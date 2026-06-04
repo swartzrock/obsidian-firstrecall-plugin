@@ -1,4 +1,4 @@
-import { Notice, Plugin, requestUrl } from "obsidian";
+import { Notice, Plugin, TFile, requestUrl } from "obsidian";
 import {
 	CueCraftSettings,
 	CueCraftSettingTab,
@@ -7,9 +7,22 @@ import {
 import { generateNote } from "./generator";
 import { OllamaProvider } from "./providers/ollama-provider";
 import type { HttpClient } from "./providers/types";
+import { parseSections } from "./parser";
+import {
+	CacheStore,
+	buildNoteCache,
+	isStale,
+	loadCache,
+	type NoteCache,
+} from "./cache";
 
 /** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
 type CueStatus = "setup" | "ready" | "generating" | "stale" | "study";
+
+interface PluginData {
+	settings: CueCraftSettings;
+	caches: Record<string, NoteCache>;
+}
 
 const RIBBON_ICON = "graduation-cap";
 
@@ -19,35 +32,76 @@ export default class CueCraftPlugin extends Plugin {
 	private statusBarEl: HTMLElement | null = null;
 	private studyMode = false;
 	private currentRun: AbortController | null = null;
+	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {} };
+	private cacheStore!: CacheStore;
 
 	async onload(): Promise<void> {
-		await this.loadSettings();
+		await this.loadPluginData();
+
+		this.cacheStore = new CacheStore(this.data.caches, async (map) => {
+			this.data.caches = map;
+			await this.saveData(this.data);
+		});
 
 		this.addSettingTab(new CueCraftSettingTab(this.app, this));
 
 		this.statusBarEl = this.addStatusBarItem();
 		this.statusBarEl.addClass("cuecraft-status");
-		this.setStatus(this.isConfigured() ? "ready" : "setup");
 
 		this.addRibbonIcon(RIBBON_ICON, "CueCraft", () => this.onRibbonClick());
-
 		this.registerCommands();
+
+		this.registerEvent(
+			this.app.workspace.on("file-open", (file) =>
+				void this.updateStatusForFile(file)
+			)
+		);
+		void this.updateStatusForFile(this.app.workspace.getActiveFile());
 	}
 
 	onunload(): void {
 		// Nothing persistent to tear down in the scaffold.
 	}
 
-	async loadSettings(): Promise<void> {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+	private async loadPluginData(): Promise<void> {
+		const loaded = (await this.loadData()) as Partial<PluginData> | null;
+		const rawSettings = loaded?.settings ?? loaded ?? {};
+		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
+		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
+		const caches: Record<string, NoteCache> = {};
+		for (const [path, value] of Object.entries(rawCaches)) {
+			const cache = loadCache(value);
+			if (cache) caches[path] = cache;
+		}
+		this.data = { settings, caches };
+		this.settings = this.data.settings;
 	}
 
 	async saveSettings(): Promise<void> {
-		await this.saveData(this.settings);
-		// Configuration may have changed; refresh the idle status pill.
+		await this.saveData(this.data);
 		if (!this.studyMode) {
-			this.setStatus(this.isConfigured() ? "ready" : "setup");
+			void this.updateStatusForFile(this.app.workspace.getActiveFile());
 		}
+	}
+
+	/** Sets the idle status pill based on the active note's cache (ready/stale/setup). */
+	private async updateStatusForFile(file: TFile | null): Promise<void> {
+		if (this.studyMode) return;
+		if (!this.isConfigured()) {
+			this.setStatus("setup");
+			return;
+		}
+		if (!file) {
+			this.setStatus("ready");
+			return;
+		}
+		const cache = this.cacheStore.get(file.path);
+		if (!cache) {
+			this.setStatus("ready");
+			return;
+		}
+		const markdown = await this.app.vault.cachedRead(file);
+		this.setStatus(isStale(cache, parseSections(markdown)) ? "stale" : "ready");
 	}
 
 	/** True once a provider host + model are set. */
@@ -102,7 +156,7 @@ export default class CueCraftPlugin extends Plugin {
 		this.addCommand({
 			id: "clear-cues",
 			name: "Clear Generated Cues",
-			callback: () => new Notice("CueCraft: clear-cues not implemented yet."),
+			callback: () => this.clearCues(),
 		});
 	}
 
@@ -166,6 +220,16 @@ export default class CueCraftPlugin extends Plugin {
 					this.setStatus("generating", { done, total }),
 			});
 
+			const cache = buildNoteCache({
+				result,
+				provider: provider.id,
+				model: this.settings.ollamaModel,
+				preset: this.settings.cuePreset,
+				generationMode: "whole-note-context",
+				noteModifiedAt: file.stat.mtime,
+			});
+			await this.cacheStore.set(file.path, cache);
+
 			const ok = result.sections.filter((s) => !s.error).length;
 			const failed = result.sections.length - ok;
 			if (result.canceled) {
@@ -184,16 +248,33 @@ export default class CueCraftPlugin extends Plugin {
 			new Notice("CueCraft: generation failed. See console for details.");
 		} finally {
 			this.currentRun = null;
-			if (!this.studyMode) {
-				this.setStatus(this.isConfigured() ? "ready" : "setup");
-			}
+			await this.updateStatusForFile(this.app.workspace.getActiveFile());
 		}
+	}
+
+	private async clearCues(): Promise<void> {
+		const file = this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("CueCraft: open a note first.");
+			return;
+		}
+		if (!this.cacheStore.has(file.path)) {
+			new Notice("CueCraft: no generated cues to clear for this note.");
+			return;
+		}
+		await this.cacheStore.delete(file.path);
+		new Notice("CueCraft: cleared generated cues for this note.");
+		await this.updateStatusForFile(file);
 	}
 
 	private toggleStudyMode(): void {
 		this.studyMode = !this.studyMode;
 		document.body.toggleClass("cuecraft-study-active", this.studyMode);
-		this.setStatus(this.studyMode ? "study" : this.isConfigured() ? "ready" : "setup");
+		if (this.studyMode) {
+			this.setStatus("study");
+		} else {
+			void this.updateStatusForFile(this.app.workspace.getActiveFile());
+		}
 		new Notice(`CueCraft: Study Mode ${this.studyMode ? "on" : "off"}.`);
 	}
 }

@@ -1,0 +1,158 @@
+import { describe, it, expect, vi } from "vitest";
+import {
+	CACHE_SCHEMA_VERSION,
+	CacheStore,
+	buildNoteCache,
+	isStale,
+	loadCache,
+	migrateCache,
+	validateCache,
+	type NoteCache,
+} from "../src/cache";
+import { parseSections } from "../src/parser";
+import type { NoteGenerationResult } from "../src/generator";
+
+const NOTE = "# A\nalpha\n## B\nbeta";
+
+function sampleResult(): NoteGenerationResult {
+	const sections = parseSections(NOTE).map((s) => ({
+		id: s.id,
+		heading: s.heading,
+		level: s.level,
+		lineNumber: s.lineNumber,
+		contentHash: s.contentHash,
+		keywords: ["k1", "k2"],
+		question: `Q:${s.heading}`,
+		confidence: "high" as const,
+		error: null,
+	}));
+	return {
+		sections,
+		summary: "a summary",
+		learningObjective: "understand A and B",
+		canceled: false,
+	};
+}
+
+function build(): NoteCache {
+	return buildNoteCache({
+		result: sampleResult(),
+		provider: "ollama",
+		model: "llama3.1:8b",
+		preset: "conceptual",
+		generationMode: "whole-note-context",
+		noteModifiedAt: 1000,
+		generatedAt: "2026-06-04T00:00:00.000Z",
+	});
+}
+
+describe("buildNoteCache + validateCache", () => {
+	it("produces a current-schema cache that validates", () => {
+		const cache = build();
+		expect(cache.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
+		expect(cache.sections).toHaveLength(2);
+		expect(cache.outline.learningObjective).toBe("understand A and B");
+		expect(validateCache(cache).ok).toBe(true);
+	});
+
+	it("rejects objects that are not valid caches", () => {
+		expect(validateCache({ schemaVersion: 2 }).ok).toBe(false);
+		expect(validateCache(null).ok).toBe(false);
+	});
+});
+
+describe("isStale", () => {
+	it("is not stale against the same note", () => {
+		const cache = build();
+		expect(isStale(cache, parseSections(NOTE))).toBe(false);
+	});
+
+	it("is stale when a section's content changes", () => {
+		const cache = build();
+		const edited = parseSections("# A\nalpha EDITED\n## B\nbeta");
+		expect(isStale(cache, edited)).toBe(true);
+	});
+
+	it("is stale when a section is added or removed", () => {
+		const cache = build();
+		expect(isStale(cache, parseSections("# A\nalpha"))).toBe(true);
+		expect(
+			isStale(cache, parseSections("# A\nalpha\n## B\nbeta\n## C\ngamma"))
+		).toBe(true);
+	});
+});
+
+describe("migrateCache (v1 -> v2)", () => {
+	it("upgrades a v1 cache by filling new fields", () => {
+		const v1 = {
+			schemaVersion: 1,
+			generatedAt: "2026-06-01T00:00:00.000Z",
+			noteModifiedAt: 5,
+			provider: "ollama",
+			model: "llama3.1:8b",
+			summary: "old summary",
+			sections: [
+				{
+					id: "a",
+					heading: "A",
+					lineNumber: 1,
+					contentHash: "deadbeef",
+					keywords: ["x", "y"],
+					question: "Q",
+					confidence: "medium",
+					error: null,
+				},
+			],
+		};
+		const migrated = migrateCache(v1);
+		expect(migrated).not.toBeNull();
+		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
+		expect(migrated?.preset).toBe("conceptual");
+		expect(migrated?.generationMode).toBe("whole-note-context");
+		expect(migrated?.sections[0].level).toBe(0);
+		expect(validateCache(migrated).ok).toBe(true);
+	});
+
+	it("returns null for unmigratable junk", () => {
+		expect(migrateCache(42)).toBeNull();
+		expect(migrateCache({ schemaVersion: 99, nonsense: true })).toBeNull();
+	});
+
+	it("loadCache passes through a valid v2 cache and migrates a v1 cache", () => {
+		const v2 = build();
+		expect(loadCache(v2)?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
+		expect(loadCache({ schemaVersion: 1, sections: [] })).toBeNull();
+	});
+});
+
+describe("CacheStore", () => {
+	it("sets, gets, has and deletes, persisting each mutation", async () => {
+		const persist = vi.fn(async () => {});
+		const store = new CacheStore({}, persist);
+		const cache = build();
+
+		expect(store.has("note.md")).toBe(false);
+		await store.set("note.md", cache);
+		expect(store.get("note.md")).toEqual(cache);
+		expect(store.has("note.md")).toBe(true);
+		expect(persist).toHaveBeenCalledTimes(1);
+
+		await store.delete("note.md");
+		expect(store.get("note.md")).toBeNull();
+		expect(persist).toHaveBeenCalledTimes(2);
+	});
+
+	it("does not persist when deleting a missing key", async () => {
+		const persist = vi.fn(async () => {});
+		const store = new CacheStore(undefined, persist);
+		await store.delete("missing.md");
+		expect(persist).not.toHaveBeenCalled();
+	});
+
+	it("seeds from initial data", () => {
+		const cache = build();
+		const store = new CacheStore({ "seed.md": cache }, async () => {});
+		expect(store.get("seed.md")).toEqual(cache);
+		expect(store.snapshot()).toEqual({ "seed.md": cache });
+	});
+});
