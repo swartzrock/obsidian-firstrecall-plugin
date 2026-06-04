@@ -37,11 +37,36 @@ describe("validateCue", () => {
 		expect(r.ok).toBe(false);
 	});
 
-	it("rejects an invalid confidence value", () => {
+	it("trims more than 5 keywords down to 5 instead of failing", () => {
+		const r = validateCue(
+			'{"question":"Q","keywords":["a","b","c","d","e","f","g"],"confidence":"high"}'
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.keywords).toEqual(["a", "b", "c", "d", "e"]);
+	});
+
+	it("drops blank and duplicate keywords before validating", () => {
+		const r = validateCue(
+			'{"question":"Q","keywords":["a"," ","A","b","a"],"confidence":"low"}'
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.keywords).toEqual(["a", "b"]);
+	});
+
+	it("normalizes confidence casing", () => {
+		const r = validateCue(
+			'{"question":"Q","keywords":["a","b"],"confidence":" High "}'
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.confidence).toBe("high");
+	});
+
+	it("falls back to medium for an unrecognized confidence value", () => {
 		const r = validateCue(
 			'{"question":"Q","keywords":["a","b"],"confidence":"sure"}'
 		);
-		expect(r.ok).toBe(false);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.confidence).toBe("medium");
 	});
 
 	it("rejects an empty question", () => {
