@@ -1,0 +1,30 @@
+{
+	"name": "cuecraft",
+	"version": "0.1.0",
+	"description": "AI-powered active-recall study cues for Obsidian.",
+	"main": "main.js",
+	"type": "module",
+	"scripts": {
+		"dev": "node esbuild.config.mjs",
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"typecheck": "tsc -noEmit -skipLibCheck"
+	},
+	"keywords": [
+		"obsidian",
+		"obsidian-plugin",
+		"study",
+		"active-recall",
+		"spaced-repetition",
+		"ai"
+	],
+	"author": "swartzrock",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/node": "^20.11.0",
+		"builtin-modules": "^3.3.0",
+		"esbuild": "0.20.0",
+		"obsidian": "latest",
+		"tslib": "2.6.2",
+		"typescript": "5.3.3"
+	}
+}
