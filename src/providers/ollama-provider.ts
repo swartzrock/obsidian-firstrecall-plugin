@@ -4,10 +4,27 @@ import {
 	AiProvider,
 	CueInput,
 	HttpClient,
+	HttpResponse,
 	ProviderError,
 	ProviderStatus,
 	SummaryInput,
 } from "./types";
+
+/** Pull Ollama's `{ "error": "..." }` body out of a failed response. */
+function extractServerError(res: HttpResponse): string {
+	const fromJson = (res.json as { error?: unknown } | null)?.error;
+	if (typeof fromJson === "string" && fromJson.trim()) return fromJson.trim();
+	if (res.text && res.text.trim()) return res.text.trim().slice(0, 300);
+	return "no error detail returned";
+}
+
+/** Add a hint for the common status codes so the Notice is actionable. */
+function describeError(status: number): string {
+	if (status === 404) return " — model not found; run `ollama pull <model>`";
+	if (status === 400) return " — bad request; the model may not support generation";
+	if (status === 500) return " — server error; the model may have failed to load (often out of memory)";
+	return "";
+}
 
 export interface OllamaProviderOptions {
 	host: string;
@@ -148,7 +165,9 @@ export class OllamaProvider implements AiProvider {
 			throw new ProviderError("Ollama server unreachable. Check the host and that Ollama is running.");
 		}
 		if (res.status < 200 || res.status >= 300) {
-			throw new ProviderError(`Ollama request failed (HTTP ${res.status}).`);
+			throw new ProviderError(
+				`Ollama request failed (HTTP ${res.status})${describeError(res.status)}: ${extractServerError(res)}`
+			);
 		}
 		const body = res.json as { response?: string } | null;
 		if (!body || typeof body.response !== "string") {
