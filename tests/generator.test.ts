@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { generateNote } from "../src/generator";
+import { generateNote, clampText, DEFAULT_MAX_CONTEXT_CHARS } from "../src/generator";
 import type {
 	AiProvider,
 	CueInput,
@@ -16,6 +16,7 @@ interface MockOptions {
 function mockProvider(opts: MockOptions = {}): AiProvider & {
 	summaryCalls: number;
 	lastSummaryInput?: SummaryInput;
+	cueInputs: CueInput[];
 } {
 	const provider = {
 		id: "mock",
@@ -24,10 +25,12 @@ function mockProvider(opts: MockOptions = {}): AiProvider & {
 		requiresDownload: false,
 		summaryCalls: 0,
 		lastSummaryInput: undefined as SummaryInput | undefined,
+		cueInputs: [] as CueInput[],
 		async testConnection(): Promise<ProviderStatus> {
 			return { ok: true, message: "ok" };
 		},
 		async generateCue(input: CueInput): Promise<CueOutput> {
+			provider.cueInputs.push(input);
 			opts.onCue?.();
 			if (opts.failOnHeading && input.heading === opts.failOnHeading) {
 				throw new Error("boom");
@@ -124,5 +127,49 @@ describe("generateNote", () => {
 			preset: "conceptual",
 		});
 		expect(result.sections).toHaveLength(1);
+	});
+
+	it("caps whole-note context injected into each prompt (avoids context-overflow errors)", async () => {
+		const provider = mockProvider();
+		const big = "# H\n" + "x".repeat(50_000);
+		await generateNote({
+			noteTitle: "T",
+			markdown: big,
+			provider,
+			preset: "conceptual",
+			useWholeNoteContext: true,
+			maxContextChars: 1000,
+		});
+		for (const input of provider.cueInputs) {
+			expect(input.noteContext!.length).toBeLessThanOrEqual(1100);
+			expect(input.noteContext).toMatch(/truncated for length/);
+		}
+		// Summary's full text is capped too.
+		expect(provider.lastSummaryInput!.fullText.length).toBeLessThanOrEqual(1100);
+	});
+
+	it("does not inject whole-note context unless enabled", async () => {
+		const provider = mockProvider();
+		await generateNote({
+			noteTitle: "T",
+			markdown: NOTE,
+			provider,
+			preset: "conceptual",
+		});
+		expect(provider.cueInputs.every((i) => i.noteContext === undefined)).toBe(true);
+	});
+});
+
+describe("clampText", () => {
+	it("returns short text unchanged", () => {
+		expect(clampText("hello", 100)).toBe("hello");
+	});
+	it("truncates and marks long text", () => {
+		const out = clampText("a".repeat(200), 50);
+		expect(out.startsWith("a".repeat(50))).toBe(true);
+		expect(out).toMatch(/truncated for length/);
+	});
+	it("exposes a sane default budget", () => {
+		expect(DEFAULT_MAX_CONTEXT_CHARS).toBeGreaterThan(0);
 	});
 });

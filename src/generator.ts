@@ -28,8 +28,19 @@ export interface GenerateNoteParams {
 	provider: AiProvider;
 	preset: string;
 	useWholeNoteContext?: boolean;
+	/** Cap (in chars) on note text injected into prompts; keeps requests within model context limits. */
+	maxContextChars?: number;
 	signal?: AbortSignal;
 	onProgress?: (done: number, total: number) => void;
+}
+
+/** Default budget for note text injected into a single prompt. */
+export const DEFAULT_MAX_CONTEXT_CHARS = 8000;
+
+/** Trim long text to a char budget, adding a marker so the model knows it was cut. */
+export function clampText(text: string, maxChars: number): string {
+	if (text.length <= maxChars) return text;
+	return text.slice(0, maxChars) + "\n...[truncated for length]...";
 }
 
 /**
@@ -42,6 +53,10 @@ export async function generateNote(
 	params: GenerateNoteParams
 ): Promise<NoteGenerationResult> {
 	const { provider, markdown, preset, noteTitle, signal, onProgress } = params;
+	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
+	const wholeNoteContext = params.useWholeNoteContext
+		? clampText(markdown, maxContextChars)
+		: undefined;
 	const sections = parseSections(markdown);
 	const total = sections.length;
 	const results: SectionResult[] = [];
@@ -68,8 +83,8 @@ export async function generateNote(
 			const cue = await provider.generateCue(
 				{
 					heading: s.heading,
-					content: s.content,
-					noteContext: params.useWholeNoteContext ? markdown : undefined,
+					content: clampText(s.content, maxContextChars),
+					noteContext: wholeNoteContext,
 					preset,
 				},
 				signal
@@ -96,7 +111,11 @@ export async function generateNote(
 		.filter((q): q is string => Boolean(q));
 	try {
 		const sum = await provider.generateSummary(
-			{ noteTitle, fullText: markdown, sectionQuestions: questions },
+			{
+				noteTitle,
+				fullText: clampText(markdown, maxContextChars),
+				sectionQuestions: questions,
+			},
 			signal
 		);
 		summary = sum.summary;

@@ -101,6 +101,28 @@ describe("OllamaProvider.generateCue", () => {
 			p.generateCue({ heading: "H", content: "c", preset: "conceptual" })
 		).rejects.toBeInstanceOf(ProviderError);
 	});
+
+	it("surfaces the server's error body and a status hint on HTTP 500", async () => {
+		const http: HttpClient = async (req) => {
+			if (req.url.endsWith("/api/tags")) {
+				return jsonResponse({ models: [{ name: "test-model" }] });
+			}
+			return jsonResponse({ error: "model requires more system memory" }, 500);
+		};
+		const p = new OllamaProvider(baseOpts(http));
+		await expect(
+			p.generateCue({ heading: "H", content: "c", preset: "conceptual" })
+		).rejects.toThrow(/HTTP 500.*memory.*model requires more system memory/i);
+	});
+
+	it("hints to pull the model on HTTP 404", async () => {
+		const http: HttpClient = async () =>
+			jsonResponse({ error: "model 'x' not found" }, 404);
+		const p = new OllamaProvider(baseOpts(http));
+		await expect(
+			p.generateCue({ heading: "H", content: "c", preset: "conceptual" })
+		).rejects.toThrow(/HTTP 404.*ollama pull.*not found/i);
+	});
 });
 
 describe("OllamaProvider.generateSummary", () => {
