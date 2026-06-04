@@ -30,14 +30,18 @@ cue layer, Study Mode, and caching are being built out against the v1.0 spec.
 
 ## Development
 
-Requirements: Node 18+ and an Obsidian vault for manual testing.
+Requirements: [Bun](https://bun.sh) and an Obsidian vault for manual testing.
 
 ```bash
-npm install      # install dependencies
-npm run dev      # esbuild watch -> main.js
-npm run build    # typecheck + production bundle
-npm run typecheck
+bun install      # install dependencies
+bun run dev      # esbuild watch -> main.js
+bun run build    # typecheck + production bundle
+bun run test     # run the vitest suite
+bun run typecheck
 ```
+
+CI (GitHub Actions) runs `bun install`, `bun run build`, and `bun run test` on every pull
+request — see [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 
 To try it in Obsidian, symlink or copy `manifest.json`, `main.js`, and `styles.css` into
 `<your-vault>/.obsidian/plugins/cuecraft/`, then enable the plugin in
