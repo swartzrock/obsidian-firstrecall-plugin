@@ -1,4 +1,5 @@
-import { Notice, Plugin, TFile, requestUrl } from "obsidian";
+import { MarkdownView, Notice, Plugin, TFile, requestUrl } from "obsidian";
+import type { EditorView } from "@codemirror/view";
 import {
 	CueCraftSettings,
 	CueCraftSettingTab,
@@ -15,6 +16,11 @@ import {
 	loadCache,
 	type NoteCache,
 } from "./cache";
+import {
+	buildCueLineData,
+	cueEditorExtension,
+	setCuesEffect,
+} from "./cue-extension";
 
 /** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
 type CueStatus = "setup" | "ready" | "generating" | "stale" | "study";
@@ -50,13 +56,12 @@ export default class CueCraftPlugin extends Plugin {
 
 		this.addRibbonIcon(RIBBON_ICON, "CueCraft", () => this.onRibbonClick());
 		this.registerCommands();
+		this.registerEditorExtension(cueEditorExtension);
 
 		this.registerEvent(
-			this.app.workspace.on("file-open", (file) =>
-				void this.updateStatusForFile(file)
-			)
+			this.app.workspace.on("file-open", (file) => this.onActiveFile(file))
 		);
-		void this.updateStatusForFile(this.app.workspace.getActiveFile());
+		this.onActiveFile(this.app.workspace.getActiveFile());
 	}
 
 	onunload(): void {
@@ -102,6 +107,26 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const markdown = await this.app.vault.cachedRead(file);
 		this.setStatus(isStale(cache, parseSections(markdown)) ? "stale" : "ready");
+	}
+
+	/** Refresh both the status pill and the rendered cues for a note. */
+	private onActiveFile(file: TFile | null): void {
+		void this.updateStatusForFile(file);
+		if (file) this.renderCues(file);
+	}
+
+	/** Push the active note's cached cues into its CodeMirror editor (or clear them). */
+	private renderCues(file: TFile): void {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view || view.file?.path !== file.path) return;
+		const cm = (view.editor as unknown as { cm?: EditorView }).cm;
+		if (!cm) return;
+
+		const cache = this.cacheStore.get(file.path);
+		const cues = cache
+			? buildCueLineData(cache, parseSections(view.editor.getValue()))
+			: [];
+		cm.dispatch({ effects: setCuesEffect.of(cues) });
 	}
 
 	/** True once a provider host + model are set. */
@@ -249,6 +274,7 @@ export default class CueCraftPlugin extends Plugin {
 		} finally {
 			this.currentRun = null;
 			await this.updateStatusForFile(this.app.workspace.getActiveFile());
+			this.renderCues(file);
 		}
 	}
 
@@ -265,6 +291,7 @@ export default class CueCraftPlugin extends Plugin {
 		await this.cacheStore.delete(file.path);
 		new Notice("CueCraft: cleared generated cues for this note.");
 		await this.updateStatusForFile(file);
+		this.renderCues(file);
 	}
 
 	private toggleStudyMode(): void {

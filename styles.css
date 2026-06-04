@@ -23,9 +23,15 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	filter: blur(3px);
 }
 
+/* Cue block widget rendered beside a section heading in the editor. */
 .cuecraft-cue {
 	color: var(--text-normal);
 	font-size: var(--font-ui-small);
+	border-left: 3px solid var(--interactive-accent);
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+	padding: 0.4em 0.7em;
+	margin: 0.3em 0 0.6em;
 }
 
 .cuecraft-cue-question {
@@ -34,6 +40,19 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-cue-keywords {
 	color: var(--text-muted);
+	margin-top: 0.2em;
+	font-size: var(--font-smallest);
+}
+
+/* Confidence accent on the cue's left border. */
+.cuecraft-cue[data-confidence="high"] {
+	border-left-color: var(--color-green);
+}
+.cuecraft-cue[data-confidence="medium"] {
+	border-left-color: var(--color-yellow);
+}
+.cuecraft-cue[data-confidence="low"] {
+	border-left-color: var(--color-red);
 }
 
 .cuecraft-summary {
