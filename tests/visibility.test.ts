@@ -1,5 +1,34 @@
 import { describe, it, expect, vi } from "vitest";
-import { VisibilityStore, loadHiddenMap } from "../src/visibility";
+import {
+	VisibilityStore,
+	loadHiddenMap,
+	pillAction,
+	visibilityMenuLabel,
+} from "../src/visibility";
+
+describe("pillAction", () => {
+	it("opens settings when unconfigured", () => {
+		expect(pillAction("setup")).toBe("open-settings");
+	});
+
+	it("is inert during generation and study mode", () => {
+		expect(pillAction("generating")).toBe("none");
+		expect(pillAction("study")).toBe("none");
+	});
+
+	it("toggles visibility for an idle note", () => {
+		expect(pillAction("ready")).toBe("toggle-visibility");
+		expect(pillAction("stale")).toBe("toggle-visibility");
+		expect(pillAction("hidden")).toBe("toggle-visibility");
+	});
+});
+
+describe("visibilityMenuLabel", () => {
+	it("offers to enable when hidden and hide when shown", () => {
+		expect(visibilityMenuLabel(true)).toMatch(/Enable/);
+		expect(visibilityMenuLabel(false)).toMatch(/Hide/);
+	});
+});
 
 describe("loadHiddenMap", () => {
 	it("returns an empty map for non-object input", () => {
