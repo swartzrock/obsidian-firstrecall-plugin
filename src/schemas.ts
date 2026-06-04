@@ -1,17 +1,49 @@
 import { z } from "zod";
 
 /**
- * Strict validation for AI output. v1.0 acceptance criteria H1.1:
+ * Validation for AI output. v1.0 acceptance criteria H1.1:
  * - question: non-empty string
  * - keywords: 2-5 non-empty strings
  * - confidence: high | medium | low
+ *
+ * We coerce where the intent is unambiguous before validating, so a usable cue
+ * isn't discarded over benign model quirks: extra keywords are trimmed to 5
+ * (rather than failing the whole section), blanks/dupes are dropped, and the
+ * confidence casing is normalized (falling back to "medium" when unrecognized).
  */
 export const confidenceSchema = z.enum(["high", "medium", "low"]);
 
+/** Drop blanks, trim, dedupe case-insensitively, and cap at 5 keywords. */
+function coerceKeywords(value: unknown): unknown {
+	if (!Array.isArray(value)) return value;
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const item of value) {
+		if (typeof item !== "string") continue;
+		const trimmed = item.trim();
+		if (!trimmed) continue;
+		const key = trimmed.toLowerCase();
+		if (seen.has(key)) continue;
+		seen.add(key);
+		out.push(trimmed);
+		if (out.length === 5) break;
+	}
+	return out;
+}
+
+/** Normalize confidence casing; fall back to "medium" when unrecognized. */
+function coerceConfidence(value: unknown): unknown {
+	if (typeof value !== "string") return value;
+	const normalized = value.trim().toLowerCase();
+	return confidenceSchema.options.includes(normalized as z.infer<typeof confidenceSchema>)
+		? normalized
+		: "medium";
+}
+
 export const cueOutputSchema = z.object({
 	question: z.string().trim().min(1, "question is required"),
-	keywords: z.array(z.string().trim().min(1)).min(2).max(5),
-	confidence: confidenceSchema,
+	keywords: z.preprocess(coerceKeywords, z.array(z.string().min(1)).min(2).max(5)),
+	confidence: z.preprocess(coerceConfidence, confidenceSchema),
 	rationale: z.string().trim().optional(),
 });
 
