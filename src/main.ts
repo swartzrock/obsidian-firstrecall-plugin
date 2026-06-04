@@ -1,9 +1,12 @@
-import { Notice, Plugin } from "obsidian";
+import { Notice, Plugin, requestUrl } from "obsidian";
 import {
 	CueCraftSettings,
 	CueCraftSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
+import { generateNote } from "./generator";
+import { OllamaProvider } from "./providers/ollama-provider";
+import type { HttpClient } from "./providers/types";
 
 /** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
 type CueStatus = "setup" | "ready" | "generating" | "stale" | "study";
@@ -15,6 +18,7 @@ export default class CueCraftPlugin extends Plugin {
 
 	private statusBarEl: HTMLElement | null = null;
 	private studyMode = false;
+	private currentRun: AbortController | null = null;
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -102,16 +106,88 @@ export default class CueCraftPlugin extends Plugin {
 		});
 	}
 
-	private generateCues(): void {
+	/** Wraps Obsidian's requestUrl as the provider HTTP client (avoids CORS). */
+	private makeHttpClient(): HttpClient {
+		return async (req) => {
+			const res = await requestUrl({
+				url: req.url,
+				method: req.method,
+				body: req.body,
+				headers: req.headers,
+				throw: false,
+			});
+			let json: unknown = null;
+			try {
+				json = res.json;
+			} catch {
+				json = null;
+			}
+			return { status: res.status, text: res.text, json };
+		};
+	}
+
+	private async generateCues(): Promise<void> {
+		// A second invocation while running acts as cancel (AC C3.2).
+		if (this.currentRun) {
+			this.currentRun.abort();
+			new Notice("CueCraft: cancelling generation…");
+			return;
+		}
 		const file = this.app.workspace.getActiveFile();
 		if (!file) {
 			new Notice("CueCraft: open a note first.");
 			return;
 		}
-		// Scaffold placeholder — real parsing/generation lands with the parser
-		// and generator modules. This proves the command + status wiring.
-		new Notice(`CueCraft: would generate cues for "${file.basename}".`);
-		this.setStatus("ready");
+		if (!this.isConfigured()) {
+			new Notice("CueCraft: set your Ollama host and model in Settings first.");
+			return;
+		}
+
+		const markdown = await this.app.vault.cachedRead(file);
+		const provider = new OllamaProvider({
+			host: this.settings.ollamaHost,
+			model: this.settings.ollamaModel,
+			http: this.makeHttpClient(),
+		});
+
+		const controller = new AbortController();
+		this.currentRun = controller;
+		this.setStatus("generating", { done: 0, total: 0 });
+
+		try {
+			const result = await generateNote({
+				noteTitle: file.basename,
+				markdown,
+				provider,
+				preset: this.settings.cuePreset,
+				useWholeNoteContext: true,
+				signal: controller.signal,
+				onProgress: (done, total) =>
+					this.setStatus("generating", { done, total }),
+			});
+
+			const ok = result.sections.filter((s) => !s.error).length;
+			const failed = result.sections.length - ok;
+			if (result.canceled) {
+				new Notice(`CueCraft: cancelled — kept ${ok} section(s).`);
+			} else {
+				new Notice(
+					`CueCraft: generated ${ok} cue(s)` +
+						(failed ? `, ${failed} failed` : "") +
+						(result.summary ? " + summary." : ".")
+				);
+			}
+			// Rendering/caching of `result` lands with the cue-extension + cache modules.
+			console.debug("CueCraft generation result", result);
+		} catch (e) {
+			console.error("CueCraft generation failed", e);
+			new Notice("CueCraft: generation failed. See console for details.");
+		} finally {
+			this.currentRun = null;
+			if (!this.studyMode) {
+				this.setStatus(this.isConfigured() ? "ready" : "setup");
+			}
+		}
 	}
 
 	private toggleStudyMode(): void {
