@@ -1,4 +1,12 @@
-import { MarkdownView, Notice, Plugin, TFile, requestUrl } from "obsidian";
+import {
+	MarkdownView,
+	Menu,
+	Notice,
+	Plugin,
+	TFile,
+	requestUrl,
+	type MarkdownFileInfo,
+} from "obsidian";
 import type { EditorView } from "@codemirror/view";
 import {
 	CueCraftSettings,
@@ -21,7 +29,12 @@ import {
 	cueEditorExtension,
 	setCuesEffect,
 } from "./cue-extension";
-import { VisibilityStore, loadHiddenMap } from "./visibility";
+import {
+	VisibilityStore,
+	loadHiddenMap,
+	pillAction,
+	visibilityMenuLabel,
+} from "./visibility";
 
 /** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
 type CueStatus = "setup" | "ready" | "generating" | "stale" | "study" | "hidden";
@@ -60,6 +73,7 @@ export default class CueCraftPlugin extends Plugin {
 
 		this.statusBarEl = this.addStatusBarItem();
 		this.statusBarEl.addClass("cuecraft-status");
+		this.statusBarEl.addEventListener("click", () => this.onPillClick());
 
 		this.addRibbonIcon(RIBBON_ICON, "CueCraft", () => this.onRibbonClick());
 		this.registerCommands();
@@ -71,6 +85,18 @@ export default class CueCraftPlugin extends Plugin {
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
 				if (file instanceof TFile) void this.visibility.rename(oldPath, file.path);
+			})
+		);
+		this.registerEvent(
+			this.app.workspace.on("file-menu", (menu, file) => {
+				if (file instanceof TFile && file.extension === "md") {
+					this.addVisibilityMenuItem(menu, file);
+				}
+			})
+		);
+		this.registerEvent(
+			this.app.workspace.on("editor-menu", (menu, _editor, info: MarkdownFileInfo) => {
+				if (info.file) this.addVisibilityMenuItem(menu, info.file);
 			})
 		);
 		this.onActiveFile(this.app.workspace.getActiveFile());
@@ -160,19 +186,50 @@ export default class CueCraftPlugin extends Plugin {
 				: `CueCraft: ${status}`;
 		this.statusBarEl.setText(label);
 		this.statusBarEl.dataset.status = status;
+		this.statusBarEl.style.cursor =
+			pillAction(status) === "none" ? "default" : "pointer";
+	}
+
+	/** Open Settings on the CueCraft tab. */
+	private openSettings(): void {
+		// @ts-expect-error - setting is available on the desktop app.
+		this.app.setting?.open?.();
+		// @ts-expect-error - openTabById is available on the desktop app.
+		this.app.setting?.openTabById?.(this.manifest.id);
 	}
 
 	private onRibbonClick(): void {
 		if (!this.isConfigured()) {
 			new Notice("CueCraft: choose your AI provider in Settings to get started.");
-			// Open settings → CueCraft tab.
-			// @ts-expect-error - setting is available on the desktop app.
-			this.app.setting?.open?.();
-			// @ts-expect-error - openTabById is available on the desktop app.
-			this.app.setting?.openTabById?.(this.manifest.id);
+			this.openSettings();
 			return;
 		}
 		this.generateCues();
+	}
+
+	/** Status-pill click: open settings when unconfigured, else toggle visibility. */
+	private onPillClick(): void {
+		const status = this.statusBarEl?.dataset.status ?? "";
+		const action = pillAction(status);
+		if (action === "open-settings") {
+			this.openSettings();
+			return;
+		}
+		if (action === "none") return;
+		const file = this.app.workspace.getActiveFile();
+		if (!file) return;
+		void this.setNoteVisibility(this.visibility.isHidden(file.path), file);
+	}
+
+	/** Add the enable/hide toggle to a file or editor context menu. */
+	private addVisibilityMenuItem(menu: Menu, file: TFile): void {
+		const hidden = this.visibility.isHidden(file.path);
+		menu.addItem((item) =>
+			item
+				.setTitle(visibilityMenuLabel(hidden))
+				.setIcon(RIBBON_ICON)
+				.onClick(() => void this.setNoteVisibility(hidden, file))
+		);
 	}
 
 	private registerCommands(): void {
@@ -314,9 +371,12 @@ export default class CueCraftPlugin extends Plugin {
 		this.renderCues(file);
 	}
 
-	/** Enable (show) or hide the cue layer for the active note (epic G). */
-	private async setNoteVisibility(visible: boolean): Promise<void> {
-		const file = this.app.workspace.getActiveFile();
+	/**
+	 * Enable (show) or hide the cue layer for a note (epic G). Defaults to the
+	 * active note; a `target` lets context menus act on a non-active note.
+	 */
+	private async setNoteVisibility(visible: boolean, target?: TFile): Promise<void> {
+		const file = target ?? this.app.workspace.getActiveFile();
 		if (!file) {
 			new Notice("CueCraft: open a note first.");
 			return;
@@ -328,8 +388,9 @@ export default class CueCraftPlugin extends Plugin {
 			await this.visibility.hide(file.path);
 			new Notice("CueCraft: cues hidden for this note.");
 		}
-		await this.updateStatusForFile(file);
-		this.renderCues(file);
+		const active = this.app.workspace.getActiveFile();
+		await this.updateStatusForFile(active);
+		if (active) this.renderCues(active);
 	}
 
 	private toggleStudyMode(): void {
