@@ -21,13 +21,15 @@ import {
 	cueEditorExtension,
 	setCuesEffect,
 } from "./cue-extension";
+import { VisibilityStore, loadHiddenMap } from "./visibility";
 
 /** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
-type CueStatus = "setup" | "ready" | "generating" | "stale" | "study";
+type CueStatus = "setup" | "ready" | "generating" | "stale" | "study" | "hidden";
 
 interface PluginData {
 	settings: CueCraftSettings;
 	caches: Record<string, NoteCache>;
+	hidden: Record<string, true>;
 }
 
 const RIBBON_ICON = "graduation-cap";
@@ -38,14 +40,19 @@ export default class CueCraftPlugin extends Plugin {
 	private statusBarEl: HTMLElement | null = null;
 	private studyMode = false;
 	private currentRun: AbortController | null = null;
-	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {} };
+	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {}, hidden: {} };
 	private cacheStore!: CacheStore;
+	private visibility!: VisibilityStore;
 
 	async onload(): Promise<void> {
 		await this.loadPluginData();
 
 		this.cacheStore = new CacheStore(this.data.caches, async (map) => {
 			this.data.caches = map;
+			await this.saveData(this.data);
+		});
+		this.visibility = new VisibilityStore(this.data.hidden, async (map) => {
+			this.data.hidden = map;
 			await this.saveData(this.data);
 		});
 
@@ -60,6 +67,11 @@ export default class CueCraftPlugin extends Plugin {
 
 		this.registerEvent(
 			this.app.workspace.on("file-open", (file) => this.onActiveFile(file))
+		);
+		this.registerEvent(
+			this.app.vault.on("rename", (file, oldPath) => {
+				if (file instanceof TFile) void this.visibility.rename(oldPath, file.path);
+			})
 		);
 		this.onActiveFile(this.app.workspace.getActiveFile());
 	}
@@ -78,7 +90,8 @@ export default class CueCraftPlugin extends Plugin {
 			const cache = loadCache(value);
 			if (cache) caches[path] = cache;
 		}
-		this.data = { settings, caches };
+		const hidden = loadHiddenMap(loaded?.hidden);
+		this.data = { settings, caches, hidden };
 		this.settings = this.data.settings;
 	}
 
@@ -98,6 +111,10 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		if (!file) {
 			this.setStatus("ready");
+			return;
+		}
+		if (this.visibility.isHidden(file.path)) {
+			this.setStatus("hidden");
 			return;
 		}
 		const cache = this.cacheStore.get(file.path);
@@ -123,9 +140,10 @@ export default class CueCraftPlugin extends Plugin {
 		if (!cm) return;
 
 		const cache = this.cacheStore.get(file.path);
-		const cues = cache
-			? buildCueLineData(cache, parseSections(view.editor.getValue()))
-			: [];
+		const cues =
+			cache && !this.visibility.isHidden(file.path)
+				? buildCueLineData(cache, parseSections(view.editor.getValue()))
+				: [];
 		cm.dispatch({ effects: setCuesEffect.of(cues) });
 	}
 
@@ -171,12 +189,12 @@ export default class CueCraftPlugin extends Plugin {
 		this.addCommand({
 			id: "enable-for-note",
 			name: "Enable for This Note",
-			callback: () => new Notice("CueCraft: enable-for-note not implemented yet."),
+			callback: () => this.setNoteVisibility(true),
 		});
 		this.addCommand({
 			id: "hide-for-note",
 			name: "Hide for This Note",
-			callback: () => new Notice("CueCraft: hide-for-note not implemented yet."),
+			callback: () => this.setNoteVisibility(false),
 		});
 		this.addCommand({
 			id: "clear-cues",
@@ -254,6 +272,8 @@ export default class CueCraftPlugin extends Plugin {
 				noteModifiedAt: file.stat.mtime,
 			});
 			await this.cacheStore.set(file.path, cache);
+			// Generating for a note implies you want to see its cues.
+			await this.visibility.show(file.path);
 
 			const ok = result.sections.filter((s) => !s.error).length;
 			const failed = result.sections.length - ok;
@@ -290,6 +310,24 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		await this.cacheStore.delete(file.path);
 		new Notice("CueCraft: cleared generated cues for this note.");
+		await this.updateStatusForFile(file);
+		this.renderCues(file);
+	}
+
+	/** Enable (show) or hide the cue layer for the active note (epic G). */
+	private async setNoteVisibility(visible: boolean): Promise<void> {
+		const file = this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("CueCraft: open a note first.");
+			return;
+		}
+		if (visible) {
+			await this.visibility.show(file.path);
+			new Notice("CueCraft: cues enabled for this note.");
+		} else {
+			await this.visibility.hide(file.path);
+			new Notice("CueCraft: cues hidden for this note.");
+		}
 		await this.updateStatusForFile(file);
 		this.renderCues(file);
 	}
