@@ -1,6 +1,6 @@
 {
 	"id": "cuecraft-devin",
-	"name": "CueCraft",
+	"name": "CueCraftDevin",
 	"version": "0.1.0",
 	"minAppVersion": "1.5.0",
 	"description": "Turn notes into active-recall study sessions: AI-generated Cornell-style cue questions, keywords, and summaries shown beside your note. Non-destructive — your Markdown is never modified.",
