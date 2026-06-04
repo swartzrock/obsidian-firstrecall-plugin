@@ -8,6 +8,27 @@
  */
 export type PersistFn = (map: Record<string, true>) => Promise<void>;
 
+/** What clicking the status pill should do for a given status. */
+export type PillAction = "open-settings" | "toggle-visibility" | "none";
+
+/**
+ * Decide the click behavior of the status pill from its current status:
+ * unconfigured opens settings; mid-generation / study mode is inert; an idle
+ * note (ready/stale/hidden) toggles its cue visibility.
+ */
+export function pillAction(status: string): PillAction {
+	if (status === "setup") return "open-settings";
+	if (status === "generating" || status === "study") return "none";
+	return "toggle-visibility";
+}
+
+/** Context-menu label reflecting the note's current visibility. */
+export function visibilityMenuLabel(isHidden: boolean): string {
+	return isHidden
+		? "CueCraft: Enable cues for this note"
+		: "CueCraft: Hide cues for this note";
+}
+
 /** Coerce arbitrary stored data into a hidden-paths map (defensive on load). */
 export function loadHiddenMap(raw: unknown): Record<string, true> {
 	if (!raw || typeof raw !== "object") return {};
