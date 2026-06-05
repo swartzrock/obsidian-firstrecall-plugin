@@ -23,7 +23,8 @@ cue layer, Study Mode, and caching are being built out against the v1.0 spec.
 
 - **Provider:** Ollama (local, free). Other providers (OpenAI, Claude Code, Local VM) come later.
 - **Editor-mode** cue questions + keywords per section, and a whole-note summary.
-- **Study Mode** hides section bodies (blur) while questions stay visible.
+- **Cornell view** — a dedicated pane laying the note out as Title → left cue column | main notes → Summary, rendered from the cache (command: *Open Cornell View*).
+- **Study Mode** (in the Cornell view) blurs the left keyword hints until you reveal each cue.
 - **Per-note** enable / hide / clear.
 - **JSON cache** with stale detection; strict typed validation of model output.
 - **Desktop-only** (`isDesktopOnly: true`) — relies on a local Ollama server.

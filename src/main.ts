@@ -35,6 +35,8 @@ import {
 	pillAction,
 	visibilityMenuLabel,
 } from "./visibility";
+import { buildCornellModel, type CornellModel } from "./cornell";
+import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 
 /** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
 type CueStatus = "setup" | "ready" | "generating" | "stale" | "study" | "hidden";
@@ -71,6 +73,11 @@ export default class CueCraftPlugin extends Plugin {
 		});
 
 		this.addSettingTab(new CueCraftSettingTab(this.app, this));
+
+		this.registerView(
+			VIEW_TYPE_CORNELL,
+			(leaf) => new CornellView(leaf, this)
+		);
 
 		this.statusBarEl = this.addStatusBarItem();
 		this.statusBarEl.addClass("cuecraft-status");
@@ -272,6 +279,45 @@ export default class CueCraftPlugin extends Plugin {
 			name: "Clear Generated Cues",
 			callback: () => this.clearCues(),
 		});
+		this.addCommand({
+			id: "open-cornell-view",
+			name: "Open Cornell View",
+			callback: () => void this.activateCornellView(),
+		});
+	}
+
+	/** Open (or focus) the Cornell view in a main-area tab. */
+	private async activateCornellView(): Promise<void> {
+		const { workspace } = this.app;
+		const existing = workspace.getLeavesOfType(VIEW_TYPE_CORNELL)[0];
+		if (existing) {
+			workspace.revealLeaf(existing);
+			return;
+		}
+		const leaf = workspace.getLeaf("tab");
+		await leaf.setViewState({ type: VIEW_TYPE_CORNELL, active: true });
+		workspace.revealLeaf(leaf);
+	}
+
+	/** Build the Cornell layout model for a note, or null when it has no cache. */
+	async buildCornellFor(
+		file: TFile
+	): Promise<{ title: string; model: CornellModel } | null> {
+		const cache = this.cacheStore.get(file.path);
+		if (!cache) return null;
+		const markdown = await this.app.vault.cachedRead(file);
+		return {
+			title: file.basename,
+			model: buildCornellModel(cache, parseSections(markdown)),
+		};
+	}
+
+	/** Re-render any open Cornell views (e.g. after generate/clear). */
+	private refreshCornellViews(): void {
+		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_CORNELL)) {
+			const view = leaf.view;
+			if (view instanceof CornellView) void view.render();
+		}
 	}
 
 	/** Wraps Obsidian's requestUrl as the provider HTTP client (avoids CORS). */
@@ -366,6 +412,7 @@ export default class CueCraftPlugin extends Plugin {
 			this.currentRun = null;
 			await this.updateStatusForFile(this.app.workspace.getActiveFile());
 			this.renderCues(file);
+			this.refreshCornellViews();
 		}
 	}
 
@@ -383,6 +430,7 @@ export default class CueCraftPlugin extends Plugin {
 		new Notice("CueCraft: cleared generated cues for this note.");
 		await this.updateStatusForFile(file);
 		this.renderCues(file);
+		this.refreshCornellViews();
 	}
 
 	/**
