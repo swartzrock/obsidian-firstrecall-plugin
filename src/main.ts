@@ -51,6 +51,7 @@ export default class CueCraftPlugin extends Plugin {
 	settings: CueCraftSettings = DEFAULT_SETTINGS;
 
 	private statusBarEl: HTMLElement | null = null;
+	private ribbonEl: HTMLElement | null = null;
 	private studyMode = false;
 	private currentRun: AbortController | null = null;
 	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {}, hidden: {} };
@@ -75,7 +76,10 @@ export default class CueCraftPlugin extends Plugin {
 		this.statusBarEl.addClass("cuecraft-status");
 		this.statusBarEl.addEventListener("click", () => this.onPillClick());
 
-		this.addRibbonIcon(RIBBON_ICON, "CueCraft", () => this.onRibbonClick());
+		this.ribbonEl = this.addRibbonIcon(RIBBON_ICON, "CueCraft", () =>
+			this.onRibbonClick()
+		);
+		this.updateRibbonLabel();
 		this.registerCommands();
 		this.registerEditorExtension(cueEditorExtension);
 
@@ -123,9 +127,19 @@ export default class CueCraftPlugin extends Plugin {
 
 	async saveSettings(): Promise<void> {
 		await this.saveData(this.data);
+		this.updateRibbonLabel();
 		if (!this.studyMode) {
 			void this.updateStatusForFile(this.app.workspace.getActiveFile());
 		}
+	}
+
+	/** Keep the ribbon tooltip describing what a click will do. */
+	private updateRibbonLabel(): void {
+		if (!this.ribbonEl) return;
+		const label = this.isConfigured()
+			? "CueCraft: Generate cues for this note"
+			: "CueCraft: Set up \u2014 open settings";
+		this.ribbonEl.setAttribute("aria-label", label);
 	}
 
 	/** Sets the idle status pill based on the active note's cache (ready/stale/setup). */
