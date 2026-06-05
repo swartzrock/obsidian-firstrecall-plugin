@@ -61,3 +61,129 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	padding-top: 0.75em;
 	color: var(--text-normal);
 }
+
+/* =========================================================================
+ * Cornell view — Title / cue-rail | notes / Summary, rendered from the cache.
+ * Theme-aware: relies on Obsidian CSS variables only.
+ * ========================================================================= */
+.cuecraft-cornell {
+	padding: 12px 18px 28px;
+	overflow: auto;
+}
+
+.cuecraft-cornell-empty {
+	color: var(--text-muted);
+	padding: 24px 4px;
+}
+
+.cuecraft-cornell-toolbar {
+	display: flex;
+	gap: 8px;
+	justify-content: flex-end;
+	margin-bottom: 6px;
+}
+
+.cuecraft-cornell-btn {
+	font-size: var(--font-ui-smaller);
+	padding: 2px 10px;
+	border-radius: var(--radius-s);
+	cursor: pointer;
+}
+.cuecraft-cornell-btn.is-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.cuecraft-cornell-title {
+	text-align: center;
+	font-size: 1.4em;
+	font-weight: var(--font-bold);
+	padding-bottom: 8px;
+	border-bottom: 2px solid var(--text-muted);
+}
+
+.cuecraft-cornell-grid {
+	display: grid;
+	grid-template-columns: minmax(180px, 260px) 1fr;
+}
+
+.cuecraft-cornell-cuecell {
+	border-right: 2px solid var(--text-muted);
+	padding: 12px 14px 12px 2px;
+}
+
+.cuecraft-cornell-notecell {
+	padding: 12px 4px 12px 18px;
+}
+
+.cuecraft-cornell-cue {
+	border-left: 3px solid var(--interactive-accent);
+	padding-left: 8px;
+}
+.cuecraft-cornell-cue[data-confidence="high"] {
+	border-left-color: var(--color-green);
+}
+.cuecraft-cornell-cue[data-confidence="medium"] {
+	border-left-color: var(--color-yellow);
+}
+.cuecraft-cornell-cue[data-confidence="low"] {
+	border-left-color: var(--color-red);
+}
+
+.cuecraft-cornell-q {
+	font-weight: var(--font-semibold);
+	font-size: var(--font-ui-small);
+}
+
+.cuecraft-cornell-kw {
+	margin-top: 8px;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.cuecraft-cornell-chip {
+	font-size: var(--font-smallest);
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 999px;
+	padding: 1px 8px;
+}
+
+/* Study Mode: keyword hints blur until the cue is revealed. */
+.cuecraft-cornell-kw.is-hidden {
+	filter: blur(5px);
+	user-select: none;
+	transition: filter 120ms ease-in-out;
+}
+.cuecraft-cornell-study .cuecraft-cornell-cue {
+	cursor: pointer;
+}
+
+.cuecraft-cornell-heading {
+	font-weight: var(--font-bold);
+	margin-bottom: 2px;
+}
+.cuecraft-cornell-heading[data-level="1"] { font-size: 1.15em; }
+.cuecraft-cornell-heading[data-level="2"] { font-size: 1.05em; }
+
+.cuecraft-cornell-body-empty {
+	color: var(--text-faint);
+}
+
+.cuecraft-cornell-summary {
+	border-top: 2px solid var(--text-muted);
+	margin-top: 6px;
+	padding-top: 10px;
+}
+.cuecraft-cornell-summary-label {
+	text-align: center;
+	font-weight: var(--font-bold);
+	margin-bottom: 6px;
+}
+.cuecraft-cornell-summary-body {
+	color: var(--text-muted);
+}
+.cuecraft-cornell-objective {
+	margin-top: 8px;
+}
