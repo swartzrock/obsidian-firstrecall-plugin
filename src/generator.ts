@@ -22,6 +22,22 @@ export interface NoteGenerationResult {
 	canceled: boolean;
 }
 
+export interface GenerateSectionParams {
+	section: {
+		id: string;
+		heading: string;
+		level: number;
+		lineNumber: number;
+		content: string;
+		contentHash: string;
+	};
+	provider: AiProvider;
+	preset: string;
+	noteContext?: string;
+	maxContextChars?: number;
+	signal?: AbortSignal;
+}
+
 export interface GenerateNoteParams {
 	noteTitle: string;
 	markdown: string;
@@ -41,6 +57,48 @@ export const DEFAULT_MAX_CONTEXT_CHARS = 8000;
 export function clampText(text: string, maxChars: number): string {
 	if (text.length <= maxChars) return text;
 	return text.slice(0, maxChars) + "\n...[truncated for length]...";
+}
+
+/**
+ * Generate a cue for a single section. The caller supplies the parsed section
+ * and an optional whole-note context. On provider failure the error is captured
+ * in the result rather than thrown, matching generateNote's isolation semantics.
+ */
+export async function generateSectionCue(
+	params: GenerateSectionParams
+): Promise<SectionResult> {
+	const { section, provider, preset, signal } = params;
+	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
+	const result: SectionResult = {
+		id: section.id,
+		heading: section.heading,
+		level: section.level,
+		lineNumber: section.lineNumber,
+		contentHash: section.contentHash,
+		keywords: null,
+		question: null,
+		confidence: null,
+		error: null,
+	};
+	try {
+		const cue = await provider.generateCue(
+			{
+				heading: section.heading,
+				content: clampText(section.content, maxCtx),
+				noteContext: params.noteContext
+					? clampText(params.noteContext, maxCtx)
+					: undefined,
+				preset,
+			},
+			signal
+		);
+		result.keywords = cue.keywords;
+		result.question = cue.question;
+		result.confidence = cue.confidence;
+	} catch (e) {
+		result.error = e instanceof Error ? e.message : String(e);
+	}
+	return result;
 }
 
 /**
@@ -68,33 +126,14 @@ export async function generateNote(
 			break;
 		}
 		const s = sections[i];
-		const result: SectionResult = {
-			id: s.id,
-			heading: s.heading,
-			level: s.level,
-			lineNumber: s.lineNumber,
-			contentHash: s.contentHash,
-			keywords: null,
-			question: null,
-			confidence: null,
-			error: null,
-		};
-		try {
-			const cue = await provider.generateCue(
-				{
-					heading: s.heading,
-					content: clampText(s.content, maxContextChars),
-					noteContext: wholeNoteContext,
-					preset,
-				},
-				signal
-			);
-			result.keywords = cue.keywords;
-			result.question = cue.question;
-			result.confidence = cue.confidence;
-		} catch (e) {
-			result.error = e instanceof Error ? e.message : String(e);
-		}
+		const result = await generateSectionCue({
+			section: s,
+			provider,
+			preset,
+			noteContext: wholeNoteContext,
+			maxContextChars,
+			signal,
+		});
 		results.push(result);
 		onProgress?.(i + 1, total);
 	}

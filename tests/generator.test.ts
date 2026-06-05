@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { generateNote, clampText, DEFAULT_MAX_CONTEXT_CHARS } from "../src/generator";
+import { generateNote, generateSectionCue, clampText, DEFAULT_MAX_CONTEXT_CHARS } from "../src/generator";
 import type {
 	AiProvider,
 	CueInput,
@@ -157,6 +157,67 @@ describe("generateNote", () => {
 			preset: "conceptual",
 		});
 		expect(provider.cueInputs.every((i) => i.noteContext === undefined)).toBe(true);
+	});
+});
+
+describe("generateSectionCue", () => {
+	const section = {
+		id: "terms",
+		heading: "Terms",
+		level: 2,
+		lineNumber: 3,
+		content: "some body text",
+		contentHash: "abc123",
+	};
+
+	it("returns a SectionResult with the cue on success", async () => {
+		const provider = mockProvider();
+		const result = await generateSectionCue({
+			section,
+			provider,
+			preset: "conceptual",
+		});
+		expect(result.id).toBe("terms");
+		expect(result.question).toBe("Q:Terms");
+		expect(result.keywords).toEqual(["k1", "k2"]);
+		expect(result.confidence).toBe("high");
+		expect(result.error).toBeNull();
+		expect(result.contentHash).toBe("abc123");
+	});
+
+	it("captures provider error without throwing", async () => {
+		const provider = mockProvider({ failOnHeading: "Terms" });
+		const result = await generateSectionCue({
+			section,
+			provider,
+			preset: "conceptual",
+		});
+		expect(result.error).toMatch(/boom/);
+		expect(result.question).toBeNull();
+	});
+
+	it("passes noteContext when supplied", async () => {
+		const provider = mockProvider();
+		await generateSectionCue({
+			section,
+			provider,
+			preset: "conceptual",
+			noteContext: "full note text",
+		});
+		expect(provider.cueInputs[0].noteContext).toBe("full note text");
+	});
+
+	it("clamps section content to maxContextChars", async () => {
+		const big = { ...section, content: "x".repeat(50_000) };
+		const provider = mockProvider();
+		await generateSectionCue({
+			section: big,
+			provider,
+			preset: "conceptual",
+			maxContextChars: 500,
+		});
+		expect(provider.cueInputs[0].content.length).toBeLessThanOrEqual(600);
+		expect(provider.cueInputs[0].content).toMatch(/truncated for length/);
 	});
 });
 
