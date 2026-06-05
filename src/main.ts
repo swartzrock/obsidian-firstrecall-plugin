@@ -1,4 +1,5 @@
 import {
+	FuzzySuggestModal,
 	MarkdownView,
 	Menu,
 	Notice,
@@ -13,15 +14,16 @@ import {
 	CueCraftSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
-import { generateNote } from "./generator";
+import { generateNote, generateSectionCue } from "./generator";
 import { OllamaProvider } from "./providers/ollama-provider";
 import type { HttpClient } from "./providers/types";
-import { parseSections } from "./parser";
+import { parseSections, type Section } from "./parser";
 import {
 	CacheStore,
 	buildNoteCache,
 	isStale,
 	loadCache,
+	replaceSection,
 	type NoteCache,
 } from "./cache";
 import {
@@ -260,6 +262,11 @@ export default class CueCraftPlugin extends Plugin {
 			callback: () => this.generateCues(),
 		});
 		this.addCommand({
+			id: "regenerate-section",
+			name: "Regenerate Section\u2026",
+			callback: () => this.pickAndRegenerateSection(),
+		});
+		this.addCommand({
 			id: "toggle-study-mode",
 			name: "Toggle Study Mode",
 			callback: () => this.toggleStudyMode(),
@@ -338,6 +345,107 @@ export default class CueCraftPlugin extends Plugin {
 			}
 			return { status: res.status, text: res.text, json };
 		};
+	}
+
+	/** Open a fuzzy picker listing the active note's sections, then regen. */
+	private pickAndRegenerateSection(): void {
+		const file = this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("CueCraft: open a note first.");
+			return;
+		}
+		if (!this.isConfigured()) {
+			new Notice("CueCraft: set your Ollama host and model in Settings first.");
+			return;
+		}
+		if (!this.cacheStore.has(file.path)) {
+			new Notice("CueCraft: generate cues for this note first.");
+			return;
+		}
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view) return;
+		const sections = parseSections(view.editor.getValue()).filter((s) => s.heading);
+		if (!sections.length) {
+			new Notice("CueCraft: no headed sections found.");
+			return;
+		}
+		new SectionSuggestModal(this.app, sections, this.cacheStore.get(file.path), (s) =>
+			void this.regenerateSection(file, s.id)
+		).open();
+	}
+
+	/**
+	 * Regenerate the cue for a single section (by id) and merge it back into the
+	 * cache. Public so the Cornell view can call it directly from per-cue buttons.
+	 */
+	async regenerateSection(file: TFile, sectionId: string): Promise<void> {
+		if (this.currentRun) {
+			new Notice("CueCraft: generation already in progress.");
+			return;
+		}
+		if (!this.isConfigured()) {
+			new Notice("CueCraft: set your Ollama host and model in Settings first.");
+			return;
+		}
+		const cache = this.cacheStore.get(file.path);
+		if (!cache) {
+			new Notice("CueCraft: no cache for this note \u2014 run Generate first.");
+			return;
+		}
+		const markdown = await this.app.vault.cachedRead(file);
+		const section = parseSections(markdown).find((s) => s.id === sectionId);
+		if (!section) {
+			new Notice("CueCraft: section no longer exists in the note.");
+			return;
+		}
+
+		const provider = new OllamaProvider({
+			host: this.settings.ollamaHost,
+			model: this.settings.ollamaModel,
+			http: this.makeHttpClient(),
+		});
+
+		const controller = new AbortController();
+		this.currentRun = controller;
+		this.setStatus("generating", { done: 0, total: 1 });
+
+		try {
+			const result = await generateSectionCue({
+				section,
+				provider,
+				preset: this.settings.cuePreset,
+				noteContext: markdown,
+				signal: controller.signal,
+			});
+
+			const updated = replaceSection(cache, {
+				id: result.id,
+				heading: result.heading,
+				level: result.level,
+				lineNumber: result.lineNumber,
+				contentHash: result.contentHash,
+				keywords: result.keywords,
+				question: result.question,
+				confidence: result.confidence,
+				error: result.error,
+			});
+			await this.cacheStore.set(file.path, updated);
+			await this.visibility.show(file.path);
+
+			if (result.error) {
+				new Notice(`CueCraft: regeneration failed \u2014 ${result.error}`);
+			} else {
+				new Notice(`CueCraft: regenerated cue for "${section.heading}".`);
+			}
+		} catch (e) {
+			console.error("CueCraft section regen failed", e);
+			new Notice("CueCraft: section regeneration failed. See console.");
+		} finally {
+			this.currentRun = null;
+			await this.updateStatusForFile(this.app.workspace.getActiveFile());
+			this.renderCues(file);
+			this.refreshCornellViews();
+		}
 	}
 
 	private async generateCues(): Promise<void> {
@@ -464,5 +572,35 @@ export default class CueCraftPlugin extends Plugin {
 			void this.updateStatusForFile(this.app.workspace.getActiveFile());
 		}
 		new Notice(`CueCraft: Study Mode ${this.studyMode ? "on" : "off"}.`);
+	}
+}
+
+/**
+ * Fuzzy picker that lists the active note's sections. Each item shows the
+ * heading + the current cached question (if any) for context.
+ */
+class SectionSuggestModal extends FuzzySuggestModal<Section> {
+	constructor(
+		app: InstanceType<typeof Plugin>["app"],
+		private readonly sections: Section[],
+		private readonly cache: NoteCache | null,
+		private readonly onChoose: (section: Section) => void
+	) {
+		super(app);
+		this.setPlaceholder("Pick a section to regenerate\u2026");
+	}
+
+	getItems(): Section[] {
+		return this.sections;
+	}
+
+	getItemText(item: Section): string {
+		const cached = this.cache?.sections.find((s) => s.id === item.id);
+		const q = cached?.question ? ` \u2014 ${cached.question}` : "";
+		return `${item.heading}${q}`;
+	}
+
+	onChooseItem(item: Section): void {
+		this.onChoose(item);
 	}
 }

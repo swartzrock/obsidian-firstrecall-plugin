@@ -160,6 +160,28 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	cursor: pointer;
 }
 
+/* Per-cue regenerate button in Cornell view. */
+.cuecraft-cornell-regen {
+	display: inline-block;
+	margin-top: 6px;
+	font-size: var(--font-smallest);
+	color: var(--text-muted);
+	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 2px 8px;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 120ms;
+}
+.cuecraft-cornell-cue:hover .cuecraft-cornell-regen {
+	opacity: 1;
+}
+.cuecraft-cornell-regen:hover {
+	color: var(--text-normal);
+	border-color: var(--interactive-accent);
+}
+
 .cuecraft-cornell-heading {
 	font-weight: var(--font-bold);
 	margin-bottom: 2px;

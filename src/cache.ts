@@ -152,6 +152,24 @@ export function isStale(cache: NoteCache, currentSections: Section[]): boolean {
 	return false;
 }
 
+/**
+ * Return a new cache with the section matching `updated.id` replaced.
+ * Other sections, summary, and outline stay untouched. Bumps `generatedAt`
+ * so the cache reflects its most recent change. Returns the cache unchanged
+ * when the id is not found.
+ */
+export function replaceSection(
+	cache: NoteCache,
+	updated: CachedSection,
+	generatedAt?: string
+): NoteCache {
+	const idx = cache.sections.findIndex((s) => s.id === updated.id);
+	if (idx === -1) return cache;
+	const sections = cache.sections.slice();
+	sections[idx] = updated;
+	return { ...cache, sections, generatedAt: generatedAt ?? new Date().toISOString() };
+}
+
 export type PersistFn = (map: Record<string, NoteCache>) => Promise<void>;
 
 /**

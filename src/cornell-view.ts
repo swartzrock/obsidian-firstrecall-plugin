@@ -117,12 +117,12 @@ export class CornellView extends ItemView {
 	): Promise<void> {
 		const grid = root.createEl("div", { cls: "cuecraft-cornell-grid" });
 		for (const row of model.rows) {
-			this.renderCueCell(grid, row);
+			this.renderCueCell(grid, row, file);
 			await this.renderNoteCell(grid, row, file);
 		}
 	}
 
-	private renderCueCell(grid: HTMLElement, row: CornellRow): void {
+	private renderCueCell(grid: HTMLElement, row: CornellRow, file: TFile): void {
 		const cell = grid.createEl("div", { cls: "cuecraft-cornell-cuecell" });
 		if (!row.hasCue || !row.question) return;
 
@@ -139,6 +139,18 @@ export class CornellView extends ItemView {
 			if (this.studyMode && !this.revealed.has(row.id) && !this.revealAll) {
 				kw.addClass("is-hidden");
 			}
+		}
+
+		// Regenerate button (visible when not in Study Mode).
+		if (!this.studyMode) {
+			const regen = cue.createEl("button", {
+				cls: "cuecraft-cornell-regen",
+				text: "\u21bb Regenerate",
+			});
+			regen.addEventListener("click", (e) => {
+				e.stopPropagation();
+				void this.plugin.regenerateSection(file, row.id);
+			});
 		}
 
 		// In Study Mode, clicking a cue toggles its hint's reveal.

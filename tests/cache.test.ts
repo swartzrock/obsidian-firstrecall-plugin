@@ -6,6 +6,7 @@ import {
 	isStale,
 	loadCache,
 	migrateCache,
+	replaceSection,
 	validateCache,
 	type NoteCache,
 } from "../src/cache";
@@ -154,5 +155,40 @@ describe("CacheStore", () => {
 		const store = new CacheStore({ "seed.md": cache }, async () => {});
 		expect(store.get("seed.md")).toEqual(cache);
 		expect(store.snapshot()).toEqual({ "seed.md": cache });
+	});
+});
+
+describe("replaceSection", () => {
+	it("replaces the matching section and bumps generatedAt", () => {
+		const cache = build();
+		const original = cache.sections[1]; // B
+		const updated = {
+			...original,
+			question: "new Q",
+			keywords: ["x", "y", "z"],
+			confidence: "low" as const,
+			contentHash: "newHash",
+		};
+		const result = replaceSection(cache, updated, "2099-01-01T00:00:00.000Z");
+		expect(result.sections[1].question).toBe("new Q");
+		expect(result.sections[1].contentHash).toBe("newHash");
+		expect(result.sections[0]).toEqual(cache.sections[0]); // A untouched
+		expect(result.summary).toBe(cache.summary);
+		expect(result.generatedAt).toBe("2099-01-01T00:00:00.000Z");
+	});
+
+	it("returns the cache unchanged when the id is not found", () => {
+		const cache = build();
+		const missing = { ...cache.sections[0], id: "does-not-exist" };
+		const result = replaceSection(cache, missing);
+		expect(result).toBe(cache);
+	});
+
+	it("does not mutate the original sections array", () => {
+		const cache = build();
+		const updated = { ...cache.sections[0], question: "replaced" };
+		const result = replaceSection(cache, updated);
+		expect(result.sections[0].question).toBe("replaced");
+		expect(cache.sections[0].question).toBe("Q:A"); // original unchanged
 	});
 });
