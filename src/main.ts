@@ -14,7 +14,7 @@ import {
 	CueCraftSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
-import { generateNote, generateSectionCue } from "./generator";
+import { generateNote, generateSectionCue, type SectionResult } from "./generator";
 import { OllamaProvider } from "./providers/ollama-provider";
 import type { HttpClient } from "./providers/types";
 import { parseSections, type Section } from "./parser";
@@ -24,6 +24,8 @@ import {
 	isStale,
 	loadCache,
 	replaceSection,
+	staleSectionIds,
+	type CachedSection,
 	type NoteCache,
 } from "./cache";
 import {
@@ -267,6 +269,11 @@ export default class CueCraftPlugin extends Plugin {
 			callback: () => this.pickAndRegenerateSection(),
 		});
 		this.addCommand({
+			id: "regenerate-stale-sections",
+			name: "Regenerate Stale Sections",
+			callback: () => void this.regenerateStaleSections(),
+		});
+		this.addCommand({
 			id: "toggle-study-mode",
 			name: "Toggle Study Mode",
 			callback: () => this.toggleStudyMode(),
@@ -418,17 +425,7 @@ export default class CueCraftPlugin extends Plugin {
 				signal: controller.signal,
 			});
 
-			const updated = replaceSection(cache, {
-				id: result.id,
-				heading: result.heading,
-				level: result.level,
-				lineNumber: result.lineNumber,
-				contentHash: result.contentHash,
-				keywords: result.keywords,
-				question: result.question,
-				confidence: result.confidence,
-				error: result.error,
-			});
+			const updated = replaceSection(cache, toCachedSection(result));
 			await this.cacheStore.set(file.path, updated);
 			await this.visibility.show(file.path);
 
@@ -440,6 +437,87 @@ export default class CueCraftPlugin extends Plugin {
 		} catch (e) {
 			console.error("CueCraft section regen failed", e);
 			new Notice("CueCraft: section regeneration failed. See console.");
+		} finally {
+			this.currentRun = null;
+			await this.updateStatusForFile(this.app.workspace.getActiveFile());
+			this.renderCues(file);
+			this.refreshCornellViews();
+		}
+	}
+
+	/**
+	 * Regenerate only the sections that have gone stale (edited since last
+	 * generation) or previously errored. Defaults to the active note. Public so
+	 * the Cornell view toolbar can trigger it.
+	 */
+	async regenerateStaleSections(target?: TFile): Promise<void> {
+		const file = target ?? this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("CueCraft: open a note first.");
+			return;
+		}
+		if (this.currentRun) {
+			new Notice("CueCraft: generation already in progress.");
+			return;
+		}
+		if (!this.isConfigured()) {
+			new Notice("CueCraft: set your Ollama host and model in Settings first.");
+			return;
+		}
+		const cache = this.cacheStore.get(file.path);
+		if (!cache) {
+			new Notice("CueCraft: no cache for this note \u2014 run Generate first.");
+			return;
+		}
+		const markdown = await this.app.vault.cachedRead(file);
+		const sections = parseSections(markdown);
+		const staleIds = staleSectionIds(cache, sections);
+		if (!staleIds.length) {
+			new Notice("CueCraft: no stale sections \u2014 everything is up to date.");
+			return;
+		}
+
+		const provider = new OllamaProvider({
+			host: this.settings.ollamaHost,
+			model: this.settings.ollamaModel,
+			http: this.makeHttpClient(),
+		});
+		const byId = new Map(sections.map((s) => [s.id, s]));
+
+		const controller = new AbortController();
+		this.currentRun = controller;
+
+		let working = cache;
+		let done = 0;
+		let failed = 0;
+		try {
+			for (const id of staleIds) {
+				if (controller.signal.aborted) break;
+				const section = byId.get(id);
+				if (!section) continue;
+				this.setStatus("generating", { done, total: staleIds.length });
+				const result = await generateSectionCue({
+					section,
+					provider,
+					preset: this.settings.cuePreset,
+					noteContext: markdown,
+					signal: controller.signal,
+				});
+				working = replaceSection(working, toCachedSection(result));
+				await this.cacheStore.set(file.path, working);
+				if (result.error) failed++;
+				done++;
+			}
+			await this.visibility.show(file.path);
+			const ok = done - failed;
+			new Notice(
+				`CueCraft: refreshed ${ok} stale section${ok === 1 ? "" : "s"}` +
+					(failed ? `, ${failed} failed` : "") +
+					"."
+			);
+		} catch (e) {
+			console.error("CueCraft stale refresh failed", e);
+			new Notice("CueCraft: stale refresh failed. See console.");
 		} finally {
 			this.currentRun = null;
 			await this.updateStatusForFile(this.app.workspace.getActiveFile());
@@ -573,6 +651,21 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		new Notice(`CueCraft: Study Mode ${this.studyMode ? "on" : "off"}.`);
 	}
+}
+
+/** Map a generation result into the cache's persisted section shape. */
+function toCachedSection(result: SectionResult): CachedSection {
+	return {
+		id: result.id,
+		heading: result.heading,
+		level: result.level,
+		lineNumber: result.lineNumber,
+		contentHash: result.contentHash,
+		keywords: result.keywords,
+		question: result.question,
+		confidence: result.confidence,
+		error: result.error,
+	};
 }
 
 /**
