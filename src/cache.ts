@@ -153,6 +153,29 @@ export function isStale(cache: NoteCache, currentSections: Section[]): boolean {
 }
 
 /**
+ * Ids of cached sections that need regenerating: their content changed since the
+ * cache was built (hash mismatch against the current parse) or they previously
+ * errored. Matched by stable section id, so reordering alone doesn't count.
+ * Newly added sections (absent from the cache) are not included — those come
+ * from a full Generate.
+ */
+export function staleSectionIds(
+	cache: NoteCache,
+	currentSections: Section[]
+): string[] {
+	const current = new Map(currentSections.map((s) => [s.id, s]));
+	const ids: string[] = [];
+	for (const cached of cache.sections) {
+		const live = current.get(cached.id);
+		if (!live) continue;
+		if (cached.error || cached.contentHash !== live.contentHash) {
+			ids.push(cached.id);
+		}
+	}
+	return ids;
+}
+
+/**
  * Return a new cache with the section matching `updated.id` replaced.
  * Other sections, summary, and outline stay untouched. Bumps `generatedAt`
  * so the cache reflects its most recent change. Returns the cache unchanged

@@ -65,7 +65,7 @@ export class CornellView extends ItemView {
 			return;
 		}
 
-		this.renderToolbar(root);
+		this.renderToolbar(root, file);
 		root.createEl("div", { cls: "cuecraft-cornell-title", text: built.title });
 		await this.renderGrid(root, built.model, file);
 		this.renderSummary(root, built.model);
@@ -75,7 +75,7 @@ export class CornellView extends ItemView {
 		root.createEl("div", { cls: "cuecraft-cornell-empty", text: message });
 	}
 
-	private renderToolbar(root: HTMLElement): void {
+	private renderToolbar(root: HTMLElement, file: TFile): void {
 		const bar = root.createEl("div", { cls: "cuecraft-cornell-toolbar" });
 		const study = bar.createEl("button", {
 			cls: "cuecraft-cornell-btn",
@@ -88,6 +88,16 @@ export class CornellView extends ItemView {
 			this.revealAll = false;
 			void this.render();
 		});
+
+		if (!this.studyMode) {
+			const refresh = bar.createEl("button", {
+				cls: "cuecraft-cornell-btn",
+				text: "\u21bb Refresh stale",
+			});
+			refresh.addEventListener("click", () => {
+				void this.plugin.regenerateStaleSections(file);
+			});
+		}
 
 		if (this.studyMode) {
 			const revealAll = bar.createEl("button", {
