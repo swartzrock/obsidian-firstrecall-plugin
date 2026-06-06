@@ -1,4 +1,4 @@
-import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAI } from "@ai-sdk/openai";
 import type { FetchFunction } from "@ai-sdk/provider-utils";
 import {
 	AiSdkProvider,
@@ -6,9 +6,7 @@ import {
 	type ObjectGenerator,
 } from "./ai-sdk-provider";
 
-export type { ObjectGenerator } from "./ai-sdk-provider";
-
-export interface AnthropicProviderOptions {
+export interface OpenAIProviderOptions {
 	apiKey: string;
 	model: string;
 	/** Custom fetch (Obsidian's requestUrl) to avoid CORS in Electron. */
@@ -17,24 +15,23 @@ export interface AnthropicProviderOptions {
 	generator?: ObjectGenerator;
 }
 
-export class AnthropicProvider extends AiSdkProvider {
-	constructor(opts: AnthropicProviderOptions) {
+export class OpenAIProvider extends AiSdkProvider {
+	constructor(opts: OpenAIProviderOptions) {
 		super({
-			id: "anthropic",
-			label: "Anthropic (Claude)",
-			vendor: "Anthropic",
+			id: "openai",
+			label: "OpenAI (ChatGPT)",
+			vendor: "OpenAI",
 			model: opts.model,
 			generate: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
 		});
 	}
 }
 
-/** Build the real AI SDK structured-output caller for a given key/model. */
 function defaultGenerator(
 	apiKey: string,
 	model: string,
 	fetchImpl?: FetchFunction
 ): ObjectGenerator {
-	const anthropic = createAnthropic({ apiKey, fetch: fetchImpl });
-	return modelGenerator(anthropic(model));
+	const openai = createOpenAI({ apiKey, fetch: fetchImpl });
+	return modelGenerator(openai(model));
 }

@@ -2,13 +2,13 @@ import { App, Notice, PluginSettingTab, Setting, requestUrl } from "obsidian";
 import type CueCraftPlugin from "./main";
 
 /**
- * v1.0 ships a single provider (Ollama). The settings shape intentionally
- * leaves room for the provider abstraction described in the scope doc, but
- * only Ollama fields are surfaced for now.
+ * CueCraft supports a local provider (Ollama) and several cloud providers via
+ * the Vercel AI SDK (Anthropic, OpenAI, Google, xAI). Each cloud provider keeps
+ * its own API key + model id; only the selected provider's fields are surfaced.
  */
 export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
-export type ProviderId = "ollama" | "anthropic";
+export type ProviderId = "ollama" | "anthropic" | "openai" | "google" | "xai";
 
 export interface CueCraftSettings {
 	provider: ProviderId;
@@ -16,6 +16,12 @@ export interface CueCraftSettings {
 	ollamaModel: string;
 	anthropicApiKey: string;
 	anthropicModel: string;
+	openaiApiKey: string;
+	openaiModel: string;
+	googleApiKey: string;
+	googleModel: string;
+	xaiApiKey: string;
+	xaiModel: string;
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
 }
@@ -26,6 +32,12 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	ollamaModel: "llama3.1:8b",
 	anthropicApiKey: "",
 	anthropicModel: "claude-3-5-sonnet-latest",
+	openaiApiKey: "",
+	openaiModel: "gpt-4o-mini",
+	googleApiKey: "",
+	googleModel: "gemini-1.5-flash",
+	xaiApiKey: "",
+	xaiModel: "grok-2-latest",
 	cuePreset: "conceptual",
 	studyHideMode: "blur",
 };
@@ -44,17 +56,20 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		containerEl.createEl("h2", { text: "CueCraft" });
 		containerEl.createEl("p", {
-			text: "CueCraft generates study cues using a local Ollama model or a frontier model (Claude). Your Markdown files are never modified.",
+			text: "CueCraft generates study cues using a local Ollama model or a frontier model (Claude, ChatGPT, Gemini, Grok). Your Markdown files are never modified.",
 			cls: "cuecraft-settings-intro",
 		});
 
 		new Setting(containerEl)
 			.setName("AI provider")
-			.setDesc("Where cues are generated. Ollama runs locally; Claude calls the Anthropic API.")
+			.setDesc("Where cues are generated. Ollama runs locally; the rest call a cloud API.")
 			.addDropdown((dd) =>
 				dd
 					.addOption("ollama", "Ollama (local)")
 					.addOption("anthropic", "Anthropic (Claude)")
+					.addOption("openai", "OpenAI (ChatGPT)")
+					.addOption("google", "Google (Gemini)")
+					.addOption("xai", "xAI (Grok)")
 					.setValue(this.plugin.settings.provider)
 					.onChange(async (value) => {
 						this.plugin.settings.provider = value as ProviderId;
@@ -63,11 +78,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					})
 			);
 
-		if (this.plugin.settings.provider === "ollama") {
-			this.renderOllamaSettings(containerEl);
-		} else {
-			this.renderAnthropicSettings(containerEl);
-		}
+		this.renderProviderSettings(containerEl);
 
 		new Setting(containerEl)
 			.setName("Test connection")
@@ -138,32 +149,111 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 	}
 
-	private renderAnthropicSettings(containerEl: HTMLElement): void {
+	/** Render the field set for whichever provider is selected. */
+	private renderProviderSettings(containerEl: HTMLElement): void {
+		const s = this.plugin.settings;
+		switch (s.provider) {
+			case "ollama":
+				this.renderOllamaSettings(containerEl);
+				return;
+			case "anthropic":
+				this.renderCloudSettings(containerEl, {
+					vendor: "Anthropic",
+					keyDesc: "Your Anthropic API key (from console.anthropic.com). Stored locally in this vault's plugin data.",
+					keyPlaceholder: "sk-ant-...",
+					getKey: () => s.anthropicApiKey,
+					setKey: (v) => (s.anthropicApiKey = v),
+					modelLabel: "Claude model",
+					modelDesc: "An Anthropic model id (e.g. claude-3-5-sonnet-latest, claude-3-5-haiku-latest).",
+					modelPlaceholder: "claude-3-5-sonnet-latest",
+					getModel: () => s.anthropicModel,
+					setModel: (v) => (s.anthropicModel = v),
+				});
+				return;
+			case "openai":
+				this.renderCloudSettings(containerEl, {
+					vendor: "OpenAI",
+					keyDesc: "Your OpenAI API key (from platform.openai.com). Stored locally in this vault's plugin data.",
+					keyPlaceholder: "sk-...",
+					getKey: () => s.openaiApiKey,
+					setKey: (v) => (s.openaiApiKey = v),
+					modelLabel: "OpenAI model",
+					modelDesc: "An OpenAI model id (e.g. gpt-4o-mini, gpt-4o).",
+					modelPlaceholder: "gpt-4o-mini",
+					getModel: () => s.openaiModel,
+					setModel: (v) => (s.openaiModel = v),
+				});
+				return;
+			case "google":
+				this.renderCloudSettings(containerEl, {
+					vendor: "Google",
+					keyDesc: "Your Google AI (Gemini) API key (from aistudio.google.com). Stored locally in this vault's plugin data.",
+					keyPlaceholder: "AIza...",
+					getKey: () => s.googleApiKey,
+					setKey: (v) => (s.googleApiKey = v),
+					modelLabel: "Gemini model",
+					modelDesc: "A Gemini model id (e.g. gemini-1.5-flash, gemini-1.5-pro).",
+					modelPlaceholder: "gemini-1.5-flash",
+					getModel: () => s.googleModel,
+					setModel: (v) => (s.googleModel = v),
+				});
+				return;
+			case "xai":
+				this.renderCloudSettings(containerEl, {
+					vendor: "xAI",
+					keyDesc: "Your xAI API key (from console.x.ai). Stored locally in this vault's plugin data.",
+					keyPlaceholder: "xai-...",
+					getKey: () => s.xaiApiKey,
+					setKey: (v) => (s.xaiApiKey = v),
+					modelLabel: "Grok model",
+					modelDesc: "An xAI model id (e.g. grok-2-latest, grok-beta).",
+					modelPlaceholder: "grok-2-latest",
+					getModel: () => s.xaiModel,
+					setModel: (v) => (s.xaiModel = v),
+				});
+				return;
+		}
+	}
+
+	/** Shared API-key + model field set for the cloud (AI SDK) providers. */
+	private renderCloudSettings(
+		containerEl: HTMLElement,
+		opts: {
+			vendor: string;
+			keyDesc: string;
+			keyPlaceholder: string;
+			getKey: () => string;
+			setKey: (v: string) => void;
+			modelLabel: string;
+			modelDesc: string;
+			modelPlaceholder: string;
+			getModel: () => string;
+			setModel: (v: string) => void;
+		}
+	): void {
 		new Setting(containerEl)
-			.setName("Anthropic API key")
-			.setDesc(
-				"Your Anthropic API key (from console.anthropic.com). Stored locally in this vault's plugin data."
-			)
+			.setName(`${opts.vendor} API key`)
+			.setDesc(opts.keyDesc)
 			.addText((text) => {
 				text
-					.setPlaceholder("sk-ant-...")
-					.setValue(this.plugin.settings.anthropicApiKey)
+					.setPlaceholder(opts.keyPlaceholder)
+					.setValue(opts.getKey())
 					.onChange(async (value) => {
-						this.plugin.settings.anthropicApiKey = value.trim();
+						opts.setKey(value.trim());
 						await this.plugin.saveSettings();
 					});
 				text.inputEl.type = "password";
 			});
 
 		new Setting(containerEl)
-			.setName("Claude model")
-			.setDesc("An Anthropic model id (e.g. claude-3-5-sonnet-latest, claude-3-5-haiku-latest).")
+			.setName(opts.modelLabel)
+			.setDesc(opts.modelDesc)
 			.addText((text) =>
 				text
-					.setPlaceholder("claude-3-5-sonnet-latest")
-					.setValue(this.plugin.settings.anthropicModel)
+					.setPlaceholder(opts.modelPlaceholder)
+					.setValue(opts.getModel())
 					.onChange(async (value) => {
-						this.plugin.settings.anthropicModel = value.trim();
+						opts.setModel(value.trim());
 						await this.plugin.saveSettings();
 					})
 			);
@@ -171,8 +261,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	/** Verify the selected provider is reachable and reports a readable result. */
 	private async testConnection(): Promise<void> {
-		if (this.plugin.settings.provider === "anthropic") {
-			await this.testAnthropic();
+		if (this.plugin.settings.provider !== "ollama") {
+			await this.testCloudProvider();
 			return;
 		}
 		const host = this.plugin.settings.ollamaHost.replace(/\/+$/, "");
@@ -195,13 +285,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 	}
 
-	private async testAnthropic(): Promise<void> {
-		if (!this.plugin.settings.anthropicApiKey) {
-			new Notice("CueCraft: enter your Anthropic API key first.");
+	private async testCloudProvider(): Promise<void> {
+		const provider = this.plugin.makeProvider();
+		if (!this.plugin.isProviderConfigured()) {
+			new Notice(`CueCraft: enter your ${provider.label} API key first.`);
 			return;
 		}
-		new Notice("CueCraft: testing Anthropic\u2026");
-		const status = await this.plugin.makeProvider().testConnection();
+		new Notice(`CueCraft: testing ${provider.label}\u2026`);
+		const status = await provider.testConnection();
 		new Notice(`CueCraft: ${status.message}`);
 	}
 }
