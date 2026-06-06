@@ -330,6 +330,11 @@ export default class CueCraftPlugin extends Plugin {
 		};
 	}
 
+	/** Whether a note has generated cues cached. */
+	hasCueCache(path: string): boolean {
+		return this.cacheStore.has(path);
+	}
+
 	/** Re-render any open Cornell views (e.g. after generate/clear). */
 	private refreshCornellViews(): void {
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_CORNELL)) {

@@ -63,3 +63,38 @@ export function buildCornellModel(
 		learningObjective: cache.outline.learningObjective,
 	};
 }
+
+/** Minimal view of a vault file for picking the Cornell target note. */
+export interface CornellFileRef {
+	path: string;
+	extension: string;
+}
+
+/**
+ * Choose which note the Cornell view should render, in priority order:
+ *  1. the active Markdown note,
+ *  2. the last note we showed (if it still exists),
+ *  3. the most recently opened note that has cached cues,
+ *  4. failing that, the most recently opened Markdown note.
+ *
+ * This keeps the view populated after an Obsidian restart, when the restored
+ * active leaf is the Cornell view itself and there is no active Markdown file.
+ * Pure (no Obsidian/DOM) so it can be unit-tested.
+ */
+export function pickCornellFile(opts: {
+	active: CornellFileRef | null;
+	last: CornellFileRef | null;
+	lastExists: boolean;
+	recentMd: CornellFileRef[];
+	hasCache: (path: string) => boolean;
+}): CornellFileRef | null {
+	const { active, last, lastExists, recentMd, hasCache } = opts;
+	if (active && active.extension === "md") return active;
+	if (last && lastExists) return last;
+	let firstMd: CornellFileRef | null = null;
+	for (const f of recentMd) {
+		if (!firstMd) firstMd = f;
+		if (hasCache(f.path)) return f;
+	}
+	return firstMd;
+}

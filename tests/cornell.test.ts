@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildCornellModel } from "../src/cornell";
+import { buildCornellModel, pickCornellFile, type CornellFileRef } from "../src/cornell";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
@@ -89,5 +89,86 @@ describe("buildCornellModel", () => {
 		const d = model.rows.find((r) => r.heading === "D");
 		expect(d?.hasCue).toBe(false);
 		expect(d?.content).toBe("delta");
+	});
+});
+
+const md = (path: string): CornellFileRef => ({ path, extension: "md" });
+
+describe("pickCornellFile", () => {
+	it("prefers the active Markdown note", () => {
+		const picked = pickCornellFile({
+			active: md("active.md"),
+			last: md("last.md"),
+			lastExists: true,
+			recentMd: [md("recent.md")],
+			hasCache: () => true,
+		});
+		expect(picked?.path).toBe("active.md");
+	});
+
+	it("ignores a non-Markdown active leaf (e.g. the Cornell view itself)", () => {
+		const picked = pickCornellFile({
+			active: { path: "cornell", extension: "cuecraft-cornell" },
+			last: md("last.md"),
+			lastExists: true,
+			recentMd: [md("recent.md")],
+			hasCache: () => true,
+		});
+		expect(picked?.path).toBe("last.md");
+	});
+
+	it("falls back to the last note shown when no Markdown is active (restart)", () => {
+		const picked = pickCornellFile({
+			active: null,
+			last: md("last.md"),
+			lastExists: true,
+			recentMd: [md("recent.md")],
+			hasCache: () => true,
+		});
+		expect(picked?.path).toBe("last.md");
+	});
+
+	it("uses the most recently opened note WITH cues on a cold start", () => {
+		const picked = pickCornellFile({
+			active: null,
+			last: null,
+			lastExists: false,
+			recentMd: [md("no-cues.md"), md("has-cues.md")],
+			hasCache: (p) => p === "has-cues.md",
+		});
+		expect(picked?.path).toBe("has-cues.md");
+	});
+
+	it("falls back to the most recent Markdown note when none have cues", () => {
+		const picked = pickCornellFile({
+			active: null,
+			last: null,
+			lastExists: false,
+			recentMd: [md("first.md"), md("second.md")],
+			hasCache: () => false,
+		});
+		expect(picked?.path).toBe("first.md");
+	});
+
+	it("skips a remembered note that no longer exists", () => {
+		const picked = pickCornellFile({
+			active: null,
+			last: md("deleted.md"),
+			lastExists: false,
+			recentMd: [md("has-cues.md")],
+			hasCache: () => true,
+		});
+		expect(picked?.path).toBe("has-cues.md");
+	});
+
+	it("returns null when there is nothing to show", () => {
+		const picked = pickCornellFile({
+			active: null,
+			last: null,
+			lastExists: false,
+			recentMd: [],
+			hasCache: () => false,
+		});
+		expect(picked).toBeNull();
 	});
 });
