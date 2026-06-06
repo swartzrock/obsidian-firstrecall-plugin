@@ -1,6 +1,6 @@
 import { ItemView, MarkdownRenderer, TFile, type WorkspaceLeaf } from "obsidian";
 import type CueCraftPlugin from "./main";
-import type { CornellModel, CornellRow } from "./cornell";
+import { pickCornellFile, type CornellModel, type CornellRow } from "./cornell";
 
 export const VIEW_TYPE_CORNELL = "cuecraft-cornell";
 
@@ -16,6 +16,8 @@ export class CornellView extends ItemView {
 	private revealed = new Set<string>();
 	/** When true, all hints are shown regardless of per-cue reveal state. */
 	private revealAll = false;
+	/** The last Markdown note we rendered, used as a fallback on restart. */
+	private lastFile: TFile | null = null;
 
 	constructor(leaf: WorkspaceLeaf, private readonly plugin: CueCraftPlugin) {
 		super(leaf);
@@ -50,8 +52,8 @@ export class CornellView extends ItemView {
 		root.addClass("cuecraft-cornell");
 		root.toggleClass("cuecraft-cornell-study", this.studyMode);
 
-		const file = this.app.workspace.getActiveFile();
-		if (!file || file.extension !== "md") {
+		const file = this.resolveTargetFile();
+		if (!file) {
 			this.renderEmpty(root, "Open a Markdown note to see its Cornell study layout.");
 			return;
 		}
@@ -69,6 +71,33 @@ export class CornellView extends ItemView {
 		root.createEl("div", { cls: "cuecraft-cornell-title", text: built.title });
 		await this.renderGrid(root, built.model, file);
 		this.renderSummary(root, built.model);
+	}
+
+	/**
+	 * Decide which note to render. Prefers the active Markdown note; otherwise
+	 * falls back to the last one we showed, then to the most recently opened
+	 * note with cues. This keeps the view populated after an Obsidian restart,
+	 * where the restored active leaf is the Cornell view itself (no active md).
+	 */
+	private resolveTargetFile(): TFile | null {
+		const { workspace, vault } = this.app;
+		const recentMd: TFile[] = [];
+		for (const path of workspace.getLastOpenFiles()) {
+			const f = vault.getAbstractFileByPath(path);
+			if (f instanceof TFile && f.extension === "md") recentMd.push(f);
+		}
+		const picked = pickCornellFile({
+			active: workspace.getActiveFile(),
+			last: this.lastFile,
+			lastExists: Boolean(
+				this.lastFile && vault.getAbstractFileByPath(this.lastFile.path)
+			),
+			recentMd,
+			hasCache: (path) => this.plugin.hasCueCache(path),
+		});
+		// pickCornellFile only ever returns one of the TFile inputs (or null).
+		this.lastFile = (picked as TFile | null) ?? null;
+		return this.lastFile;
 	}
 
 	private renderEmpty(root: HTMLElement, message: string): void {
