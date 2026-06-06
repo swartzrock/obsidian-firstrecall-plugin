@@ -16,7 +16,8 @@ import {
 } from "./settings";
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
 import { OllamaProvider } from "./providers/ollama-provider";
-import type { HttpClient } from "./providers/types";
+import { AnthropicProvider } from "./providers/anthropic-provider";
+import type { AiProvider, HttpClient } from "./providers/types";
 import { parseSections, type Section } from "./parser";
 import {
 	CacheStore,
@@ -198,8 +199,11 @@ export default class CueCraftPlugin extends Plugin {
 		cm.dispatch({ effects: setCuesEffect.of(cues) });
 	}
 
-	/** True once a provider host + model are set. */
+	/** True once the selected provider has its required fields set. */
 	private isConfigured(): boolean {
+		if (this.settings.provider === "anthropic") {
+			return Boolean(this.settings.anthropicApiKey && this.settings.anthropicModel);
+		}
 		return Boolean(this.settings.ollamaHost && this.settings.ollamaModel);
 	}
 
@@ -354,6 +358,52 @@ export default class CueCraftPlugin extends Plugin {
 		};
 	}
 
+	/**
+	 * Wraps Obsidian's requestUrl as a Web `fetch` so AI SDK providers route
+	 * through it (avoids CORS in Electron; no proxy needed).
+	 */
+	private makeFetch(): typeof fetch {
+		return (async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url =
+				typeof input === "string"
+					? input
+					: input instanceof URL
+						? input.toString()
+						: input.url;
+			const headers: Record<string, string> = {};
+			new Headers(init?.headers).forEach((value, key) => {
+				headers[key] = value;
+			});
+			const res = await requestUrl({
+				url,
+				method: init?.method ?? "GET",
+				body: (init?.body as string | ArrayBuffer | undefined) ?? undefined,
+				headers,
+				throw: false,
+			});
+			return new Response(res.arrayBuffer, {
+				status: res.status,
+				headers: res.headers,
+			});
+		}) as typeof fetch;
+	}
+
+	/** Build the provider for the current settings. Public so Settings can test it. */
+	makeProvider(): AiProvider {
+		if (this.settings.provider === "anthropic") {
+			return new AnthropicProvider({
+				apiKey: this.settings.anthropicApiKey,
+				model: this.settings.anthropicModel,
+				fetchImpl: this.makeFetch(),
+			});
+		}
+		return new OllamaProvider({
+			host: this.settings.ollamaHost,
+			model: this.settings.ollamaModel,
+			http: this.makeHttpClient(),
+		});
+	}
+
 	/** Open a fuzzy picker listing the active note's sections, then regen. */
 	private pickAndRegenerateSection(): void {
 		const file = this.app.workspace.getActiveFile();
@@ -362,7 +412,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		if (!this.isConfigured()) {
-			new Notice("CueCraft: set your Ollama host and model in Settings first.");
+			new Notice("CueCraft: set up your AI provider in Settings first.");
 			return;
 		}
 		if (!this.cacheStore.has(file.path)) {
@@ -391,7 +441,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		if (!this.isConfigured()) {
-			new Notice("CueCraft: set your Ollama host and model in Settings first.");
+			new Notice("CueCraft: set up your AI provider in Settings first.");
 			return;
 		}
 		const cache = this.cacheStore.get(file.path);
@@ -406,11 +456,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 
-		const provider = new OllamaProvider({
-			host: this.settings.ollamaHost,
-			model: this.settings.ollamaModel,
-			http: this.makeHttpClient(),
-		});
+		const provider = this.makeProvider();
 
 		const controller = new AbortController();
 		this.currentRun = controller;
@@ -461,7 +507,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		if (!this.isConfigured()) {
-			new Notice("CueCraft: set your Ollama host and model in Settings first.");
+			new Notice("CueCraft: set up your AI provider in Settings first.");
 			return;
 		}
 		const cache = this.cacheStore.get(file.path);
@@ -477,11 +523,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 
-		const provider = new OllamaProvider({
-			host: this.settings.ollamaHost,
-			model: this.settings.ollamaModel,
-			http: this.makeHttpClient(),
-		});
+		const provider = this.makeProvider();
 		const byId = new Map(sections.map((s) => [s.id, s]));
 
 		const controller = new AbortController();
@@ -539,16 +581,12 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		if (!this.isConfigured()) {
-			new Notice("CueCraft: set your Ollama host and model in Settings first.");
+			new Notice("CueCraft: set up your AI provider in Settings first.");
 			return;
 		}
 
 		const markdown = await this.app.vault.cachedRead(file);
-		const provider = new OllamaProvider({
-			host: this.settings.ollamaHost,
-			model: this.settings.ollamaModel,
-			http: this.makeHttpClient(),
-		});
+		const provider = this.makeProvider();
 
 		const controller = new AbortController();
 		this.currentRun = controller;
