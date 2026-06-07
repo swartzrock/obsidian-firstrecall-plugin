@@ -101,6 +101,15 @@ export default class CueCraftPlugin extends Plugin {
 		this.registerEvent(
 			this.app.workspace.on("file-open", (file) => this.onActiveFile(file))
 		);
+		// `file-open` does not fire for a note that Obsidian restores into the
+		// active leaf on startup, and switching back to an already-open tab only
+		// fires `active-leaf-change`. Without this, a restored editor shows no
+		// cues until the user opens a *different* note.
+		this.registerEvent(
+			this.app.workspace.on("active-leaf-change", () =>
+				this.onActiveFile(this.app.workspace.getActiveFile())
+			)
+		);
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
 				if (file instanceof TFile) void this.visibility.rename(oldPath, file.path);
@@ -118,7 +127,12 @@ export default class CueCraftPlugin extends Plugin {
 				if (info.file) this.addVisibilityMenuItem(menu, info.file);
 			})
 		);
-		this.onActiveFile(this.app.workspace.getActiveFile());
+		// Defer the first render until the workspace is restored: during onload
+		// the restored editor's CodeMirror instance isn't ready yet, so an early
+		// renderCues would no-op and the cues would never appear on startup.
+		this.app.workspace.onLayoutReady(() =>
+			this.onActiveFile(this.app.workspace.getActiveFile())
+		);
 	}
 
 	onunload(): void {
