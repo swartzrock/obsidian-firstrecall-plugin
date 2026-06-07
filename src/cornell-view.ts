@@ -1,5 +1,6 @@
-import { ItemView, MarkdownRenderer, TFile, type WorkspaceLeaf } from "obsidian";
+import { ItemView, MarkdownRenderer, Menu, TFile, type WorkspaceLeaf } from "obsidian";
 import type CueCraftPlugin from "./main";
+import { TONE_OPTIONS } from "./main";
 import {
 	failedCueCount,
 	pickCornellFile,
@@ -226,7 +227,7 @@ export class CornellView extends ItemView {
 			});
 			regen.addEventListener("click", (e) => {
 				e.stopPropagation();
-				void this.plugin.regenerateSection(file, row.id);
+				this.showToneMenu(e, file, row.id);
 			});
 		}
 
@@ -253,7 +254,7 @@ export class CornellView extends ItemView {
 		});
 		regen.addEventListener("click", (e) => {
 			e.stopPropagation();
-			void this.plugin.regenerateSection(file, row.id);
+			this.showToneMenu(e, file, row.id);
 		});
 	}
 
@@ -289,6 +290,19 @@ export class CornellView extends ItemView {
 			obj.createEl("strong", { text: "Objective: " });
 			obj.appendText(model.learningObjective);
 		}
+	}
+
+	/** Show a tone picker menu then regenerate the chosen section with that tone. */
+	private showToneMenu(e: MouseEvent, file: TFile, sectionId: string): void {
+		const menu = new Menu();
+		for (const tone of TONE_OPTIONS) {
+			menu.addItem((item) =>
+				item.setTitle(tone.label).onClick(() =>
+					void this.plugin.regenerateSection(file, sectionId, tone.id)
+				)
+			);
+		}
+		menu.showAtMouseEvent(e);
 	}
 
 	/** Apply current reveal state to already-rendered keyword hints (no full re-render). */

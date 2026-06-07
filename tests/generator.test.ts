@@ -185,6 +185,16 @@ describe("generateSectionCue", () => {
 		expect(result.contentHash).toBe("abc123");
 	});
 
+	it("forwards the preset (tone override) to the provider", async () => {
+		const provider = mockProvider();
+		await generateSectionCue({
+			section,
+			provider,
+			preset: "simpler",
+		});
+		expect(provider.cueInputs[0].preset).toBe("simpler");
+	});
+
 	it("captures provider error without throwing", async () => {
 		const provider = mockProvider({ failOnHeading: "Terms" });
 		const result = await generateSectionCue({
