@@ -316,6 +316,3 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-style-handwritten .cuecraft-cornell-q {
 	font-weight: var(--font-bold);
 }
-.cuecraft-style-handwritten .cuecraft-cornell-heading {
-	font-family: "Comic Sans MS", "Bradley Hand", "Segoe Print", cursive;
-}
