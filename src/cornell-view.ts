@@ -1,6 +1,11 @@
 import { ItemView, MarkdownRenderer, TFile, type WorkspaceLeaf } from "obsidian";
 import type CueCraftPlugin from "./main";
-import { pickCornellFile, type CornellModel, type CornellRow } from "./cornell";
+import {
+	failedCueCount,
+	pickCornellFile,
+	type CornellModel,
+	type CornellRow,
+} from "./cornell";
 import { CORNELL_STYLES, cornellStyleClass } from "./cornell-style";
 
 export const VIEW_TYPE_CORNELL = "cuecraft-cornell";
@@ -72,6 +77,7 @@ export class CornellView extends ItemView {
 		}
 
 		this.renderToolbar(root, file);
+		this.renderFailedBanner(root, built.model, file);
 		root.createEl("div", { cls: "cuecraft-cornell-title", text: built.title });
 		await this.renderGrid(root, built.model, file);
 		this.renderSummary(root, built.model);
@@ -98,6 +104,7 @@ export class CornellView extends ItemView {
 			),
 			recentMd,
 			hasCache: (path) => this.plugin.hasCueCache(path),
+			hasUsableCache: (path) => this.plugin.hasUsableCueCache(path),
 		});
 		// pickCornellFile only ever returns one of the TFile inputs (or null).
 		this.lastFile = (picked as TFile | null) ?? null;
@@ -153,6 +160,28 @@ export class CornellView extends ItemView {
 		}
 	}
 
+	/** Banner shown when one or more sections failed to generate. */
+	private renderFailedBanner(
+		root: HTMLElement,
+		model: CornellModel,
+		file: TFile
+	): void {
+		const failed = failedCueCount(model);
+		if (failed === 0) return;
+		const banner = root.createEl("div", { cls: "cuecraft-cornell-failbanner" });
+		banner.createEl("span", {
+			cls: "cuecraft-cornell-failbanner-text",
+			text: `\u26a0 ${failed} section${failed === 1 ? "" : "s"} failed to generate.`,
+		});
+		const retry = banner.createEl("button", {
+			cls: "cuecraft-cornell-btn",
+			text: "\u21bb Retry failed",
+		});
+		retry.addEventListener("click", () => {
+			void this.plugin.regenerateStaleSections(file);
+		});
+	}
+
 	private async renderGrid(
 		root: HTMLElement,
 		model: CornellModel,
@@ -167,7 +196,12 @@ export class CornellView extends ItemView {
 
 	private renderCueCell(grid: HTMLElement, row: CornellRow, file: TFile): void {
 		const cell = grid.createEl("div", { cls: "cuecraft-cornell-cuecell" });
-		if (!row.hasCue || !row.question) return;
+		if (!row.hasCue || !row.question) {
+			// Attempted but failed: surface it as an actionable state instead of a
+			// silent blank cell. Sections never generated stay empty.
+			if (row.error) this.renderErrorCue(cell, row, file);
+			return;
+		}
 
 		const cue = cell.createEl("div", { cls: "cuecraft-cornell-cue" });
 		if (row.confidence) cue.dataset.confidence = row.confidence;
@@ -202,6 +236,24 @@ export class CornellView extends ItemView {
 			if (this.revealed.has(row.id)) this.revealed.delete(row.id);
 			else this.revealed.add(row.id);
 			this.applyReveal(this.contentEl);
+		});
+	}
+
+	/** Render a failed section's cue as a warning + regenerate action. */
+	private renderErrorCue(cell: HTMLElement, row: CornellRow, file: TFile): void {
+		const cue = cell.createEl("div", { cls: "cuecraft-cornell-cue cuecraft-cornell-cue-error" });
+		cue.createEl("div", {
+			cls: "cuecraft-cornell-q",
+			text: "\u26a0 Generation failed",
+		});
+		if (row.error) cue.setAttr("title", row.error);
+		const regen = cue.createEl("button", {
+			cls: "cuecraft-cornell-regen",
+			text: "\u21bb Regenerate",
+		});
+		regen.addEventListener("click", (e) => {
+			e.stopPropagation();
+			void this.plugin.regenerateSection(file, row.id);
 		});
 	}
 

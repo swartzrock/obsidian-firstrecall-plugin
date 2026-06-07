@@ -193,6 +193,11 @@ export function replaceSection(
 	return { ...cache, sections, generatedAt: generatedAt ?? new Date().toISOString() };
 }
 
+/** True when at least one cached section has a usable (non-errored) question. */
+export function hasUsableCues(cache: NoteCache): boolean {
+	return cache.sections.some((s) => !s.error && Boolean(s.question));
+}
+
 export type PersistFn = (map: Record<string, NoteCache>) => Promise<void>;
 
 /**

@@ -15,13 +15,17 @@ export interface CueLineData {
 	question: string;
 	keywords: string[];
 	confidence: Confidence | null;
+	/** Generation error message, when this section failed. */
+	error: string | null;
 }
 
 /**
  * Resolve a cache's cues to current document lines. Cues are matched to the
  * freshly parsed sections by stable id (falling back to the cached line),
  * so they stay attached to the right heading even after edits elsewhere.
- * Sections that errored or have no question are skipped.
+ * Usable cues render their question; sections that errored render a compact
+ * warning marker (instead of nothing) so a failed generation isn't silent.
+ * Sections that were never generated (no question and no error) are skipped.
  */
 export function buildCueLineData(
 	cache: NoteCache,
@@ -32,15 +36,17 @@ export function buildCueLineData(
 
 	const out: CueLineData[] = [];
 	for (const sec of cache.sections) {
-		if (sec.error || !sec.question) continue;
+		if (!sec.question && !sec.error) continue;
 		const current = byId.get(sec.id);
 		const line = current ? current.lineNumber : sec.lineNumber;
+		const failed = Boolean(sec.error) || !sec.question;
 		out.push({
 			line,
 			heading: sec.heading,
-			question: sec.question,
-			keywords: sec.keywords ?? [],
-			confidence: sec.confidence,
+			question: failed ? "" : (sec.question ?? ""),
+			keywords: failed ? [] : sec.keywords ?? [],
+			confidence: failed ? null : sec.confidence,
+			error: failed ? sec.error ?? "Generation failed" : null,
 		});
 	}
 	// Render top-to-bottom.
@@ -57,13 +63,25 @@ class CueWidget extends WidgetType {
 		return (
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
-			other.cue.confidence === this.cue.confidence
+			other.cue.confidence === this.cue.confidence &&
+			other.cue.error === this.cue.error
 		);
 	}
 
 	toDOM(): HTMLElement {
 		const root = document.createElement("div");
 		root.className = "cuecraft-cue";
+
+		if (this.cue.error) {
+			root.classList.add("cuecraft-cue-error");
+			root.title = this.cue.error;
+			const q = document.createElement("div");
+			q.className = "cuecraft-cue-question";
+			q.textContent = "\u26a0 Generation failed \u2014 regenerate";
+			root.appendChild(q);
+			return root;
+		}
+
 		if (this.cue.confidence) {
 			root.dataset.confidence = this.cue.confidence;
 		}

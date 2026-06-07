@@ -25,6 +25,7 @@ import { parseSections, type Section } from "./parser";
 import {
 	CacheStore,
 	buildNoteCache,
+	hasUsableCues,
 	isStale,
 	loadCache,
 	replaceSection,
@@ -364,6 +365,12 @@ export default class CueCraftPlugin extends Plugin {
 	/** Whether a note has generated cues cached. */
 	hasCueCache(path: string): boolean {
 		return this.cacheStore.has(path);
+	}
+
+	/** Whether a note has at least one usable (non-errored) cached cue. */
+	hasUsableCueCache(path: string): boolean {
+		const cache = this.cacheStore.get(path);
+		return cache ? hasUsableCues(cache) : false;
 	}
 
 	/** Re-render any open Cornell views (e.g. after generate/clear/style change). */

@@ -52,9 +52,21 @@ describe("buildCueLineData", () => {
 		});
 	});
 
-	it("skips sections that errored or have no question", () => {
+	it("emits a warning marker for errored sections instead of skipping them", () => {
 		const cache = cacheFrom((_s, i) =>
 			i === 1 ? { error: "boom", question: null } : {}
+		);
+		const cues = buildCueLineData(cache, parseSections(NOTE));
+		expect(cues).toHaveLength(3);
+		const b = cues.find((c) => c.heading === "B");
+		expect(b).toMatchObject({ error: "boom", question: "", keywords: [], confidence: null });
+		// Usable cues carry no error.
+		expect(cues.find((c) => c.heading === "A")?.error).toBeNull();
+	});
+
+	it("skips sections that were never generated (no question, no error)", () => {
+		const cache = cacheFrom((_s, i) =>
+			i === 1 ? { error: null, question: null, keywords: null, confidence: null } : {}
 		);
 		const cues = buildCueLineData(cache, parseSections(NOTE));
 		expect(cues).toHaveLength(2);

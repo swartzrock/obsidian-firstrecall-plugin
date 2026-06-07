@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { buildCornellModel, pickCornellFile, type CornellFileRef } from "../src/cornell";
+import {
+	buildCornellModel,
+	failedCueCount,
+	pickCornellFile,
+	type CornellFileRef,
+} from "../src/cornell";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
@@ -71,6 +76,23 @@ describe("buildCornellModel", () => {
 		expect(b?.content).toBe("beta"); // notes still render
 	});
 
+	it("surfaces the generation error on a failed row (and not on usable ones)", () => {
+		const cache = cacheFrom((_s, i) =>
+			i === 1 ? { error: "boom", question: null } : {}
+		);
+		const model = buildCornellModel(cache, parseSections(NOTE));
+		expect(model.rows.find((r) => r.heading === "B")?.error).toBe("boom");
+		expect(model.rows.find((r) => r.heading === "A")?.error).toBeNull();
+		expect(failedCueCount(model)).toBe(1);
+	});
+
+	it("reports a never-generated section as failure-free (count stays 0)", () => {
+		const cache = cacheFrom();
+		const model = buildCornellModel(cache, parseSections(NOTE + "\n## D\ndelta"));
+		expect(model.rows.find((r) => r.heading === "D")?.error).toBeNull();
+		expect(failedCueCount(model)).toBe(0);
+	});
+
 	it("reflects the live document order and body, not the cache snapshot", () => {
 		const cache = cacheFrom();
 		// Reorder + edit the note after caching; ids stay stable by body hash.
@@ -137,6 +159,30 @@ describe("pickCornellFile", () => {
 			hasCache: (p) => p === "has-cues.md",
 		});
 		expect(picked?.path).toBe("has-cues.md");
+	});
+
+	it("prefers a note with USABLE cues over one whose cache is all errors", () => {
+		const picked = pickCornellFile({
+			active: null,
+			last: null,
+			lastExists: false,
+			recentMd: [md("all-errors.md"), md("good.md")],
+			hasCache: () => true,
+			hasUsableCache: (p) => p === "good.md",
+		});
+		expect(picked?.path).toBe("good.md");
+	});
+
+	it("falls back to an all-errored cache when no note has usable cues", () => {
+		const picked = pickCornellFile({
+			active: null,
+			last: null,
+			lastExists: false,
+			recentMd: [md("plain.md"), md("all-errors.md")],
+			hasCache: (p) => p === "all-errors.md",
+			hasUsableCache: () => false,
+		});
+		expect(picked?.path).toBe("all-errors.md");
 	});
 
 	it("falls back to the most recent Markdown note when none have cues", () => {
