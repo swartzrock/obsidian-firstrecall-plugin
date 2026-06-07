@@ -17,6 +17,9 @@ import {
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
 import { OllamaProvider } from "./providers/ollama-provider";
 import { AnthropicProvider } from "./providers/anthropic-provider";
+import { OpenAIProvider } from "./providers/openai-provider";
+import { GoogleProvider } from "./providers/google-provider";
+import { XaiProvider } from "./providers/xai-provider";
 import type { AiProvider, HttpClient } from "./providers/types";
 import { parseSections, type Section } from "./parser";
 import {
@@ -201,10 +204,24 @@ export default class CueCraftPlugin extends Plugin {
 
 	/** True once the selected provider has its required fields set. */
 	private isConfigured(): boolean {
-		if (this.settings.provider === "anthropic") {
-			return Boolean(this.settings.anthropicApiKey && this.settings.anthropicModel);
+		const s = this.settings;
+		switch (s.provider) {
+			case "anthropic":
+				return Boolean(s.anthropicApiKey && s.anthropicModel);
+			case "openai":
+				return Boolean(s.openaiApiKey && s.openaiModel);
+			case "google":
+				return Boolean(s.googleApiKey && s.googleModel);
+			case "xai":
+				return Boolean(s.xaiApiKey && s.xaiModel);
+			default:
+				return Boolean(s.ollamaHost && s.ollamaModel);
 		}
-		return Boolean(this.settings.ollamaHost && this.settings.ollamaModel);
+	}
+
+	/** Public view of {@link isConfigured} for the settings tab. */
+	isProviderConfigured(): boolean {
+		return this.isConfigured();
 	}
 
 	private setStatus(status: CueStatus, progress?: { done: number; total: number }): void {
@@ -395,18 +412,40 @@ export default class CueCraftPlugin extends Plugin {
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
 	makeProvider(): AiProvider {
-		if (this.settings.provider === "anthropic") {
-			return new AnthropicProvider({
-				apiKey: this.settings.anthropicApiKey,
-				model: this.settings.anthropicModel,
-				fetchImpl: this.makeFetch(),
-			});
+		const s = this.settings;
+		const fetchImpl = this.makeFetch();
+		switch (s.provider) {
+			case "anthropic":
+				return new AnthropicProvider({
+					apiKey: s.anthropicApiKey,
+					model: s.anthropicModel,
+					fetchImpl,
+				});
+			case "openai":
+				return new OpenAIProvider({
+					apiKey: s.openaiApiKey,
+					model: s.openaiModel,
+					fetchImpl,
+				});
+			case "google":
+				return new GoogleProvider({
+					apiKey: s.googleApiKey,
+					model: s.googleModel,
+					fetchImpl,
+				});
+			case "xai":
+				return new XaiProvider({
+					apiKey: s.xaiApiKey,
+					model: s.xaiModel,
+					fetchImpl,
+				});
+			default:
+				return new OllamaProvider({
+					host: s.ollamaHost,
+					model: s.ollamaModel,
+					http: this.makeHttpClient(),
+				});
 		}
-		return new OllamaProvider({
-			host: this.settings.ollamaHost,
-			model: this.settings.ollamaModel,
-			http: this.makeHttpClient(),
-		});
 	}
 
 	/** Open a fuzzy picker listing the active note's sections, then regen. */
