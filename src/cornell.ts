@@ -20,6 +20,8 @@ export interface CornellRow {
 	confidence: Confidence | null;
 	/** True when a usable question exists (no error). */
 	hasCue: boolean;
+	/** Generation error for this section, when it was attempted but failed. */
+	error: string | null;
 }
 
 export interface CornellModel {
@@ -54,6 +56,7 @@ export function buildCornellModel(
 			keywords: hasCue ? cue?.keywords ?? [] : [],
 			confidence: hasCue ? cue?.confidence ?? null : null,
 			hasCue,
+			error: hasCue ? null : cue?.error ?? null,
 		};
 	});
 
@@ -74,8 +77,10 @@ export interface CornellFileRef {
  * Choose which note the Cornell view should render, in priority order:
  *  1. the active Markdown note,
  *  2. the last note we showed (if it still exists),
- *  3. the most recently opened note that has cached cues,
- *  4. failing that, the most recently opened Markdown note.
+ *  3. the most recently opened note with *usable* cues (questions, not just
+ *     errors), so a note whose cache is entirely failed cues doesn't win,
+ *  4. the most recently opened note that has any cache,
+ *  5. failing that, the most recently opened Markdown note.
  *
  * This keeps the view populated after an Obsidian restart, when the restored
  * active leaf is the Cornell view itself and there is no active Markdown file.
@@ -87,14 +92,24 @@ export function pickCornellFile(opts: {
 	lastExists: boolean;
 	recentMd: CornellFileRef[];
 	hasCache: (path: string) => boolean;
+	/** Optional: whether a note has at least one non-errored cue. */
+	hasUsableCache?: (path: string) => boolean;
 }): CornellFileRef | null {
-	const { active, last, lastExists, recentMd, hasCache } = opts;
+	const { active, last, lastExists, recentMd, hasCache, hasUsableCache } = opts;
 	if (active && active.extension === "md") return active;
 	if (last && lastExists) return last;
+	const isUsable = hasUsableCache ?? hasCache;
 	let firstMd: CornellFileRef | null = null;
+	let firstCached: CornellFileRef | null = null;
 	for (const f of recentMd) {
 		if (!firstMd) firstMd = f;
-		if (hasCache(f.path)) return f;
+		if (!firstCached && hasCache(f.path)) firstCached = f;
+		if (isUsable(f.path)) return f;
 	}
-	return firstMd;
+	return firstCached ?? firstMd;
+}
+
+/** How many rows in the model are failed cues (attempted but errored). */
+export function failedCueCount(model: CornellModel): number {
+	return model.rows.filter((r) => r.error).length;
 }

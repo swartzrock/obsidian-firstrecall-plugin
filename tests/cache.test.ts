@@ -3,6 +3,7 @@ import {
 	CACHE_SCHEMA_VERSION,
 	CacheStore,
 	buildNoteCache,
+	hasUsableCues,
 	isStale,
 	loadCache,
 	migrateCache,
@@ -220,5 +221,26 @@ describe("replaceSection", () => {
 		const result = replaceSection(cache, updated);
 		expect(result.sections[0].question).toBe("replaced");
 		expect(cache.sections[0].question).toBe("Q:A"); // original unchanged
+	});
+});
+
+describe("hasUsableCues", () => {
+	it("is true when at least one section has a non-errored question", () => {
+		expect(hasUsableCues(build())).toBe(true);
+	});
+
+	it("is false when every section is errored or questionless", () => {
+		const cache = build();
+		const allFailed: NoteCache = {
+			...cache,
+			sections: cache.sections.map((s) => ({
+				...s,
+				question: null,
+				keywords: null,
+				confidence: null,
+				error: "response was not valid JSON",
+			})),
+		};
+		expect(hasUsableCues(allFailed)).toBe(false);
 	});
 });
