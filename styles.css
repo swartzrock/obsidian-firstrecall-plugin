@@ -209,3 +209,110 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-cornell-objective {
 	margin-top: 8px;
 }
+
+/* =========================================================================
+ * Cornell view — visual style presets (V1.2).
+ * Each preset is scoped under .cuecraft-style-<id> on the view root so only
+ * the chosen look applies. "Cornell Classic" is the base styling above; the
+ * presets below layer overrides on top. Classic/Exam Prep/Minimal stay
+ * theme-aware; Legal Pad and Handwritten deliberately use their own palette
+ * (matching the approved mockups).
+ * ========================================================================= */
+
+/* ---- Exam Prep: boxed cues with a confidence badge ---- */
+.cuecraft-style-exam-prep .cuecraft-cornell-cue {
+	border: 1px solid var(--background-modifier-border);
+	border-left-width: 4px;
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+	padding: 8px 10px;
+}
+.cuecraft-style-exam-prep .cuecraft-cornell-cue::before {
+	content: "Question";
+	display: inline-block;
+	font-size: var(--font-smallest);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 0 6px;
+	margin-bottom: 6px;
+}
+.cuecraft-style-exam-prep .cuecraft-cornell-cue[data-confidence="high"]::before {
+	content: "Question · high";
+}
+.cuecraft-style-exam-prep .cuecraft-cornell-cue[data-confidence="medium"]::before {
+	content: "Question · medium";
+}
+.cuecraft-style-exam-prep .cuecraft-cornell-cue[data-confidence="low"]::before {
+	content: "Question · low";
+}
+.cuecraft-style-exam-prep .cuecraft-cornell-kw {
+	border-top: 1px dashed var(--background-modifier-border);
+	padding-top: 6px;
+}
+
+/* ---- Legal Pad: yellow ruled paper, red margin rule, serif type ---- */
+.cuecraft-style-legal-pad .cuecraft-cornell-grid {
+	background-color: #f8f4d8;
+	background-image: repeating-linear-gradient(#f8f4d8 0 27px, #e4dcae 27px 28px);
+	color: #2b2a23;
+	font-family: Georgia, "Times New Roman", serif;
+	border-radius: 6px;
+}
+.cuecraft-style-legal-pad .cuecraft-cornell-cuecell {
+	border-right-color: #d98b8b;
+}
+.cuecraft-style-legal-pad .cuecraft-cornell-cue {
+	border-left-color: #d98b8b;
+}
+.cuecraft-style-legal-pad .cuecraft-cornell-q,
+.cuecraft-style-legal-pad .cuecraft-cornell-heading {
+	color: #2b2a23;
+}
+.cuecraft-style-legal-pad .cuecraft-cornell-chip {
+	color: #6a5d2a;
+	border-color: #c8ba78;
+	font-style: italic;
+}
+.cuecraft-style-legal-pad .cuecraft-cornell-body,
+.cuecraft-style-legal-pad .cuecraft-cornell-body p {
+	color: #2b2a23;
+}
+
+/* ---- Minimal: quiet, borderless cues ---- */
+.cuecraft-style-minimal .cuecraft-cornell-cuecell {
+	border-right-color: var(--background-modifier-border);
+}
+.cuecraft-style-minimal .cuecraft-cornell-cue {
+	border-left: 2px solid var(--background-modifier-border);
+}
+.cuecraft-style-minimal .cuecraft-cornell-cue[data-confidence] {
+	border-left-color: var(--background-modifier-border);
+}
+.cuecraft-style-minimal .cuecraft-cornell-q {
+	font-weight: var(--font-normal);
+	color: var(--text-muted);
+}
+.cuecraft-style-minimal .cuecraft-cornell-chip {
+	border-color: transparent;
+	padding: 1px 4px;
+}
+.cuecraft-style-minimal .cuecraft-cornell-title {
+	border-bottom-color: var(--background-modifier-border);
+	font-weight: var(--font-semibold);
+}
+
+/* ---- Handwritten: casual font, dashed tilted card ---- */
+.cuecraft-style-handwritten .cuecraft-cornell-cue {
+	font-family: "Comic Sans MS", "Bradley Hand", "Segoe Print", cursive;
+	border-left-style: dashed;
+	background: var(--background-secondary);
+	border-radius: var(--radius-s);
+	padding: 6px 9px;
+	transform: rotate(-0.4deg);
+}
+.cuecraft-style-handwritten .cuecraft-cornell-q {
+	font-weight: var(--font-bold);
+}

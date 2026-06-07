@@ -1,5 +1,10 @@
 import { App, Notice, PluginSettingTab, Setting, requestUrl } from "obsidian";
 import type CueCraftPlugin from "./main";
+import {
+	CORNELL_STYLES,
+	DEFAULT_CORNELL_STYLE,
+	type CornellStyle,
+} from "./cornell-style";
 
 /**
  * CueCraft supports a local provider (Ollama) and several cloud providers via
@@ -24,6 +29,7 @@ export interface CueCraftSettings {
 	xaiModel: string;
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
+	cornellStyle: CornellStyle;
 }
 
 export const DEFAULT_SETTINGS: CueCraftSettings = {
@@ -40,6 +46,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	xaiModel: "grok-2-latest",
 	cuePreset: "conceptual",
 	studyHideMode: "blur",
+	cornellStyle: DEFAULT_CORNELL_STYLE,
 };
 
 export class CueCraftSettingTab extends PluginSettingTab {
@@ -105,6 +112,24 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		const styleSetting = new Setting(containerEl)
+			.setName("Cornell view style")
+			.addDropdown((dd) => {
+				for (const s of CORNELL_STYLES) dd.addOption(s.id, s.label);
+				dd.setValue(this.plugin.settings.cornellStyle).onChange(
+					async (value) => {
+						this.plugin.settings.cornellStyle = value as CornellStyle;
+						await this.plugin.saveSettings();
+						this.plugin.refreshCornellViews();
+						styleSetting.setDesc(styleDesc());
+					}
+				);
+			});
+		const styleDesc = (): string =>
+			CORNELL_STYLES.find((s) => s.id === this.plugin.settings.cornellStyle)
+				?.description ?? "Visual preset for the Cornell view.";
+		styleSetting.setDesc(styleDesc());
 
 		new Setting(containerEl)
 			.setName("Study Mode hide style")

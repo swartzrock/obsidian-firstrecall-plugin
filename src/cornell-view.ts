@@ -1,6 +1,7 @@
 import { ItemView, MarkdownRenderer, TFile, type WorkspaceLeaf } from "obsidian";
 import type CueCraftPlugin from "./main";
 import { pickCornellFile, type CornellModel, type CornellRow } from "./cornell";
+import { CORNELL_STYLES, cornellStyleClass } from "./cornell-style";
 
 export const VIEW_TYPE_CORNELL = "cuecraft-cornell";
 
@@ -51,6 +52,9 @@ export class CornellView extends ItemView {
 		root.empty();
 		root.addClass("cuecraft-cornell");
 		root.toggleClass("cuecraft-cornell-study", this.studyMode);
+		// Apply the selected visual preset; only one style class at a time.
+		for (const s of CORNELL_STYLES) root.removeClass(cornellStyleClass(s.id));
+		root.addClass(cornellStyleClass(this.plugin.settings.cornellStyle));
 
 		const file = this.resolveTargetFile();
 		if (!file) {
