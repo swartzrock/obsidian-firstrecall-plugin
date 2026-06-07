@@ -352,8 +352,8 @@ export default class CueCraftPlugin extends Plugin {
 		return this.cacheStore.has(path);
 	}
 
-	/** Re-render any open Cornell views (e.g. after generate/clear). */
-	private refreshCornellViews(): void {
+	/** Re-render any open Cornell views (e.g. after generate/clear/style change). */
+	refreshCornellViews(): void {
 		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_CORNELL)) {
 			const view = leaf.view;
 			if (view instanceof CornellView) void view.render();
