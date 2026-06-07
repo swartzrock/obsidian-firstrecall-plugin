@@ -491,16 +491,21 @@ export default class CueCraftPlugin extends Plugin {
 			new Notice("CueCraft: no headed sections found.");
 			return;
 		}
-		new SectionSuggestModal(this.app, sections, this.cacheStore.get(file.path), (s) =>
-			void this.regenerateSection(file, s.id)
-		).open();
+		new SectionSuggestModal(this.app, sections, this.cacheStore.get(file.path), (s) => {
+			new ToneSuggestModal(this.app, (tone) =>
+				void this.regenerateSection(file, s.id, tone)
+			).open();
+		}).open();
 	}
 
 	/**
 	 * Regenerate the cue for a single section (by id) and merge it back into the
 	 * cache. Public so the Cornell view can call it directly from per-cue buttons.
+	 * When `toneOverride` is supplied it replaces the global cue preset for this
+	 * single regeneration, so users can ask for a different question style without
+	 * changing their default setting.
 	 */
-	async regenerateSection(file: TFile, sectionId: string): Promise<void> {
+	async regenerateSection(file: TFile, sectionId: string, toneOverride?: string): Promise<void> {
 		if (this.currentRun) {
 			new Notice("CueCraft: generation already in progress.");
 			return;
@@ -531,7 +536,7 @@ export default class CueCraftPlugin extends Plugin {
 			const result = await generateSectionCue({
 				section,
 				provider,
-				preset: this.settings.cuePreset,
+				preset: toneOverride ?? this.settings.cuePreset,
 				noteContext: markdown,
 				signal: controller.signal,
 			});
@@ -769,6 +774,37 @@ function toCachedSection(result: SectionResult): CachedSection {
 		confidence: result.confidence,
 		error: result.error,
 	};
+}
+
+/** Tone variant options shown when regenerating a single section's cue. */
+export const TONE_OPTIONS: Array<{ id: string; label: string }> = [
+	{ id: "conceptual", label: "More conceptual" },
+	{ id: "exam-prep", label: "Exam prep" },
+	{ id: "simpler", label: "Simpler" },
+	{ id: "vocabulary", label: "Vocabulary" },
+];
+
+/** Fuzzy picker that presents the four tone variants for per-section regeneration. */
+class ToneSuggestModal extends FuzzySuggestModal<{ id: string; label: string }> {
+	constructor(
+		app: InstanceType<typeof Plugin>["app"],
+		private readonly onChoose: (toneId: string) => void
+	) {
+		super(app);
+		this.setPlaceholder("Choose a tone for this cue…");
+	}
+
+	getItems(): Array<{ id: string; label: string }> {
+		return TONE_OPTIONS;
+	}
+
+	getItemText(item: { id: string; label: string }): string {
+		return item.label;
+	}
+
+	onChooseItem(item: { id: string; label: string }): void {
+		this.onChoose(item.id);
+	}
 }
 
 /**

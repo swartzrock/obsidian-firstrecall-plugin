@@ -37,6 +37,7 @@ const PRESET_GUIDANCE: Record<string, string> = {
 	"exam-prep": "Write an exam-style question a student is likely to be tested on.",
 	vocabulary: "Emphasize key terms and their definitions.",
 	minimal: "Keep the question short and direct.",
+	simpler: "Use simple, accessible language. Keep the question brief and focused on the single most basic idea.",
 };
 
 export class OllamaProvider implements AiProvider {

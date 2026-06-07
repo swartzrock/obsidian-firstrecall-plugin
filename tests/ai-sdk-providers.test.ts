@@ -86,7 +86,21 @@ for (const c of cases) {
 			expect(prompts[0]).toContain("exam-style");
 		});
 
-		it("throws a ProviderError on invalid model output", async () => {
+		it("includes simpler preset guidance in the prompt", async () => {
+				const { generator, prompts } = fixedGenerator({
+					question: "Q?",
+					keywords: ["a", "b"],
+					confidence: "low",
+				});
+				await make(generator).generateCue({
+					heading: "H",
+					content: "c",
+					preset: "simpler",
+				});
+				expect(prompts[0]).toContain("simple, accessible");
+			});
+
+			it("throws a ProviderError on invalid model output", async () => {
 			const { generator } = fixedGenerator({
 				question: "Q?",
 				keywords: [], // too few -> invalid
