@@ -136,6 +136,17 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	grid-template-columns: minmax(180px, 260px) 1fr;
 }
 
+/* ---- Typography / layout controls (cue-column width) ---- */
+.cuecraft-cuewidth-narrow .cuecraft-cornell-grid {
+	grid-template-columns: minmax(140px, 200px) 1fr;
+}
+.cuecraft-cuewidth-medium .cuecraft-cornell-grid {
+	grid-template-columns: minmax(180px, 260px) 1fr;
+}
+.cuecraft-cuewidth-wide .cuecraft-cornell-grid {
+	grid-template-columns: minmax(240px, 360px) 1fr;
+}
+
 .cuecraft-cornell-cuecell {
 	border-right: 2px solid var(--text-muted);
 	padding: 12px 14px 12px 2px;
@@ -162,6 +173,23 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-cornell-q {
 	font-weight: var(--font-semibold);
 	font-size: var(--font-ui-small);
+}
+
+/* ---- Typography / layout controls (cue font size) ---- */
+.cuecraft-cuefont-small .cuecraft-cornell-q {
+	font-size: var(--font-smallest);
+}
+.cuecraft-cuefont-small .cuecraft-cornell-chip {
+	font-size: calc(var(--font-smallest) * 0.9);
+}
+.cuecraft-cuefont-medium .cuecraft-cornell-q {
+	font-size: var(--font-ui-small);
+}
+.cuecraft-cuefont-large .cuecraft-cornell-q {
+	font-size: var(--font-ui-medium);
+}
+.cuecraft-cuefont-large .cuecraft-cornell-chip {
+	font-size: var(--font-ui-smaller, var(--font-smallest));
 }
 
 .cuecraft-cornell-kw {

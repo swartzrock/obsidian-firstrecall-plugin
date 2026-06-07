@@ -5,6 +5,14 @@ import {
 	DEFAULT_CORNELL_STYLE,
 	type CornellStyle,
 } from "./cornell-style";
+import {
+	CUE_COLUMN_WIDTHS,
+	CUE_FONT_SIZES,
+	DEFAULT_CUE_COLUMN_WIDTH,
+	DEFAULT_CUE_FONT_SIZE,
+	type CueColumnWidth,
+	type CueFontSize,
+} from "./cornell-layout";
 
 /**
  * CueCraft supports a local provider (Ollama) and several cloud providers via
@@ -30,6 +38,8 @@ export interface CueCraftSettings {
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
 	cornellStyle: CornellStyle;
+	cueColumnWidth: CueColumnWidth;
+	cueFontSize: CueFontSize;
 }
 
 export const DEFAULT_SETTINGS: CueCraftSettings = {
@@ -47,6 +57,8 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cuePreset: "conceptual",
 	studyHideMode: "blur",
 	cornellStyle: DEFAULT_CORNELL_STYLE,
+	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
+	cueFontSize: DEFAULT_CUE_FONT_SIZE,
 };
 
 export class CueCraftSettingTab extends PluginSettingTab {
@@ -130,6 +142,44 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			CORNELL_STYLES.find((s) => s.id === this.plugin.settings.cornellStyle)
 				?.description ?? "Visual preset for the Cornell view.";
 		styleSetting.setDesc(styleDesc());
+
+		const widthSetting = new Setting(containerEl)
+			.setName("Cue column width")
+			.addDropdown((dd) => {
+				for (const w of CUE_COLUMN_WIDTHS) dd.addOption(w.id, w.label);
+				dd.setValue(this.plugin.settings.cueColumnWidth).onChange(
+					async (value) => {
+						this.plugin.settings.cueColumnWidth =
+							value as CueColumnWidth;
+						await this.plugin.saveSettings();
+						this.plugin.refreshCornellViews();
+						widthSetting.setDesc(widthDesc());
+					}
+				);
+			});
+		const widthDesc = (): string =>
+			CUE_COLUMN_WIDTHS.find(
+				(w) => w.id === this.plugin.settings.cueColumnWidth
+			)?.description ?? "Width of the Cornell cue rail.";
+		widthSetting.setDesc(widthDesc());
+
+		const fontSetting = new Setting(containerEl)
+			.setName("Cue font size")
+			.addDropdown((dd) => {
+				for (const f of CUE_FONT_SIZES) dd.addOption(f.id, f.label);
+				dd.setValue(this.plugin.settings.cueFontSize).onChange(
+					async (value) => {
+						this.plugin.settings.cueFontSize = value as CueFontSize;
+						await this.plugin.saveSettings();
+						this.plugin.refreshCornellViews();
+						fontSetting.setDesc(fontDesc());
+					}
+				);
+			});
+		const fontDesc = (): string =>
+			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
+				?.description ?? "Font size of the Cornell cue text.";
+		fontSetting.setDesc(fontDesc());
 
 		new Setting(containerEl)
 			.setName("Study Mode hide style")
