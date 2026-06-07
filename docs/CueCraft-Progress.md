@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (after PR #21). 123 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (after PR #25). 135 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -15,8 +15,8 @@ display → study), the two biggest risks are retired (theme-safe CM6 cue render
 producing reliable validated structured cues), and provider breadth now covers a local model
 plus four frontier models. What remains is mostly **breadth and UX polish**, not core risk.
 
-Rough completion against the full V1.0 → V2 vision: **~55%**, with 100% of the MVP core loop
-and most of V1.1 done.
+Rough completion against the full V1.0 → V2 vision: **~60%**, with 100% of the MVP core loop,
+most of V1.1 done, and the first slice of V1.2 (visual style presets) shipped.
 
 ---
 
@@ -47,11 +47,22 @@ Each item links to the PR that delivered it.
   per-provider key/model settings + Test connection (#21).
 - Context menus + clickable toggle (delivered with #13/#14).
 
+### V1.2 — Expression & presets (started)
+- **Visual style presets** — "Cornell view style" settings dropdown: Cornell Classic, Exam Prep,
+  Legal Pad, Minimal, Handwritten. Display-only (never touches generation/cache); switching
+  re-renders open Cornell views live (#23).
+
 ### Beyond the original v1.0 slice
 - **Cornell view** — dedicated pane: Title → left cue column | main notes → Summary, from cache;
   **Study Mode** blur/reveal lives on the left keyword hints (#16).
 - **Cornell restart fix** — keep the view populated after an Obsidian restart by falling back to the
   last/most-recent note instead of rendering empty (#20).
+- **Cues render on startup / tab-restore** — push cached cues into the editor via
+  `workspace.onLayoutReady` + `active-leaf-change`, so a restored note shows its cues immediately
+  instead of coming up blank (#24).
+- **Actionable failed-cue state** — errored sections render `⚠ Generation failed` + a Regenerate
+  action (Cornell view banner + per-cue button; editor marker) instead of a silent blank; restart
+  fallback prefers notes with *usable* cues (#25).
 
 ---
 
@@ -62,13 +73,10 @@ Each item links to the PR that delivered it.
    ("More conceptual", "Exam prep", "Simpler", "Vocabulary"). Builds directly on #17; pass the
    chosen tone into the existing cue prompt. Small, high-value. _(Next planned PR.)_
 
-### P2 — V1.2 Expression & presets (the big visible upgrade)
-2. **Visual style presets** — Cornell Classic, Exam Prep, Legal Pad, Minimal, Handwritten
-   (mockups already explored in `cuecraft-mockups/`). Selectable in settings; applies to the
-   Cornell view (and editor where feasible).
-3. **Typography / layout controls** — cue-column width, font, under-heading vs. left-rail placement
-   in the editor.
-4. **Cue content presets** — Vocabulary-heavy / Minimal content modes + Faster vs. Better generation.
+### P2 — V1.2 Expression & presets (visual style presets shipped in #23)
+2. **Typography / layout controls** — cue-column width, font, under-heading vs. left-rail placement
+   in the editor. _(Next planned P2 slice.)_
+3. **Cue content presets** — Vocabulary-heavy / Minimal content modes + Faster vs. Better generation.
 
 ### P3 — V1.5 Reading & Review
 5. **Reading-mode cues** — render cues in Obsidian reading view, reusing the existing cache.
@@ -100,7 +108,7 @@ Each item links to the PR that delivered it.
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (123 tests)
+bun run test       # vitest (135 tests)
 ```
 
 Install into a vault by copying `main.js`, `manifest.json`, `styles.css` into
