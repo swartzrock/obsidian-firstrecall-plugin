@@ -78,9 +78,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-cornell-toolbar {
 	display: flex;
+	align-items: center;
 	gap: 8px;
 	justify-content: flex-end;
 	margin-bottom: 6px;
+}
+/* Pushes the ⚙ Display button to the far right of the toolbar. */
+.cuecraft-cornell-spacer {
+	flex: 1 1 auto;
 }
 
 .cuecraft-cornell-btn {
@@ -90,6 +95,55 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	cursor: pointer;
 }
 .cuecraft-cornell-btn.is-active {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+/* ---- Hybrid in-view display-controls row (style / width / font) ---- */
+.cuecraft-cornell-display {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 18px;
+	margin-bottom: 10px;
+	padding: 8px 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+}
+.cuecraft-cornell-ctl {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+}
+.cuecraft-cornell-ctl-label {
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+}
+.cuecraft-cornell-select {
+	font-size: var(--font-ui-smaller);
+}
+.cuecraft-cornell-seg {
+	display: inline-flex;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	overflow: hidden;
+}
+.cuecraft-cornell-seg-btn {
+	font-size: var(--font-ui-smaller);
+	padding: 2px 9px;
+	border: none;
+	border-right: 1px solid var(--background-modifier-border);
+	border-radius: 0;
+	box-shadow: none;
+	cursor: pointer;
+	color: var(--text-muted);
+	background: var(--background-primary);
+}
+.cuecraft-cornell-seg-btn:last-child {
+	border-right: none;
+}
+.cuecraft-cornell-seg-btn.is-on {
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
 }

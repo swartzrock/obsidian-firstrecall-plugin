@@ -7,12 +7,18 @@ import {
 	type CornellModel,
 	type CornellRow,
 } from "./cornell";
-import { CORNELL_STYLES, cornellStyleClass } from "./cornell-style";
+import {
+	CORNELL_STYLES,
+	cornellStyleClass,
+	type CornellStyle,
+} from "./cornell-style";
 import {
 	CUE_COLUMN_WIDTHS,
 	CUE_FONT_SIZES,
 	cueColumnWidthClass,
 	cueFontSizeClass,
+	type CueColumnWidth,
+	type CueFontSize,
 } from "./cornell-layout";
 
 export const VIEW_TYPE_CORNELL = "cuecraft-cornell";
@@ -29,6 +35,8 @@ export class CornellView extends ItemView {
 	private revealed = new Set<string>();
 	/** When true, all hints are shown regardless of per-cue reveal state. */
 	private revealAll = false;
+	/** When true, the in-view display-controls row (style/width/font) is shown. */
+	private displayOpen = false;
 	/** The last Markdown note we rendered, used as a fallback on restart. */
 	private lastFile: TFile | null = null;
 
@@ -90,6 +98,7 @@ export class CornellView extends ItemView {
 		}
 
 		this.renderToolbar(root, file);
+		if (this.displayOpen) this.renderDisplayRow(root);
 		this.renderFailedBanner(root, built.model, file);
 		root.createEl("div", { cls: "cuecraft-cornell-title", text: built.title });
 		await this.renderGrid(root, built.model, file);
@@ -171,6 +180,98 @@ export class CornellView extends ItemView {
 				this.applyReveal(root);
 			});
 		}
+
+		bar.createEl("span", { cls: "cuecraft-cornell-spacer" });
+		const display = bar.createEl("button", {
+			cls: "cuecraft-cornell-btn",
+			text: `\u2699 Display ${this.displayOpen ? "\u25b4" : "\u25be"}`,
+		});
+		display.toggleClass("is-active", this.displayOpen);
+		display.addEventListener("click", () => {
+			this.displayOpen = !this.displayOpen;
+			void this.render();
+		});
+	}
+
+	/**
+	 * The Hybrid display-controls row: an in-view (no overlay) strip of Style /
+	 * cue-column-width / cue-font-size controls that the ⚙ Display button expands.
+	 * Each control writes straight to settings and live-re-renders, so the effect
+	 * is visible immediately under the controls. Settings remains the place to set
+	 * the saved default.
+	 */
+	private renderDisplayRow(root: HTMLElement): void {
+		const row = root.createEl("div", { cls: "cuecraft-cornell-display" });
+
+		const styleCtl = row.createEl("div", { cls: "cuecraft-cornell-ctl" });
+		styleCtl.createEl("label", {
+			cls: "cuecraft-cornell-ctl-label",
+			text: "Style",
+		});
+		const select = styleCtl.createEl("select", {
+			cls: "cuecraft-cornell-select dropdown",
+		});
+		for (const s of CORNELL_STYLES) {
+			const opt = select.createEl("option", { text: s.label });
+			opt.value = s.id;
+		}
+		select.value = this.plugin.settings.cornellStyle;
+		select.addEventListener("change", () => {
+			this.plugin.settings.cornellStyle = select.value as CornellStyle;
+			void this.commitDisplayChange();
+		});
+
+		this.renderSegmented(
+			row,
+			"Width",
+			CUE_COLUMN_WIDTHS,
+			this.plugin.settings.cueColumnWidth,
+			(id) => {
+				this.plugin.settings.cueColumnWidth = id as CueColumnWidth;
+			}
+		);
+		this.renderSegmented(
+			row,
+			"Font",
+			CUE_FONT_SIZES,
+			this.plugin.settings.cueFontSize,
+			(id) => {
+				this.plugin.settings.cueFontSize = id as CueFontSize;
+			}
+		);
+	}
+
+	/** A small segmented-button group used by the display-controls row. */
+	private renderSegmented(
+		parent: HTMLElement,
+		label: string,
+		options: readonly { id: string; label: string }[],
+		current: string,
+		set: (id: string) => void
+	): void {
+		const ctl = parent.createEl("div", { cls: "cuecraft-cornell-ctl" });
+		ctl.createEl("label", {
+			cls: "cuecraft-cornell-ctl-label",
+			text: label,
+		});
+		const seg = ctl.createEl("div", { cls: "cuecraft-cornell-seg" });
+		for (const o of options) {
+			const btn = seg.createEl("button", {
+				cls: "cuecraft-cornell-seg-btn",
+				text: o.label,
+			});
+			btn.toggleClass("is-on", o.id === current);
+			btn.addEventListener("click", () => {
+				set(o.id);
+				void this.commitDisplayChange();
+			});
+		}
+	}
+
+	/** Persist a display-control change and live-re-render open Cornell views. */
+	private async commitDisplayChange(): Promise<void> {
+		await this.plugin.saveSettings();
+		this.plugin.refreshCornellViews();
 	}
 
 	/** Banner shown when one or more sections failed to generate. */
