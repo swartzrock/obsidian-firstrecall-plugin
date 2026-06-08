@@ -8,6 +8,12 @@ import {
 	type CornellRow,
 } from "./cornell";
 import { CORNELL_STYLES, cornellStyleClass } from "./cornell-style";
+import {
+	CUE_COLUMN_WIDTHS,
+	CUE_FONT_SIZES,
+	cueColumnWidthClass,
+	cueFontSizeClass,
+} from "./cornell-layout";
 
 export const VIEW_TYPE_CORNELL = "cuecraft-cornell";
 
@@ -61,6 +67,12 @@ export class CornellView extends ItemView {
 		// Apply the selected visual preset; only one style class at a time.
 		for (const s of CORNELL_STYLES) root.removeClass(cornellStyleClass(s.id));
 		root.addClass(cornellStyleClass(this.plugin.settings.cornellStyle));
+		// Apply the typography/layout controls (width + font size), one each.
+		for (const w of CUE_COLUMN_WIDTHS)
+			root.removeClass(cueColumnWidthClass(w.id));
+		root.addClass(cueColumnWidthClass(this.plugin.settings.cueColumnWidth));
+		for (const f of CUE_FONT_SIZES) root.removeClass(cueFontSizeClass(f.id));
+		root.addClass(cueFontSizeClass(this.plugin.settings.cueFontSize));
 
 		const file = this.resolveTargetFile();
 		if (!file) {
