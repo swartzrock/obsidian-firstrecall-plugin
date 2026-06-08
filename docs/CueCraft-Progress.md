@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (after PR #29). 150 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (after PR #30). 155 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -61,6 +61,12 @@ Each item links to the PR that delivered it.
   in-pane control row (no overlay) with Style / Width / Font controls, so you tweak them while
   looking right at the cues. Writes through to the same saved settings; settings stays the place
   to set the default (#29).
+- **Editor cue placement** — "Editor cue placement" setting: **Under heading** (full-width block,
+  the default) vs. **Left rail** (compact card floated into the left margin so note text keeps its
+  width). Display-only body-class toggle; pure `editor-layout.ts` module with unit tests (#30).
+- **Cue content presets** — "Cue preset" (Conceptual / Exam prep / Vocabulary-heavy / Minimal) plus
+  one-off tone variants on per-section regenerate; both feed `PRESET_GUIDANCE` into the prompt
+  (shipped with #27).
 
 ### Beyond the original v1.0 slice
 - **Cornell view** — dedicated pane: Title → left cue column | main notes → Summary, from cache;
@@ -78,10 +84,9 @@ Each item links to the PR that delivered it.
 
 ## Remaining work (prioritized)
 
-### P1 — V1.2 Expression & presets (visual presets #23, typography/layout #28, in-view controls #29 shipped)
-1. **Editor cue placement** — under-heading (current) vs. left-rail placement for the inline
-   editor cue layer, complementing the Cornell-view typography/layout controls. _(Next planned slice.)_
-2. **Cue content presets** — Vocabulary-heavy / Minimal content modes + Faster vs. Better generation.
+### P1 — V1.2 Expression & presets (mostly shipped: visual presets #23, typography/layout #28, in-view controls #29, editor placement #30)
+1. **Faster vs. Better generation** — the only remaining P1 knob: a generation-quality toggle
+   (content presets + tone variants already shipped in #27). _(Optional / lower value.)_
 
 ### P3 — V1.5 Reading & Review
 5. **Reading-mode cues** — render cues in Obsidian reading view, reusing the existing cache.

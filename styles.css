@@ -246,6 +246,18 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-size: var(--font-ui-smaller, var(--font-smallest));
 }
 
+/* ---- Editor cue placement (under heading vs. left rail) ----
+ * Default ("under") keeps the cue as a full-width block beneath the heading.
+ * "rail" floats it to the left as a compact card so the heading + note text
+ * wrap to its right, reading like a margin annotation. */
+body.cuecraft-editorcue-rail .cuecraft-cue {
+	float: left;
+	clear: left;
+	width: 38%;
+	max-width: 320px;
+	margin: 0.3em 1.1em 0.5em 0;
+}
+
 .cuecraft-cornell-kw {
 	margin-top: 8px;
 	display: flex;

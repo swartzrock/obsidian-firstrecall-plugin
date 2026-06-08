@@ -13,6 +13,11 @@ import {
 	type CueColumnWidth,
 	type CueFontSize,
 } from "./cornell-layout";
+import {
+	EDITOR_CUE_PLACEMENTS,
+	DEFAULT_EDITOR_CUE_PLACEMENT,
+	type EditorCuePlacement,
+} from "./editor-layout";
 
 /**
  * CueCraft supports a local provider (Ollama) and several cloud providers via
@@ -40,6 +45,7 @@ export interface CueCraftSettings {
 	cornellStyle: CornellStyle;
 	cueColumnWidth: CueColumnWidth;
 	cueFontSize: CueFontSize;
+	editorCuePlacement: EditorCuePlacement;
 }
 
 export const DEFAULT_SETTINGS: CueCraftSettings = {
@@ -59,6 +65,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cornellStyle: DEFAULT_CORNELL_STYLE,
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
+	editorCuePlacement: DEFAULT_EDITOR_CUE_PLACEMENT,
 };
 
 export class CueCraftSettingTab extends PluginSettingTab {
@@ -180,6 +187,26 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
 				?.description ?? "Font size of the Cornell cue text.";
 		fontSetting.setDesc(fontDesc());
+
+		const placementSetting = new Setting(containerEl)
+			.setName("Editor cue placement")
+			.addDropdown((dd) => {
+				for (const p of EDITOR_CUE_PLACEMENTS) dd.addOption(p.id, p.label);
+				dd.setValue(this.plugin.settings.editorCuePlacement).onChange(
+					async (value) => {
+						this.plugin.settings.editorCuePlacement =
+							value as EditorCuePlacement;
+						await this.plugin.saveSettings();
+						this.plugin.applyEditorCuePlacement();
+						placementSetting.setDesc(placementDesc());
+					}
+				);
+			});
+		const placementDesc = (): string =>
+			EDITOR_CUE_PLACEMENTS.find(
+				(p) => p.id === this.plugin.settings.editorCuePlacement
+			)?.description ?? "Where inline editor cues sit relative to the heading.";
+		placementSetting.setDesc(placementDesc());
 
 		new Setting(containerEl)
 			.setName("Study Mode hide style")

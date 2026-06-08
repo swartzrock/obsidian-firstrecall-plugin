@@ -44,6 +44,10 @@ import {
 	pillAction,
 	visibilityMenuLabel,
 } from "./visibility";
+import {
+	EDITOR_CUE_PLACEMENTS,
+	editorCuePlacementClass,
+} from "./editor-layout";
 import { buildCornellModel, type CornellModel } from "./cornell";
 import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 
@@ -98,6 +102,7 @@ export default class CueCraftPlugin extends Plugin {
 		this.updateRibbonLabel();
 		this.registerCommands();
 		this.registerEditorExtension(cueEditorExtension);
+		this.applyEditorCuePlacement();
 
 		this.registerEvent(
 			this.app.workspace.on("file-open", (file) => this.onActiveFile(file))
@@ -137,7 +142,21 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	onunload(): void {
-		// Nothing persistent to tear down in the scaffold.
+		for (const p of EDITOR_CUE_PLACEMENTS)
+			document.body.removeClass(editorCuePlacementClass(p.id));
+	}
+
+	/**
+	 * Reflect the editor cue-placement setting as a body class so `styles.css`
+	 * can shift the inline editor cue layer (under-heading vs. left rail). The
+	 * cue widgets themselves are unchanged; only their layout differs.
+	 */
+	applyEditorCuePlacement(): void {
+		for (const p of EDITOR_CUE_PLACEMENTS)
+			document.body.removeClass(editorCuePlacementClass(p.id));
+		document.body.addClass(
+			editorCuePlacementClass(this.settings.editorCuePlacement)
+		);
 	}
 
 	private async loadPluginData(): Promise<void> {
