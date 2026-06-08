@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (after PR #28). 150 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (after PR #29). 150 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -57,6 +57,10 @@ Each item links to the PR that delivered it.
 - **Typography / layout controls** — "Cue column width" (Narrow/Medium/Wide) and "Cue font size"
   (Small/Medium/Large) settings dropdowns applied live to the Cornell view via CSS classes.
   Display-only; pure `cornell-layout.ts` module with unit tests (#28).
+- **In-view display controls (Hybrid)** — a `⚙ Display` button in the Cornell toolbar expands an
+  in-pane control row (no overlay) with Style / Width / Font controls, so you tweak them while
+  looking right at the cues. Writes through to the same saved settings; settings stays the place
+  to set the default (#29).
 
 ### Beyond the original v1.0 slice
 - **Cornell view** — dedicated pane: Title → left cue column | main notes → Summary, from cache;
@@ -74,7 +78,7 @@ Each item links to the PR that delivered it.
 
 ## Remaining work (prioritized)
 
-### P1 — V1.2 Expression & presets (visual presets #23, typography/layout #28 shipped)
+### P1 — V1.2 Expression & presets (visual presets #23, typography/layout #28, in-view controls #29 shipped)
 1. **Editor cue placement** — under-heading (current) vs. left-rail placement for the inline
    editor cue layer, complementing the Cornell-view typography/layout controls. _(Next planned slice.)_
 2. **Cue content presets** — Vocabulary-heavy / Minimal content modes + Faster vs. Better generation.
