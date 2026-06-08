@@ -2,8 +2,8 @@
  * Editor cue-placement control (V1.2). A display-only knob for where the inline
  * editor cue layer sits relative to its heading:
  *   - "under" — a full-width block directly beneath the heading (the default).
- *   - "rail"  — a compact card pulled to the left margin, so the note text keeps
- *               its width and cues read like margin annotations.
+ *   - "rail"  — a Cornell-style left margin: note content shifts right and the
+ *               cue is pulled into the reserved left gutter as a compact card.
  *
  * Like the Cornell layout controls, this never touches generation or the cache;
  * the plugin tags `document.body` with a CSS class per option and `styles.css`
@@ -31,7 +31,7 @@ export const EDITOR_CUE_PLACEMENTS: readonly EditorLayoutOptionInfo<EditorCuePla
 			id: "rail",
 			label: "Left rail",
 			description:
-				"Cue is pulled into the left margin as a compact card, keeping note text full-width.",
+				"Note text shifts right and the cue sits in a Cornell-style left margin as a compact card.",
 		},
 	] as const;
 

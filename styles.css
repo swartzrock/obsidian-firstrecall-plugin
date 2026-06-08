@@ -248,14 +248,20 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 /* ---- Editor cue placement (under heading vs. left rail) ----
  * Default ("under") keeps the cue as a full-width block beneath the heading.
- * "rail" floats it to the left as a compact card so the heading + note text
- * wrap to its right, reading like a margin annotation. */
-body.cuecraft-editorcue-rail .cuecraft-cue {
-	float: left;
-	clear: left;
-	width: 38%;
-	max-width: 320px;
-	margin: 0.3em 1.1em 0.5em 0;
+ * "rail" turns the inline cue layer into a Cornell-style left margin: the note
+ * content is shifted right to reserve a gutter, and each block cue widget is
+ * pulled back into that gutter with a negative margin. Floats can't be used
+ * here because each editor line is its own CodeMirror block, so a floated cue
+ * overlaps the following lines instead of letting them wrap beside it.
+ * Scoped to the source/editor view so reading-mode cues are never affected. */
+body.cuecraft-editorcue-rail .markdown-source-view .cm-content {
+	padding-left: 16em;
+}
+body.cuecraft-editorcue-rail .markdown-source-view .cuecraft-cue {
+	width: 14em;
+	margin-left: -15em;
+	margin-right: 1em;
+	font-size: var(--font-ui-smaller, var(--font-smaller));
 }
 
 .cuecraft-cornell-kw {
