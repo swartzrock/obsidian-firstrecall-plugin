@@ -66,6 +66,18 @@ export class CornellView extends ItemView {
 		await this.render();
 	}
 
+	/**
+	 * Turn on this view's Study Mode (questions visible, keyword hints blurred
+	 * until revealed) and re-render. Used by "Review This Note" so the command
+	 * lands the user in an actually-studying state instead of a no-op toggle.
+	 */
+	async enterStudyMode(): Promise<void> {
+		this.studyMode = true;
+		this.revealed.clear();
+		this.revealAll = false;
+		await this.render();
+	}
+
 	/** Re-render from the active note's cache. Safe to call repeatedly. */
 	async render(): Promise<void> {
 		const root = this.contentEl;

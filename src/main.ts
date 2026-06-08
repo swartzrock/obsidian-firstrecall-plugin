@@ -407,8 +407,11 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/**
-	 * "Review this note": ensure the active note has cues, then drop straight
-	 * into Study Mode so section bodies are hidden for active recall.
+	 * "Review this note": ensure the note has usable cues and is visible, then
+	 * open it in the Cornell view and enter that view's Study Mode (questions
+	 * shown, keyword hints blurred for active recall). The Cornell view is the
+	 * only surface where Study Mode is actually visible, so Review always lands
+	 * the user somewhere studying can happen — not a silent global toggle.
 	 */
 	private async reviewThisNote(target?: TFile): Promise<void> {
 		const file = target ?? this.app.workspace.getActiveFile();
@@ -425,20 +428,25 @@ export default class CueCraftPlugin extends Plugin {
 		if (this.visibility.isHidden(file.path)) {
 			await this.setNoteVisibility(true, file);
 		}
-		if (!this.studyMode) this.toggleStudyMode();
+		// Make the target the active note so the Cornell view resolves to it,
+		// then open the Cornell view and switch it into Study Mode.
+		await this.app.workspace.getLeaf(false).openFile(file);
+		const view = await this.activateCornellView();
+		await view?.enterStudyMode();
 	}
 
-	/** Open (or focus) the Cornell view in a main-area tab. */
-	private async activateCornellView(): Promise<void> {
+	/** Open (or focus) the Cornell view in a main-area tab; returns the view. */
+	private async activateCornellView(): Promise<CornellView | null> {
 		const { workspace } = this.app;
 		const existing = workspace.getLeavesOfType(VIEW_TYPE_CORNELL)[0];
 		if (existing) {
 			workspace.revealLeaf(existing);
-			return;
+			return existing.view instanceof CornellView ? existing.view : null;
 		}
 		const leaf = workspace.getLeaf("tab");
 		await leaf.setViewState({ type: VIEW_TYPE_CORNELL, active: true });
 		workspace.revealLeaf(leaf);
+		return leaf.view instanceof CornellView ? leaf.view : null;
 	}
 
 	/** Build the Cornell layout model for a note, or null when it has no cache. */

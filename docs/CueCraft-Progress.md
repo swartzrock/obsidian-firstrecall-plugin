@@ -74,8 +74,9 @@ Each item links to the PR that delivered it.
 - **Export** — "Export Cues to Markdown" (study sheet) and "Export Cues to Anki (TSV)" commands
   write a sibling file next to the note; pure `export.ts` formatters (`cuesToMarkdown`/`cuesToAnki`,
   TSV-safe) with unit tests. Never modifies the source note (#32).
-- **"Review this note"** — command + context-menu entry that enables the note's cues (if hidden) and
-  drops straight into Study Mode for active recall (#32).
+- **"Review this note"** — command + context-menu entry that enables the note's cues (if hidden),
+  opens it in the **Cornell view**, and turns on that view's Study Mode (questions shown, keyword
+  hints blurred for active recall) — the surface where Study Mode is actually visible (#32).
 
 ### Beyond the original v1.0 slice
 - **Cornell view** — dedicated pane: Title → left cue column | main notes → Summary, from cache;
