@@ -264,6 +264,11 @@ body.cuecraft-editorcue-rail .markdown-source-view .cuecraft-cue {
 	font-size: var(--font-ui-smaller, var(--font-smaller));
 }
 
+/* Reading-mode (preview) cues, inserted beneath their headings. */
+.cuecraft-cue-reading {
+	margin: 0.4em 0 1em;
+}
+
 .cuecraft-cornell-kw {
 	margin-top: 8px;
 	display: flex;
