@@ -42,6 +42,11 @@ import {
 } from "./cue-extension";
 import { buildReadingCueMap } from "./reading-cues";
 import {
+	selectExportableCues,
+	cuesToMarkdown,
+	cuesToAnki,
+} from "./export";
+import {
 	VisibilityStore,
 	loadHiddenMap,
 	pillAction,
@@ -316,6 +321,15 @@ export default class CueCraftPlugin extends Plugin {
 				.setIcon(RIBBON_ICON)
 				.onClick(() => void this.setNoteVisibility(hidden, file))
 		);
+		// "Review" is only meaningful once a note has usable cues to study.
+		if (this.hasUsableCueCache(file.path)) {
+			menu.addItem((item) =>
+				item
+					.setTitle("CueCraft: Review (Study Mode)")
+					.setIcon(RIBBON_ICON)
+					.onClick(() => void this.reviewThisNote(file))
+			);
+		}
 	}
 
 	private registerCommands(): void {
@@ -359,6 +373,82 @@ export default class CueCraftPlugin extends Plugin {
 			name: "Open Cornell View",
 			callback: () => void this.activateCornellView(),
 		});
+		this.addCommand({
+			id: "review-this-note",
+			name: "Review This Note (Study Mode)",
+			callback: () => void this.reviewThisNote(),
+		});
+		this.addCommand({
+			id: "export-cues-markdown",
+			name: "Export Cues to Markdown",
+			callback: () => void this.exportCues("markdown"),
+		});
+		this.addCommand({
+			id: "export-cues-anki",
+			name: "Export Cues to Anki (TSV)",
+			callback: () => void this.exportCues("anki"),
+		});
+	}
+
+	/**
+	 * Export the active note's usable cues to a sibling file: a Markdown study
+	 * sheet or Anki-importable TSV. Never touches the source note.
+	 */
+	private async exportCues(format: "markdown" | "anki"): Promise<void> {
+		const file = this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("CueCraft: open a note to export its cues.");
+			return;
+		}
+		const cache = this.cacheStore.get(file.path);
+		const cues = cache ? selectExportableCues(cache) : [];
+		if (cues.length === 0) {
+			new Notice("CueCraft: no usable cues to export \u2014 generate first.");
+			return;
+		}
+		const dir =
+			file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
+		const ext = format === "markdown" ? "md" : "txt";
+		const tag = format === "markdown" ? "cues" : "cues.anki";
+		const outPath = `${dir}${file.basename} (${tag}).${ext}`;
+		const content =
+			format === "markdown"
+				? cuesToMarkdown(file.basename, cues)
+				: cuesToAnki(cues);
+		const existing = this.app.vault.getAbstractFileByPath(outPath);
+		let out: TFile;
+		if (existing instanceof TFile) {
+			await this.app.vault.modify(existing, content);
+			out = existing;
+		} else {
+			out = await this.app.vault.create(outPath, content);
+		}
+		new Notice(`CueCraft: exported ${cues.length} cue(s) to ${outPath}`);
+		if (format === "markdown") {
+			await this.app.workspace.getLeaf(true).openFile(out);
+		}
+	}
+
+	/**
+	 * "Review this note": ensure the active note has cues, then drop straight
+	 * into Study Mode so section bodies are hidden for active recall.
+	 */
+	private async reviewThisNote(target?: TFile): Promise<void> {
+		const file = target ?? this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("CueCraft: open a note to review.");
+			return;
+		}
+		if (!this.hasUsableCueCache(file.path)) {
+			new Notice(
+				"CueCraft: no usable cues for this note \u2014 generate first."
+			);
+			return;
+		}
+		if (this.visibility.isHidden(file.path)) {
+			await this.setNoteVisibility(true, file);
+		}
+		if (!this.studyMode) this.toggleStudyMode();
 	}
 
 	/** Open (or focus) the Cornell view in a main-area tab. */
