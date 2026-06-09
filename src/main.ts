@@ -7,6 +7,7 @@ import {
 	TFile,
 	requestUrl,
 	type MarkdownFileInfo,
+	type MarkdownPostProcessorContext,
 } from "obsidian";
 import type { EditorView } from "@codemirror/view";
 import {
@@ -37,7 +38,14 @@ import {
 	buildCueLineData,
 	cueEditorExtension,
 	setCuesEffect,
+	type CueLineData,
 } from "./cue-extension";
+import { buildReadingCueMap } from "./reading-cues";
+import {
+	selectExportableCues,
+	cuesToMarkdown,
+	cuesToAnki,
+} from "./export";
 import {
 	VisibilityStore,
 	loadHiddenMap,
@@ -98,6 +106,9 @@ export default class CueCraftPlugin extends Plugin {
 		this.updateRibbonLabel();
 		this.registerCommands();
 		this.registerEditorExtension(cueEditorExtension);
+		this.registerMarkdownPostProcessor((el, ctx) =>
+			this.renderReadingCues(el, ctx)
+		);
 
 		this.registerEvent(
 			this.app.workspace.on("file-open", (file) => this.onActiveFile(file))
@@ -134,10 +145,6 @@ export default class CueCraftPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(() =>
 			this.onActiveFile(this.app.workspace.getActiveFile())
 		);
-	}
-
-	onunload(): void {
-		// Nothing persistent to tear down in the scaffold.
 	}
 
 	private async loadPluginData(): Promise<void> {
@@ -291,6 +298,15 @@ export default class CueCraftPlugin extends Plugin {
 				.setIcon(RIBBON_ICON)
 				.onClick(() => void this.setNoteVisibility(hidden, file))
 		);
+		// "Review" is only meaningful once a note has usable cues to study.
+		if (this.hasUsableCueCache(file.path)) {
+			menu.addItem((item) =>
+				item
+					.setTitle("CueCraft: Review (Study Mode)")
+					.setIcon(RIBBON_ICON)
+					.onClick(() => void this.reviewThisNote(file))
+			);
+		}
 	}
 
 	private registerCommands(): void {
@@ -334,19 +350,103 @@ export default class CueCraftPlugin extends Plugin {
 			name: "Open Cornell View",
 			callback: () => void this.activateCornellView(),
 		});
+		this.addCommand({
+			id: "review-this-note",
+			name: "Review This Note (Study Mode)",
+			callback: () => void this.reviewThisNote(),
+		});
+		this.addCommand({
+			id: "export-cues-markdown",
+			name: "Export Cues to Markdown",
+			callback: () => void this.exportCues("markdown"),
+		});
+		this.addCommand({
+			id: "export-cues-anki",
+			name: "Export Cues to Anki (TSV)",
+			callback: () => void this.exportCues("anki"),
+		});
 	}
 
-	/** Open (or focus) the Cornell view in a main-area tab. */
-	private async activateCornellView(): Promise<void> {
+	/**
+	 * Export the active note's usable cues to a sibling file: a Markdown study
+	 * sheet or Anki-importable TSV. Never touches the source note.
+	 */
+	private async exportCues(format: "markdown" | "anki"): Promise<void> {
+		const file = this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("CueCraft: open a note to export its cues.");
+			return;
+		}
+		const cache = this.cacheStore.get(file.path);
+		const cues = cache ? selectExportableCues(cache) : [];
+		if (cues.length === 0) {
+			new Notice("CueCraft: no usable cues to export \u2014 generate first.");
+			return;
+		}
+		const dir =
+			file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
+		const ext = format === "markdown" ? "md" : "txt";
+		const tag = format === "markdown" ? "cues" : "cues.anki";
+		const outPath = `${dir}${file.basename} (${tag}).${ext}`;
+		const content =
+			format === "markdown"
+				? cuesToMarkdown(file.basename, cues)
+				: cuesToAnki(cues);
+		const existing = this.app.vault.getAbstractFileByPath(outPath);
+		let out: TFile;
+		if (existing instanceof TFile) {
+			await this.app.vault.modify(existing, content);
+			out = existing;
+		} else {
+			out = await this.app.vault.create(outPath, content);
+		}
+		new Notice(`CueCraft: exported ${cues.length} cue(s) to ${outPath}`);
+		if (format === "markdown") {
+			await this.app.workspace.getLeaf(true).openFile(out);
+		}
+	}
+
+	/**
+	 * "Review this note": ensure the note has usable cues and is visible, then
+	 * open it in the Cornell view and enter that view's Study Mode (questions
+	 * shown, keyword hints blurred for active recall). The Cornell view is the
+	 * only surface where Study Mode is actually visible, so Review always lands
+	 * the user somewhere studying can happen — not a silent global toggle.
+	 */
+	private async reviewThisNote(target?: TFile): Promise<void> {
+		const file = target ?? this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("CueCraft: open a note to review.");
+			return;
+		}
+		if (!this.hasUsableCueCache(file.path)) {
+			new Notice(
+				"CueCraft: no usable cues for this note \u2014 generate first."
+			);
+			return;
+		}
+		if (this.visibility.isHidden(file.path)) {
+			await this.setNoteVisibility(true, file);
+		}
+		// Make the target the active note so the Cornell view resolves to it,
+		// then open the Cornell view and switch it into Study Mode.
+		await this.app.workspace.getLeaf(false).openFile(file);
+		const view = await this.activateCornellView();
+		await view?.enterStudyMode();
+	}
+
+	/** Open (or focus) the Cornell view in a main-area tab; returns the view. */
+	private async activateCornellView(): Promise<CornellView | null> {
 		const { workspace } = this.app;
 		const existing = workspace.getLeavesOfType(VIEW_TYPE_CORNELL)[0];
 		if (existing) {
 			workspace.revealLeaf(existing);
-			return;
+			return existing.view instanceof CornellView ? existing.view : null;
 		}
 		const leaf = workspace.getLeaf("tab");
 		await leaf.setViewState({ type: VIEW_TYPE_CORNELL, active: true });
 		workspace.revealLeaf(leaf);
+		return leaf.view instanceof CornellView ? leaf.view : null;
 	}
 
 	/** Build the Cornell layout model for a note, or null when it has no cache. */
@@ -371,6 +471,86 @@ export default class CueCraftPlugin extends Plugin {
 	hasUsableCueCache(path: string): boolean {
 		const cache = this.cacheStore.get(path);
 		return cache ? hasUsableCues(cache) : false;
+	}
+
+	/**
+	 * Reading-mode (preview) post-processor: insert cached cues beneath their
+	 * headings. Obsidian calls this per rendered block, so we memoize the
+	 * resolved line->cue map for the current (path, source-text) to avoid
+	 * re-parsing for every heading element.
+	 */
+	private readingCueMemo: {
+		path: string;
+		text: string;
+		map: Map<number, CueLineData>;
+	} | null = null;
+
+	private renderReadingCues(
+		el: HTMLElement,
+		ctx: MarkdownPostProcessorContext
+	): void {
+		const path = ctx.sourcePath;
+		if (!path) return;
+		const cache = this.cacheStore.get(path);
+		if (!cache || this.visibility.isHidden(path)) return;
+
+		const headings = Array.from(
+			el.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")
+		);
+		for (const heading of headings) {
+			const info = ctx.getSectionInfo(heading);
+			if (!info) continue;
+			const map = this.readingMapFor(path, info.text, cache);
+			const cue = map.get(info.lineStart + 1);
+			if (!cue) continue;
+			// Guard against the post-processor running twice over the same node.
+			const next = heading.nextElementSibling;
+			if (next && next.hasClass("cuecraft-cue")) continue;
+			heading.insertAdjacentElement(
+				"afterend",
+				this.buildReadingCueEl(cue)
+			);
+		}
+	}
+
+	private readingMapFor(
+		path: string,
+		text: string,
+		cache: NoteCache
+	): Map<number, CueLineData> {
+		if (
+			this.readingCueMemo &&
+			this.readingCueMemo.path === path &&
+			this.readingCueMemo.text === text
+		) {
+			return this.readingCueMemo.map;
+		}
+		const map = buildReadingCueMap(cache, text);
+		this.readingCueMemo = { path, text, map };
+		return map;
+	}
+
+	/** Build the reading-view cue element (mirrors the editor cue widget DOM). */
+	private buildReadingCueEl(cue: CueLineData): HTMLElement {
+		const root = createDiv({ cls: "cuecraft-cue cuecraft-cue-reading" });
+		if (cue.error) {
+			root.addClass("cuecraft-cue-error");
+			root.setAttr("title", cue.error);
+			root.createDiv({
+				cls: "cuecraft-cue-question",
+				text: "\u26a0 Generation failed \u2014 regenerate",
+			});
+			return root;
+		}
+		if (cue.confidence) root.dataset.confidence = cue.confidence;
+		root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
+		if (cue.keywords.length) {
+			root.createDiv({
+				cls: "cuecraft-cue-keywords",
+				text: cue.keywords.join(" \u00b7 "),
+			});
+		}
+		return root;
 	}
 
 	/** Re-render any open Cornell views (e.g. after generate/clear/style change). */

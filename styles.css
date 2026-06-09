@@ -246,6 +246,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-size: var(--font-ui-smaller, var(--font-smallest));
 }
 
+/* Reading-mode (preview) cues, inserted beneath their headings. */
+.cuecraft-cue-reading {
+	margin: 0.4em 0 1em;
+}
+
 .cuecraft-cornell-kw {
 	margin-top: 8px;
 	display: flex;
