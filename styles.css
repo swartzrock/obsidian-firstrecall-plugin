@@ -475,14 +475,16 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	align-items: center;
 	gap: 8px;
 }
-.cuecraft-swatch {
+/* `button.cuecraft-swatch` (raised specificity) beats Obsidian's themed
+ * `.theme-dark button` background, which otherwise leaves the circles blank. */
+.cuecraft-swatches button.cuecraft-swatch {
 	position: relative;
 	width: 22px;
 	height: 22px;
 	padding: 0;
 	border-radius: 50%;
 	border: 2px solid transparent;
-	background: var(--cuecraft-accent, var(--interactive-accent));
+	background-color: var(--cuecraft-accent, var(--interactive-accent));
 	cursor: pointer;
 	box-shadow: none;
 }

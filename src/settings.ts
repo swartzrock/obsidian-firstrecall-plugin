@@ -397,7 +397,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private renderAccentSwatches(containerEl: HTMLElement): void {
 		new Setting(containerEl)
 			.setName("Cue accent color")
-			.setDesc("Accent used for cue questions and chips.")
+			.setDesc("Accent used for the cue rail and keyword chips.")
 			.then((setting) => {
 				const wrap = setting.controlEl.createDiv({
 					cls: "cuecraft-swatches",
