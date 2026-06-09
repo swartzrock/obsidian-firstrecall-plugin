@@ -96,7 +96,12 @@ Each item links to the PR that delivered it.
   variable; the view re-renders live when the swatch changes. Per the v0 design the question text
   stays the normal foreground color (the accent is for chips/rail, not the question copy). Accent
   rules use low specificity so style presets that deliberately recolor (legal-pad, minimal) keep
-  their look and per-cue confidence border colors still win.
+  their look; failed cues keep their red rail via a `:not(.cuecraft-cornell-cue-error)` guard.
+- **Confidence label + per-cue regenerate icon.** Since the rail is now the accent color, each cue
+  shows its self-reported confidence as a small colored **HIGH/MED/LOW** label (green/yellow/red).
+  A circle-arrow (↻) **regenerate** icon sits top-right of the cue: hidden until hover, but kept
+  visible for **low-confidence** cues as a nudge to regenerate them (opens the existing tone menu →
+  `regenerateSection`).
 - **Removed two unused "Note format" controls.** The read-only Storage block (` ```cornell `) and
   Summary callout type (`> [!summary]`) badges were dropped — they documented internals the user
   doesn't act on. (The `renderReadOnlyBadge` helper + `.cuecraft-code-badge` CSS went with them.)
