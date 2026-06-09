@@ -516,15 +516,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	--cuecraft-accent: #f43f5e;
 }
 
-/* Apply the chosen accent to the Cornell cue surface (questions, rail, chips).
+/* Apply the chosen accent to the Cornell cue surface. Per the v0 design the
+ * accent tints the keyword chips and the cue rail only — the question text
+ * stays the normal foreground color so it reads as the primary content.
  * Lower specificity than the per-preset rules, so presets that deliberately
- * recolor questions/chips (legal-pad, minimal) keep their look; confidence
- * border colors still win via their attribute selector. */
+ * recolor chips (legal-pad, minimal) keep their look; confidence border colors
+ * still win via their attribute selector. */
 .cuecraft-cornell-cue {
 	border-left-color: var(--cuecraft-accent, var(--interactive-accent));
-}
-.cuecraft-cornell-q {
-	color: var(--cuecraft-accent, inherit);
 }
 .cuecraft-cornell-chip {
 	color: var(--cuecraft-accent, var(--text-muted));

@@ -92,10 +92,11 @@ Each item links to the PR that delivered it.
   settings-only for now**: they persist but aren't wired into generation/rendering yet (the inline
   `cornell`-block work lands later).
 - **Cue accent color wired (first settings→view feature).** The chosen accent (violet/teal/amber/
-  rose) now tints the Cornell view's cue questions, cue rail, and keyword chips via the
-  `--cuecraft-accent` CSS variable; the view re-renders live when the swatch changes. Accent rules
-  use low specificity so style presets that deliberately recolor (legal-pad, minimal) keep their
-  look and per-cue confidence border colors still win.
+  rose) now tints the Cornell view's keyword chips and cue rail via the `--cuecraft-accent` CSS
+  variable; the view re-renders live when the swatch changes. Per the v0 design the question text
+  stays the normal foreground color (the accent is for chips/rail, not the question copy). Accent
+  rules use low specificity so style presets that deliberately recolor (legal-pad, minimal) keep
+  their look and per-cue confidence border colors still win.
 - **Removed two unused "Note format" controls.** The read-only Storage block (` ```cornell `) and
   Summary callout type (`> [!summary]`) badges were dropped — they documented internals the user
   doesn't act on. (The `renderReadOnlyBadge` helper + `.cuecraft-code-badge` CSS went with them.)
