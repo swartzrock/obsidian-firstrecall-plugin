@@ -432,3 +432,98 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-style-handwritten .cuecraft-cornell-q {
 	font-weight: var(--font-bold);
 }
+
+/* ============================================================================
+ * Settings: v0 redesign controls (badges, key field, accent swatches)
+ * ==========================================================================*/
+
+/* Fixed code badge for the read-only "Note format" rows. */
+.cuecraft-code-badge {
+	font-family: var(--font-monospace);
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	background: var(--background-modifier-form-field);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	padding: 2px 8px;
+	white-space: nowrap;
+}
+
+/* API key field: inline show/hide eye + presence badge. */
+.cuecraft-key-eye {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: 6px;
+	padding: 4px;
+	color: var(--text-muted);
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	cursor: pointer;
+}
+.cuecraft-key-eye:hover {
+	color: var(--text-normal);
+}
+.cuecraft-key-badge {
+	margin-left: 6px;
+	font-size: var(--font-ui-smaller);
+	border-radius: var(--radius-s);
+	padding: 2px 8px;
+	white-space: nowrap;
+}
+.cuecraft-key-badge.is-set {
+	color: var(--text-success, var(--text-accent));
+	background: var(--background-modifier-success, var(--background-secondary));
+}
+.cuecraft-key-badge.is-empty {
+	color: var(--text-muted);
+	background: var(--background-secondary);
+}
+
+/* Accent-color swatches (Appearance). The selected one shows a ring + check. */
+.cuecraft-swatches {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.cuecraft-swatch {
+	position: relative;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border-radius: 50%;
+	border: 2px solid transparent;
+	background: var(--cuecraft-accent, var(--interactive-accent));
+	cursor: pointer;
+	box-shadow: none;
+}
+.cuecraft-swatch.is-selected {
+	border-color: var(--text-normal);
+}
+.cuecraft-swatch.is-selected::after {
+	content: "\2713";
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-on-accent);
+	font-size: 12px;
+	font-weight: var(--font-bold);
+}
+
+/* Accent palette. `--cuecraft-accent` is the single knob the swatch + (future)
+ * cue/chip styles read, so adding a color here is all it takes. */
+.cuecraft-accent-violet {
+	--cuecraft-accent: #8b5cf6;
+}
+.cuecraft-accent-teal {
+	--cuecraft-accent: #14b8a6;
+}
+.cuecraft-accent-amber {
+	--cuecraft-accent: #f59e0b;
+}
+.cuecraft-accent-rose {
+	--cuecraft-accent: #f43f5e;
+}

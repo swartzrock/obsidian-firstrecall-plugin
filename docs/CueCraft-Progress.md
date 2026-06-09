@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (after PR #32). 161 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (core-UX: settings redesign). 173 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -77,6 +77,21 @@ Each item links to the PR that delivered it.
 - **"Review this note"** — command + context-menu entry that enables the note's cues (if hidden),
   opens it in the **Cornell view**, and turns on that view's Study Mode (questions shown, keyword
   hints blurred for active recall) — the surface where Study Mode is actually visible (#32).
+
+### Core UX — settings redesign (in progress)
+- **Settings reorganized by section (v0 design).** The settings tab is now grouped under
+  `setHeading()` sections — **AI model / Cue generation / Note format / Appearance / Study Mode** —
+  mirroring the v0 prototype in PR #33. New persisted controls: Auto-generate on save, Cue density
+  (slider, Minimal/Balanced/Thorough), Question style (Recall/Socratic/Exam-style), Generate keyword
+  chips, Auto-write section summary, Render in Reading mode, Fold cue column on mobile, Cue accent
+  color (swatches), Show cue column border, Compact chips. Provider API-key fields gained a show/hide
+  eye + a presence badge; "Note format" shows the storage block / summary-callout as fixed code
+  badges. New single-source-of-truth modules `cue-generation.ts` (question style + density) and
+  `cornell-accent.ts` (accent → CSS class), with unit tests. The existing multi-provider config
+  (Ollama + Anthropic/OpenAI/Gemini/Grok + Test connection) is preserved under "AI model" — the v0
+  single-"AI Gateway" concept was intentionally not adopted. **Several new controls are
+  settings-only for now**: they persist but aren't wired into generation/rendering yet (the inline
+  `cornell`-block work lands later).
 
 ### Beyond the original v1.0 slice
 - **Cornell view** — dedicated pane: Title → left cue column | main notes → Summary, from cache;
