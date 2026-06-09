@@ -434,20 +434,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 /* ============================================================================
- * Settings: v0 redesign controls (badges, key field, accent swatches)
+ * Settings: v0 redesign controls (key field, accent swatches)
  * ==========================================================================*/
-
-/* Fixed code badge for the read-only "Note format" rows. */
-.cuecraft-code-badge {
-	font-family: var(--font-monospace);
-	font-size: var(--font-ui-smaller);
-	color: var(--text-muted);
-	background: var(--background-modifier-form-field);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	padding: 2px 8px;
-	white-space: nowrap;
-}
 
 /* API key field: inline show/hide eye + presence badge. */
 .cuecraft-key-eye {
@@ -513,7 +501,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-weight: var(--font-bold);
 }
 
-/* Accent palette. `--cuecraft-accent` is the single knob the swatch + (future)
+/* Accent palette. `--cuecraft-accent` is the single knob the swatch and the
  * cue/chip styles read, so adding a color here is all it takes. */
 .cuecraft-accent-violet {
 	--cuecraft-accent: #8b5cf6;
@@ -526,4 +514,19 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 .cuecraft-accent-rose {
 	--cuecraft-accent: #f43f5e;
+}
+
+/* Apply the chosen accent to the Cornell cue surface (questions, rail, chips).
+ * Lower specificity than the per-preset rules, so presets that deliberately
+ * recolor questions/chips (legal-pad, minimal) keep their look; confidence
+ * border colors still win via their attribute selector. */
+.cuecraft-cornell-cue {
+	border-left-color: var(--cuecraft-accent, var(--interactive-accent));
+}
+.cuecraft-cornell-q {
+	color: var(--cuecraft-accent, inherit);
+}
+.cuecraft-cornell-chip {
+	color: var(--cuecraft-accent, var(--text-muted));
+	border-color: var(--cuecraft-accent, var(--background-modifier-border));
 }

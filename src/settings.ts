@@ -262,19 +262,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private renderNoteFormatSection(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Note format").setHeading();
 
-		this.renderReadOnlyBadge(
-			containerEl,
-			"Storage block",
-			"Cues are stored in a fenced code block so notes stay portable markdown.",
-			"```cornell"
-		);
-		this.renderReadOnlyBadge(
-			containerEl,
-			"Summary callout type",
-			"Obsidian callout used for the bottom summary section.",
-			"> [!summary]"
-		);
-
 		new Setting(containerEl)
 			.setName("Render in Reading mode")
 			.setDesc("Process the cornell block in both Live Preview and Reading view.")
@@ -406,24 +393,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 	}
 
-	/** A non-editable setting row whose control is a fixed code badge. */
-	private renderReadOnlyBadge(
-		containerEl: HTMLElement,
-		name: string,
-		desc: string,
-		badge: string
-	): void {
-		new Setting(containerEl)
-			.setName(name)
-			.setDesc(desc)
-			.then((setting) => {
-				setting.controlEl.createEl("code", {
-					text: badge,
-					cls: "cuecraft-code-badge",
-				});
-			});
-	}
-
 	/** Accent-color swatches (Appearance) rendered as custom buttons. */
 	private renderAccentSwatches(containerEl: HTMLElement): void {
 		new Setting(containerEl)
@@ -451,6 +420,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						this.plugin.registerDomEvent(btn, "click", async () => {
 							this.plugin.settings.cueAccent = accent.id;
 							await this.plugin.saveSettings();
+							this.plugin.refreshCornellViews();
 							paint();
 						});
 					}

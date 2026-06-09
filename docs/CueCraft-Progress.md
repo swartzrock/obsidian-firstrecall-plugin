@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (core-UX: settings redesign). 173 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (core-UX: settings redesign + cue accent color wired). 173 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -85,13 +85,20 @@ Each item links to the PR that delivered it.
   (slider, Minimal/Balanced/Thorough), Question style (Recall/Socratic/Exam-style), Generate keyword
   chips, Auto-write section summary, Render in Reading mode, Fold cue column on mobile, Cue accent
   color (swatches), Show cue column border, Compact chips. Provider API-key fields gained a show/hide
-  eye + a presence badge; "Note format" shows the storage block / summary-callout as fixed code
-  badges. New single-source-of-truth modules `cue-generation.ts` (question style + density) and
-  `cornell-accent.ts` (accent → CSS class), with unit tests. The existing multi-provider config
-  (Ollama + Anthropic/OpenAI/Gemini/Grok + Test connection) is preserved under "AI model" — the v0
-  single-"AI Gateway" concept was intentionally not adopted. **Several new controls are
+  eye + a presence badge. New single-source-of-truth modules `cue-generation.ts` (question style +
+  density) and `cornell-accent.ts` (accent → CSS class), with unit tests. The existing multi-provider
+  config (Ollama + Anthropic/OpenAI/Gemini/Grok + Test connection) is preserved under "AI model" —
+  the v0 single-"AI Gateway" concept was intentionally not adopted. **Several new controls are
   settings-only for now**: they persist but aren't wired into generation/rendering yet (the inline
   `cornell`-block work lands later).
+- **Cue accent color wired (first settings→view feature).** The chosen accent (violet/teal/amber/
+  rose) now tints the Cornell view's cue questions, cue rail, and keyword chips via the
+  `--cuecraft-accent` CSS variable; the view re-renders live when the swatch changes. Accent rules
+  use low specificity so style presets that deliberately recolor (legal-pad, minimal) keep their
+  look and per-cue confidence border colors still win.
+- **Removed two unused "Note format" controls.** The read-only Storage block (` ```cornell `) and
+  Summary callout type (`> [!summary]`) badges were dropped — they documented internals the user
+  doesn't act on. (The `renderReadOnlyBadge` helper + `.cuecraft-code-badge` CSS went with them.)
 
 ### Beyond the original v1.0 slice
 - **Cornell view** — dedicated pane: Title → left cue column | main notes → Summary, from cache;

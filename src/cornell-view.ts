@@ -20,6 +20,7 @@ import {
 	type CueColumnWidth,
 	type CueFontSize,
 } from "./cornell-layout";
+import { CUE_ACCENTS, cueAccentClass } from "./cornell-accent";
 
 export const VIEW_TYPE_CORNELL = "cuecraft-cornell";
 
@@ -93,6 +94,9 @@ export class CornellView extends ItemView {
 		root.addClass(cueColumnWidthClass(this.plugin.settings.cueColumnWidth));
 		for (const f of CUE_FONT_SIZES) root.removeClass(cueFontSizeClass(f.id));
 		root.addClass(cueFontSizeClass(this.plugin.settings.cueFontSize));
+		// Apply the cue accent color (tints cue questions, rail, and chips).
+		for (const a of CUE_ACCENTS) root.removeClass(cueAccentClass(a.id));
+		root.addClass(cueAccentClass(this.plugin.settings.cueAccent));
 
 		const file = this.resolveTargetFile();
 		if (!file) {
