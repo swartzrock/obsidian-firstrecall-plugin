@@ -4,6 +4,7 @@ import { TONE_OPTIONS } from "./main";
 import {
 	failedCueCount,
 	pickCornellFile,
+	type Confidence,
 	type CornellModel,
 	type CornellRow,
 } from "./cornell";
@@ -20,6 +21,7 @@ import {
 	type CueColumnWidth,
 	type CueFontSize,
 } from "./cornell-layout";
+import { CUE_ACCENTS, cueAccentClass } from "./cornell-accent";
 
 export const VIEW_TYPE_CORNELL = "cuecraft-cornell";
 
@@ -93,6 +95,9 @@ export class CornellView extends ItemView {
 		root.addClass(cueColumnWidthClass(this.plugin.settings.cueColumnWidth));
 		for (const f of CUE_FONT_SIZES) root.removeClass(cueFontSizeClass(f.id));
 		root.addClass(cueFontSizeClass(this.plugin.settings.cueFontSize));
+		// Apply the cue accent color (tints cue questions, rail, and chips).
+		for (const a of CUE_ACCENTS) root.removeClass(cueAccentClass(a.id));
+		root.addClass(cueAccentClass(this.plugin.settings.cueAccent));
 
 		const file = this.resolveTargetFile();
 		if (!file) {
@@ -331,6 +336,33 @@ export class CornellView extends ItemView {
 
 		const cue = cell.createEl("div", { cls: "cuecraft-cornell-cue" });
 		if (row.confidence) cue.dataset.confidence = row.confidence;
+
+		// Meta row: confidence label (left) + regenerate icon (right). The rail
+		// itself now uses the accent color, so confidence reads from this label.
+		const meta = cue.createEl("div", { cls: "cuecraft-cornell-cuemeta" });
+		if (row.confidence) {
+			meta.createEl("span", {
+				cls: "cuecraft-cornell-confidence",
+				text: confidenceLabel(row.confidence),
+			});
+		}
+		// Circle-arrow regenerate icon: appears on hover, and stays visible for
+		// low-confidence cues as a nudge to regenerate them. Hidden in Study Mode.
+		if (!this.studyMode) {
+			const regen = meta.createEl("button", {
+				cls: "cuecraft-cornell-regen",
+				text: "\u21bb",
+				attr: {
+					"aria-label": "Regenerate cue",
+					title: "Regenerate cue",
+				},
+			});
+			regen.addEventListener("click", (e) => {
+				e.stopPropagation();
+				this.showToneMenu(e, file, row.id);
+			});
+		}
+
 		cue.createEl("div", { cls: "cuecraft-cornell-q", text: row.question });
 
 		if (row.keywords.length) {
@@ -342,18 +374,6 @@ export class CornellView extends ItemView {
 			if (this.studyMode && !this.revealed.has(row.id) && !this.revealAll) {
 				kw.addClass("is-hidden");
 			}
-		}
-
-		// Regenerate button (visible when not in Study Mode).
-		if (!this.studyMode) {
-			const regen = cue.createEl("button", {
-				cls: "cuecraft-cornell-regen",
-				text: "\u21bb Regenerate",
-			});
-			regen.addEventListener("click", (e) => {
-				e.stopPropagation();
-				this.showToneMenu(e, file, row.id);
-			});
 		}
 
 		// In Study Mode, clicking a cue toggles its hint's reveal.
@@ -438,5 +458,17 @@ export class CornellView extends ItemView {
 			const show = !this.studyMode || this.revealAll || this.revealed.has(id);
 			el.toggleClass("is-hidden", !show);
 		});
+	}
+}
+
+/** Short uppercase label for a cue's self-reported confidence. */
+function confidenceLabel(confidence: Confidence): string {
+	switch (confidence) {
+		case "high":
+			return "HIGH";
+		case "medium":
+			return "MED";
+		case "low":
+			return "LOW";
 	}
 }

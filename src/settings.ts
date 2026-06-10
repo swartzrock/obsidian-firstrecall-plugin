@@ -1,4 +1,11 @@
-import { App, Notice, PluginSettingTab, Setting, requestUrl } from "obsidian";
+import {
+	App,
+	Notice,
+	PluginSettingTab,
+	Setting,
+	requestUrl,
+	setIcon,
+} from "obsidian";
 import type CueCraftPlugin from "./main";
 import {
 	CORNELL_STYLES,
@@ -13,6 +20,20 @@ import {
 	type CueColumnWidth,
 	type CueFontSize,
 } from "./cornell-layout";
+import {
+	CUE_DENSITIES,
+	DEFAULT_CUE_DENSITY,
+	DEFAULT_QUESTION_STYLE,
+	QUESTION_STYLES,
+	cueDensityLabel,
+	type CueDensity,
+	type QuestionStyle,
+} from "./cue-generation";
+import {
+	CUE_ACCENTS,
+	DEFAULT_CUE_ACCENT,
+	type CueAccent,
+} from "./cornell-accent";
 
 /**
  * CueCraft supports a local provider (Ollama) and several cloud providers via
@@ -40,6 +61,18 @@ export interface CueCraftSettings {
 	cornellStyle: CornellStyle;
 	cueColumnWidth: CueColumnWidth;
 	cueFontSize: CueFontSize;
+	// v0 settings redesign. Persisted now; some are not yet wired into
+	// generation/rendering (the inline `cornell` block work lands later).
+	autoGenerateOnSave: boolean;
+	cueDensity: CueDensity;
+	questionStyle: QuestionStyle;
+	generateKeywords: boolean;
+	autoSummary: boolean;
+	renderInReadingMode: boolean;
+	foldCueColumnOnMobile: boolean;
+	cueAccent: CueAccent;
+	showCueBorder: boolean;
+	compactChips: boolean;
 }
 
 export const DEFAULT_SETTINGS: CueCraftSettings = {
@@ -59,6 +92,17 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cornellStyle: DEFAULT_CORNELL_STYLE,
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
+	// Off by default so an unwired auto-generate can't trigger API calls.
+	autoGenerateOnSave: false,
+	cueDensity: DEFAULT_CUE_DENSITY,
+	questionStyle: DEFAULT_QUESTION_STYLE,
+	generateKeywords: true,
+	autoSummary: true,
+	renderInReadingMode: true,
+	foldCueColumnOnMobile: true,
+	cueAccent: DEFAULT_CUE_ACCENT,
+	showCueBorder: true,
+	compactChips: false,
 };
 
 export class CueCraftSettingTab extends PluginSettingTab {
@@ -73,11 +117,21 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: "CueCraft" });
 		containerEl.createEl("p", {
 			text: "CueCraft generates study cues using a local Ollama model or a frontier model (Claude, ChatGPT, Gemini, Grok). Your Markdown files are never modified.",
 			cls: "cuecraft-settings-intro",
 		});
+
+		this.renderAiModelSection(containerEl);
+		this.renderCueGenerationSection(containerEl);
+		this.renderNoteFormatSection(containerEl);
+		this.renderAppearanceSection(containerEl);
+		this.renderStudySection(containerEl);
+	}
+
+	// ── AI model ──────────────────────────────────────────────────────────
+	private renderAiModelSection(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("AI model").setHeading();
 
 		new Setting(containerEl)
 			.setName("AI provider")
@@ -110,6 +164,23 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Auto-generate on save")
+			.setDesc("Draft cues and a summary automatically whenever a note is saved.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.autoGenerateOnSave)
+					.onChange(async (value) => {
+						this.plugin.settings.autoGenerateOnSave = value;
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+
+	// ── Cue generation ────────────────────────────────────────────────────
+	private renderCueGenerationSection(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Cue generation").setHeading();
+
+		new Setting(containerEl)
 			.setName("Cue preset")
 			.setDesc("Controls the style of generated questions.")
 			.addDropdown((dd) =>
@@ -124,6 +195,101 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		const densityDesc = (): string =>
+			`How many recall questions to generate per section \u2014 ${cueDensityLabel(
+				this.plugin.settings.cueDensity
+			)}.`;
+		const densitySetting = new Setting(containerEl)
+			.setName("Cue density")
+			.addSlider((sl) =>
+				sl
+					.setLimits(
+						CUE_DENSITIES[0].value,
+						CUE_DENSITIES[CUE_DENSITIES.length - 1].value,
+						1
+					)
+					.setValue(this.plugin.settings.cueDensity)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.cueDensity = value as CueDensity;
+						await this.plugin.saveSettings();
+						densitySetting.setDesc(densityDesc());
+					})
+			);
+		densitySetting.setDesc(densityDesc());
+
+		new Setting(containerEl)
+			.setName("Question style")
+			.setDesc("Tone of the generated questions.")
+			.addDropdown((dd) => {
+				for (const q of QUESTION_STYLES) dd.addOption(q.id, q.label);
+				dd.setValue(this.plugin.settings.questionStyle).onChange(
+					async (value) => {
+						this.plugin.settings.questionStyle =
+							value as QuestionStyle;
+						await this.plugin.saveSettings();
+					}
+				);
+			});
+
+		new Setting(containerEl)
+			.setName("Generate keyword chips")
+			.setDesc("Add short keyword/phrase tags to the cue column for each section.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.generateKeywords)
+					.onChange(async (value) => {
+						this.plugin.settings.generateKeywords = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Auto-write section summary")
+			.setDesc("Draft a short summary callout beneath each note's cues.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.autoSummary)
+					.onChange(async (value) => {
+						this.plugin.settings.autoSummary = value;
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+
+	// ── Note format ───────────────────────────────────────────────────────
+	private renderNoteFormatSection(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Note format").setHeading();
+
+		new Setting(containerEl)
+			.setName("Render in Reading mode")
+			.setDesc("Process the cornell block in both Live Preview and Reading view.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.renderInReadingMode)
+					.onChange(async (value) => {
+						this.plugin.settings.renderInReadingMode = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Fold cue column on mobile")
+			.setDesc("Collapse the left cue column into a tap-to-expand panel on narrow screens.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.foldCueColumnOnMobile)
+					.onChange(async (value) => {
+						this.plugin.settings.foldCueColumnOnMobile = value;
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+
+	// ── Appearance ────────────────────────────────────────────────────────
+	private renderAppearanceSection(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Appearance").setHeading();
 
 		const styleSetting = new Setting(containerEl)
 			.setName("Cornell view style")
@@ -181,6 +347,37 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				?.description ?? "Font size of the Cornell cue text.";
 		fontSetting.setDesc(fontDesc());
 
+		this.renderAccentSwatches(containerEl);
+
+		new Setting(containerEl)
+			.setName("Show cue column border")
+			.setDesc("Draw a divider between the cue column and note content.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.showCueBorder)
+					.onChange(async (value) => {
+						this.plugin.settings.showCueBorder = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Compact chips")
+			.setDesc("Use smaller keyword chips with tighter spacing.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.compactChips)
+					.onChange(async (value) => {
+						this.plugin.settings.compactChips = value;
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+
+	// ── Study Mode ────────────────────────────────────────────────────────
+	private renderStudySection(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Study Mode").setHeading();
+
 		new Setting(containerEl)
 			.setName("Study Mode hide style")
 			.setDesc("How section bodies are hidden during Study Mode.")
@@ -194,6 +391,42 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+	}
+
+	/** Accent-color swatches (Appearance) rendered as custom buttons. */
+	private renderAccentSwatches(containerEl: HTMLElement): void {
+		new Setting(containerEl)
+			.setName("Cue accent color")
+			.setDesc("Accent used for the cue rail and keyword chips.")
+			.then((setting) => {
+				const wrap = setting.controlEl.createDiv({
+					cls: "cuecraft-swatches",
+				});
+				const paint = (): void => {
+					wrap.empty();
+					for (const accent of CUE_ACCENTS) {
+						const selected =
+							this.plugin.settings.cueAccent === accent.id;
+						const btn = wrap.createEl("button", {
+							cls: `cuecraft-swatch cuecraft-accent-${accent.id}`,
+							attr: {
+								type: "button",
+								"aria-label": accent.label,
+								title: accent.label,
+								"aria-pressed": String(selected),
+							},
+						});
+						if (selected) btn.addClass("is-selected");
+						this.plugin.registerDomEvent(btn, "click", async () => {
+							this.plugin.settings.cueAccent = accent.id;
+							await this.plugin.saveSettings();
+							this.plugin.refreshCornellViews();
+							paint();
+						});
+					}
+				};
+				paint();
+			});
 	}
 
 	private renderOllamaSettings(containerEl: HTMLElement): void {
@@ -316,8 +549,43 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						opts.setKey(value.trim());
 						await this.plugin.saveSettings();
+						updateBadge();
 					});
 				text.inputEl.type = "password";
+
+				// Show/hide toggle for the otherwise-masked key.
+				const eye = text.inputEl.insertAdjacentElement(
+					"afterend",
+					createEl("button", {
+						cls: "cuecraft-key-eye",
+						attr: { type: "button", "aria-label": "Show API key" },
+					})
+				) as HTMLButtonElement;
+				setIcon(eye, "eye");
+				this.plugin.registerDomEvent(eye, "click", () => {
+					const masked = text.inputEl.type === "password";
+					text.inputEl.type = masked ? "text" : "password";
+					setIcon(eye, masked ? "eye-off" : "eye");
+					eye.setAttr(
+						"aria-label",
+						masked ? "Hide API key" : "Show API key"
+					);
+				});
+
+				// Presence badge mirroring the v0 "Valid" pill. This reflects
+				// that a key is set, not a verified key -- use Test connection
+				// for a real round-trip check.
+				const badge = eye.insertAdjacentElement(
+					"afterend",
+					createEl("span", { cls: "cuecraft-key-badge" })
+				) as HTMLSpanElement;
+				const updateBadge = (): void => {
+					const set = opts.getKey().trim().length > 0;
+					badge.setText(set ? "Set" : "Empty");
+					badge.toggleClass("is-set", set);
+					badge.toggleClass("is-empty", !set);
+				};
+				updateBadge();
 			});
 
 		new Setting(containerEl)

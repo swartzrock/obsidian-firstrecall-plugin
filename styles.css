@@ -214,14 +214,33 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-left: 3px solid var(--interactive-accent);
 	padding-left: 8px;
 }
-.cuecraft-cornell-cue[data-confidence="high"] {
-	border-left-color: var(--color-green);
+
+/* Meta row above the question: confidence label (left) + regenerate icon
+ * (right). Confidence now reads from this label's color/text, since the rail
+ * uses the accent color. */
+.cuecraft-cornell-cuemeta {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 6px;
+	min-height: 20px;
+	margin-bottom: 2px;
 }
-.cuecraft-cornell-cue[data-confidence="medium"] {
-	border-left-color: var(--color-yellow);
+.cuecraft-cornell-confidence {
+	font-size: var(--font-smallest);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	font-weight: var(--font-semibold);
+	color: var(--text-muted);
 }
-.cuecraft-cornell-cue[data-confidence="low"] {
-	border-left-color: var(--color-red);
+.cuecraft-cornell-cue[data-confidence="high"] .cuecraft-cornell-confidence {
+	color: var(--color-green);
+}
+.cuecraft-cornell-cue[data-confidence="medium"] .cuecraft-cornell-confidence {
+	color: var(--color-yellow);
+}
+.cuecraft-cornell-cue[data-confidence="low"] .cuecraft-cornell-confidence {
+	color: var(--color-red);
 }
 
 .cuecraft-cornell-q {
@@ -276,21 +295,29 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	cursor: pointer;
 }
 
-/* Per-cue regenerate button in Cornell view. */
+/* Per-cue regenerate icon (circle-arrow) in the Cornell view. Hidden until the
+ * cue is hovered; low-confidence cues keep it visible as a regenerate nudge. */
 .cuecraft-cornell-regen {
-	display: inline-block;
-	margin-top: 6px;
-	font-size: var(--font-smallest);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	font-size: var(--font-ui-small);
+	line-height: 1;
 	color: var(--text-muted);
 	background: transparent;
 	border: 1px solid var(--background-modifier-border);
-	border-radius: 4px;
-	padding: 2px 8px;
+	border-radius: 50%;
+	box-shadow: none;
 	cursor: pointer;
 	opacity: 0;
-	transition: opacity 120ms;
+	transition: opacity 120ms, color 120ms, border-color 120ms;
 }
-.cuecraft-cornell-cue:hover .cuecraft-cornell-regen {
+.cuecraft-cornell-cue:hover .cuecraft-cornell-regen,
+.cuecraft-cornell-cue[data-confidence="low"] .cuecraft-cornell-regen {
 	opacity: 1;
 }
 .cuecraft-cornell-regen:hover {
@@ -354,15 +381,6 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-radius: 4px;
 	padding: 0 6px;
 	margin-bottom: 6px;
-}
-.cuecraft-style-exam-prep .cuecraft-cornell-cue[data-confidence="high"]::before {
-	content: "Question · high";
-}
-.cuecraft-style-exam-prep .cuecraft-cornell-cue[data-confidence="medium"]::before {
-	content: "Question · medium";
-}
-.cuecraft-style-exam-prep .cuecraft-cornell-cue[data-confidence="low"]::before {
-	content: "Question · low";
 }
 .cuecraft-style-exam-prep .cuecraft-cornell-kw {
 	border-top: 1px dashed var(--background-modifier-border);
@@ -431,4 +449,103 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 .cuecraft-style-handwritten .cuecraft-cornell-q {
 	font-weight: var(--font-bold);
+}
+
+/* ============================================================================
+ * Settings: v0 redesign controls (key field, accent swatches)
+ * ==========================================================================*/
+
+/* API key field: inline show/hide eye + presence badge. */
+.cuecraft-key-eye {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	margin-left: 6px;
+	padding: 4px;
+	color: var(--text-muted);
+	background: transparent;
+	border: none;
+	box-shadow: none;
+	cursor: pointer;
+}
+.cuecraft-key-eye:hover {
+	color: var(--text-normal);
+}
+.cuecraft-key-badge {
+	margin-left: 6px;
+	font-size: var(--font-ui-smaller);
+	border-radius: var(--radius-s);
+	padding: 2px 8px;
+	white-space: nowrap;
+}
+.cuecraft-key-badge.is-set {
+	color: var(--text-success, var(--text-accent));
+	background: var(--background-modifier-success, var(--background-secondary));
+}
+.cuecraft-key-badge.is-empty {
+	color: var(--text-muted);
+	background: var(--background-secondary);
+}
+
+/* Accent-color swatches (Appearance). The selected one shows a ring + check. */
+.cuecraft-swatches {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+/* `button.cuecraft-swatch` (raised specificity) beats Obsidian's themed
+ * `.theme-dark button` background, which otherwise leaves the circles blank. */
+.cuecraft-swatches button.cuecraft-swatch {
+	position: relative;
+	width: 22px;
+	height: 22px;
+	padding: 0;
+	border-radius: 50%;
+	border: 2px solid transparent;
+	background-color: var(--cuecraft-accent, var(--interactive-accent));
+	cursor: pointer;
+	box-shadow: none;
+}
+.cuecraft-swatch.is-selected {
+	border-color: var(--text-normal);
+}
+.cuecraft-swatch.is-selected::after {
+	content: "\2713";
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-on-accent);
+	font-size: 12px;
+	font-weight: var(--font-bold);
+}
+
+/* Accent palette. `--cuecraft-accent` is the single knob the swatch and the
+ * cue/chip styles read, so adding a color here is all it takes. */
+.cuecraft-accent-violet {
+	--cuecraft-accent: #8b5cf6;
+}
+.cuecraft-accent-teal {
+	--cuecraft-accent: #14b8a6;
+}
+.cuecraft-accent-amber {
+	--cuecraft-accent: #f59e0b;
+}
+.cuecraft-accent-rose {
+	--cuecraft-accent: #f43f5e;
+}
+
+/* Apply the chosen accent to the Cornell cue surface. Per the v0 design the
+ * accent tints the keyword chips and the cue rail — the question text stays the
+ * normal foreground color so it reads as the primary content, and confidence is
+ * shown via the per-cue label, not the rail. Failed cues keep their red rail
+ * (the `:not()` keeps this rule from overriding it). Low specificity otherwise,
+ * so presets that recolor chips (legal-pad, minimal) keep their look. */
+.cuecraft-cornell-cue:not(.cuecraft-cornell-cue-error) {
+	border-left-color: var(--cuecraft-accent, var(--interactive-accent));
+}
+.cuecraft-cornell-chip {
+	color: var(--cuecraft-accent, var(--text-muted));
+	border-color: var(--cuecraft-accent, var(--background-modifier-border));
 }
