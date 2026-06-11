@@ -38,6 +38,7 @@ import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	ANTHROPIC_DEFAULT_MODEL_ID,
 	describeAnthropicModel,
+	formatAnthropicUnavailableModelMessage,
 	ANTHROPIC_MODEL_CATALOG,
 	isAnthropicCustomModelSelection,
 } from "./anthropic-models";
@@ -770,6 +771,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			const model = describeAnthropicModel(this.plugin.settings.anthropicModel);
 			new Notice(
 				`CueCraft: Connected to Anthropic with ${model.label} (${model.rawId}).`
+			);
+			return;
+		}
+		if (
+			provider.id === "anthropic" &&
+			/authentication_error|model|access|permission|unsupported|not found/i.test(
+				status.message
+			)
+		) {
+			new Notice(
+				formatAnthropicUnavailableModelMessage(this.plugin.settings.anthropicModel)
 			);
 			return;
 		}

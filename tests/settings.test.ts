@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	ANTHROPIC_DEFAULT_MODEL_ID,
+	formatAnthropicUnavailableModelMessage,
 	isAnthropicCustomModelSelection,
 	normalizeAnthropicModelSelection,
 } from "../src/anthropic-models";
@@ -53,5 +54,11 @@ describe("Anthropic picker defaults", () => {
 		};
 		normalizeAnthropicModelSelection(settings);
 		expect(settings.anthropicModelSelection).toBe(ANTHROPIC_CUSTOM_MODEL_ID);
+	});
+
+	it("formats an unavailable Anthropic model message with friendly and raw IDs", () => {
+		expect(formatAnthropicUnavailableModelMessage("claude-unknown-xyz")).toBe(
+			"CueCraft: This key cannot access Custom model ID (claude-unknown-xyz). Pick another model or check your Anthropic account."
+		);
 	});
 });

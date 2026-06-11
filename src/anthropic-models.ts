@@ -77,3 +77,8 @@ export function describeAnthropicModel(modelId: string): {
 	}
 	return { label: "Custom model ID", rawId: modelId };
 }
+
+export function formatAnthropicUnavailableModelMessage(modelId: string): string {
+	const model = describeAnthropicModel(modelId);
+	return `CueCraft: This key cannot access ${model.label} (${model.rawId}). Pick another model or check your Anthropic account.`;
+}
