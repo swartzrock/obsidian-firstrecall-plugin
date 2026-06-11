@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic picker now ships with a curated Claude catalog, custom ID fallback, and preserved saved IDs). 205 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic picker and connection-test copy now ship with curated Claude labels, custom ID fallback, preserved saved IDs, and friendlier test connection notices). 208 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -105,6 +105,10 @@ Each item links to the PR that delivered it.
   with friendly labels, a `Custom model ID...` escape hatch, preserved legacy/custom saved IDs, and
   Claude Sonnet 4.6 as the default/recommended model for new configs. Unit tests cover the default,
   catalog/custom selection, and preserved-load behavior.
+- **Anthropic connection-test copy.** `Test connection` now reports the friendly Anthropic model
+  name alongside the raw ID on success, and uses a more specific unavailable-model notice when the
+  selected Claude model is inaccessible. Unit tests cover both the friendly success copy and the
+  unavailable-model wording.
 - **Parallel cue generation + setting-change regeneration.** Full-note generation now runs section
   cue requests in bounded batches of five while preserving section order for cache/summary output;
   stale-section refresh uses the configured concurrency too. Cue-affecting settings (preset,
@@ -187,7 +191,7 @@ For the Anthropic picker slice:
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (205 tests)
+bun run test       # vitest (208 tests)
 ```
 
 Install into a vault by copying `main.js`, `manifest.json`, `styles.css` into

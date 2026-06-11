@@ -20,7 +20,7 @@ Implement all AI model settings improvements from the brief, preserving current 
 - [x] Show friendly model name and raw ID on success
 - [x] Improve unavailable-model error copy
 - [x] Add tests
-- [ ] Update progress docs
+- [x] Update progress docs
 - [ ] Manual Obsidian test instructions
 
 ## Rules
