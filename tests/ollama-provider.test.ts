@@ -77,6 +77,27 @@ describe("OllamaProvider.generateCue", () => {
 		expect(body.prompt).toContain("simple, accessible");
 	});
 
+	it("includes generation option guidance in the prompt", async () => {
+		const good = JSON.stringify({ question: "What is X?", keywords: ["a", "b"], confidence: "high" });
+		const spy = vi.fn(generateClient([good]));
+		const p = new OllamaProvider(baseOpts(spy));
+		await p.generateCue({
+			heading: "H",
+			content: "c",
+			preset: "conceptual",
+			options: {
+				cueDensity: 3,
+				questionStyle: "socratic",
+				generateKeywords: false,
+				autoSummary: true,
+			},
+		});
+		const body = JSON.parse(spy.mock.calls[0][0].body as string);
+		expect(body.prompt).toContain("Socratic");
+		expect(body.prompt).toContain("thorough");
+		expect(body.prompt).toContain("minimum 2");
+	});
+
 	it("repairs once when the first response is malformed", async () => {
 		const bad = "totally not json";
 		const good = JSON.stringify({

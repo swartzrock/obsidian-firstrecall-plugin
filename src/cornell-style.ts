@@ -24,11 +24,11 @@ export const CORNELL_STYLES: readonly CornellStyleInfo[] = [
 		label: "Cornell Classic",
 		description: "Theme-aware cue rail with a divider (the default).",
 	},
-	{
-		id: "exam-prep",
-		label: "Exam Prep",
-		description: "Boxed cues with a confidence badge, tuned for review.",
-	},
+		{
+			id: "exam-prep",
+			label: "Exam Prep",
+			description: "Boxed cues tuned for review.",
+		},
 	{
 		id: "legal-pad",
 		label: "Legal Pad",

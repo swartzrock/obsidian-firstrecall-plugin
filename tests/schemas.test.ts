@@ -61,6 +61,14 @@ describe("validateCue", () => {
 		if (r.ok) expect(r.value.confidence).toBe("high");
 	});
 
+	it("accepts an optional rationale", () => {
+		const r = validateCue(
+			'{"question":"Q","keywords":["a","b"],"confidence":"low","rationale":"The section is sparse."}'
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.rationale).toBe("The section is sparse.");
+	});
+
 	it("falls back to medium for an unrecognized confidence value", () => {
 		const r = validateCue(
 			'{"question":"Q","keywords":["a","b"],"confidence":"sure"}'

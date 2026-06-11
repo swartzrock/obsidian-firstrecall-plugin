@@ -1,5 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
-import { generateNote, generateSectionCue, clampText, DEFAULT_MAX_CONTEXT_CHARS } from "../src/generator";
+import {
+	generateNote,
+	generateSectionCue,
+	clampText,
+	DEFAULT_MAX_CONTEXT_CHARS,
+	DEFAULT_SECTION_CONCURRENCY,
+	resolveGenerationOptions,
+	resolveSectionConcurrency,
+} from "../src/generator";
 import type {
 	AiProvider,
 	CueInput,
@@ -11,6 +19,7 @@ import type { CueOutput, SummaryOutput } from "../src/schemas";
 interface MockOptions {
 	failOnHeading?: string;
 	onCue?: () => void;
+	delayMs?: number;
 }
 
 function mockProvider(opts: MockOptions = {}): AiProvider & {
@@ -32,6 +41,9 @@ function mockProvider(opts: MockOptions = {}): AiProvider & {
 		async generateCue(input: CueInput): Promise<CueOutput> {
 			provider.cueInputs.push(input);
 			opts.onCue?.();
+			if (opts.delayMs) {
+				await new Promise((resolve) => setTimeout(resolve, opts.delayMs));
+			}
 			if (opts.failOnHeading && input.heading === opts.failOnHeading) {
 				throw new Error("boom");
 			}
@@ -39,6 +51,7 @@ function mockProvider(opts: MockOptions = {}): AiProvider & {
 				question: `Q:${input.heading}`,
 				keywords: ["k1", "k2"],
 				confidence: "high",
+				rationale: input.heading === "Terms" ? "clear section" : undefined,
 			};
 		},
 		async generateSummary(input: SummaryInput): Promise<SummaryOutput> {
@@ -51,6 +64,7 @@ function mockProvider(opts: MockOptions = {}): AiProvider & {
 }
 
 const NOTE = "# A\na\n## B\nb\n### C\nc";
+const SIX_SECTION_NOTE = "# A\na\n# B\nb\n# C\nc\n# D\nd\n# E\ne\n# F\nf";
 
 describe("generateNote", () => {
 	it("reports progress for every section and generates the summary last", async () => {
@@ -80,6 +94,37 @@ describe("generateNote", () => {
 		]);
 	});
 
+	it("runs section cue generation in bounded parallel batches", async () => {
+		let active = 0;
+		let maxActive = 0;
+		const provider = mockProvider({
+			delayMs: 5,
+			onCue: () => {
+				active++;
+				maxActive = Math.max(maxActive, active);
+				setTimeout(() => {
+					active--;
+				}, 5);
+			},
+		});
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: SIX_SECTION_NOTE,
+			provider,
+			preset: "conceptual",
+			sectionConcurrency: 5,
+		});
+		expect(result.sections.map((s) => s.heading)).toEqual([
+			"A",
+			"B",
+			"C",
+			"D",
+			"E",
+			"F",
+		]);
+		expect(maxActive).toBe(5);
+	});
+
 	it("isolates a failing section without aborting the rest (H1.3)", async () => {
 		const provider = mockProvider({ failOnHeading: "B" });
 		const result = await generateNote({
@@ -96,16 +141,17 @@ describe("generateNote", () => {
 		expect(result.canceled).toBe(false);
 	});
 
-	it("cancels between sections and skips the summary (C3.2)", async () => {
+	it("cancels between batches and skips the summary", async () => {
 		const controller = new AbortController();
 		const provider = mockProvider();
 		const summarySpy = vi.spyOn(provider, "generateSummary");
 
 		const result = await generateNote({
 			noteTitle: "T",
-			markdown: NOTE,
+			markdown: SIX_SECTION_NOTE,
 			provider,
 			preset: "conceptual",
+			sectionConcurrency: 2,
 			signal: controller.signal,
 			onProgress: (done) => {
 				if (done === 1) controller.abort();
@@ -113,7 +159,7 @@ describe("generateNote", () => {
 		});
 
 		expect(result.canceled).toBe(true);
-		expect(result.sections).toHaveLength(1); // stopped after first
+		expect(result.sections).toHaveLength(2); // in-flight batch finished
 		expect(result.summary).toBeNull();
 		expect(summarySpy).not.toHaveBeenCalled();
 	});
@@ -158,6 +204,38 @@ describe("generateNote", () => {
 		});
 		expect(provider.cueInputs.every((i) => i.noteContext === undefined)).toBe(true);
 	});
+
+	it("passes generation options to cue calls", async () => {
+		const provider = mockProvider();
+		await generateNote({
+			noteTitle: "T",
+			markdown: NOTE,
+			provider,
+			preset: "conceptual",
+			options: {
+				cueDensity: 3,
+				questionStyle: "socratic",
+				generateKeywords: false,
+			},
+		});
+		expect(provider.cueInputs.every((i) => i.options?.cueDensity === 3)).toBe(true);
+		expect(provider.cueInputs.every((i) => i.options?.questionStyle === "socratic")).toBe(true);
+		expect(provider.cueInputs.every((i) => i.options?.generateKeywords === false)).toBe(true);
+	});
+
+	it("skips summary generation when autoSummary is disabled", async () => {
+		const provider = mockProvider();
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: NOTE,
+			provider,
+			preset: "conceptual",
+			options: { autoSummary: false },
+		});
+		expect(provider.summaryCalls).toBe(0);
+		expect(result.summary).toBeNull();
+		expect(result.learningObjective).toBeNull();
+	});
 });
 
 describe("generateSectionCue", () => {
@@ -181,6 +259,7 @@ describe("generateSectionCue", () => {
 		expect(result.question).toBe("Q:Terms");
 		expect(result.keywords).toEqual(["k1", "k2"]);
 		expect(result.confidence).toBe("high");
+		expect(result.rationale).toBe("clear section");
 		expect(result.error).toBeNull();
 		expect(result.contentHash).toBe("abc123");
 	});
@@ -193,6 +272,26 @@ describe("generateSectionCue", () => {
 			preset: "simpler",
 		});
 		expect(provider.cueInputs[0].preset).toBe("simpler");
+	});
+
+	it("forwards resolved generation options to the provider", async () => {
+		const provider = mockProvider();
+		await generateSectionCue({
+			section,
+			provider,
+			preset: "conceptual",
+			options: {
+				cueDensity: 1,
+				questionStyle: "exam",
+				generateKeywords: false,
+			},
+		});
+		expect(provider.cueInputs[0].options).toMatchObject({
+			cueDensity: 1,
+			questionStyle: "exam",
+			generateKeywords: false,
+			autoSummary: true,
+		});
 	});
 
 	it("captures provider error without throwing", async () => {
@@ -228,6 +327,31 @@ describe("generateSectionCue", () => {
 		});
 		expect(provider.cueInputs[0].content.length).toBeLessThanOrEqual(600);
 		expect(provider.cueInputs[0].content).toMatch(/truncated for length/);
+	});
+});
+
+describe("resolveGenerationOptions", () => {
+	it("fills unspecified values from defaults", () => {
+		expect(resolveGenerationOptions({ cueDensity: 3 })).toEqual({
+			cueDensity: 3,
+			questionStyle: "recall",
+			generateKeywords: true,
+			autoSummary: true,
+		});
+	});
+});
+
+describe("resolveSectionConcurrency", () => {
+	it("defaults to five parallel section requests", () => {
+		expect(DEFAULT_SECTION_CONCURRENCY).toBe(5);
+		expect(resolveSectionConcurrency(undefined)).toBe(5);
+		expect(resolveSectionConcurrency(0)).toBe(5);
+		expect(resolveSectionConcurrency(-1)).toBe(5);
+	});
+
+	it("accepts positive finite numbers and floors decimals", () => {
+		expect(resolveSectionConcurrency(3)).toBe(3);
+		expect(resolveSectionConcurrency(2.8)).toBe(2);
 	});
 });
 

@@ -61,9 +61,8 @@ export interface CueCraftSettings {
 	cornellStyle: CornellStyle;
 	cueColumnWidth: CueColumnWidth;
 	cueFontSize: CueFontSize;
-	// v0 settings redesign. Persisted now; some are not yet wired into
-	// generation/rendering (the inline `cornell` block work lands later).
 	autoGenerateOnSave: boolean;
+	sectionConcurrency: number;
 	cueDensity: CueDensity;
 	questionStyle: QuestionStyle;
 	generateKeywords: boolean;
@@ -92,8 +91,8 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cornellStyle: DEFAULT_CORNELL_STYLE,
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
-	// Off by default so an unwired auto-generate can't trigger API calls.
 	autoGenerateOnSave: false,
+	sectionConcurrency: 5,
 	cueDensity: DEFAULT_CUE_DENSITY,
 	questionStyle: DEFAULT_QUESTION_STYLE,
 	generateKeywords: true,
@@ -127,6 +126,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderNoteFormatSection(containerEl);
 		this.renderAppearanceSection(containerEl);
 		this.renderStudySection(containerEl);
+	}
+
+	hide(): void {
+		super.hide();
+		this.plugin.promptForCueSettingsRegeneration();
 	}
 
 	// ── AI model ──────────────────────────────────────────────────────────
@@ -174,6 +178,25 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		const concurrencyDesc = (): string =>
+			`Run up to ${this.plugin.settings.sectionConcurrency} section request${
+				this.plugin.settings.sectionConcurrency === 1 ? "" : "s"
+			} at once. Lower this if a cloud provider returns rate-limit errors.`;
+		const concurrencySetting = new Setting(containerEl)
+			.setName("Parallel requests")
+			.addSlider((sl) =>
+				sl
+					.setLimits(1, 5, 1)
+					.setValue(this.plugin.settings.sectionConcurrency)
+					.setDynamicTooltip()
+					.onChange(async (value) => {
+						this.plugin.settings.sectionConcurrency = value;
+						await this.plugin.saveSettings();
+						concurrencySetting.setDesc(concurrencyDesc());
+					})
+			);
+		concurrencySetting.setDesc(concurrencyDesc());
 	}
 
 	// ── Cue generation ────────────────────────────────────────────────────
@@ -193,11 +216,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.cuePreset = value as CuePreset;
 						await this.plugin.saveSettings();
+						this.plugin.noteCueSettingsChanged();
 					})
 			);
 
 		const densityDesc = (): string =>
-			`How many recall questions to generate per section \u2014 ${cueDensityLabel(
+			`How detailed each section's recall cue should be \u2014 ${cueDensityLabel(
 				this.plugin.settings.cueDensity
 			)}.`;
 		const densitySetting = new Setting(containerEl)
@@ -215,6 +239,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						this.plugin.settings.cueDensity = value as CueDensity;
 						await this.plugin.saveSettings();
 						densitySetting.setDesc(densityDesc());
+						this.plugin.noteCueSettingsChanged();
 					})
 			);
 		densitySetting.setDesc(densityDesc());
@@ -229,6 +254,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						this.plugin.settings.questionStyle =
 							value as QuestionStyle;
 						await this.plugin.saveSettings();
+						this.plugin.noteCueSettingsChanged();
 					}
 				);
 			});
@@ -242,18 +268,20 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.generateKeywords = value;
 						await this.plugin.saveSettings();
+						this.plugin.noteCueSettingsChanged();
 					})
 			);
 
 		new Setting(containerEl)
 			.setName("Auto-write section summary")
-			.setDesc("Draft a short summary callout beneath each note's cues.")
+			.setDesc("Draft a whole-note summary after section cues are generated.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.autoSummary)
 					.onChange(async (value) => {
 						this.plugin.settings.autoSummary = value;
 						await this.plugin.saveSettings();
+						this.plugin.noteCueSettingsChanged();
 					})
 			);
 	}
@@ -264,7 +292,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Render in Reading mode")
-			.setDesc("Process the cornell block in both Live Preview and Reading view.")
+			.setDesc("Show cached CueCraft cues beneath headings in Reading view.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.renderInReadingMode)

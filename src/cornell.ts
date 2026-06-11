@@ -18,6 +18,7 @@ export interface CornellRow {
 	question: string | null;
 	keywords: string[];
 	confidence: Confidence | null;
+	rationale: string | null;
 	/** True when a usable question exists (no error). */
 	hasCue: boolean;
 	/** Generation error for this section, when it was attempted but failed. */
@@ -55,6 +56,7 @@ export function buildCornellModel(
 			question: hasCue ? (cue?.question ?? null) : null,
 			keywords: hasCue ? cue?.keywords ?? [] : [],
 			confidence: hasCue ? cue?.confidence ?? null : null,
+			rationale: hasCue ? cue?.rationale ?? null : null,
 			hasCue,
 			error: hasCue ? null : cue?.error ?? null,
 		};

@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (core-UX: settings redesign + cue accent color wired). 173 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (cue confidence UI: low-confidence warnings only). 199 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -29,8 +29,8 @@ Each item links to the PR that delivered it.
 ### V1.0 — Study Layer MVP (complete)
 - **Docs / scope** — MVP scope + phased roadmap (#1), v1.0 user stories & acceptance criteria (#2).
 - **Plugin scaffold** — build, ribbon, command palette, settings skeleton (#3).
-- **Parser + Ollama provider + generator** — heading-section parser, Ollama provider, sequential
-  generation with validation + tests (#4).
+- **Parser + Ollama provider + generator** — heading-section parser, Ollama provider, bounded
+  parallel generation with validation + tests (#4; parallel batching added later).
 - **Tooling/CI** — switch to Bun + GitHub Actions (build & test on PRs) (#5).
 - **Per-note cache** — per-note JSON cache with `contentHash` stale detection + schema migration (#6).
 - **Editor rendering** — cues rendered in the editor via CodeMirror 6 decorations (#8).
@@ -88,20 +88,33 @@ Each item links to the PR that delivered it.
   eye + a presence badge. New single-source-of-truth modules `cue-generation.ts` (question style +
   density) and `cornell-accent.ts` (accent → CSS class), with unit tests. The existing multi-provider
   config (Ollama + Anthropic/OpenAI/Gemini/Grok + Test connection) is preserved under "AI model" —
-  the v0 single-"AI Gateway" concept was intentionally not adopted. **Several new controls are
-  settings-only for now**: they persist but aren't wired into generation/rendering yet (the inline
-  `cornell`-block work lands later).
+  the v0 single-"AI Gateway" concept was intentionally not adopted.
 - **Cue accent color wired (first settings→view feature).** The chosen accent (violet/teal/amber/
   rose) now tints the Cornell view's keyword chips and cue rail via the `--cuecraft-accent` CSS
   variable; the view re-renders live when the swatch changes. Per the v0 design the question text
   stays the normal foreground color (the accent is for chips/rail, not the question copy). Accent
   rules use low specificity so style presets that deliberately recolor (legal-pad, minimal) keep
   their look; failed cues keep their red rail via a `:not(.cuecraft-cornell-cue-error)` guard.
-- **Confidence label + per-cue regenerate icon.** Since the rail is now the accent color, each cue
-  shows its self-reported confidence as a small colored **HIGH/MED/LOW** label (green/yellow/red).
-  A circle-arrow (↻) **regenerate** icon sits top-right of the cue: hidden until hover, but kept
-  visible for **low-confidence** cues as a nudge to regenerate them (opens the existing tone menu →
-  `regenerateSection`).
+- **Settings controls wired into generation/rendering.** Cue density and question style now feed
+  shared prompt guidance for Ollama and all AI SDK providers; "Auto-write section summary" skips
+  summary generation when off. "Generate keyword chips" hides keyword hints consistently in editor,
+  Cornell, and Reading mode; "Render in Reading mode" gates the post-processor; "Show cue column
+  border", "Compact chips", and "Fold cue column on mobile" now apply CSS classes in Cornell view.
+  "Auto-generate on save" now debounces Markdown file modifications and refreshes cues when enabled.
+- **Parallel cue generation + setting-change regeneration.** Full-note generation now runs section
+  cue requests in bounded batches of five while preserving section order for cache/summary output;
+  stale-section refresh uses the configured concurrency too. Cue-affecting settings (preset,
+  density, question style, keyword generation, summary generation) now debounce and offer to
+  regenerate the current note when it already has cached cues.
+- **Provider safety controls.** The AI model settings now expose **Parallel requests** (1–5,
+  default 5) so cloud-provider users can reduce concurrency if they hit API limits. AI SDK
+  providers retry rate-limit responses with backoff before surfacing a section failure. Cue-affecting
+  settings now ask "Regenerate cues with new settings?" after the user leaves CueCraft settings,
+  instead of interrupting settings edits or immediately spending API calls.
+- **Low-confidence warnings + per-cue regenerate icon.** High/medium confidence is now treated as
+  internal metadata and hidden from the cue UI. Low-confidence cues show a compact warning button
+  with the model's rationale in the tooltip, and keep the circle-arrow (↻) regenerate icon visible
+  as a nudge to retry them (opens the existing tone menu → `regenerateSection`).
 - **Removed two unused "Note format" controls.** The read-only Storage block (` ```cornell `) and
   Summary callout type (`> [!summary]`) badges were dropped — they documented internals the user
   doesn't act on. (The `renderReadOnlyBadge` helper + `.cuecraft-code-badge` CSS went with them.)
@@ -155,7 +168,7 @@ Each item links to the PR that delivered it.
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (150 tests)
+bun run test       # vitest (199 tests)
 ```
 
 Install into a vault by copying `main.js`, `manifest.json`, `styles.css` into

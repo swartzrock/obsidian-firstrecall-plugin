@@ -48,6 +48,14 @@ describe("buildReadingCueMap", () => {
 		expect(map.get(3)?.heading).toBe("B");
 	});
 
+	it("can omit keyword hints from mapped reading cues", () => {
+		const map = buildReadingCueMap(cacheFrom(), NOTE, {
+			showKeywords: false,
+		});
+		expect(map.get(1)?.question).toBe("Q:A");
+		expect(map.get(1)?.keywords).toEqual([]);
+	});
+
 	it("re-resolves lines after content shifts headings down", () => {
 		const map = buildReadingCueMap(cacheFrom(), "intro\nmore\n" + NOTE);
 		// "# A" is now on line 3.
