@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
+import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import {
 	AnthropicProvider,
 	type ObjectGenerator,
@@ -135,5 +136,45 @@ describe("AnthropicProvider.testConnection", () => {
 		const status = await p.testConnection();
 		expect(status.ok).toBe(false);
 		expect(status.message).toMatch(/API key/i);
+	});
+});
+
+describe("AnthropicProvider.listModels", () => {
+	it("returns typed models with display names from the official SDK", async () => {
+		const models: ModelInfo[] = [
+			{
+				id: "claude-account-123",
+				display_name: "Claude Account 123",
+				type: "model",
+				created_at: "2026-01-01T00:00:00Z",
+				max_input_tokens: 1000,
+				max_tokens: 1000,
+				capabilities: null,
+			},
+		] as ModelInfo[];
+		const fetchMock = async (input: RequestInfo | URL) => {
+			expect(String(input)).toContain("/v1/models");
+			return new Response(
+				JSON.stringify({
+					data: models,
+					first_id: "claude-account-123",
+					last_id: "claude-account-123",
+					has_more: false,
+				}),
+				{
+					status: 200,
+					headers: { "content-type": "application/json" },
+				}
+			);
+		};
+		const p = new AnthropicProvider({
+			apiKey: "sk-ant-test",
+			model: "claude-3-5-sonnet-latest",
+			fetchImpl: fetchMock as never,
+		});
+		const listed = await p.listModels();
+		expect(listed).toHaveLength(1);
+		expect(listed[0].display_name).toBe("Claude Account 123");
+		expect(listed[0].id).toBe("claude-account-123");
 	});
 });

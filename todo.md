@@ -40,14 +40,14 @@ Stopping after one phase is a successful completion of that run. Do not continue
 - [x] Manual Obsidian test instructions
 
 ## Phase 4: Refresh Available Models
-- [ ] Add a provider model-list abstraction that can return curated fallback models
-- [ ] Add Anthropic model refresh support after an API key is entered
-- [ ] Merge refreshed models with curated fallback models without losing recommended labels
-- [ ] Preserve the saved model as a custom option if it is not returned by the provider
-- [ ] Show a clear fallback/error state if refresh fails
-- [ ] Add tests for refresh success, refresh failure, and saved-model preservation
-- [ ] Update docs/CueCraft-Progress.md and test counts if needed
-- [ ] Manual Obsidian test instructions
+- [x] Add a provider model-list abstraction that can return curated fallback models
+- [x] Add Anthropic model refresh support after an API key is entered
+- [x] Merge refreshed models with curated fallback models without losing recommended labels
+- [x] Preserve the saved model as a custom option if it is not returned by the provider
+- [x] Show a clear fallback/error state if refresh fails
+- [x] Add tests for refresh success, refresh failure, and saved-model preservation
+- [x] Update docs/CueCraft-Progress.md and test counts if needed
+- [x] Manual Obsidian test instructions
 
 ## Phase 5: Parallel Request Guidance
 - [ ] Add provider/model-specific guidance text for the Parallel requests setting

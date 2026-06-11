@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic picker, connection-test copy, and model hints now ship with curated Claude labels, custom ID fallback, preserved saved IDs, and friendlier test connection notices). 210 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic picker, refresh support, connection-test copy, and model hints now ship with curated Claude labels, custom ID fallback, preserved saved IDs, merged refreshable model lists from the official Anthropic SDK, and friendlier test connection notices). 215 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -112,6 +112,12 @@ Each item links to the PR that delivered it.
 - **Anthropic model hints.** The Anthropic picker now shows a concise CueCraft-specific hint under
   the model dropdown, with short quality/speed/cost/context metadata for each curated model plus a
   generic fallback for custom IDs. Unit tests cover curated and fallback hint selection.
+- **Anthropic model refresh.** The Anthropic picker now has a `Refresh models` action that
+  re-fetches Anthropic's account-specific model IDs after an API key is entered, uses the official
+  Anthropic TypeScript SDK model types to pull each model's `display_name`, merges them with the
+  curated fallback list, and keeps the custom-model path visible when refresh fails or a saved
+  custom ID is not returned. Unit tests cover refresh success, refresh failure, and custom-model
+  preservation behavior.
 - **Parallel cue generation + setting-change regeneration.** Full-note generation now runs section
   cue requests in bounded batches of five while preserving section order for cache/summary output;
   stale-section refresh uses the configured concurrency too. Cue-affecting settings (preset,
@@ -206,12 +212,21 @@ For the Anthropic model-hint slice:
 4. Confirm the hint updates to reflect the selected model's practical tradeoffs.
 5. Confirm the custom-model fallback keeps the hint useful even when the model is not in the catalog.
 
+For the Anthropic model-refresh slice:
+
+1. Open CueCraft settings and select `Anthropic (Claude)`.
+2. Enter a valid Anthropic API key if one is not already saved.
+3. Click `Refresh models`.
+4. Confirm the curated Claude options remain available and any account-specific models are merged into the dropdown using their Anthropic `display_name` values.
+5. Switch to a custom model ID, refresh again, and confirm the custom text field still preserves the saved model when the provider does not return it.
+6. Temporarily use an invalid key or otherwise force refresh to fail, then confirm CueCraft shows the curated fallback list plus a clear refresh-failure message.
+
 ## How to resume / dev quickstart
 
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (210 tests)
+bun run test       # vitest (214 tests)
 ```
 
 Install into a vault by copying `main.js`, `manifest.json`, `styles.css` into

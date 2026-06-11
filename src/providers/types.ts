@@ -48,7 +48,7 @@ export interface AiProvider {
 	requiresNetwork: boolean;
 	requiresDownload: boolean;
 	testConnection(): Promise<ProviderStatus>;
-	listModels?(): Promise<string[]>;
+	listModels?(): Promise<unknown[]>;
 	generateCue(input: CueInput, signal?: AbortSignal): Promise<CueOutput>;
 	generateSummary(input: SummaryInput, signal?: AbortSignal): Promise<SummaryOutput>;
 }

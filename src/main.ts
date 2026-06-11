@@ -19,6 +19,7 @@ import {
 import {
 	normalizeAnthropicModelSelection,
 } from "./anthropic-models";
+import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
 import { OllamaProvider } from "./providers/ollama-provider";
 import { AnthropicProvider } from "./providers/anthropic-provider";
@@ -171,9 +172,28 @@ export default class CueCraftPlugin extends Plugin {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
 		const rawSettings = loaded?.settings ?? loaded ?? {};
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
+		const legacyAvailableModelIds = (settings as unknown as {
+			anthropicAvailableModelIds?: string[];
+		}).anthropicAvailableModelIds;
+		const hasAvailableModels = Boolean(
+			(settings as { anthropicAvailableModels?: ModelInfo[] }).anthropicAvailableModels
+		);
+		if (Array.isArray(legacyAvailableModelIds) && !hasAvailableModels) {
+			(settings as { anthropicAvailableModels?: ModelInfo[] }).anthropicAvailableModels =
+				legacyAvailableModelIds.map((id) => ({
+					id,
+					display_name: id,
+					type: "model",
+					created_at: new Date(0).toISOString(),
+					max_input_tokens: null,
+					max_tokens: null,
+					capabilities: null,
+				} as ModelInfo));
+		}
 		normalizeAnthropicModelSelection(settings as {
 			anthropicModel: string;
 			anthropicModelSelection?: string;
+			anthropicAvailableModels?: ModelInfo[];
 		});
 		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
 		const caches: Record<string, NoteCache> = {};
