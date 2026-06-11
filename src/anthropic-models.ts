@@ -7,10 +7,11 @@ export interface AnthropicModelOption {
 }
 
 export const ANTHROPIC_CUSTOM_MODEL_ID = "__custom__";
+export const ANTHROPIC_DEFAULT_MODEL_ID = "claude-sonnet-4-6";
 
 export const ANTHROPIC_MODEL_CATALOG: AnthropicModelOption[] = [
 	{
-		id: "claude-sonnet-4-6",
+		id: ANTHROPIC_DEFAULT_MODEL_ID,
 		label: "Claude Sonnet 4.6",
 		description: "Recommended balanced option for CueCraft.",
 		recommended: true,

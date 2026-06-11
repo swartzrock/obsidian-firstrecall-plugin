@@ -12,7 +12,7 @@ Implement all AI model settings improvements from the brief, preserving current 
 - [x] Add custom model ID fallback
 - [x] Preserve existing saved model IDs
 - [x] Default Anthropic to Claude Sonnet 4.6
-- [ ] Add tests
+- [x] Add tests
 - [ ] Update docs/CueCraft-Progress.md
 - [ ] Manual Obsidian test instructions
 

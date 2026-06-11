@@ -36,6 +36,7 @@ import {
 } from "./cornell-accent";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
+	ANTHROPIC_DEFAULT_MODEL_ID,
 	ANTHROPIC_MODEL_CATALOG,
 	isAnthropicCustomModelSelection,
 } from "./anthropic-models";
@@ -85,8 +86,8 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	ollamaHost: "http://localhost:11434",
 	ollamaModel: "llama3.1:8b",
 	anthropicApiKey: "",
-	anthropicModel: "claude-sonnet-4-6",
-	anthropicModelSelection: "claude-sonnet-4-6",
+	anthropicModel: ANTHROPIC_DEFAULT_MODEL_ID,
+	anthropicModelSelection: ANTHROPIC_DEFAULT_MODEL_ID,
 	openaiApiKey: "",
 	openaiModel: "gpt-4o-mini",
 	googleApiKey: "",
