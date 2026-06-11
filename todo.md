@@ -58,13 +58,13 @@ Stopping after one phase is a successful completion of that run. Do not continue
 - [x] Manual Obsidian test instructions
 
 ## Phase 6: Cleaner Provider Selection Layout
-- [ ] Group provider, API key, model picker, and test connection into one coherent AI setup section
-- [ ] Make the setup order visually match choose provider, enter key, choose model, test connection, tune speed
-- [ ] Keep the settings page compact and consistent with existing Obsidian settings styling
-- [ ] Confirm no setting controls overlap or wrap awkwardly at narrow settings widths
-- [ ] Add tests only if shared settings rendering helpers are introduced
-- [ ] Update docs/CueCraft-Progress.md and test counts if needed
-- [ ] Manual Obsidian test instructions
+- [x] Group provider, API key, model picker, and test connection into one coherent AI setup section
+- [x] Make the setup order visually match choose provider, enter key, choose model, test connection, tune speed
+- [x] Keep the settings page compact and consistent with existing Obsidian settings styling
+- [x] Confirm no setting controls overlap or wrap awkwardly at narrow settings widths
+- [x] Add tests only if shared settings rendering helpers are introduced
+- [x] Update docs/CueCraft-Progress.md and test counts if needed
+- [x] Manual Obsidian test instructions
 
 ## Phase 7: Per-Provider Setup Status
 - [ ] Add lightweight setup status indicators for key saved, model selected, and connection tested

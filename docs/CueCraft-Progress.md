@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic picker, refresh support, connection-test copy, model hints, and provider-aware parallel-request guidance now ship with curated Claude labels, custom ID fallback, preserved saved IDs, merged refreshable model lists from the official Anthropic SDK, and safer concurrency tuning copy). 223 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic picker, refresh support, connection-test copy, model hints, provider-aware parallel-request guidance, and a cleaner AI setup flow now ship with curated Claude labels, custom ID fallback, preserved saved IDs, merged refreshable model lists from the official Anthropic SDK, and safer concurrency tuning copy). 223 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -133,6 +133,11 @@ Each item links to the PR that delivered it.
   hint, premium/rate-limit-prone cloud models steer users toward fewer parallel requests, and Ollama
   calls out local machine/model performance. Unit tests cover fast, premium, Ollama, and fallback
   guidance selection.
+- **Cleaner AI setup flow.** The AI model section now groups setup into a compact Obsidian-native
+  card with explicit steps: choose provider, add credentials and model, test the setup, then tune
+  parallel speed. The `Auto-generate on save` toggle now sits as a final optional automation step,
+  and the grouped controls add narrow-width wrapping guards so key/model controls stay readable in
+  tighter settings panes.
 - **Low-confidence warnings + per-cue regenerate icon.** High/medium confidence is now treated as
   internal metadata and hidden from the cue UI. Low-confidence cues show a compact warning button
   with the model's rationale in the tooltip, and keep the circle-arrow (↻) regenerate icon visible
@@ -234,6 +239,15 @@ For the parallel-request guidance slice:
 4. Switch the provider to `Ollama (local)` and confirm the hint changes to local machine/model performance guidance.
 5. Switch to a balanced cloud model such as `Claude Sonnet 4.6` and confirm the fallback rate-limit guidance appears.
 6. Move the slider and confirm the description still updates the request count while keeping the provider/model-specific guidance.
+
+For the cleaner AI setup layout slice:
+
+1. Reload CueCraft in Obsidian so the updated settings layout is active.
+2. Open CueCraft settings and confirm the AI model area reads as a single setup flow with step labels for provider, credentials/model, test connection, speed, and optional automation.
+3. Switch between `Anthropic (Claude)`, `OpenAI (ChatGPT)`, and `Ollama (local)` and confirm the provider-specific controls stay inside that grouped setup area in the same order.
+4. Confirm `Test connection` appears before `Parallel requests`, and `Auto-generate on save` appears after the speed controls as a separate optional step.
+5. Narrow the settings pane if convenient and confirm dropdowns, text inputs, eye buttons, and badges do not overlap or wrap awkwardly.
+6. Confirm the grouped AI controls still feel native to Obsidian rather than looking like a custom modal or separate screen.
 
 ## How to resume / dev quickstart
 

@@ -156,7 +156,16 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private renderAiModelSection(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("AI model").setHeading();
 
-		new Setting(containerEl)
+		const setupFlowEl = containerEl.createDiv({
+			cls: "cuecraft-settings-flow",
+		});
+		this.renderSettingsFlowHeading(
+			setupFlowEl,
+			"1. Choose provider",
+			"Pick where CueCraft should generate cues."
+		);
+
+		new Setting(setupFlowEl)
 			.setName("AI provider")
 			.setDesc("Where cues are generated. Ollama runs locally; the rest call a cloud API.")
 			.addDropdown((dd) =>
@@ -174,9 +183,21 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					})
 			);
 
-		this.renderProviderSettings(containerEl);
+		this.renderSettingsFlowHeading(
+			setupFlowEl,
+			"2. Add credentials and choose a model",
+			"Enter the provider key or host details, then choose the model CueCraft should use."
+		);
 
-		new Setting(containerEl)
+		this.renderProviderSettings(setupFlowEl);
+
+		this.renderSettingsFlowHeading(
+			setupFlowEl,
+			"3. Verify the setup",
+			"Run a quick provider check before generating cues."
+		);
+
+		new Setting(setupFlowEl)
 			.setName("Test connection")
 			.setDesc("Verify CueCraft can reach the selected provider.")
 			.addButton((btn) =>
@@ -186,21 +207,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.onClick(() => this.testConnection())
 			);
 
-		new Setting(containerEl)
-			.setName("Auto-generate on save")
-			.setDesc("Draft cues and a summary automatically whenever a note is saved.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.autoGenerateOnSave)
-					.onChange(async (value) => {
-						this.plugin.settings.autoGenerateOnSave = value;
-						await this.plugin.saveSettings();
-					})
-			);
+		this.renderSettingsFlowHeading(
+			setupFlowEl,
+			"4. Tune speed",
+			"Adjust how aggressively CueCraft generates section cues in parallel."
+		);
 
 		const concurrencyDesc = (): string =>
 			formatParallelRequestsDescription(this.plugin.settings);
-		const concurrencySetting = new Setting(containerEl)
+		const concurrencySetting = new Setting(setupFlowEl)
 			.setName("Parallel requests")
 			.addSlider((sl) =>
 				sl
@@ -214,6 +229,42 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					})
 			);
 		concurrencySetting.setDesc(concurrencyDesc());
+
+		this.renderSettingsFlowHeading(
+			setupFlowEl,
+			"5. Optional automation",
+			"Let CueCraft refresh cues automatically after note edits."
+		);
+
+		new Setting(setupFlowEl)
+			.setName("Auto-generate on save")
+			.setDesc("Draft cues and a summary automatically whenever a note is saved.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.autoGenerateOnSave)
+					.onChange(async (value) => {
+						this.plugin.settings.autoGenerateOnSave = value;
+						await this.plugin.saveSettings();
+					})
+			);
+	}
+
+	private renderSettingsFlowHeading(
+		containerEl: HTMLElement,
+		title: string,
+		description: string
+	): void {
+		const headingEl = containerEl.createDiv({
+			cls: "cuecraft-settings-flow-heading",
+		});
+		headingEl.createEl("div", {
+			cls: "cuecraft-settings-flow-title",
+			text: title,
+		});
+		headingEl.createEl("div", {
+			cls: "cuecraft-settings-flow-desc",
+			text: description,
+		});
 	}
 
 	// ── Cue generation ────────────────────────────────────────────────────
