@@ -34,6 +34,11 @@ import {
 	DEFAULT_CUE_ACCENT,
 	type CueAccent,
 } from "./cornell-accent";
+import {
+	ANTHROPIC_CUSTOM_MODEL_ID,
+	ANTHROPIC_MODEL_CATALOG,
+	isAnthropicCustomModelSelection,
+} from "./anthropic-models";
 
 /**
  * CueCraft supports a local provider (Ollama) and several cloud providers via
@@ -44,56 +49,13 @@ export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
 export type ProviderId = "ollama" | "anthropic" | "openai" | "google" | "xai";
 
-export interface AnthropicModelOption {
-	id: string;
-	label: string;
-	description: string;
-	recommended?: boolean;
-	legacy?: boolean;
-}
-
-export const ANTHROPIC_MODEL_CATALOG: AnthropicModelOption[] = [
-	{
-		id: "claude-sonnet-4-6",
-		label: "Claude Sonnet 4.6",
-		description: "Recommended balanced option for CueCraft.",
-		recommended: true,
-	},
-	{
-		id: "claude-haiku-4-5",
-		label: "Claude Haiku 4.5",
-		description: "Faster and lower-cost option for frequent generation.",
-	},
-	{
-		id: "claude-opus-4-8",
-		label: "Claude Opus 4.8",
-		description: "Higher-quality option for dense or subtle notes.",
-	},
-	{
-		id: "claude-fable-5",
-		label: "Claude Fable 5",
-		description: "Premium option when available on the user's account.",
-	},
-	{
-		id: "claude-3-5-sonnet-latest",
-		label: "Claude 3.5 Sonnet Latest",
-		description: "Legacy compatibility for existing settings.",
-		legacy: true,
-	},
-	{
-		id: "claude-3-5-haiku-latest",
-		label: "Claude 3.5 Haiku Latest",
-		description: "Legacy compatibility for users already configured this way.",
-		legacy: true,
-	},
-];
-
 export interface CueCraftSettings {
 	provider: ProviderId;
 	ollamaHost: string;
 	ollamaModel: string;
 	anthropicApiKey: string;
 	anthropicModel: string;
+	anthropicModelSelection: string;
 	openaiApiKey: string;
 	openaiModel: string;
 	googleApiKey: string;
@@ -123,7 +85,8 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	ollamaHost: "http://localhost:11434",
 	ollamaModel: "llama3.1:8b",
 	anthropicApiKey: "",
-	anthropicModel: "claude-3-5-sonnet-latest",
+	anthropicModel: "claude-sonnet-4-6",
+	anthropicModelSelection: "claude-sonnet-4-6",
 	openaiApiKey: "",
 	openaiModel: "gpt-4o-mini",
 	googleApiKey: "",
@@ -531,6 +494,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private renderAnthropicSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
+		const isCustomSelection = isAnthropicCustomModelSelection(s);
+		const modelDescription =
+			ANTHROPIC_MODEL_CATALOG.find((model) => model.id === s.anthropicModel)
+				?.description ?? "Choose a Claude model for generation.";
 
 		new Setting(containerEl)
 			.setName("Anthropic API key")
@@ -579,15 +546,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				updateBadge();
 			});
 
-		const selectedModel =
-			ANTHROPIC_MODEL_CATALOG.find((model) => model.id === s.anthropicModel) ??
-			null;
 		new Setting(containerEl)
 			.setName("Claude model")
-			.setDesc(
-				selectedModel?.description ?? "Choose a Claude model for generation."
-			)
+			.setDesc(modelDescription)
 			.addDropdown((dd) => {
+				dd.addOption(ANTHROPIC_CUSTOM_MODEL_ID, "Custom model ID...");
 				for (const model of ANTHROPIC_MODEL_CATALOG) {
 					const label = model.recommended
 						? `${model.label} (Recommended)`
@@ -596,12 +559,41 @@ export class CueCraftSettingTab extends PluginSettingTab {
 							: model.label;
 					dd.addOption(model.id, label);
 				}
-				dd.setValue(s.anthropicModel).onChange(async (value) => {
-					s.anthropicModel = value;
-					await this.plugin.saveSettings();
-					this.display();
-				});
+				dd
+					.setValue(
+						isCustomSelection
+							? ANTHROPIC_CUSTOM_MODEL_ID
+							: s.anthropicModel
+					)
+					.onChange(async (value) => {
+						if (value === ANTHROPIC_CUSTOM_MODEL_ID) {
+							s.anthropicModelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
+							await this.plugin.saveSettings();
+							this.display();
+							return;
+						}
+						s.anthropicModelSelection = value;
+						s.anthropicModel = value;
+						await this.plugin.saveSettings();
+						this.display();
+					});
 			});
+
+		if (isCustomSelection) {
+			new Setting(containerEl)
+				.setName("Custom model ID")
+				.setDesc("Enter the exact Anthropic model ID CueCraft should use.")
+				.addText((text) =>
+					text
+						.setPlaceholder("claude-sonnet-4-6")
+						.setValue(s.anthropicModel)
+						.onChange(async (value) => {
+							s.anthropicModel = value.trim();
+							s.anthropicModelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
+							await this.plugin.saveSettings();
+						})
+				);
+		}
 	}
 
 	/** Render the field set for whichever provider is selected. */

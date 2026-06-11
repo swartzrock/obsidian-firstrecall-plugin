@@ -9,7 +9,7 @@ Implement all AI model settings improvements from the brief, preserving current 
 ## Phase 1: Anthropic Picker
 - [x] Add curated Anthropic model catalog
 - [x] Replace Anthropic free-text field with dropdown
-- [ ] Add custom model ID fallback
+- [x] Add custom model ID fallback
 - [ ] Preserve existing saved model IDs
 - [ ] Default Anthropic to Claude Sonnet 4.6
 - [ ] Add tests
