@@ -10,7 +10,7 @@ Implement all AI model settings improvements from the brief, preserving current 
 - [x] Add curated Anthropic model catalog
 - [x] Replace Anthropic free-text field with dropdown
 - [x] Add custom model ID fallback
-- [ ] Preserve existing saved model IDs
+- [x] Preserve existing saved model IDs
 - [ ] Default Anthropic to Claude Sonnet 4.6
 - [ ] Add tests
 - [ ] Update docs/CueCraft-Progress.md

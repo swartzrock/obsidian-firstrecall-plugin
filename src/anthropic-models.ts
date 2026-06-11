@@ -53,3 +53,15 @@ export function isAnthropicCustomModelSelection(settings: {
 		!ANTHROPIC_MODEL_CATALOG.some((model) => model.id === settings.anthropicModel)
 	);
 }
+
+export function normalizeAnthropicModelSelection(settings: {
+	anthropicModel: string;
+	anthropicModelSelection?: string;
+}): void {
+	if (settings.anthropicModelSelection) return;
+	settings.anthropicModelSelection = ANTHROPIC_MODEL_CATALOG.some(
+		(model) => model.id === settings.anthropicModel
+	)
+		? settings.anthropicModel
+		: ANTHROPIC_CUSTOM_MODEL_ID;
+}

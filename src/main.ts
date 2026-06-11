@@ -16,6 +16,9 @@ import {
 	CueCraftSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
+import {
+	normalizeAnthropicModelSelection,
+} from "./anthropic-models";
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
 import { OllamaProvider } from "./providers/ollama-provider";
 import { AnthropicProvider } from "./providers/anthropic-provider";
@@ -168,6 +171,10 @@ export default class CueCraftPlugin extends Plugin {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
 		const rawSettings = loaded?.settings ?? loaded ?? {};
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
+		normalizeAnthropicModelSelection(settings as {
+			anthropicModel: string;
+			anthropicModelSelection?: string;
+		});
 		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
 		const caches: Record<string, NoteCache> = {};
 		for (const [path, value] of Object.entries(rawCaches)) {
