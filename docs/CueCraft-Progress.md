@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Cornell cue controls no longer add top spacing). 199 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic picker now ships with a curated Claude catalog, custom ID fallback, and preserved saved IDs). 205 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -101,6 +101,10 @@ Each item links to the PR that delivered it.
   Cornell, and Reading mode; "Render in Reading mode" gates the post-processor; "Show cue column
   border", "Compact chips", and "Fold cue column on mobile" now apply CSS classes in Cornell view.
   "Auto-generate on save" now debounces Markdown file modifications and refreshes cues when enabled.
+- **Anthropic picker refinement.** The Anthropic model setting now uses a curated Claude dropdown
+  with friendly labels, a `Custom model ID...` escape hatch, preserved legacy/custom saved IDs, and
+  Claude Sonnet 4.6 as the default/recommended model for new configs. Unit tests cover the default,
+  catalog/custom selection, and preserved-load behavior.
 - **Parallel cue generation + setting-change regeneration.** Full-note generation now runs section
   cue requests in bounded batches of five while preserving section order for cache/summary output;
   stale-section refresh uses the configured concurrency too. Cue-affecting settings (preset,
@@ -166,12 +170,24 @@ Each item links to the PR that delivered it.
 
 ---
 
+## Manual Obsidian Test Instructions
+
+For the Anthropic picker slice:
+
+1. Reload CueCraft in Obsidian so the latest settings code is active.
+2. Open CueCraft settings and select `Anthropic (Claude)` as the provider.
+3. Confirm the model picker is a dropdown with friendly Claude names, not a free-text field.
+4. Confirm `Claude Sonnet 4.6` is the default selection for a fresh Anthropic config.
+5. Select `Custom model ID...`, enter a custom model ID, close settings, and reopen them to verify it persists.
+6. If you already have a saved legacy Anthropic model ID, reopen settings and confirm it is preserved.
+7. Switch back to a curated model and confirm the dropdown stores the selected Claude model ID.
+
 ## How to resume / dev quickstart
 
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (199 tests)
+bun run test       # vitest (205 tests)
 ```
 
 Install into a vault by copying `main.js`, `manifest.json`, `styles.css` into
