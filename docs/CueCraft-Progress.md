@@ -186,6 +186,15 @@ For the Anthropic picker slice:
 6. If you already have a saved legacy Anthropic model ID, reopen settings and confirm it is preserved.
 7. Switch back to a curated model and confirm the dropdown stores the selected Claude model ID.
 
+For the Anthropic connection-copy slice:
+
+1. Open CueCraft settings and select `Anthropic (Claude)`.
+2. With a valid Anthropic key, click `Test connection`.
+3. Confirm the success notice names the friendly Claude model and raw model ID together.
+4. Switch to a model your key cannot access, if you have one, and click `Test connection` again.
+5. Confirm the error notice says the key cannot access the selected model and suggests choosing another model or checking the Anthropic account.
+6. Try a custom model ID and confirm the same style of success/error wording still includes the raw ID.
+
 ## How to resume / dev quickstart
 
 ```sh
