@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic picker, refresh support, connection-test copy, and model hints now ship with curated Claude labels, custom ID fallback, preserved saved IDs, merged refreshable model lists from the official Anthropic SDK, and friendlier test connection notices). 215 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic picker, refresh support, connection-test copy, model hints, and provider-aware parallel-request guidance now ship with curated Claude labels, custom ID fallback, preserved saved IDs, merged refreshable model lists from the official Anthropic SDK, and safer concurrency tuning copy). 223 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -128,6 +128,11 @@ Each item links to the PR that delivered it.
   providers retry rate-limit responses with backoff before surfacing a section failure. Cue-affecting
   settings now ask "Regenerate cues with new settings?" after the user leaves CueCraft settings,
   instead of interrupting settings edits or immediately spending API calls.
+- **Provider-aware parallel guidance.** The **Parallel requests** slider now explains how to tune
+  concurrency for the selected provider/model: faster families like Claude Haiku get a higher-throughput
+  hint, premium/rate-limit-prone cloud models steer users toward fewer parallel requests, and Ollama
+  calls out local machine/model performance. Unit tests cover fast, premium, Ollama, and fallback
+  guidance selection.
 - **Low-confidence warnings + per-cue regenerate icon.** High/medium confidence is now treated as
   internal metadata and hidden from the cue UI. Low-confidence cues show a compact warning button
   with the model's rationale in the tooltip, and keep the circle-arrow (↻) regenerate icon visible
@@ -221,12 +226,21 @@ For the Anthropic model-refresh slice:
 5. Switch to a custom model ID, refresh again, and confirm the custom text field still preserves the saved model when the provider does not return it.
 6. Temporarily use an invalid key or otherwise force refresh to fail, then confirm CueCraft shows the curated fallback list plus a clear refresh-failure message.
 
+For the parallel-request guidance slice:
+
+1. Open CueCraft settings and look at the `Parallel requests` slider description.
+2. Select `Anthropic (Claude)` with `Claude Haiku 4.5` and confirm the hint says faster parallel generation is usually safe.
+3. Switch to a premium/rate-limit-prone cloud model such as `Claude Opus 4.8` and confirm the hint suggests fewer parallel requests if generation fails.
+4. Switch the provider to `Ollama (local)` and confirm the hint changes to local machine/model performance guidance.
+5. Switch to a balanced cloud model such as `Claude Sonnet 4.6` and confirm the fallback rate-limit guidance appears.
+6. Move the slider and confirm the description still updates the request count while keeping the provider/model-specific guidance.
+
 ## How to resume / dev quickstart
 
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (214 tests)
+bun run test       # vitest (223 tests)
 ```
 
 Install into a vault by copying `main.js`, `manifest.json`, `styles.css` into

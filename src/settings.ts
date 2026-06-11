@@ -44,6 +44,7 @@ import {
 	isAnthropicCustomModelSelection,
 	refreshAnthropicModelOptions,
 } from "./anthropic-models";
+import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
 
@@ -198,9 +199,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 
 		const concurrencyDesc = (): string =>
-			`Run up to ${this.plugin.settings.sectionConcurrency} section request${
-				this.plugin.settings.sectionConcurrency === 1 ? "" : "s"
-			} at once. Lower this if a cloud provider returns rate-limit errors.`;
+			formatParallelRequestsDescription(this.plugin.settings);
 		const concurrencySetting = new Setting(containerEl)
 			.setName("Parallel requests")
 			.addSlider((sl) =>

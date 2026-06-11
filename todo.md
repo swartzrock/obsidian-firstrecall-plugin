@@ -50,12 +50,12 @@ Stopping after one phase is a successful completion of that run. Do not continue
 - [x] Manual Obsidian test instructions
 
 ## Phase 5: Parallel Request Guidance
-- [ ] Add provider/model-specific guidance text for the Parallel requests setting
-- [ ] Show safer guidance for premium or rate-limit-prone cloud models
-- [ ] Show local-performance guidance for Ollama
-- [ ] Add tests for guidance selection/fallback behavior
-- [ ] Update docs/CueCraft-Progress.md and test counts if needed
-- [ ] Manual Obsidian test instructions
+- [x] Add provider/model-specific guidance text for the Parallel requests setting
+- [x] Show safer guidance for premium or rate-limit-prone cloud models
+- [x] Show local-performance guidance for Ollama
+- [x] Add tests for guidance selection/fallback behavior
+- [x] Update docs/CueCraft-Progress.md and test counts if needed
+- [x] Manual Obsidian test instructions
 
 ## Phase 6: Cleaner Provider Selection Layout
 - [ ] Group provider, API key, model picker, and test connection into one coherent AI setup section
