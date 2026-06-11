@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	ANTHROPIC_DEFAULT_MODEL_ID,
+	describeAnthropicModel,
 	formatAnthropicUnavailableModelMessage,
 	isAnthropicCustomModelSelection,
 	normalizeAnthropicModelSelection,
@@ -60,5 +61,19 @@ describe("Anthropic picker defaults", () => {
 		expect(formatAnthropicUnavailableModelMessage("claude-unknown-xyz")).toBe(
 			"CueCraft: This key cannot access Custom model ID (claude-unknown-xyz). Pick another model or check your Anthropic account."
 		);
+	});
+
+	it("describes curated Anthropic models with friendly labels and raw IDs", () => {
+		expect(describeAnthropicModel("claude-sonnet-4-6")).toEqual({
+			label: "Claude Sonnet 4.6",
+			rawId: "claude-sonnet-4-6",
+		});
+	});
+
+	it("describes custom Anthropic models with a generic label", () => {
+		expect(describeAnthropicModel("claude-unknown-xyz")).toEqual({
+			label: "Custom model ID",
+			rawId: "claude-unknown-xyz",
+		});
 	});
 });
