@@ -37,6 +37,7 @@ import {
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	ANTHROPIC_DEFAULT_MODEL_ID,
+	describeAnthropicModel,
 	ANTHROPIC_MODEL_CATALOG,
 	isAnthropicCustomModelSelection,
 } from "./anthropic-models";
@@ -765,6 +766,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 		new Notice(`CueCraft: testing ${provider.label}\u2026`);
 		const status = await provider.testConnection();
+		if (status.ok && provider.id === "anthropic") {
+			const model = describeAnthropicModel(this.plugin.settings.anthropicModel);
+			new Notice(
+				`CueCraft: Connected to Anthropic with ${model.label} (${model.rawId}).`
+			);
+			return;
+		}
 		new Notice(`CueCraft: ${status.message}`);
 	}
 }

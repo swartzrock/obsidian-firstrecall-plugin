@@ -66,3 +66,14 @@ export function normalizeAnthropicModelSelection(settings: {
 		? settings.anthropicModel
 		: ANTHROPIC_CUSTOM_MODEL_ID;
 }
+
+export function describeAnthropicModel(modelId: string): {
+	label: string;
+	rawId: string;
+} {
+	const model = ANTHROPIC_MODEL_CATALOG.find((item) => item.id === modelId);
+	if (model) {
+		return { label: model.label, rawId: model.id };
+	}
+	return { label: "Custom model ID", rawId: modelId };
+}

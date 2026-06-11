@@ -17,7 +17,7 @@ Implement all AI model settings improvements from the brief, preserving current 
 - [x] Manual Obsidian test instructions
 
 ## Phase 2: Connection Test Copy
-- [ ] Show friendly model name and raw ID on success
+- [x] Show friendly model name and raw ID on success
 - [ ] Improve unavailable-model error copy
 - [ ] Add tests
 - [ ] Update progress docs
