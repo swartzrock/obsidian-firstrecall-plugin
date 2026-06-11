@@ -3,7 +3,9 @@ import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	ANTHROPIC_DEFAULT_MODEL_ID,
 	describeAnthropicModel,
+	describeAnthropicModelDetails,
 	formatAnthropicUnavailableModelMessage,
+	formatAnthropicModelHint,
 	isAnthropicCustomModelSelection,
 	normalizeAnthropicModelSelection,
 } from "../src/anthropic-models";
@@ -75,5 +77,39 @@ describe("Anthropic picker defaults", () => {
 			label: "Custom model ID",
 			rawId: "claude-unknown-xyz",
 		});
+	});
+
+	it("returns cue-quality hint metadata for curated Anthropic models", () => {
+		expect(describeAnthropicModelDetails("claude-haiku-4-5")).toEqual({
+			label: "Claude Haiku 4.5",
+			rawId: "claude-haiku-4-5",
+			hint: {
+				quality: "Good",
+				speed: "Fast",
+				cost: "Low",
+				context: "Good",
+				cuecraftHint: "Fast, lower-cost refreshes for frequent cue generation.",
+			},
+		});
+		expect(formatAnthropicModelHint("claude-haiku-4-5")).toBe(
+			"Fast · Low · Good"
+		);
+	});
+
+	it("falls back to generic hint metadata for custom Anthropic models", () => {
+		expect(describeAnthropicModelDetails("claude-unknown-xyz")).toEqual({
+			label: "Custom model ID",
+			rawId: "claude-unknown-xyz",
+			hint: {
+				quality: "Varies",
+				speed: "Varies",
+				cost: "Varies",
+				context: "Varies",
+				cuecraftHint: "Cue quality depends on the exact custom model you enter.",
+			},
+		});
+		expect(formatAnthropicModelHint("claude-unknown-xyz")).toBe(
+			"Varies · Varies · Varies"
+		);
 	});
 });

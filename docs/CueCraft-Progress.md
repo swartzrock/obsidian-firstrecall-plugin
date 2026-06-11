@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic picker and connection-test copy now ship with curated Claude labels, custom ID fallback, preserved saved IDs, and friendlier test connection notices). 208 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic picker, connection-test copy, and model hints now ship with curated Claude labels, custom ID fallback, preserved saved IDs, and friendlier test connection notices). 210 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -109,6 +109,9 @@ Each item links to the PR that delivered it.
   name alongside the raw ID on success, and uses a more specific unavailable-model notice when the
   selected Claude model is inaccessible. Unit tests cover both the friendly success copy and the
   unavailable-model wording.
+- **Anthropic model hints.** The Anthropic picker now shows a concise CueCraft-specific hint under
+  the model dropdown, with short quality/speed/cost/context metadata for each curated model plus a
+  generic fallback for custom IDs. Unit tests cover curated and fallback hint selection.
 - **Parallel cue generation + setting-change regeneration.** Full-note generation now runs section
   cue requests in bounded batches of five while preserving section order for cache/summary output;
   stale-section refresh uses the configured concurrency too. Cue-affecting settings (preset,
@@ -195,12 +198,20 @@ For the Anthropic connection-copy slice:
 5. Confirm the error notice says the key cannot access the selected model and suggests choosing another model or checking the Anthropic account.
 6. Try a custom model ID and confirm the same style of success/error wording still includes the raw ID.
 
+For the Anthropic model-hint slice:
+
+1. Open CueCraft settings and select `Anthropic (Claude)`.
+2. Confirm the model picker shows a concise CueCraft-specific hint under the dropdown.
+3. Switch between `Claude Sonnet 4.6`, `Claude Haiku 4.5`, and a custom model ID.
+4. Confirm the hint updates to reflect the selected model's practical tradeoffs.
+5. Confirm the custom-model fallback keeps the hint useful even when the model is not in the catalog.
+
 ## How to resume / dev quickstart
 
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (208 tests)
+bun run test       # vitest (210 tests)
 ```
 
 Install into a vault by copying `main.js`, `manifest.json`, `styles.css` into

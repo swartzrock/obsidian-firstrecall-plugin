@@ -38,6 +38,7 @@ import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	ANTHROPIC_DEFAULT_MODEL_ID,
 	describeAnthropicModel,
+	formatAnthropicModelHint,
 	formatAnthropicUnavailableModelMessage,
 	ANTHROPIC_MODEL_CATALOG,
 	isAnthropicCustomModelSelection,
@@ -498,9 +499,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private renderAnthropicSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		const isCustomSelection = isAnthropicCustomModelSelection(s);
-		const modelDescription =
-			ANTHROPIC_MODEL_CATALOG.find((model) => model.id === s.anthropicModel)
-				?.description ?? "Choose a Claude model for generation.";
+		const modelHint = formatAnthropicModelHint(s.anthropicModel);
 
 		new Setting(containerEl)
 			.setName("Anthropic API key")
@@ -551,7 +550,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Claude model")
-			.setDesc(modelDescription)
+			.setDesc(modelHint)
 			.addDropdown((dd) => {
 				dd.addOption(ANTHROPIC_CUSTOM_MODEL_ID, "Custom model ID...");
 				for (const model of ANTHROPIC_MODEL_CATALOG) {
