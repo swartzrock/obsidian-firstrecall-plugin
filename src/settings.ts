@@ -526,7 +526,82 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						this.plugin.settings.ollamaModel = value.trim();
 						await this.plugin.saveSettings();
 					})
-			);
+				);
+	}
+
+	private renderAnthropicSettings(containerEl: HTMLElement): void {
+		const s = this.plugin.settings;
+
+		new Setting(containerEl)
+			.setName("Anthropic API key")
+			.setDesc(
+				"Your Anthropic API key (from console.anthropic.com). Stored locally in this vault's plugin data."
+			)
+			.addText((text) => {
+				text
+					.setPlaceholder("sk-ant-...")
+					.setValue(s.anthropicApiKey)
+					.onChange(async (value) => {
+						s.anthropicApiKey = value.trim();
+						await this.plugin.saveSettings();
+						updateBadge();
+					});
+				text.inputEl.type = "password";
+
+				const eye = text.inputEl.insertAdjacentElement(
+					"afterend",
+					createEl("button", {
+						cls: "cuecraft-key-eye",
+						attr: { type: "button", "aria-label": "Show API key" },
+					})
+				) as HTMLButtonElement;
+				setIcon(eye, "eye");
+				this.plugin.registerDomEvent(eye, "click", () => {
+					const masked = text.inputEl.type === "password";
+					text.inputEl.type = masked ? "text" : "password";
+					setIcon(eye, masked ? "eye-off" : "eye");
+					eye.setAttr(
+						"aria-label",
+						masked ? "Hide API key" : "Show API key"
+					);
+				});
+
+				const badge = eye.insertAdjacentElement(
+					"afterend",
+					createEl("span", { cls: "cuecraft-key-badge" })
+				) as HTMLSpanElement;
+				const updateBadge = (): void => {
+					const set = s.anthropicApiKey.trim().length > 0;
+					badge.setText(set ? "Set" : "Empty");
+					badge.toggleClass("is-set", set);
+					badge.toggleClass("is-empty", !set);
+				};
+				updateBadge();
+			});
+
+		const selectedModel =
+			ANTHROPIC_MODEL_CATALOG.find((model) => model.id === s.anthropicModel) ??
+			null;
+		new Setting(containerEl)
+			.setName("Claude model")
+			.setDesc(
+				selectedModel?.description ?? "Choose a Claude model for generation."
+			)
+			.addDropdown((dd) => {
+				for (const model of ANTHROPIC_MODEL_CATALOG) {
+					const label = model.recommended
+						? `${model.label} (Recommended)`
+						: model.legacy
+							? `${model.label} (Legacy)`
+							: model.label;
+					dd.addOption(model.id, label);
+				}
+				dd.setValue(s.anthropicModel).onChange(async (value) => {
+					s.anthropicModel = value;
+					await this.plugin.saveSettings();
+					this.display();
+				});
+			});
 	}
 
 	/** Render the field set for whichever provider is selected. */
@@ -537,18 +612,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderOllamaSettings(containerEl);
 				return;
 			case "anthropic":
-				this.renderCloudSettings(containerEl, {
-					vendor: "Anthropic",
-					keyDesc: "Your Anthropic API key (from console.anthropic.com). Stored locally in this vault's plugin data.",
-					keyPlaceholder: "sk-ant-...",
-					getKey: () => s.anthropicApiKey,
-					setKey: (v) => (s.anthropicApiKey = v),
-					modelLabel: "Claude model",
-					modelDesc: "An Anthropic model id (e.g. claude-3-5-sonnet-latest, claude-3-5-haiku-latest).",
-					modelPlaceholder: "claude-3-5-sonnet-latest",
-					getModel: () => s.anthropicModel,
-					setModel: (v) => (s.anthropicModel = v),
-				});
+				this.renderAnthropicSettings(containerEl);
 				return;
 			case "openai":
 				this.renderCloudSettings(containerEl, {

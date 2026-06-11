@@ -8,7 +8,7 @@ Implement all AI model settings improvements from the brief, preserving current 
 
 ## Phase 1: Anthropic Picker
 - [x] Add curated Anthropic model catalog
-- [ ] Replace Anthropic free-text field with dropdown
+- [x] Replace Anthropic free-text field with dropdown
 - [ ] Add custom model ID fallback
 - [ ] Preserve existing saved model IDs
 - [ ] Default Anthropic to Claude Sonnet 4.6
@@ -36,4 +36,3 @@ Implement all AI model settings improvements from the brief, preserving current 
 6. Only create a git commit after the user explicitly says `continue`.
 7. When the user says `continue`, first commit the completed task with a descriptive commit message, then begin the next unchecked task.
 8. Never include unfinished work in the commit.
-
