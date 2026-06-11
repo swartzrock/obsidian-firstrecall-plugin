@@ -1,12 +1,16 @@
 import { describe, it, expect } from "vitest";
 import {
 	CUE_DENSITIES,
+	DEFAULT_CUE_GENERATION_OPTIONS,
 	DEFAULT_CUE_DENSITY,
 	DEFAULT_QUESTION_STYLE,
 	QUESTION_STYLES,
+	cueDensityGuidance,
 	cueDensityLabel,
 	isCueDensity,
 	isQuestionStyle,
+	keywordGuidance,
+	questionStyleGuidance,
 } from "../src/cue-generation";
 
 describe("cue-generation: question style", () => {
@@ -30,6 +34,36 @@ describe("cue-generation: question style", () => {
 		for (const bad of ["", "Recall", "quiz", null, undefined, 1, {}]) {
 			expect(isQuestionStyle(bad)).toBe(false);
 		}
+	});
+});
+
+describe("cue-generation: prompt guidance", () => {
+	it("exposes default generation options", () => {
+		expect(DEFAULT_CUE_GENERATION_OPTIONS).toEqual({
+			cueDensity: 2,
+			questionStyle: "recall",
+			generateKeywords: true,
+			autoSummary: true,
+		});
+	});
+
+	it("maps density to prompt guidance", () => {
+		expect(cueDensityGuidance(1)).toMatch(/minimal/i);
+		expect(cueDensityGuidance(2)).toMatch(/balanced/i);
+		expect(cueDensityGuidance(3)).toMatch(/thorough/i);
+		expect(cueDensityGuidance("bad")).toMatch(/balanced/i);
+	});
+
+	it("maps question style to prompt guidance", () => {
+		expect(questionStyleGuidance("recall")).toMatch(/active-recall/i);
+		expect(questionStyleGuidance("socratic")).toMatch(/Socratic/i);
+		expect(questionStyleGuidance("exam")).toMatch(/exam prompt/i);
+		expect(questionStyleGuidance("bad")).toMatch(/active-recall/i);
+	});
+
+	it("maps keyword visibility to prompt guidance", () => {
+		expect(keywordGuidance(true)).toMatch(/2 to 5/);
+		expect(keywordGuidance(false)).toMatch(/minimum 2/);
 	});
 });
 

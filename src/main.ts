@@ -2,6 +2,7 @@ import {
 	FuzzySuggestModal,
 	MarkdownView,
 	Menu,
+	Modal,
 	Notice,
 	Plugin,
 	TFile,
@@ -54,6 +55,7 @@ import {
 } from "./visibility";
 import { buildCornellModel, type CornellModel } from "./cornell";
 import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
+import type { CueGenerationOptions } from "./cue-generation";
 
 /** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
 type CueStatus = "setup" | "ready" | "generating" | "stale" | "study" | "hidden";
@@ -73,6 +75,8 @@ export default class CueCraftPlugin extends Plugin {
 	private ribbonEl: HTMLElement | null = null;
 	private studyMode = false;
 	private currentRun: AbortController | null = null;
+	private autoGenerateTimers = new Map<string, number>();
+	private cueSettingsChanged = false;
 	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {}, hidden: {} };
 	private cacheStore!: CacheStore;
 	private visibility!: VisibilityStore;
@@ -128,6 +132,11 @@ export default class CueCraftPlugin extends Plugin {
 			})
 		);
 		this.registerEvent(
+			this.app.vault.on("modify", (file) => {
+				if (file instanceof TFile) this.scheduleAutoGenerate(file);
+			})
+		);
+		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, file) => {
 				if (file instanceof TFile && file.extension === "md") {
 					this.addVisibilityMenuItem(menu, file);
@@ -145,6 +154,14 @@ export default class CueCraftPlugin extends Plugin {
 		this.app.workspace.onLayoutReady(() =>
 			this.onActiveFile(this.app.workspace.getActiveFile())
 		);
+	}
+
+	onunload(): void {
+		for (const timer of this.autoGenerateTimers.values()) {
+			window.clearTimeout(timer);
+		}
+		this.autoGenerateTimers.clear();
+		this.currentRun?.abort();
 	}
 
 	private async loadPluginData(): Promise<void> {
@@ -219,7 +236,9 @@ export default class CueCraftPlugin extends Plugin {
 		const cache = this.cacheStore.get(file.path);
 		const cues =
 			cache && !this.visibility.isHidden(file.path)
-				? buildCueLineData(cache, parseSections(view.editor.getValue()))
+				? buildCueLineData(cache, parseSections(view.editor.getValue()), {
+						showKeywords: this.settings.generateKeywords,
+					})
 				: [];
 		cm.dispatch({ effects: setCuesEffect.of(cues) });
 	}
@@ -482,6 +501,7 @@ export default class CueCraftPlugin extends Plugin {
 	private readingCueMemo: {
 		path: string;
 		text: string;
+		showKeywords: boolean;
 		map: Map<number, CueLineData>;
 	} | null = null;
 
@@ -492,7 +512,13 @@ export default class CueCraftPlugin extends Plugin {
 		const path = ctx.sourcePath;
 		if (!path) return;
 		const cache = this.cacheStore.get(path);
-		if (!cache || this.visibility.isHidden(path)) return;
+		if (
+			!this.settings.renderInReadingMode ||
+			!cache ||
+			this.visibility.isHidden(path)
+		) {
+			return;
+		}
 
 		const headings = Array.from(
 			el.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")
@@ -521,12 +547,20 @@ export default class CueCraftPlugin extends Plugin {
 		if (
 			this.readingCueMemo &&
 			this.readingCueMemo.path === path &&
-			this.readingCueMemo.text === text
+			this.readingCueMemo.text === text &&
+			this.readingCueMemo.showKeywords === this.settings.generateKeywords
 		) {
 			return this.readingCueMemo.map;
 		}
-		const map = buildReadingCueMap(cache, text);
-		this.readingCueMemo = { path, text, map };
+		const map = buildReadingCueMap(cache, text, {
+			showKeywords: this.settings.generateKeywords,
+		});
+		this.readingCueMemo = {
+			path,
+			text,
+			showKeywords: this.settings.generateKeywords,
+			map,
+		};
 		return map;
 	}
 
@@ -559,6 +593,24 @@ export default class CueCraftPlugin extends Plugin {
 			const view = leaf.view;
 			if (view instanceof CornellView) void view.render();
 		}
+	}
+
+	/** Mark cue content settings dirty; the settings tab asks on close. */
+	noteCueSettingsChanged(): void {
+		this.cueSettingsChanged = true;
+	}
+
+	/** Ask whether to regenerate after the user leaves CueCraft settings. */
+	promptForCueSettingsRegeneration(): void {
+		if (!this.cueSettingsChanged) return;
+		this.cueSettingsChanged = false;
+		const file = this.app.workspace.getActiveFile();
+		if (!file || file.extension !== "md" || !this.cacheStore.has(file.path)) {
+			return;
+		}
+		new RegenerateSettingsModal(this.app, file.basename, () => {
+			void this.generateCuesForFile(file, { automatic: true });
+		}).open();
 	}
 
 	/** Wraps Obsidian's requestUrl as the provider HTTP client (avoids CORS). */
@@ -649,6 +701,49 @@ export default class CueCraftPlugin extends Plugin {
 		}
 	}
 
+	private generationOptions(): CueGenerationOptions {
+		const s = this.settings;
+		return {
+			cueDensity: s.cueDensity,
+			questionStyle: s.questionStyle,
+			generateKeywords: s.generateKeywords,
+			autoSummary: s.autoSummary,
+		};
+	}
+
+	private selectedModelName(): string {
+		const s = this.settings;
+		switch (s.provider) {
+			case "anthropic":
+				return s.anthropicModel;
+			case "openai":
+				return s.openaiModel;
+			case "google":
+				return s.googleModel;
+			case "xai":
+				return s.xaiModel;
+			default:
+				return s.ollamaModel;
+		}
+	}
+
+	private scheduleAutoGenerate(file: TFile): void {
+		if (
+			!this.settings.autoGenerateOnSave ||
+			file.extension !== "md" ||
+			this.visibility.isHidden(file.path)
+		) {
+			return;
+		}
+		const existing = this.autoGenerateTimers.get(file.path);
+		if (existing) window.clearTimeout(existing);
+		const timer = window.setTimeout(() => {
+			this.autoGenerateTimers.delete(file.path);
+			void this.generateCuesForFile(file, { automatic: true });
+		}, 1200);
+		this.autoGenerateTimers.set(file.path, timer);
+	}
+
 	/** Open a fuzzy picker listing the active note's sections, then regen. */
 	private pickAndRegenerateSection(): void {
 		const file = this.app.workspace.getActiveFile();
@@ -717,6 +812,7 @@ export default class CueCraftPlugin extends Plugin {
 				section,
 				provider,
 				preset: toneOverride ?? this.settings.cuePreset,
+				options: this.generationOptions(),
 				noteContext: markdown,
 				signal: controller.signal,
 			});
@@ -783,22 +879,34 @@ export default class CueCraftPlugin extends Plugin {
 		let done = 0;
 		let failed = 0;
 		try {
-			for (const id of staleIds) {
+			const concurrency = this.settings.sectionConcurrency;
+			for (let start = 0; start < staleIds.length; start += concurrency) {
 				if (controller.signal.aborted) break;
-				const section = byId.get(id);
-				if (!section) continue;
+				const batch = staleIds
+					.slice(start, start + concurrency)
+					.map((id) => byId.get(id))
+					.filter((s): s is Section => Boolean(s));
 				this.setStatus("generating", { done, total: staleIds.length });
-				const result = await generateSectionCue({
-					section,
-					provider,
-					preset: this.settings.cuePreset,
-					noteContext: markdown,
-					signal: controller.signal,
-				});
-				working = replaceSection(working, toCachedSection(result));
+				const results = await Promise.all(
+					batch.map(async (section) => {
+						const result = await generateSectionCue({
+							section,
+							provider,
+							preset: this.settings.cuePreset,
+							options: this.generationOptions(),
+							noteContext: markdown,
+							signal: controller.signal,
+						});
+						done++;
+						this.setStatus("generating", { done, total: staleIds.length });
+						return result;
+					})
+				);
+				for (const result of results) {
+					working = replaceSection(working, toCachedSection(result));
+					if (result.error) failed++;
+				}
 				await this.cacheStore.set(file.path, working);
-				if (result.error) failed++;
-				done++;
 			}
 			await this.visibility.show(file.path);
 			const ok = done - failed;
@@ -819,19 +927,28 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private async generateCues(): Promise<void> {
+		await this.generateCuesForFile(this.app.workspace.getActiveFile());
+	}
+
+	private async generateCuesForFile(
+		file: TFile | null,
+		opts: { automatic?: boolean } = {}
+	): Promise<void> {
 		// A second invocation while running acts as cancel (AC C3.2).
 		if (this.currentRun) {
+			if (opts.automatic) return;
 			this.currentRun.abort();
-			new Notice("CueCraft: cancelling generation…");
+			new Notice("CueCraft: cancelling generation...");
 			return;
 		}
-		const file = this.app.workspace.getActiveFile();
 		if (!file) {
-			new Notice("CueCraft: open a note first.");
+			if (!opts.automatic) new Notice("CueCraft: open a note first.");
 			return;
 		}
 		if (!this.isConfigured()) {
-			new Notice("CueCraft: set up your AI provider in Settings first.");
+			if (!opts.automatic) {
+				new Notice("CueCraft: set up your AI provider in Settings first.");
+			}
 			return;
 		}
 
@@ -848,6 +965,8 @@ export default class CueCraftPlugin extends Plugin {
 				markdown,
 				provider,
 				preset: this.settings.cuePreset,
+				options: this.generationOptions(),
+				sectionConcurrency: this.settings.sectionConcurrency,
 				useWholeNoteContext: true,
 				signal: controller.signal,
 				onProgress: (done, total) =>
@@ -857,7 +976,7 @@ export default class CueCraftPlugin extends Plugin {
 			const cache = buildNoteCache({
 				result,
 				provider: provider.id,
-				model: this.settings.ollamaModel,
+				model: this.selectedModelName(),
 				preset: this.settings.cuePreset,
 				generationMode: "whole-note-context",
 				noteModifiedAt: file.stat.mtime,
@@ -869,13 +988,15 @@ export default class CueCraftPlugin extends Plugin {
 			const ok = result.sections.filter((s) => !s.error).length;
 			const failed = result.sections.length - ok;
 			if (result.canceled) {
-				new Notice(`CueCraft: cancelled — kept ${ok} section(s).`);
-			} else {
+				new Notice(`CueCraft: cancelled - kept ${ok} section(s).`);
+			} else if (!opts.automatic) {
 				new Notice(
 					`CueCraft: generated ${ok} cue(s)` +
 						(failed ? `, ${failed} failed` : "") +
 						(result.summary ? " + summary." : ".")
 				);
+			} else if (failed) {
+				new Notice(`CueCraft: auto-generation finished with ${failed} failed section(s).`);
 			}
 			// Rendering/caching of `result` lands with the cue-extension + cache modules.
 			console.debug("CueCraft generation result", result);
@@ -952,6 +1073,7 @@ function toCachedSection(result: SectionResult): CachedSection {
 		keywords: result.keywords,
 		question: result.question,
 		confidence: result.confidence,
+		rationale: result.rationale,
 		error: result.error,
 	};
 }
@@ -984,6 +1106,42 @@ class ToneSuggestModal extends FuzzySuggestModal<{ id: string; label: string }> 
 
 	onChooseItem(item: { id: string; label: string }): void {
 		this.onChoose(item.id);
+	}
+}
+
+class RegenerateSettingsModal extends Modal {
+	constructor(
+		app: InstanceType<typeof Plugin>["app"],
+		private readonly noteName: string,
+		private readonly onConfirm: () => void
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.createEl("h2", { text: "Regenerate cues with new settings?" });
+		contentEl.createEl("p", {
+			text: `CueCraft settings that affect generated cue content changed. Regenerate cached cues for "${this.noteName}" now?`,
+		});
+		const actions = contentEl.createEl("div", {
+			cls: "cuecraft-modal-actions",
+		});
+		const cancel = actions.createEl("button", { text: "Not now" });
+		cancel.addEventListener("click", () => this.close());
+		const regenerate = actions.createEl("button", {
+			cls: "mod-cta",
+			text: "Regenerate",
+		});
+		regenerate.addEventListener("click", () => {
+			this.close();
+			this.onConfirm();
+		});
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
 	}
 }
 

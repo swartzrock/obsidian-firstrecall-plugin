@@ -7,7 +7,7 @@ import type { NoteGenerationResult } from "./generator";
  * Persisted per-note study data. Bumping CACHE_SCHEMA_VERSION requires adding a
  * migration step in `migrateCache` so existing caches upgrade rather than break.
  */
-export const CACHE_SCHEMA_VERSION = 2;
+export const CACHE_SCHEMA_VERSION = 3;
 
 const cachedSectionSchema = z.object({
 	id: z.string(),
@@ -18,6 +18,7 @@ const cachedSectionSchema = z.object({
 	keywords: z.array(z.string()).nullable(),
 	question: z.string().nullable(),
 	confidence: confidenceSchema.nullable(),
+	rationale: z.string().nullable(),
 	error: z.string().nullable(),
 });
 
@@ -69,6 +70,7 @@ export function buildNoteCache(params: BuildCacheParams): NoteCache {
 			keywords: s.keywords,
 			question: s.question,
 			confidence: s.confidence,
+			rationale: s.rationale ?? null,
 			error: s.error,
 		})),
 		summary: params.result.summary,
@@ -93,6 +95,7 @@ export function validateCache(raw: unknown): ValidationResult<NoteCache> {
  * NoteCache or null if the input is unrecognizable / unmigratable.
  *
  * v1 -> v2: v1 lacked `level`, `outline`, `generationMode`, and `preset`.
+ * v2 -> v3: v2 lacked per-cue `rationale`.
  */
 export function migrateCache(raw: unknown): NoteCache | null {
 	if (!raw || typeof raw !== "object") return null;
@@ -120,10 +123,28 @@ export function migrateCache(raw: unknown): NoteCache | null {
 					keywords: sec.keywords ?? null,
 					question: sec.question ?? null,
 					confidence: sec.confidence ?? null,
+					rationale: null,
 					error: sec.error ?? null,
 				};
 			}),
 			summary: obj.summary ?? null,
+		};
+	}
+	if (version === 2) {
+		const sections = Array.isArray(obj.sections) ? obj.sections : [];
+		candidate = {
+			...obj,
+			schemaVersion: CACHE_SCHEMA_VERSION,
+			sections: sections.map((s) => {
+				const sec = (s ?? {}) as Record<string, unknown>;
+				return {
+					...sec,
+					rationale:
+						typeof sec.rationale === "string" && sec.rationale.trim()
+							? sec.rationale.trim()
+							: null,
+				};
+			}),
 		};
 	}
 

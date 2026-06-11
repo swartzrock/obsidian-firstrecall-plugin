@@ -8,7 +8,11 @@
  * unit-tested without a DOM.
  */
 
-import { buildCueLineData, type CueLineData } from "./cue-extension";
+import {
+	buildCueLineData,
+	type CueLineData,
+	type CueLineDataOptions,
+} from "./cue-extension";
 import { parseSections } from "./parser";
 import type { NoteCache } from "./cache";
 
@@ -20,10 +24,11 @@ import type { NoteCache } from "./cache";
  */
 export function buildReadingCueMap(
 	cache: NoteCache,
-	markdown: string
+	markdown: string,
+	options: CueLineDataOptions = {}
 ): Map<number, CueLineData> {
 	const map = new Map<number, CueLineData>();
-	for (const cue of buildCueLineData(cache, parseSections(markdown))) {
+	for (const cue of buildCueLineData(cache, parseSections(markdown), options)) {
 		// First cue wins for a given line; cues are already top-to-bottom.
 		if (!map.has(cue.line)) map.set(cue.line, cue);
 	}

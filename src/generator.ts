@@ -1,5 +1,9 @@
 import { parseSections } from "./parser";
 import type { AiProvider } from "./providers/types";
+import {
+	DEFAULT_CUE_GENERATION_OPTIONS,
+	type CueGenerationOptions,
+} from "./cue-generation";
 
 export interface SectionResult {
 	id: string;
@@ -10,6 +14,7 @@ export interface SectionResult {
 	keywords: string[] | null;
 	question: string | null;
 	confidence: "high" | "medium" | "low" | null;
+	rationale: string | null;
 	/** Non-null when this section failed validation/generation (isolated). */
 	error: string | null;
 }
@@ -33,6 +38,7 @@ export interface GenerateSectionParams {
 	};
 	provider: AiProvider;
 	preset: string;
+	options?: Partial<CueGenerationOptions>;
 	noteContext?: string;
 	maxContextChars?: number;
 	signal?: AbortSignal;
@@ -43,20 +49,36 @@ export interface GenerateNoteParams {
 	markdown: string;
 	provider: AiProvider;
 	preset: string;
+	options?: Partial<CueGenerationOptions>;
 	useWholeNoteContext?: boolean;
 	/** Cap (in chars) on note text injected into prompts; keeps requests within model context limits. */
 	maxContextChars?: number;
+	/** Maximum number of section cue requests running at once. */
+	sectionConcurrency?: number;
 	signal?: AbortSignal;
 	onProgress?: (done: number, total: number) => void;
 }
 
 /** Default budget for note text injected into a single prompt. */
 export const DEFAULT_MAX_CONTEXT_CHARS = 8000;
+export const DEFAULT_SECTION_CONCURRENCY = 5;
 
 /** Trim long text to a char budget, adding a marker so the model knows it was cut. */
 export function clampText(text: string, maxChars: number): string {
 	if (text.length <= maxChars) return text;
 	return text.slice(0, maxChars) + "\n...[truncated for length]...";
+}
+
+export function resolveGenerationOptions(
+	options?: Partial<CueGenerationOptions>
+): CueGenerationOptions {
+	return { ...DEFAULT_CUE_GENERATION_OPTIONS, ...options };
+}
+
+export function resolveSectionConcurrency(value: unknown): number {
+	return typeof value === "number" && Number.isFinite(value) && value > 0
+		? Math.floor(value)
+		: DEFAULT_SECTION_CONCURRENCY;
 }
 
 /**
@@ -68,6 +90,7 @@ export async function generateSectionCue(
 	params: GenerateSectionParams
 ): Promise<SectionResult> {
 	const { section, provider, preset, signal } = params;
+	const options = resolveGenerationOptions(params.options);
 	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	const result: SectionResult = {
 		id: section.id,
@@ -78,6 +101,7 @@ export async function generateSectionCue(
 		keywords: null,
 		question: null,
 		confidence: null,
+		rationale: null,
 		error: null,
 	};
 	try {
@@ -89,12 +113,14 @@ export async function generateSectionCue(
 					? clampText(params.noteContext, maxCtx)
 					: undefined,
 				preset,
+				options,
 			},
 			signal
 		);
 		result.keywords = cue.keywords;
 		result.question = cue.question;
 		result.confidence = cue.confidence;
+		result.rationale = cue.rationale ?? null;
 	} catch (e) {
 		result.error = e instanceof Error ? e.message : String(e);
 	}
@@ -102,66 +128,89 @@ export async function generateSectionCue(
 }
 
 /**
- * Generate cues for every section sequentially, then the whole-note summary
+ * Generate cues for every section in bounded parallel batches, then the whole-note summary
  * last. Per-section failures are isolated (recorded as `error`, never thrown).
- * Cancellation is checked between sections (AC C3.2): the in-flight section
- * finishes, then generation stops and partial results are returned.
+ * Cancellation is checked between batches: in-flight sections finish, then
+ * generation stops and partial results are returned.
  */
 export async function generateNote(
 	params: GenerateNoteParams
 ): Promise<NoteGenerationResult> {
 	const { provider, markdown, preset, noteTitle, signal, onProgress } = params;
+	const options = resolveGenerationOptions(params.options);
 	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
+	const sectionConcurrency = resolveSectionConcurrency(params.sectionConcurrency);
 	const wholeNoteContext = params.useWholeNoteContext
 		? clampText(markdown, maxContextChars)
 		: undefined;
 	const sections = parseSections(markdown);
 	const total = sections.length;
-	const results: SectionResult[] = [];
+	const results: SectionResult[] = new Array(total);
+	let done = 0;
 	let canceled = false;
 
-	for (let i = 0; i < sections.length; i++) {
+	for (let start = 0; start < sections.length; start += sectionConcurrency) {
 		if (signal?.aborted) {
 			canceled = true;
 			break;
 		}
-		const s = sections[i];
-		const result = await generateSectionCue({
-			section: s,
-			provider,
-			preset,
-			noteContext: wholeNoteContext,
-			maxContextChars,
-			signal,
-		});
-		results.push(result);
-		onProgress?.(i + 1, total);
+		const batch = sections.slice(start, start + sectionConcurrency);
+		await Promise.all(
+			batch.map(async (s, offset) => {
+				const result = await generateSectionCue({
+					section: s,
+					provider,
+					preset,
+					options,
+					noteContext: wholeNoteContext,
+					maxContextChars,
+					signal,
+				});
+				results[start + offset] = result;
+				done++;
+				onProgress?.(done, total);
+			})
+		);
+		if (signal?.aborted) {
+			canceled = true;
+			break;
+		}
 	}
 
 	let summary: string | null = null;
 	let learningObjective: string | null = null;
+	const completedResults = results.filter(
+		(r): r is SectionResult => Boolean(r)
+	);
 
 	if (canceled || signal?.aborted) {
-		return { sections: results, summary, learningObjective, canceled: true };
+		return {
+			sections: completedResults,
+			summary,
+			learningObjective,
+			canceled: true,
+		};
 	}
 
-	const questions = results
-		.map((r) => r.question)
-		.filter((q): q is string => Boolean(q));
-	try {
-		const sum = await provider.generateSummary(
-			{
-				noteTitle,
-				fullText: clampText(markdown, maxContextChars),
-				sectionQuestions: questions,
-			},
-			signal
-		);
-		summary = sum.summary;
-		learningObjective = sum.learningObjective ?? null;
-	} catch {
-		summary = null;
+	if (options.autoSummary) {
+		const questions = completedResults
+			.map((r) => r.question)
+			.filter((q): q is string => Boolean(q));
+		try {
+			const sum = await provider.generateSummary(
+				{
+					noteTitle,
+					fullText: clampText(markdown, maxContextChars),
+					sectionQuestions: questions,
+				},
+				signal
+			);
+			summary = sum.summary;
+			learningObjective = sum.learningObjective ?? null;
+		} catch {
+			summary = null;
+		}
 	}
 
-	return { sections: results, summary, learningObjective, canceled };
+	return { sections: completedResults, summary, learningObjective, canceled };
 }

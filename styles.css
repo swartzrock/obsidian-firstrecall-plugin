@@ -215,9 +215,6 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	padding-left: 8px;
 }
 
-/* Meta row above the question: confidence label (left) + regenerate icon
- * (right). Confidence now reads from this label's color/text, since the rail
- * uses the accent color. */
 .cuecraft-cornell-cuemeta {
 	display: flex;
 	align-items: center;
@@ -226,21 +223,21 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	min-height: 20px;
 	margin-bottom: 2px;
 }
-.cuecraft-cornell-confidence {
-	font-size: var(--font-smallest);
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	font-weight: var(--font-semibold);
-	color: var(--text-muted);
-}
-.cuecraft-cornell-cue[data-confidence="high"] .cuecraft-cornell-confidence {
-	color: var(--color-green);
-}
-.cuecraft-cornell-cue[data-confidence="medium"] .cuecraft-cornell-confidence {
-	color: var(--color-yellow);
-}
-.cuecraft-cornell-cue[data-confidence="low"] .cuecraft-cornell-confidence {
+.cuecraft-cornell-lowconf {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	font-size: var(--font-ui-small);
+	line-height: 1;
 	color: var(--color-red);
+	background: transparent;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 50%;
+	box-shadow: none;
+	cursor: help;
 }
 
 .cuecraft-cornell-q {
@@ -283,6 +280,40 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 999px;
 	padding: 1px 8px;
+}
+
+/* Appearance toggles from Settings. */
+.cuecraft-cornell-hide-keywords .cuecraft-cornell-kw {
+	display: none;
+}
+.cuecraft-cornell-compact-chips .cuecraft-cornell-kw {
+	gap: 3px;
+	margin-top: 5px;
+}
+.cuecraft-cornell-compact-chips .cuecraft-cornell-chip {
+	font-size: calc(var(--font-smallest) * 0.9);
+	padding: 0 5px;
+}
+.cuecraft-cornell-no-border .cuecraft-cornell-cuecell {
+	border-right-color: transparent;
+}
+.cuecraft-cornell-no-border .cuecraft-cornell-title,
+.cuecraft-cornell-no-border .cuecraft-cornell-summary {
+	border-color: var(--background-modifier-border);
+}
+
+@media (max-width: 700px) {
+	.cuecraft-cornell-fold-mobile .cuecraft-cornell-grid {
+		display: block;
+	}
+	.cuecraft-cornell-fold-mobile .cuecraft-cornell-cuecell {
+		border-right: none;
+		border-bottom: 1px solid var(--background-modifier-border);
+		padding: 10px 2px 6px;
+	}
+	.cuecraft-cornell-fold-mobile .cuecraft-cornell-notecell {
+		padding: 8px 2px 14px;
+	}
 }
 
 /* Study Mode: keyword hints blur until the cue is revealed. */
@@ -485,6 +516,13 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-key-badge.is-empty {
 	color: var(--text-muted);
 	background: var(--background-secondary);
+}
+
+.cuecraft-modal-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 16px;
 }
 
 /* Accent-color swatches (Appearance). The selected one shows a ring + check. */

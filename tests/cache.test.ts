@@ -24,11 +24,12 @@ function sampleResult(): NoteGenerationResult {
 		level: s.level,
 		lineNumber: s.lineNumber,
 		contentHash: s.contentHash,
-		keywords: ["k1", "k2"],
-		question: `Q:${s.heading}`,
-		confidence: "high" as const,
-		error: null,
-	}));
+			keywords: ["k1", "k2"],
+			question: `Q:${s.heading}`,
+			confidence: "high" as const,
+			rationale: null,
+			error: null,
+		}));
 	return {
 		sections,
 		summary: "a summary",
@@ -110,11 +111,24 @@ describe("migrateCache (v1 -> v2)", () => {
 		const migrated = migrateCache(v1);
 		expect(migrated).not.toBeNull();
 		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
-		expect(migrated?.preset).toBe("conceptual");
-		expect(migrated?.generationMode).toBe("whole-note-context");
-		expect(migrated?.sections[0].level).toBe(0);
-		expect(validateCache(migrated).ok).toBe(true);
-	});
+			expect(migrated?.preset).toBe("conceptual");
+			expect(migrated?.generationMode).toBe("whole-note-context");
+			expect(migrated?.sections[0].level).toBe(0);
+			expect(migrated?.sections[0].rationale).toBeNull();
+			expect(validateCache(migrated).ok).toBe(true);
+		});
+
+		it("upgrades a v2 cache by adding rationale fields", () => {
+			const v2 = {
+				...build(),
+				schemaVersion: 2,
+				sections: build().sections.map(({ rationale: _rationale, ...section }) => section),
+			};
+			const migrated = migrateCache(v2);
+			expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
+			expect(migrated?.sections[0].rationale).toBeNull();
+			expect(validateCache(migrated).ok).toBe(true);
+		});
 
 	it("returns null for unmigratable junk", () => {
 		expect(migrateCache(42)).toBeNull();

@@ -19,6 +19,10 @@ export interface CueLineData {
 	error: string | null;
 }
 
+export interface CueLineDataOptions {
+	showKeywords?: boolean;
+}
+
 /**
  * Resolve a cache's cues to current document lines. Cues are matched to the
  * freshly parsed sections by stable id (falling back to the cached line),
@@ -29,8 +33,10 @@ export interface CueLineData {
  */
 export function buildCueLineData(
 	cache: NoteCache,
-	currentSections: Section[]
+	currentSections: Section[],
+	options: CueLineDataOptions = {}
 ): CueLineData[] {
+	const showKeywords = options.showKeywords ?? true;
 	const byId = new Map<string, Section>();
 	for (const s of currentSections) byId.set(s.id, s);
 
@@ -44,7 +50,7 @@ export function buildCueLineData(
 			line,
 			heading: sec.heading,
 			question: failed ? "" : (sec.question ?? ""),
-			keywords: failed ? [] : sec.keywords ?? [],
+			keywords: failed || !showKeywords ? [] : sec.keywords ?? [],
 			confidence: failed ? null : sec.confidence,
 			error: failed ? sec.error ?? "Generation failed" : null,
 		});

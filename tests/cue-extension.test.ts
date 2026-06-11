@@ -52,6 +52,16 @@ describe("buildCueLineData", () => {
 		});
 	});
 
+	it("can hide keyword data while keeping questions visible", () => {
+		const cache = cacheFrom();
+		const cues = buildCueLineData(cache, parseSections(NOTE), {
+			showKeywords: false,
+		});
+		expect(cues).toHaveLength(3);
+		expect(cues[0].question).toBe("Q:A");
+		expect(cues.every((c) => c.keywords.length === 0)).toBe(true);
+	});
+
 	it("emits a warning marker for errored sections instead of skipping them", () => {
 		const cache = cacheFrom((_s, i) =>
 			i === 1 ? { error: "boom", question: null } : {}

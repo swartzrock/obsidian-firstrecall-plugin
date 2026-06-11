@@ -1,4 +1,5 @@
 import type { CueOutput, SummaryOutput } from "../schemas";
+import type { CueGenerationOptions } from "../cue-generation";
 
 /** Minimal HTTP abstraction so providers can be unit-tested without a live server. */
 export interface HttpRequest {
@@ -28,6 +29,7 @@ export interface CueInput {
 	/** Optional whole-note context for better questions. */
 	noteContext?: string;
 	preset: string;
+	options?: CueGenerationOptions;
 }
 
 export interface SummaryInput {
@@ -56,5 +58,16 @@ export class ProviderError extends Error {
 	constructor(message: string) {
 		super(message);
 		this.name = "ProviderError";
+	}
+}
+
+/** Thrown when a provider says the caller should wait before retrying. */
+export class ProviderRateLimitError extends ProviderError {
+	readonly retryAfterMs: number | null;
+
+	constructor(message: string, retryAfterMs: number | null = null) {
+		super(message);
+		this.name = "ProviderRateLimitError";
+		this.retryAfterMs = retryAfterMs;
 	}
 }

@@ -8,9 +8,15 @@ import {
 	type SummaryOutput,
 } from "../schemas";
 import {
+	cueDensityGuidance,
+	keywordGuidance,
+	questionStyleGuidance,
+} from "../cue-generation";
+import {
 	AiProvider,
 	CueInput,
 	ProviderError,
+	ProviderRateLimitError,
 	ProviderStatus,
 	SummaryInput,
 } from "./types";
@@ -38,6 +44,10 @@ const cueGenSchema = z.object({
 	confidence: z
 		.enum(["high", "medium", "low"])
 		.describe("How confident you are this cue tests the section well."),
+	rationale: z
+		.string()
+		.optional()
+		.describe("If confidence is low, a short reason why this cue may need review."),
 });
 
 const summaryGenSchema = z.object({
@@ -57,6 +67,10 @@ export type ObjectGenerator = <T>(opts: {
 	signal?: AbortSignal;
 }) => Promise<T>;
 
+export const DEFAULT_RATE_LIMIT_RETRIES = 2;
+const DEFAULT_RATE_LIMIT_RETRY_MS = 1000;
+const MAX_RATE_LIMIT_RETRY_MS = 10_000;
+
 export interface AiSdkProviderConfig {
 	/** Stable provider id (e.g. "openai"). */
 	id: string;
@@ -73,6 +87,67 @@ function formatZodError(error: z.ZodError): string {
 	return error.issues
 		.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
 		.join("; ");
+}
+
+function errorMessage(e: unknown): string {
+	return e instanceof Error ? e.message : String(e);
+}
+
+function readErrorNumber(e: unknown, keys: string[]): number | null {
+	if (!e || typeof e !== "object") return null;
+	const record = e as Record<string, unknown>;
+	for (const key of keys) {
+		const value = record[key];
+		if (typeof value === "number" && Number.isFinite(value)) return value;
+		if (typeof value === "string") {
+			const parsed = Number(value);
+			if (Number.isFinite(parsed)) return parsed;
+		}
+	}
+	return null;
+}
+
+function retryAfterMs(e: unknown): number | null {
+	if (!e || typeof e !== "object") return null;
+	const record = e as Record<string, unknown>;
+	const direct = readErrorNumber(e, ["retryAfterMs", "retry_after_ms"]);
+	if (direct !== null) return Math.max(0, direct);
+	const seconds = readErrorNumber(e, ["retryAfter", "retry_after"]);
+	if (seconds !== null) return Math.max(0, seconds * 1000);
+	const headers = record.headers;
+	if (headers && typeof (headers as Headers).get === "function") {
+		const raw = (headers as Headers).get("retry-after");
+		if (raw) {
+			const numeric = Number(raw);
+			if (Number.isFinite(numeric)) return Math.max(0, numeric * 1000);
+			const dateMs = Date.parse(raw);
+			if (Number.isFinite(dateMs)) return Math.max(0, dateMs - Date.now());
+		}
+	}
+	return null;
+}
+
+function isRateLimitError(e: unknown): boolean {
+	const status = readErrorNumber(e, ["status", "statusCode", "code"]);
+	return status === 429 || /429|rate.?limit|quota/i.test(errorMessage(e));
+}
+
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+	return new Promise((resolve, reject) => {
+		if (signal?.aborted) {
+			reject(new DOMException("Aborted", "AbortError"));
+			return;
+		}
+		const timer = setTimeout(resolve, ms);
+		signal?.addEventListener(
+			"abort",
+			() => {
+				clearTimeout(timer);
+				reject(new DOMException("Aborted", "AbortError"));
+			},
+			{ once: true }
+		);
+	});
 }
 
 /**
@@ -101,7 +176,7 @@ export class AiSdkProvider implements AiProvider {
 
 	/** Map AI SDK / network errors to user-readable provider errors. */
 	protected describeError(e: unknown): string {
-		const msg = e instanceof Error ? e.message : String(e);
+		const msg = errorMessage(e);
 		if (/api[\s_-]?key|authenticat|401|403/i.test(msg)) {
 			return `${this.vendor} rejected the API key. Check it in CueCraft settings.`;
 		}
@@ -112,6 +187,39 @@ export class AiSdkProvider implements AiProvider {
 			return `Could not reach ${this.vendor}. Check your connection.`;
 		}
 		return `${this.vendor} request failed: ${msg}`;
+	}
+
+	private async generateWithRetry<T>(opts: {
+		schema: z.ZodType<T>;
+		prompt: string;
+		signal?: AbortSignal;
+	}): Promise<T> {
+		let lastRateLimit: unknown = null;
+		for (let attempt = 0; attempt <= DEFAULT_RATE_LIMIT_RETRIES; attempt++) {
+			try {
+				return await this.generate(opts);
+			} catch (e) {
+				if (!isRateLimitError(e) || attempt === DEFAULT_RATE_LIMIT_RETRIES) {
+					if (isRateLimitError(e)) {
+						throw new ProviderRateLimitError(
+							this.describeError(e),
+							retryAfterMs(e)
+						);
+					}
+					throw e;
+				}
+				lastRateLimit = e;
+				const waitMs = Math.min(
+					retryAfterMs(e) ?? DEFAULT_RATE_LIMIT_RETRY_MS * 2 ** attempt,
+					MAX_RATE_LIMIT_RETRY_MS
+				);
+				await sleep(waitMs, opts.signal);
+			}
+		}
+		throw new ProviderRateLimitError(
+			this.describeError(lastRateLimit),
+			retryAfterMs(lastRateLimit)
+		);
 	}
 
 	async testConnection(): Promise<ProviderStatus> {
@@ -137,14 +245,18 @@ export class AiSdkProvider implements AiProvider {
 		const prompt =
 			`You are a study assistant creating Cornell-style active-recall cues.\n` +
 			`${preset}\n` +
+			`${questionStyleGuidance(input.options?.questionStyle)}\n` +
+			`${cueDensityGuidance(input.options?.cueDensity)}\n` +
+			`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
 			contextLine +
 			`\nSection heading: ${input.heading || "(untitled)"}\n` +
 			`Section content:\n${input.content}\n`;
 
 		let raw;
 		try {
-			raw = await this.generate({ schema: cueGenSchema, prompt, signal });
+			raw = await this.generateWithRetry({ schema: cueGenSchema, prompt, signal });
 		} catch (e) {
+			if (e instanceof ProviderRateLimitError) throw e;
 			throw new ProviderError(this.describeError(e));
 		}
 		const parsed = cueOutputSchema.safeParse(raw);
@@ -168,8 +280,9 @@ export class AiSdkProvider implements AiProvider {
 
 		let raw;
 		try {
-			raw = await this.generate({ schema: summaryGenSchema, prompt, signal });
+			raw = await this.generateWithRetry({ schema: summaryGenSchema, prompt, signal });
 		} catch (e) {
+			if (e instanceof ProviderRateLimitError) throw e;
 			throw new ProviderError(this.describeError(e));
 		}
 		const parsed = summaryOutputSchema.safeParse(raw);

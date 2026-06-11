@@ -4,7 +4,7 @@ import { OpenAIProvider } from "../src/providers/openai-provider";
 import { GoogleProvider } from "../src/providers/google-provider";
 import { XaiProvider } from "../src/providers/xai-provider";
 import type { ObjectGenerator } from "../src/providers/ai-sdk-provider";
-import { ProviderError } from "../src/providers/types";
+import { ProviderError, ProviderRateLimitError } from "../src/providers/types";
 
 type Ctor = new (opts: {
 	apiKey: string;
@@ -14,7 +14,18 @@ type Ctor = new (opts: {
 	id: string;
 	label: string;
 	generateCue: (
-		input: { heading: string; content: string; preset: string; noteContext?: string },
+		input: {
+			heading: string;
+			content: string;
+			preset: string;
+			noteContext?: string;
+			options?: {
+				cueDensity: 1 | 2 | 3;
+				questionStyle: "recall" | "socratic" | "exam";
+				generateKeywords: boolean;
+				autoSummary: boolean;
+			};
+		},
 		signal?: AbortSignal
 	) => Promise<{ question: string; keywords: string[]; confidence: string }>;
 	generateSummary: (input: {
@@ -100,7 +111,29 @@ for (const c of cases) {
 				expect(prompts[0]).toContain("simple, accessible");
 			});
 
-			it("throws a ProviderError on invalid model output", async () => {
+		it("includes generation option guidance in the prompt", async () => {
+			const { generator, prompts } = fixedGenerator({
+				question: "Q?",
+				keywords: ["a", "b"],
+				confidence: "low",
+			});
+			await make(generator).generateCue({
+				heading: "H",
+				content: "c",
+				preset: "conceptual",
+				options: {
+					cueDensity: 1,
+					questionStyle: "exam",
+					generateKeywords: false,
+					autoSummary: true,
+				},
+			});
+			expect(prompts[0]).toContain("exam prompt");
+			expect(prompts[0]).toContain("minimal");
+			expect(prompts[0]).toContain("minimum 2");
+		});
+
+		it("throws a ProviderError on invalid model output", async () => {
 			const { generator } = fixedGenerator({
 				question: "Q?",
 				keywords: [], // too few -> invalid
@@ -118,6 +151,50 @@ for (const c of cases) {
 			await expect(
 				make(generator).generateCue({ heading: "H", content: "c", preset: "conceptual" })
 			).rejects.toThrow(c.vendor);
+		});
+
+		it("retries rate-limit errors before surfacing failure", async () => {
+			let calls = 0;
+			const generator: ObjectGenerator = async () => {
+				calls++;
+				if (calls < 3) {
+					throw Object.assign(new Error("429 rate limit"), {
+						status: 429,
+						retryAfterMs: 0,
+					});
+				}
+				return {
+					question: "Recovered?",
+					keywords: ["a", "b"],
+					confidence: "medium",
+				} as never;
+			};
+			const cue = await make(generator).generateCue({
+				heading: "H",
+				content: "c",
+				preset: "conceptual",
+			});
+			expect(cue.question).toBe("Recovered?");
+			expect(calls).toBe(3);
+		});
+
+		it("throws ProviderRateLimitError after retry budget is exhausted", async () => {
+			let calls = 0;
+			const generator: ObjectGenerator = async () => {
+				calls++;
+				throw Object.assign(new Error("429 rate limit"), {
+					status: 429,
+					retryAfterMs: 0,
+				});
+			};
+			await expect(
+				make(generator).generateCue({
+					heading: "H",
+					content: "c",
+					preset: "conceptual",
+				})
+			).rejects.toBeInstanceOf(ProviderRateLimitError);
+			expect(calls).toBe(3);
 		});
 
 		it("returns a validated summary", async () => {

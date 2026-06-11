@@ -63,6 +63,22 @@ describe("buildCornellModel", () => {
 		expect(model.learningObjective).toBe("the objective");
 	});
 
+	it("carries low-confidence rationale into rows", () => {
+		const cache = cacheFrom((_s, i) =>
+			i === 0
+				? {
+						confidence: "low",
+						rationale: "Section is too short to make a robust cue.",
+					}
+				: {}
+		);
+		const model = buildCornellModel(cache, parseSections(NOTE));
+		expect(model.rows[0].confidence).toBe("low");
+		expect(model.rows[0].rationale).toBe(
+			"Section is too short to make a robust cue."
+		);
+	});
+
 	it("marks sections without a usable cue as hasCue=false but keeps the notes", () => {
 		const cache = cacheFrom((_s, i) =>
 			i === 1 ? { error: "boom", question: null, keywords: null } : {}

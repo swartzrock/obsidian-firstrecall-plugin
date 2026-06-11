@@ -4,7 +4,6 @@ import { TONE_OPTIONS } from "./main";
 import {
 	failedCueCount,
 	pickCornellFile,
-	type Confidence,
 	type CornellModel,
 	type CornellRow,
 } from "./cornell";
@@ -86,6 +85,22 @@ export class CornellView extends ItemView {
 		root.empty();
 		root.addClass("cuecraft-cornell");
 		root.toggleClass("cuecraft-cornell-study", this.studyMode);
+		root.toggleClass(
+			"cuecraft-cornell-hide-keywords",
+			!this.plugin.settings.generateKeywords
+		);
+		root.toggleClass(
+			"cuecraft-cornell-compact-chips",
+			this.plugin.settings.compactChips
+		);
+		root.toggleClass(
+			"cuecraft-cornell-no-border",
+			!this.plugin.settings.showCueBorder
+		);
+		root.toggleClass(
+			"cuecraft-cornell-fold-mobile",
+			this.plugin.settings.foldCueColumnOnMobile
+		);
 		// Apply the selected visual preset; only one style class at a time.
 		for (const s of CORNELL_STYLES) root.removeClass(cornellStyleClass(s.id));
 		root.addClass(cornellStyleClass(this.plugin.settings.cornellStyle));
@@ -337,13 +352,19 @@ export class CornellView extends ItemView {
 		const cue = cell.createEl("div", { cls: "cuecraft-cornell-cue" });
 		if (row.confidence) cue.dataset.confidence = row.confidence;
 
-		// Meta row: confidence label (left) + regenerate icon (right). The rail
-		// itself now uses the accent color, so confidence reads from this label.
+		// Meta row: only low-confidence cues get an explicit warning. High/medium
+		// confidence stays quiet because it is not actionable.
 		const meta = cue.createEl("div", { cls: "cuecraft-cornell-cuemeta" });
-		if (row.confidence) {
-			meta.createEl("span", {
-				cls: "cuecraft-cornell-confidence",
-				text: confidenceLabel(row.confidence),
+		if (row.confidence === "low") {
+			meta.createEl("button", {
+				cls: "cuecraft-cornell-lowconf",
+				text: "\u26a0",
+				attr: {
+					"aria-label": "Low confidence",
+					title: row.rationale
+						? `Low confidence: ${row.rationale}`
+						: "Low confidence: this cue may need review.",
+				},
 			});
 		}
 		// Circle-arrow regenerate icon: appears on hover, and stays visible for
@@ -365,7 +386,7 @@ export class CornellView extends ItemView {
 
 		cue.createEl("div", { cls: "cuecraft-cornell-q", text: row.question });
 
-		if (row.keywords.length) {
+		if (this.plugin.settings.generateKeywords && row.keywords.length) {
 			const kw = cue.createEl("div", { cls: "cuecraft-cornell-kw" });
 			kw.dataset.section = row.id;
 			for (const word of row.keywords) {
@@ -458,17 +479,5 @@ export class CornellView extends ItemView {
 			const show = !this.studyMode || this.revealAll || this.revealed.has(id);
 			el.toggleClass("is-hidden", !show);
 		});
-	}
-}
-
-/** Short uppercase label for a cue's self-reported confidence. */
-function confidenceLabel(confidence: Confidence): string {
-	switch (confidence) {
-		case "high":
-			return "HIGH";
-		case "medium":
-			return "MED";
-		case "low":
-			return "LOW";
 	}
 }

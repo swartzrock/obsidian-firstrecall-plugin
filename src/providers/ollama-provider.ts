@@ -1,6 +1,11 @@
 import type { CueOutput, SummaryOutput } from "../schemas";
 import { validateCue, validateSummary } from "../schemas";
 import {
+	cueDensityGuidance,
+	keywordGuidance,
+	questionStyleGuidance,
+} from "../cue-generation";
+import {
 	AiProvider,
 	CueInput,
 	HttpClient,
@@ -96,8 +101,12 @@ export class OllamaProvider implements AiProvider {
 		const basePrompt =
 			`You are a study assistant creating Cornell-style active-recall cues.\n` +
 			`${preset}\n` +
+			`${questionStyleGuidance(input.options?.questionStyle)}\n` +
+			`${cueDensityGuidance(input.options?.cueDensity)}\n` +
+			`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
 			`Return ONLY a JSON object with keys: "question" (string), ` +
-			`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low").\n` +
+			`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
+			`and optional "rationale" (short reason, only when confidence is "low").\n` +
 			contextLine +
 			`\nSection heading: ${input.heading || "(untitled)"}\n` +
 			`Section content:\n${input.content}\n`;
