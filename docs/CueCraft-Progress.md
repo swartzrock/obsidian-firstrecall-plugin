@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (cue confidence UI: low-confidence warnings only). 199 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Cornell cue controls no longer add top spacing). 199 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -115,6 +115,9 @@ Each item links to the PR that delivered it.
   internal metadata and hidden from the cue UI. Low-confidence cues show a compact warning button
   with the model's rationale in the tooltip, and keep the circle-arrow (↻) regenerate icon visible
   as a nudge to retry them (opens the existing tone menu → `regenerateSection`).
+- **Cornell cue control spacing polish.** Low-confidence warning and per-cue regenerate controls
+  are now positioned in the cue corner instead of reserving an always-empty meta row, so normal cue
+  questions start flush with the top of the accent rail.
 - **Removed two unused "Note format" controls.** The read-only Storage block (` ```cornell `) and
   Summary callout type (`> [!summary]`) badges were dropped — they documented internals the user
   doesn't act on. (The `renderReadOnlyBadge` helper + `.cuecraft-code-badge` CSS went with them.)

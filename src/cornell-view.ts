@@ -352,11 +352,10 @@ export class CornellView extends ItemView {
 		const cue = cell.createEl("div", { cls: "cuecraft-cornell-cue" });
 		if (row.confidence) cue.dataset.confidence = row.confidence;
 
-		// Meta row: only low-confidence cues get an explicit warning. High/medium
+		// Only low-confidence cues get an explicit warning. High/medium
 		// confidence stays quiet because it is not actionable.
-		const meta = cue.createEl("div", { cls: "cuecraft-cornell-cuemeta" });
 		if (row.confidence === "low") {
-			meta.createEl("button", {
+			cue.createEl("button", {
 				cls: "cuecraft-cornell-lowconf",
 				text: "\u26a0",
 				attr: {
@@ -370,7 +369,7 @@ export class CornellView extends ItemView {
 		// Circle-arrow regenerate icon: appears on hover, and stays visible for
 		// low-confidence cues as a nudge to regenerate them. Hidden in Study Mode.
 		if (!this.studyMode) {
-			const regen = meta.createEl("button", {
+			const regen = cue.createEl("button", {
 				cls: "cuecraft-cornell-regen",
 				text: "\u21bb",
 				attr: {
@@ -415,7 +414,7 @@ export class CornellView extends ItemView {
 		});
 		if (row.error) cue.setAttr("title", row.error);
 		const regen = cue.createEl("button", {
-			cls: "cuecraft-cornell-regen",
+			cls: "cuecraft-cornell-regen-action",
 			text: "\u21bb Regenerate",
 		});
 		regen.addEventListener("click", (e) => {

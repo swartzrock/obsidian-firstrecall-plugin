@@ -211,19 +211,18 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-cornell-cue {
+	position: relative;
 	border-left: 3px solid var(--interactive-accent);
 	padding-left: 8px;
+	padding-right: 26px;
 }
-
-.cuecraft-cornell-cuemeta {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 6px;
-	min-height: 20px;
-	margin-bottom: 2px;
+.cuecraft-cornell-cue[data-confidence="low"] {
+	padding-right: 52px;
 }
 .cuecraft-cornell-lowconf {
+	position: absolute;
+	top: 0;
+	right: 24px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -329,6 +328,9 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 /* Per-cue regenerate icon (circle-arrow) in the Cornell view. Hidden until the
  * cue is hovered; low-confidence cues keep it visible as a regenerate nudge. */
 .cuecraft-cornell-regen {
+	position: absolute;
+	top: 0;
+	right: 0;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -354,6 +356,13 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-cornell-regen:hover {
 	color: var(--text-normal);
 	border-color: var(--interactive-accent);
+}
+.cuecraft-cornell-regen-action {
+	font-size: var(--font-ui-smaller);
+	margin-top: 6px;
+	padding: 2px 8px;
+	border-radius: var(--radius-s);
+	cursor: pointer;
 }
 
 .cuecraft-cornell-heading {
