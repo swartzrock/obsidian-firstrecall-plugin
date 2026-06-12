@@ -12,6 +12,85 @@
 	margin-top: 0;
 }
 
+.cuecraft-settings-nav {
+	background: var(--background-secondary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-l);
+	overflow: hidden;
+	margin-bottom: 22px;
+}
+
+.cuecraft-settings-nav-card {
+	cursor: pointer;
+	transition:
+		background-color 120ms ease,
+		border-color 120ms ease;
+}
+
+.cuecraft-settings-nav > .setting-item {
+	margin: 0;
+	padding: 16px;
+}
+
+.cuecraft-settings-nav > .setting-item:first-child {
+	padding-top: 14px;
+}
+
+.cuecraft-settings-nav > .setting-item:last-child {
+	padding-bottom: 14px;
+	border-bottom: none;
+}
+
+.cuecraft-settings-nav-card:hover,
+.cuecraft-settings-nav-card:focus-visible {
+	background: var(--background-modifier-hover);
+}
+
+.cuecraft-settings-nav-summary {
+	margin-top: 6px;
+	font-size: var(--font-ui-smaller);
+	color: var(--text-muted);
+	line-height: 1.4;
+}
+
+.cuecraft-settings-nav-chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-muted);
+}
+
+.cuecraft-settings-subpage-header {
+	margin-bottom: 12px;
+}
+
+.cuecraft-settings-subpage-header .setting-item-name {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.cuecraft-settings-subpage-header .setting-item-heading {
+	margin-bottom: 0;
+}
+
+.cuecraft-settings-subpage-title {
+	margin-left: 0;
+}
+
+.cuecraft-settings-subpage-desc {
+	margin-top: 4px;
+	color: var(--text-muted);
+	line-height: 1.4;
+}
+
+.cuecraft-settings-back {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+}
+
 .cuecraft-settings-flow {
 	padding: 10px 14px 14px;
 	border: 1px solid var(--background-modifier-border);
@@ -48,6 +127,10 @@
 }
 
 @media (max-width: 700px) {
+	.cuecraft-settings-nav > .setting-item {
+		padding-inline: 12px;
+	}
+
 	.cuecraft-settings-flow {
 		padding-inline: 12px;
 	}

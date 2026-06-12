@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, and per-provider setup status now ship with custom-model fallback, preserved saved IDs, and provider-safe concurrency tuning copy). 229 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, and a new settings home with dedicated AI model / cue generation / appearance subpages now ship with custom-model fallback, preserved saved IDs, and provider-safe concurrency tuning copy). 229 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -156,6 +156,11 @@ Each item links to the PR that delivered it.
 - **Removed two unused "Note format" controls.** The read-only Storage block (` ```cornell `) and
   Summary callout type (`> [!summary]`) badges were dropped — they documented internals the user
   doesn't act on. (The `renderReadOnlyBadge` helper + `.cuecraft-code-badge` CSS went with them.)
+- **Settings home + dedicated subpages.** CueCraft settings now open on a lighter home screen with
+  three clear entry points: **AI model**, **Cue generation**, and **Appearance**. Those larger
+  sections moved into their own subpages with compact summaries on the home page, while lighter
+  settings like **Note format** and **Study Mode** stay inline so the main settings screen is much
+  easier to scan.
 
 ### Beyond the original v1.0 slice
 - **Cornell view** — dedicated pane: Title → left cue column | main notes → Summary, from cache;

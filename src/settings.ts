@@ -62,6 +62,7 @@ export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
 export type ProviderId = "ollama" | "anthropic" | "openai" | "google" | "xai";
 const CUSTOM_MODEL_SELECTION_ID = "__custom_model__";
+type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
 
 export interface CueCraftSettings {
 	provider: ProviderId;
@@ -159,6 +160,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 
 export class CueCraftSettingTab extends PluginSettingTab {
 	private plugin: CueCraftPlugin;
+	private currentSubpage: SettingsSubpage = "home";
 
 	constructor(app: App, plugin: CueCraftPlugin) {
 		super(app, plugin);
@@ -169,26 +171,227 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("p", {
-			text: "CueCraft generates study cues using a local Ollama model or a frontier model (Claude, ChatGPT, Gemini, Grok). Your Markdown files are never modified.",
-			cls: "cuecraft-settings-intro",
-		});
-
-		this.renderAiModelSection(containerEl);
-		this.renderCueGenerationSection(containerEl);
-		this.renderNoteFormatSection(containerEl);
-		this.renderAppearanceSection(containerEl);
-		this.renderStudySection(containerEl);
+		switch (this.currentSubpage) {
+			case "ai-model":
+				this.renderSubpageHeader(
+					containerEl,
+					"AI model",
+					"Provider setup, connection checks, model selection, and speed tuning."
+				);
+				this.renderAiModelSection(containerEl, false);
+				break;
+			case "cue-generation":
+				this.renderSubpageHeader(
+					containerEl,
+					"Cue generation",
+					"Question style, density, summaries, and auto-generation behavior."
+				);
+				this.renderCueGenerationSection(containerEl, false);
+				break;
+			case "appearance":
+				this.renderSubpageHeader(
+					containerEl,
+					"Appearance",
+					"Cornell view styling, layout, cue accents, and visual density."
+				);
+				this.renderAppearanceSection(containerEl, false);
+				break;
+			default:
+				containerEl.createEl("p", {
+					text: "CueCraft generates study cues using a local Ollama model or a frontier model (Claude, ChatGPT, Gemini, Grok). Your Markdown files are never modified.",
+					cls: "cuecraft-settings-intro",
+				});
+				this.renderSettingsHome(containerEl);
+				break;
+		}
 	}
 
 	hide(): void {
 		super.hide();
+		this.currentSubpage = "home";
 		this.plugin.promptForCueSettingsRegeneration();
 	}
 
+	private renderSettingsHome(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Settings").setHeading();
+
+		const navEl = containerEl.createDiv({ cls: "cuecraft-settings-nav" });
+		this.renderSettingsNavCard(navEl, {
+			title: "AI model",
+			description: "Provider setup, connection checks, model selection, and parallel request tuning.",
+			summary: this.aiModelSummary(),
+			onOpen: () => this.openSubpage("ai-model"),
+		});
+		this.renderSettingsNavCard(navEl, {
+			title: "Cue generation",
+			description: "Control cue style, density, keywords, summaries, and save-time generation.",
+			summary: this.cueGenerationSummary(),
+			onOpen: () => this.openSubpage("cue-generation"),
+		});
+		this.renderSettingsNavCard(navEl, {
+			title: "Appearance",
+			description: "Adjust Cornell view styling, sizing, accents, and compact display options.",
+			summary: this.appearanceSummary(),
+			onOpen: () => this.openSubpage("appearance"),
+		});
+
+		this.renderNoteFormatSection(containerEl, true);
+		this.renderStudySection(containerEl, true);
+	}
+
+	private renderSubpageHeader(
+		containerEl: HTMLElement,
+		title: string,
+		description: string
+	): void {
+		const titleSetting = new Setting(containerEl).setName(title).setHeading();
+		titleSetting.settingEl.addClass("cuecraft-settings-subpage-header");
+		titleSetting.nameEl.empty();
+
+		const backBtn = titleSetting.nameEl.createEl("button", {
+			cls: "clickable-icon cuecraft-settings-back",
+			attr: { type: "button", "aria-label": "Back to settings" },
+		});
+		setIcon(backBtn, "chevron-left");
+		this.plugin.registerDomEvent(backBtn, "click", () =>
+			this.openSubpage("home")
+		);
+		titleSetting.nameEl.createSpan({
+			cls: "cuecraft-settings-subpage-title",
+			text: title,
+		});
+		titleSetting.descEl.empty();
+		titleSetting.descEl.createDiv({
+			cls: "cuecraft-settings-subpage-desc",
+			text: description,
+		});
+	}
+
+	private renderSettingsNavCard(
+		containerEl: HTMLElement,
+		opts: {
+			title: string;
+			description: string;
+			summary: string;
+			onOpen: () => void;
+		}
+	): void {
+		const setting = new Setting(containerEl)
+			.setName(opts.title)
+			.setDesc(opts.description);
+		setting.settingEl.addClass("cuecraft-settings-nav-card");
+		setting.descEl.createDiv({
+			cls: "cuecraft-settings-nav-summary",
+			text: opts.summary,
+		});
+		const chevronEl = setting.controlEl.createSpan({
+			cls: "cuecraft-settings-nav-chevron",
+		});
+		setIcon(chevronEl, "chevron-right");
+		chevronEl.setAttr("aria-hidden", "true");
+		setting.settingEl.tabIndex = 0;
+		setting.settingEl.setAttr("role", "button");
+		setting.settingEl.setAttr("aria-label", opts.title);
+		this.plugin.registerDomEvent(setting.settingEl, "click", (event) => {
+			if (this.isSettingsNavInteractiveTarget(event.target)) return;
+			opts.onOpen();
+		});
+		this.plugin.registerDomEvent(setting.settingEl, "keydown", (event) => {
+			if (event.key !== "Enter" && event.key !== " ") return;
+			event.preventDefault();
+			opts.onOpen();
+		});
+	}
+
+	private isSettingsNavInteractiveTarget(target: EventTarget | null): boolean {
+		if (!(target instanceof HTMLElement)) return false;
+		return Boolean(
+			target.closest(
+				"button, a, input, select, textarea, .clickable-icon, [contenteditable='true']"
+			)
+		);
+	}
+
+	private openSubpage(subpage: SettingsSubpage): void {
+		this.currentSubpage = subpage;
+		this.display();
+	}
+
+	private aiModelSummary(): string {
+		const setup = deriveProviderSetupStatus(this.plugin.settings);
+		const providerLabel = this.providerDisplayName(this.plugin.settings.provider);
+		const modelLabel = this.selectedModelLabel() || "No model selected";
+		const connectionLabel =
+			setup.connection === "verified"
+				? "Connection verified"
+				: setup.connection === "stale"
+					? "Connection stale"
+					: "Connection untested";
+		return `${providerLabel} · ${modelLabel} · ${connectionLabel}`;
+	}
+
+	private cueGenerationSummary(): string {
+		return `${this.plugin.settings.cuePreset} preset · ${cueDensityLabel(
+			this.plugin.settings.cueDensity
+		)} density · ${this.plugin.settings.questionStyle} questions`;
+	}
+
+	private appearanceSummary(): string {
+		const style =
+			CORNELL_STYLES.find(
+				(item) => item.id === this.plugin.settings.cornellStyle
+			)?.label ?? "Custom";
+		return `${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
+	}
+
+	private providerDisplayName(provider: ProviderId): string {
+		switch (provider) {
+			case "ollama":
+				return "Ollama";
+			case "anthropic":
+				return "Anthropic";
+			case "openai":
+				return "OpenAI";
+			case "google":
+				return "Gemini";
+			case "xai":
+				return "xAI";
+		}
+	}
+
+	private selectedModelLabel(): string {
+		const settings = this.plugin.settings;
+		switch (settings.provider) {
+			case "anthropic": {
+				const modelId = settings.anthropicModel.trim();
+				if (!modelId) return "";
+				const described = describeAnthropicModel(
+					modelId,
+					settings.anthropicAvailableModels
+				);
+				return described.label === "Custom model ID"
+					? described.rawId || described.label
+					: described.label;
+			}
+			case "openai":
+				return settings.openaiModel.trim();
+			case "google":
+				return settings.googleModel.trim();
+			case "xai":
+				return settings.xaiModel.trim();
+			case "ollama":
+				return settings.ollamaModel.trim();
+		}
+	}
+
 	// ── AI model ──────────────────────────────────────────────────────────
-	private renderAiModelSection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("AI model").setHeading();
+	private renderAiModelSection(
+		containerEl: HTMLElement,
+		showHeading: boolean
+	): void {
+		if (showHeading) {
+			new Setting(containerEl).setName("AI model").setHeading();
+		}
 
 		const setupFlowEl = containerEl.createDiv({
 			cls: "cuecraft-settings-flow",
@@ -345,8 +548,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	// ── Cue generation ────────────────────────────────────────────────────
-	private renderCueGenerationSection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Cue generation").setHeading();
+	private renderCueGenerationSection(
+		containerEl: HTMLElement,
+		showHeading: boolean
+	): void {
+		if (showHeading) {
+			new Setting(containerEl).setName("Cue generation").setHeading();
+		}
 
 		new Setting(containerEl)
 			.setName("Cue preset")
@@ -444,8 +652,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	// ── Note format ───────────────────────────────────────────────────────
-	private renderNoteFormatSection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Note format").setHeading();
+	private renderNoteFormatSection(
+		containerEl: HTMLElement,
+		showHeading: boolean
+	): void {
+		if (showHeading) {
+			new Setting(containerEl).setName("Note format").setHeading();
+		}
 
 		new Setting(containerEl)
 			.setName("Render in Reading mode")
@@ -473,8 +686,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	// ── Appearance ────────────────────────────────────────────────────────
-	private renderAppearanceSection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Appearance").setHeading();
+	private renderAppearanceSection(
+		containerEl: HTMLElement,
+		showHeading: boolean
+	): void {
+		if (showHeading) {
+			new Setting(containerEl).setName("Appearance").setHeading();
+		}
 
 		const styleSetting = new Setting(containerEl)
 			.setName("Cornell view style")
@@ -560,8 +778,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	// ── Study Mode ────────────────────────────────────────────────────────
-	private renderStudySection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Study Mode").setHeading();
+	private renderStudySection(
+		containerEl: HTMLElement,
+		showHeading: boolean
+	): void {
+		if (showHeading) {
+			new Setting(containerEl).setName("Study Mode").setHeading();
+		}
 
 		new Setting(containerEl)
 			.setName("Study Mode hide style")
