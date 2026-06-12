@@ -649,10 +649,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Ollama models")
 			.setDesc(
-				s.ollamaModelRefreshMessage ||
-					(s.ollamaHost.trim()
+				this.resolveModelRefreshDescription(
+					s.ollamaModelRefreshMessage,
+					s.ollamaHost.trim()
 						? "Fetch locally available Ollama models from the configured host."
-						: "Enter your Ollama host first to fetch local models.")
+						: "Enter your Ollama host first to fetch local models."
+				)
 			)
 			.addButton((btn) =>
 				btn
@@ -765,10 +767,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Anthropic models")
 			.setDesc(
-				s.anthropicModelRefreshMessage ||
-				(hasApiKey
-					? "Fetch Anthropic's account-specific model list so you can choose from your account."
-					: "Enter your Anthropic API key first to fetch account-specific models.")
+				this.resolveModelRefreshDescription(
+					s.anthropicModelRefreshMessage,
+					hasApiKey
+						? "Fetch Anthropic's account-specific model list so you can choose from your account."
+						: "Enter your Anthropic API key first to fetch account-specific models."
+				)
 			)
 			.addButton((btn) =>
 				btn
@@ -1097,10 +1101,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName(`${opts.providerName} models`)
 			.setDesc(
-				opts.getRefreshMessage() ||
-					(opts.getApiKey().trim()
+				this.resolveModelRefreshDescription(
+					opts.getRefreshMessage(),
+					opts.getApiKey().trim()
 						? `Fetch ${opts.providerName}'s available model IDs for this account.`
-						: `Enter your ${opts.providerName} API key first to fetch available models.`)
+						: `Enter your ${opts.providerName} API key first to fetch available models.`
+				)
 			)
 			.addButton((btn) =>
 				btn
@@ -1120,6 +1126,21 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						})
 					)
 			);
+	}
+
+	private resolveModelRefreshDescription(
+		refreshMessage: string,
+		defaultDescription: string
+	): string {
+		const message = refreshMessage.trim();
+		if (
+			message.startsWith("Could not ") ||
+			message.startsWith("No ") ||
+			message.startsWith("CueCraft:")
+		) {
+			return message;
+		}
+		return defaultDescription;
 	}
 
 	private async refreshCloudModels(opts: {
