@@ -16,6 +16,11 @@ import {
 import { parseSections } from "./parser";
 import type { NoteCache } from "./cache";
 
+export interface ReadingReviewAffordanceState {
+	visible: boolean;
+	action: "review-this-note" | null;
+}
+
 /**
  * Resolve a note's cached cues against its current Markdown and index them by
  * 1-based heading line. Sections without a heading (the intro/whole-note
@@ -33,4 +38,20 @@ export function buildReadingCueMap(
 		if (!map.has(cue.line)) map.set(cue.line, cue);
 	}
 	return map;
+}
+
+/**
+ * The Reading-mode Cornell entry point is shown only when a note can actually
+ * be reviewed: the cue layer is visible and at least one usable cue exists.
+ * The action remains the existing review flow so Cornell Study Mode behavior
+ * stays centralized in one place.
+ */
+export function readingReviewAffordanceState(opts: {
+	hasUsableCues: boolean;
+	isHidden: boolean;
+}): ReadingReviewAffordanceState {
+	if (opts.isHidden || !opts.hasUsableCues) {
+		return { visible: false, action: null };
+	}
+	return { visible: true, action: "review-this-note" };
 }

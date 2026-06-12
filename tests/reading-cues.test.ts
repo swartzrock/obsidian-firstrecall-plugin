@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { buildReadingCueMap } from "../src/reading-cues";
+import {
+	buildReadingCueMap,
+	readingReviewAffordanceState,
+} from "../src/reading-cues";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
@@ -80,5 +83,43 @@ describe("buildReadingCueMap", () => {
 		const map = buildReadingCueMap(cache, NOTE);
 		expect(map.has(3)).toBe(false);
 		expect(map.size).toBe(2);
+	});
+});
+
+describe("readingReviewAffordanceState", () => {
+	it("shows the Cornell review entry when usable cues are available and visible", () => {
+		expect(
+			readingReviewAffordanceState({
+				hasUsableCues: true,
+				isHidden: false,
+			})
+		).toEqual({
+			visible: true,
+			action: "review-this-note",
+		});
+	});
+
+	it("hides the Cornell review entry when cues are hidden", () => {
+		expect(
+			readingReviewAffordanceState({
+				hasUsableCues: true,
+				isHidden: true,
+			})
+		).toEqual({
+			visible: false,
+			action: null,
+		});
+	});
+
+	it("hides the Cornell review entry when no usable cues exist", () => {
+		expect(
+			readingReviewAffordanceState({
+				hasUsableCues: false,
+				isHidden: false,
+			})
+		).toEqual({
+			visible: false,
+			action: null,
+		});
 	});
 });

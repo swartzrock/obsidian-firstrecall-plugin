@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, and a new settings home with dedicated AI model / cue generation / appearance subpages now ship with custom-model fallback, preserved saved IDs, and provider-safe concurrency tuning copy). 229 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, and a compact Reading-mode `Review in Cornell` entry point now ship with custom-model fallback, preserved saved IDs, and provider-safe concurrency tuning copy). 235 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -71,6 +71,10 @@ Each item links to the PR that delivered it.
 - **Reading-mode cues** — a Markdown post-processor inserts cached cues beneath their headings in
   reading (preview) view, reusing the same `buildCueLineData` resolution as the editor. Pure
   `reading-cues.ts` map (`buildReadingCueMap`) with unit tests; respects per-note hide (#32).
+- **Reading-mode Cornell entry.** Reading view now shows one compact `Review in Cornell` launcher
+  near the top of notes with usable cached cues. It stays hidden when cues are missing, hidden, or
+  unusable, and routes through the existing `reviewThisNote` flow so Cornell Study Mode behavior
+  remains centralized instead of splitting review logic across two entry points.
 - **Export** — "Export Cues to Markdown" (study sheet) and "Export Cues to Anki (TSV)" commands
   write a sibling file next to the note; pure `export.ts` formatters (`cuesToMarkdown`/`cuesToAnki`,
   TSV-safe) with unit tests. Never modifies the source note (#32).
@@ -208,15 +212,14 @@ Each item links to the PR that delivered it.
 
 ## Manual Obsidian Test Instructions
 
-For the Anthropic picker slice:
+For the Reading-mode Cornell review entry slice:
 
-1. Reload CueCraft in Obsidian so the latest settings code is active.
-2. Open CueCraft settings and select `Anthropic (Claude)` as the provider.
-3. Confirm the model picker is a dropdown with friendly Claude names, not a free-text field.
-4. Confirm `Claude Sonnet 4.6` is the default selection for a fresh Anthropic config.
-5. Select `Custom model ID...`, enter a custom model ID, close settings, and reopen them to verify it persists.
-6. If you already have a saved legacy Anthropic model ID, reopen settings and confirm it is preserved.
-7. Switch back to a curated model and confirm the dropdown stores the selected Claude model ID.
+1. Reload CueCraft in Obsidian so the latest code is active.
+2. Open a note that already has usable cached cues and switch to Reading view.
+3. Confirm a compact `Review in Cornell` affordance appears once near the top of the rendered note.
+4. Click it and confirm CueCraft opens the Cornell view and enters Study Mode.
+5. Hide cues for that note and confirm the Reading-mode affordance no longer appears.
+6. Open a note with no generated cues, or only unusable/errored cues, and confirm the affordance stays hidden.
 
 For the Anthropic connection-copy slice:
 

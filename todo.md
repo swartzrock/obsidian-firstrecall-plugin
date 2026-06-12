@@ -15,13 +15,13 @@ If this file is used with `/goal`, the goal for a single run is NOT to finish th
 Stopping after one phase is a successful completion of that run. Do not continue just because there are more unchecked phases below.
 
 ## Phase 1: Reading-Mode Entry Point To Cornell Review
-- [ ] Add a lightweight Reading-mode affordance for notes with usable cached cues
-- [ ] Route the affordance through the existing Cornell review path so Study Mode behavior stays centralized
-- [ ] Hide the affordance when cues are hidden, missing, or unusable
-- [ ] Keep the affordance compact so Reading mode does not feel noisy
-- [ ] Add or update tests for Reading-mode visibility and routing behavior
-- [ ] Update docs/CueCraft-Progress.md and test counts if needed
-- [ ] Manual Obsidian test instructions
+- [x] Add a lightweight Reading-mode affordance for notes with usable cached cues
+- [x] Route the affordance through the existing Cornell review path so Study Mode behavior stays centralized
+- [x] Hide the affordance when cues are hidden, missing, or unusable
+- [x] Keep the affordance compact so Reading mode does not feel noisy
+- [x] Add or update tests for Reading-mode visibility and routing behavior
+- [x] Update docs/CueCraft-Progress.md and test counts if needed
+- [x] Manual Obsidian test instructions
 
 ## Phase 2: Softer Cornell Structure And Visual Direction
 - [ ] Soften the title, cue-column divider, and summary rules so they use quiet theme borders instead of harsh lines

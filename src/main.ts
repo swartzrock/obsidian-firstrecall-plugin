@@ -7,6 +7,7 @@ import {
 	Plugin,
 	TFile,
 	requestUrl,
+	setIcon,
 	type MarkdownFileInfo,
 	type MarkdownPostProcessorContext,
 } from "obsidian";
@@ -45,7 +46,10 @@ import {
 	setCuesEffect,
 	type CueLineData,
 } from "./cue-extension";
-import { buildReadingCueMap } from "./reading-cues";
+import {
+	buildReadingCueMap,
+	readingReviewAffordanceState,
+} from "./reading-cues";
 import {
 	selectExportableCues,
 	cuesToMarkdown,
@@ -278,6 +282,14 @@ export default class CueCraftPlugin extends Plugin {
 					})
 				: [];
 		cm.dispatch({ effects: setCuesEffect.of(cues) });
+	}
+
+	/** Force the active Reading view to rerender its post-processed cue surface. */
+	private refreshActiveReadingView(file: TFile): void {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view || view.file?.path !== file.path) return;
+		if (view.getMode() !== "preview") return;
+		view.previewMode.rerender(true);
 	}
 
 	/** True once the selected provider has its required fields set. */
@@ -549,21 +561,23 @@ export default class CueCraftPlugin extends Plugin {
 		const path = ctx.sourcePath;
 		if (!path) return;
 		const cache = this.cacheStore.get(path);
-		if (
-			!this.settings.renderInReadingMode ||
-			!cache ||
-			this.visibility.isHidden(path)
-		) {
-			return;
-		}
+		const isHidden = this.visibility.isHidden(path);
+		if (!this.settings.renderInReadingMode || !cache || isHidden) return;
 
 		const headings = Array.from(
 			el.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")
 		);
+		const reviewState = readingReviewAffordanceState({
+			hasUsableCues: hasUsableCues(cache),
+			isHidden,
+		});
 		for (const heading of headings) {
 			const info = ctx.getSectionInfo(heading);
 			if (!info) continue;
 			const map = this.readingMapFor(path, info.text, cache);
+			if (reviewState.visible && this.maybeInsertReadingReviewEl(path, map, info, heading)) {
+				// continue with cue rendering under the same heading if one exists
+			}
 			const cue = map.get(info.lineStart + 1);
 			if (!cue) continue;
 			// Guard against the post-processor running twice over the same node.
@@ -601,6 +615,22 @@ export default class CueCraftPlugin extends Plugin {
 		return map;
 	}
 
+	private maybeInsertReadingReviewEl(
+		path: string,
+		map: Map<number, CueLineData>,
+		info: ReturnType<MarkdownPostProcessorContext["getSectionInfo"]>,
+		heading: HTMLElement
+	): boolean {
+		if (!info) return false;
+		const firstCueLine = [...map.keys()].sort((a, b) => a - b)[0];
+		if (firstCueLine !== info.lineStart + 1) return false;
+		const previous = heading.previousElementSibling;
+		if (previous && previous.hasClass("cuecraft-reading-review")) return false;
+		const reviewEl = this.buildReadingReviewEl(path);
+		heading.insertAdjacentElement("beforebegin", reviewEl);
+		return true;
+	}
+
 	/** Build the reading-view cue element (mirrors the editor cue widget DOM). */
 	private buildReadingCueEl(cue: CueLineData): HTMLElement {
 		const root = createDiv({ cls: "cuecraft-cue cuecraft-cue-reading" });
@@ -621,6 +651,29 @@ export default class CueCraftPlugin extends Plugin {
 				text: cue.keywords.join(" \u00b7 "),
 			});
 		}
+		return root;
+	}
+
+	private buildReadingReviewEl(path: string): HTMLElement {
+		const root = createDiv({ cls: "cuecraft-reading-review" });
+		const button = root.createEl("button", {
+			cls: "cuecraft-reading-review-btn",
+			attr: { type: "button" },
+		});
+		const iconEl = button.createSpan({ cls: "cuecraft-reading-review-icon" });
+		setIcon(iconEl, "graduation-cap");
+		button.createSpan({
+			cls: "cuecraft-reading-review-label",
+			text: "Review in Cornell",
+		});
+		const file = this.app.vault.getAbstractFileByPath(path);
+		this.registerDomEvent(button, "click", () => {
+			if (file instanceof TFile) {
+				void this.reviewThisNote(file);
+			} else {
+				new Notice("CueCraft: open a note to review.");
+			}
+		});
 		return root;
 	}
 
@@ -1084,7 +1137,10 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const active = this.app.workspace.getActiveFile();
 		await this.updateStatusForFile(active);
-		if (active) this.renderCues(active);
+		if (active) {
+			this.renderCues(active);
+			this.refreshActiveReadingView(active);
+		}
 	}
 
 	private toggleStudyMode(): void {
