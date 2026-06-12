@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic picker, refresh support, connection-test copy, model hints, provider-aware parallel-request guidance, and a cleaner AI setup flow now ship with curated Claude labels, custom ID fallback, preserved saved IDs, merged refreshable model lists from the official Anthropic SDK, and safer concurrency tuning copy). 223 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic picker, refresh support, connection-test copy, model hints, provider-aware parallel-request guidance, a cleaner AI setup flow, and per-provider setup status now ship with curated Claude labels, custom ID fallback, preserved saved IDs, merged refreshable model lists from the official Anthropic SDK, and safer concurrency tuning copy). 228 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -138,6 +138,12 @@ Each item links to the PR that delivered it.
   parallel speed. The `Auto-generate on save` toggle now sits as a final optional automation step,
   and the grouped controls add narrow-width wrapping guards so key/model controls stay readable in
   tighter settings panes.
+- **Per-provider setup status.** The AI setup flow now shows lightweight status chips for `Key saved`,
+  `Model selected`, and connection state (`Connection untested`, `Connection verified`, or
+  `Connection stale`). Successful test connections are stored per provider/model/key combination, and
+  changing the current key or model automatically marks that provider's saved connection check stale
+  until `Test connection` is run again. Unit tests cover verified, stale, and per-provider fallback
+  status derivation.
 - **Low-confidence warnings + per-cue regenerate icon.** High/medium confidence is now treated as
   internal metadata and hidden from the cue UI. Low-confidence cues show a compact warning button
   with the model's rationale in the tooltip, and keep the circle-arrow (↻) regenerate icon visible
@@ -249,12 +255,21 @@ For the cleaner AI setup layout slice:
 5. Narrow the settings pane if convenient and confirm dropdowns, text inputs, eye buttons, and badges do not overlap or wrap awkwardly.
 6. Confirm the grouped AI controls still feel native to Obsidian rather than looking like a custom modal or separate screen.
 
+For the per-provider setup status slice:
+
+1. Open CueCraft settings and look at the `Setup status` row in the AI setup flow.
+2. Confirm a configured provider shows `Key saved` and `Model selected` immediately, even before testing.
+3. Click `Test connection` for a working provider and confirm the status changes to `Connection verified` with a recent verification timestamp.
+4. Change the current model or API key and confirm the status changes to `Connection stale`.
+5. Run `Test connection` again and confirm the stale status returns to `Connection verified`.
+6. Switch to another provider that has not been tested yet and confirm its setup status shows `Connection untested` independently of the first provider.
+
 ## How to resume / dev quickstart
 
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (223 tests)
+bun run test       # vitest (228 tests)
 ```
 
 Install into a vault by copying `main.js`, `manifest.json`, `styles.css` into

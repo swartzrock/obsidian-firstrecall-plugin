@@ -20,7 +20,7 @@
 	margin-bottom: 18px;
 }
 
-.cuecraft-settings-flow > .setting-item {
+.cuecraft-settings-flow>.setting-item {
 	padding-left: 0;
 	padding-right: 0;
 }
@@ -67,7 +67,7 @@
 	.cuecraft-settings-flow .setting-item-control {
 		width: 100%;
 	}
-	}
+}
 
 /* Study Mode: section bodies are softened so questions can be answered from memory.
  * The cue layer (questions/keywords) is exempt via .cuecraft-cue. */
@@ -105,9 +105,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-cue[data-confidence="high"] {
 	border-left-color: var(--color-green);
 }
+
 .cuecraft-cue[data-confidence="medium"] {
 	border-left-color: var(--color-yellow);
 }
+
 .cuecraft-cue[data-confidence="low"] {
 	border-left-color: var(--color-red);
 }
@@ -140,6 +142,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	justify-content: flex-end;
 	margin-bottom: 6px;
 }
+
 /* Pushes the ⚙ Display button to the far right of the toolbar. */
 .cuecraft-cornell-spacer {
 	flex: 1 1 auto;
@@ -151,6 +154,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-radius: var(--radius-s);
 	cursor: pointer;
 }
+
 .cuecraft-cornell-btn.is-active {
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
@@ -168,24 +172,29 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-radius: var(--radius-m);
 	background: var(--background-secondary);
 }
+
 .cuecraft-cornell-ctl {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
 }
+
 .cuecraft-cornell-ctl-label {
 	font-size: var(--font-ui-smaller);
 	color: var(--text-muted);
 }
+
 .cuecraft-cornell-select {
 	font-size: var(--font-ui-smaller);
 }
+
 .cuecraft-cornell-seg {
 	display: inline-flex;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
 	overflow: hidden;
 }
+
 .cuecraft-cornell-seg-btn {
 	font-size: var(--font-ui-smaller);
 	padding: 2px 9px;
@@ -197,9 +206,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	color: var(--text-muted);
 	background: var(--background-primary);
 }
+
 .cuecraft-cornell-seg-btn:last-child {
 	border-right: none;
 }
+
 .cuecraft-cornell-seg-btn.is-on {
 	background: var(--interactive-accent);
 	color: var(--text-on-accent);
@@ -218,6 +229,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	color: var(--text-error);
 	font-size: var(--font-ui-smaller);
 }
+
 .cuecraft-cornell-failbanner-text {
 	flex: 1;
 }
@@ -228,6 +240,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-left-color: var(--text-error);
 	opacity: 0.85;
 }
+
 .cuecraft-cue-error .cuecraft-cue-question,
 .cuecraft-cornell-cue-error .cuecraft-cornell-q {
 	color: var(--text-error);
@@ -251,9 +264,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-cuewidth-narrow .cuecraft-cornell-grid {
 	grid-template-columns: minmax(140px, 200px) 1fr;
 }
+
 .cuecraft-cuewidth-medium .cuecraft-cornell-grid {
 	grid-template-columns: minmax(180px, 260px) 1fr;
 }
+
 .cuecraft-cuewidth-wide .cuecraft-cornell-grid {
 	grid-template-columns: minmax(240px, 360px) 1fr;
 }
@@ -273,9 +288,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	padding-left: 8px;
 	padding-right: 26px;
 }
+
 .cuecraft-cornell-cue[data-confidence="low"] {
 	padding-right: 52px;
 }
+
 .cuecraft-cornell-lowconf {
 	position: absolute;
 	top: 0;
@@ -305,15 +322,19 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-cuefont-small .cuecraft-cornell-q {
 	font-size: var(--font-smallest);
 }
+
 .cuecraft-cuefont-small .cuecraft-cornell-chip {
 	font-size: calc(var(--font-smallest) * 0.9);
 }
+
 .cuecraft-cuefont-medium .cuecraft-cornell-q {
 	font-size: var(--font-ui-small);
 }
+
 .cuecraft-cuefont-large .cuecraft-cornell-q {
 	font-size: var(--font-ui-medium);
 }
+
 .cuecraft-cuefont-large .cuecraft-cornell-chip {
 	font-size: var(--font-ui-smaller, var(--font-smallest));
 }
@@ -342,17 +363,21 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-cornell-hide-keywords .cuecraft-cornell-kw {
 	display: none;
 }
+
 .cuecraft-cornell-compact-chips .cuecraft-cornell-kw {
 	gap: 3px;
 	margin-top: 5px;
 }
+
 .cuecraft-cornell-compact-chips .cuecraft-cornell-chip {
 	font-size: calc(var(--font-smallest) * 0.9);
 	padding: 0 5px;
 }
+
 .cuecraft-cornell-no-border .cuecraft-cornell-cuecell {
 	border-right-color: transparent;
 }
+
 .cuecraft-cornell-no-border .cuecraft-cornell-title,
 .cuecraft-cornell-no-border .cuecraft-cornell-summary {
 	border-color: var(--background-modifier-border);
@@ -362,11 +387,13 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	.cuecraft-cornell-fold-mobile .cuecraft-cornell-grid {
 		display: block;
 	}
+
 	.cuecraft-cornell-fold-mobile .cuecraft-cornell-cuecell {
 		border-right: none;
 		border-bottom: 1px solid var(--background-modifier-border);
 		padding: 10px 2px 6px;
 	}
+
 	.cuecraft-cornell-fold-mobile .cuecraft-cornell-notecell {
 		padding: 8px 2px 14px;
 	}
@@ -378,6 +405,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	user-select: none;
 	transition: filter 120ms ease-in-out;
 }
+
 .cuecraft-cornell-study .cuecraft-cornell-cue {
 	cursor: pointer;
 }
@@ -406,14 +434,17 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	opacity: 0;
 	transition: opacity 120ms, color 120ms, border-color 120ms;
 }
+
 .cuecraft-cornell-cue:hover .cuecraft-cornell-regen,
 .cuecraft-cornell-cue[data-confidence="low"] .cuecraft-cornell-regen {
 	opacity: 1;
 }
+
 .cuecraft-cornell-regen:hover {
 	color: var(--text-normal);
 	border-color: var(--interactive-accent);
 }
+
 .cuecraft-cornell-regen-action {
 	font-size: var(--font-ui-smaller);
 	margin-top: 6px;
@@ -426,8 +457,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-weight: var(--font-bold);
 	margin-bottom: 2px;
 }
-.cuecraft-cornell-heading[data-level="1"] { font-size: 1.15em; }
-.cuecraft-cornell-heading[data-level="2"] { font-size: 1.05em; }
+
+.cuecraft-cornell-heading[data-level="1"] {
+	font-size: 1.15em;
+}
+
+.cuecraft-cornell-heading[data-level="2"] {
+	font-size: 1.05em;
+}
 
 .cuecraft-cornell-body-empty {
 	color: var(--text-faint);
@@ -438,14 +475,17 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	margin-top: 6px;
 	padding-top: 10px;
 }
+
 .cuecraft-cornell-summary-label {
 	text-align: center;
 	font-weight: var(--font-bold);
 	margin-bottom: 6px;
 }
+
 .cuecraft-cornell-summary-body {
 	color: var(--text-muted);
 }
+
 .cuecraft-cornell-objective {
 	margin-top: 8px;
 }
@@ -467,6 +507,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-radius: var(--radius-s);
 	padding: 8px 10px;
 }
+
 .cuecraft-style-exam-prep .cuecraft-cornell-cue::before {
 	content: "Question";
 	display: inline-block;
@@ -479,6 +520,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	padding: 0 6px;
 	margin-bottom: 6px;
 }
+
 .cuecraft-style-exam-prep .cuecraft-cornell-kw {
 	border-top: 1px dashed var(--background-modifier-border);
 	padding-top: 6px;
@@ -492,21 +534,26 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-family: Georgia, "Times New Roman", serif;
 	border-radius: 6px;
 }
+
 .cuecraft-style-legal-pad .cuecraft-cornell-cuecell {
 	border-right-color: #d98b8b;
 }
+
 .cuecraft-style-legal-pad .cuecraft-cornell-cue {
 	border-left-color: #d98b8b;
 }
+
 .cuecraft-style-legal-pad .cuecraft-cornell-q,
 .cuecraft-style-legal-pad .cuecraft-cornell-heading {
 	color: #2b2a23;
 }
+
 .cuecraft-style-legal-pad .cuecraft-cornell-chip {
 	color: #6a5d2a;
 	border-color: #c8ba78;
 	font-style: italic;
 }
+
 .cuecraft-style-legal-pad .cuecraft-cornell-body,
 .cuecraft-style-legal-pad .cuecraft-cornell-body p {
 	color: #2b2a23;
@@ -516,20 +563,25 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-style-minimal .cuecraft-cornell-cuecell {
 	border-right-color: var(--background-modifier-border);
 }
+
 .cuecraft-style-minimal .cuecraft-cornell-cue {
 	border-left: 2px solid var(--background-modifier-border);
 }
+
 .cuecraft-style-minimal .cuecraft-cornell-cue[data-confidence] {
 	border-left-color: var(--background-modifier-border);
 }
+
 .cuecraft-style-minimal .cuecraft-cornell-q {
 	font-weight: var(--font-normal);
 	color: var(--text-muted);
 }
+
 .cuecraft-style-minimal .cuecraft-cornell-chip {
 	border-color: transparent;
 	padding: 1px 4px;
 }
+
 .cuecraft-style-minimal .cuecraft-cornell-title {
 	border-bottom-color: var(--background-modifier-border);
 	font-weight: var(--font-semibold);
@@ -544,6 +596,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	padding: 6px 9px;
 	transform: rotate(-0.4deg);
 }
+
 .cuecraft-style-handwritten .cuecraft-cornell-q {
 	font-weight: var(--font-bold);
 }
@@ -552,7 +605,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
  * Settings: v0 redesign controls (key field, accent swatches)
  * ==========================================================================*/
 
-/* API key field: inline show/hide eye + presence badge. */
+/* API key field: inline show/hide eye. */
 .cuecraft-key-eye {
 	display: inline-flex;
 	align-items: center;
@@ -565,23 +618,66 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	box-shadow: none;
 	cursor: pointer;
 }
+
 .cuecraft-key-eye:hover {
 	color: var(--text-normal);
 }
-.cuecraft-key-badge {
-	margin-left: 6px;
+
+.cuecraft-status-chips {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 8px;
+}
+
+.cuecraft-status-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
 	font-size: var(--font-ui-smaller);
-	border-radius: var(--radius-s);
-	padding: 2px 8px;
+	border-radius: 999px;
+	padding: 3px 10px;
 	white-space: nowrap;
-}
-.cuecraft-key-badge.is-set {
-	color: var(--text-success, var(--text-accent));
-	background: var(--background-modifier-success, var(--background-secondary));
-}
-.cuecraft-key-badge.is-empty {
-	color: var(--text-muted);
+	border: 1px solid var(--background-modifier-border);
 	background: var(--background-secondary);
+	color: var(--text-normal);
+	box-shadow: none;
+}
+
+.cuecraft-status-chip-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 999px;
+	background: var(--text-muted);
+	flex: 0 0 auto;
+}
+
+.cuecraft-status-chip-label {
+	color: inherit;
+}
+
+.cuecraft-status-chip.is-positive {
+	border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+}
+
+.cuecraft-status-chip.is-positive .cuecraft-status-chip-dot {
+	background: var(--color-green, var(--interactive-accent));
+}
+
+.cuecraft-status-chip.is-warning {
+	border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
+}
+
+.cuecraft-status-chip.is-warning .cuecraft-status-chip-dot {
+	background: var(--color-orange, var(--color-yellow));
+}
+
+.cuecraft-status-chip.is-muted {
+	color: var(--text-muted);
+}
+
+.cuecraft-status-chip.is-muted .cuecraft-status-chip-dot {
+	background: var(--text-faint, var(--text-muted));
 }
 
 .cuecraft-modal-actions {
@@ -597,6 +693,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	align-items: center;
 	gap: 8px;
 }
+
 /* `button.cuecraft-swatch` (raised specificity) beats Obsidian's themed
  * `.theme-dark button` background, which otherwise leaves the circles blank. */
 .cuecraft-swatches button.cuecraft-swatch {
@@ -610,9 +707,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	cursor: pointer;
 	box-shadow: none;
 }
+
 .cuecraft-swatch.is-selected {
 	border-color: var(--text-normal);
 }
+
 .cuecraft-swatch.is-selected::after {
 	content: "\2713";
 	position: absolute;
@@ -630,12 +729,15 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-accent-violet {
 	--cuecraft-accent: #8b5cf6;
 }
+
 .cuecraft-accent-teal {
 	--cuecraft-accent: #14b8a6;
 }
+
 .cuecraft-accent-amber {
 	--cuecraft-accent: #f59e0b;
 }
+
 .cuecraft-accent-rose {
 	--cuecraft-accent: #f43f5e;
 }
@@ -649,6 +751,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-cornell-cue:not(.cuecraft-cornell-cue-error) {
 	border-left-color: var(--cuecraft-accent, var(--interactive-accent));
 }
+
 .cuecraft-cornell-chip {
 	color: var(--cuecraft-accent, var(--text-muted));
 	border-color: var(--cuecraft-accent, var(--background-modifier-border));

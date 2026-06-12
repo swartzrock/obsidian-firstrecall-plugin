@@ -45,6 +45,11 @@ import {
 	refreshAnthropicModelOptions,
 } from "./anthropic-models";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
+import {
+	deriveProviderSetupStatus,
+	recordProviderConnectionSuccess,
+	type ProviderConnectionStatusMap,
+} from "./provider-setup-status";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
 
@@ -72,6 +77,7 @@ export interface CueCraftSettings {
 	googleModel: string;
 	xaiApiKey: string;
 	xaiModel: string;
+	providerConnectionStatus: ProviderConnectionStatusMap;
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
 	cornellStyle: CornellStyle;
@@ -105,6 +111,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	googleModel: "gemini-1.5-flash",
 	xaiApiKey: "",
 	xaiModel: "grok-2-latest",
+	providerConnectionStatus: {},
 	cuePreset: "conceptual",
 	studyHideMode: "blur",
 	cornellStyle: DEFAULT_CORNELL_STYLE,
@@ -185,11 +192,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
-			"2. Add credentials and choose a model",
-			"Enter the provider key or host details, then choose the model CueCraft should use."
+			"2. Add credentials",
+			"Enter the provider key or host details so CueCraft can reach this provider."
 		);
 
-		this.renderProviderSettings(setupFlowEl);
+		this.renderProviderCredentialSettings(setupFlowEl);
 
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
@@ -203,13 +210,21 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			.addButton((btn) =>
 				btn
 					.setButtonText("Test connection")
-					.setCta()
 					.onClick(() => this.testConnection())
 			);
 
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
-			"4. Tune speed",
+			"4. Choose a model",
+			"Select the model CueCraft should use after the provider is connected."
+		);
+
+		this.renderProviderModelSettings(setupFlowEl);
+		this.renderProviderSetupStatus(setupFlowEl);
+
+		this.renderSettingsFlowHeading(
+			setupFlowEl,
+			"5. Tune speed",
 			"Adjust how aggressively CueCraft generates section cues in parallel."
 		);
 
@@ -230,23 +245,58 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 		concurrencySetting.setDesc(concurrencyDesc());
 
-		this.renderSettingsFlowHeading(
-			setupFlowEl,
-			"5. Optional automation",
-			"Let CueCraft refresh cues automatically after note edits."
-		);
+	}
 
-		new Setting(setupFlowEl)
-			.setName("Auto-generate on save")
-			.setDesc("Draft cues and a summary automatically whenever a note is saved.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.autoGenerateOnSave)
-					.onChange(async (value) => {
-						this.plugin.settings.autoGenerateOnSave = value;
-						await this.plugin.saveSettings();
-					})
+	private renderProviderSetupStatus(containerEl: HTMLElement): void {
+		const status = deriveProviderSetupStatus(this.plugin.settings);
+		const statusSetting = new Setting(containerEl)
+			.setName("Setup status")
+			.setDesc(
+				status.connection === "verified" && status.testedAt
+					? `Last verified ${new Date(status.testedAt).toLocaleString()}.`
+					: status.connection === "stale"
+						? "The saved connection check no longer matches the current key or model."
+						: "Save the key/host and model, then run Test connection to verify this setup."
 			);
+		statusSetting.controlEl.addClass("cuecraft-status-chips");
+		this.renderStatusChip(
+			statusSetting.controlEl,
+			status.keySaved ? "Key saved" : "Key missing",
+			status.keySaved ? "is-positive" : "is-muted"
+		);
+		this.renderStatusChip(
+			statusSetting.controlEl,
+			status.modelSelected ? "Model selected" : "Model missing",
+			status.modelSelected ? "is-positive" : "is-muted"
+		);
+		this.renderStatusChip(
+			statusSetting.controlEl,
+			status.connection === "verified"
+				? "Connection verified"
+				: status.connection === "stale"
+					? "Connection stale"
+					: "Connection untested",
+			status.connection === "verified"
+				? "is-positive"
+				: status.connection === "stale"
+					? "is-warning"
+					: "is-muted"
+		);
+	}
+
+	private renderStatusChip(
+		containerEl: HTMLElement,
+		label: string,
+		stateClass: string
+	): void {
+		const chipEl = containerEl.createEl("span", {
+			cls: `cuecraft-status-chip ${stateClass}`,
+		});
+		chipEl.createEl("span", { cls: "cuecraft-status-chip-dot" });
+		chipEl.createEl("span", {
+			cls: "cuecraft-status-chip-label",
+			text: label,
+		});
 	}
 
 	private renderSettingsFlowHeading(
@@ -350,6 +400,18 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						this.plugin.settings.autoSummary = value;
 						await this.plugin.saveSettings();
 						this.plugin.noteCueSettingsChanged();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Auto-generate on save")
+			.setDesc("Draft cues and a summary automatically whenever a note is saved.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.autoGenerateOnSave)
+					.onChange(async (value) => {
+						this.plugin.settings.autoGenerateOnSave = value;
+						await this.plugin.saveSettings();
 					})
 			);
 	}
@@ -525,7 +587,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			});
 	}
 
-	private renderOllamaSettings(containerEl: HTMLElement): void {
+	private renderOllamaCredentialSettings(containerEl: HTMLElement): void {
 		new Setting(containerEl)
 			.setName("Ollama host")
 			.setDesc("Base URL of your local Ollama server.")
@@ -539,6 +601,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					})
 			);
 
+	}
+
+	private renderOllamaModelSettings(containerEl: HTMLElement): void {
 		new Setting(containerEl)
 			.setName("Ollama model")
 			.setDesc("Name of an installed Ollama model (e.g. llama3.1:8b).")
@@ -550,20 +615,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						this.plugin.settings.ollamaModel = value.trim();
 						await this.plugin.saveSettings();
 					})
-				);
+			);
 	}
 
-	private renderAnthropicSettings(containerEl: HTMLElement): void {
+	private renderAnthropicCredentialSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
-		const isCustomSelection = isAnthropicCustomModelSelection(s);
-		const modelHint = formatAnthropicModelHint(
-			s.anthropicModel,
-			s.anthropicAvailableModels
-		);
-		const modelOptions = buildAnthropicModelOptions(
-			s.anthropicAvailableModels
-		);
-		const hasApiKey = s.anthropicApiKey.trim().length > 0;
 
 		new Setting(containerEl)
 			.setName("Anthropic API key")
@@ -581,7 +637,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 							"Enter your Anthropic API key, then refresh models to load account-specific Claude options.";
 						this.syncAnthropicModelSelection();
 						await this.plugin.saveSettings();
-						updateBadge();
 					});
 				text.inputEl.type = "password";
 
@@ -602,19 +657,20 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						masked ? "Hide API key" : "Show API key"
 					);
 				});
-
-				const badge = eye.insertAdjacentElement(
-					"afterend",
-					createEl("span", { cls: "cuecraft-key-badge" })
-				) as HTMLSpanElement;
-				const updateBadge = (): void => {
-					const set = s.anthropicApiKey.trim().length > 0;
-					badge.setText(set ? "Set" : "Empty");
-					badge.toggleClass("is-set", set);
-					badge.toggleClass("is-empty", !set);
-				};
-				updateBadge();
 			});
+	}
+
+	private renderAnthropicModelSettings(containerEl: HTMLElement): void {
+		const s = this.plugin.settings;
+		const isCustomSelection = isAnthropicCustomModelSelection(s);
+		const modelHint = formatAnthropicModelHint(
+			s.anthropicModel,
+			s.anthropicAvailableModels
+		);
+		const modelOptions = buildAnthropicModelOptions(
+			s.anthropicAvailableModels
+		);
+		const hasApiKey = s.anthropicApiKey.trim().length > 0;
 
 		new Setting(containerEl)
 			.setName("Claude model")
@@ -653,9 +709,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			.setName("Refresh models")
 			.setDesc(
 				s.anthropicModelRefreshMessage ||
-					(hasApiKey
-						? "Refresh Anthropic's account-specific model list. CueCraft keeps the curated fallback models even if refresh fails."
-						: "Enter your Anthropic API key first to refresh account-specific models.")
+				(hasApiKey
+					? "Refresh Anthropic's account-specific model list. CueCraft keeps the curated fallback models even if refresh fails."
+					: "Enter your Anthropic API key first to refresh account-specific models.")
 			)
 			.addButton((btn) =>
 				btn
@@ -709,7 +765,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			this.display();
 			return;
 		}
-		new Notice("CueCraft: refreshing Anthropic models…");
+		// new Notice("CueCraft: refreshing Anthropic models…");
 		const anthropicProvider = provider as AnthropicProvider & {
 			listModels(): Promise<ModelInfo[]>;
 		};
@@ -727,23 +783,56 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		new Notice(`CueCraft: ${result.message}`);
 	}
 
-	/** Render the field set for whichever provider is selected. */
-	private renderProviderSettings(containerEl: HTMLElement): void {
+	private renderProviderCredentialSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		switch (s.provider) {
 			case "ollama":
-				this.renderOllamaSettings(containerEl);
+				this.renderOllamaCredentialSettings(containerEl);
 				return;
 			case "anthropic":
-				this.renderAnthropicSettings(containerEl);
+				this.renderAnthropicCredentialSettings(containerEl);
 				return;
 			case "openai":
-				this.renderCloudSettings(containerEl, {
+				this.renderCloudCredentialSettings(containerEl, {
 					vendor: "OpenAI",
 					keyDesc: "Your OpenAI API key (from platform.openai.com). Stored locally in this vault's plugin data.",
 					keyPlaceholder: "sk-...",
 					getKey: () => s.openaiApiKey,
 					setKey: (v) => (s.openaiApiKey = v),
+				});
+				return;
+			case "google":
+				this.renderCloudCredentialSettings(containerEl, {
+					vendor: "Google",
+					keyDesc: "Your Google AI (Gemini) API key (from aistudio.google.com). Stored locally in this vault's plugin data.",
+					keyPlaceholder: "AIza...",
+					getKey: () => s.googleApiKey,
+					setKey: (v) => (s.googleApiKey = v),
+				});
+				return;
+			case "xai":
+				this.renderCloudCredentialSettings(containerEl, {
+					vendor: "xAI",
+					keyDesc: "Your xAI API key (from console.x.ai). Stored locally in this vault's plugin data.",
+					keyPlaceholder: "xai-...",
+					getKey: () => s.xaiApiKey,
+					setKey: (v) => (s.xaiApiKey = v),
+				});
+				return;
+		}
+	}
+
+	private renderProviderModelSettings(containerEl: HTMLElement): void {
+		const s = this.plugin.settings;
+		switch (s.provider) {
+			case "ollama":
+				this.renderOllamaModelSettings(containerEl);
+				return;
+			case "anthropic":
+				this.renderAnthropicModelSettings(containerEl);
+				return;
+			case "openai":
+				this.renderCloudModelSettings(containerEl, {
 					modelLabel: "OpenAI model",
 					modelDesc: "An OpenAI model id (e.g. gpt-4o-mini, gpt-4o).",
 					modelPlaceholder: "gpt-4o-mini",
@@ -752,12 +841,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				});
 				return;
 			case "google":
-				this.renderCloudSettings(containerEl, {
-					vendor: "Google",
-					keyDesc: "Your Google AI (Gemini) API key (from aistudio.google.com). Stored locally in this vault's plugin data.",
-					keyPlaceholder: "AIza...",
-					getKey: () => s.googleApiKey,
-					setKey: (v) => (s.googleApiKey = v),
+				this.renderCloudModelSettings(containerEl, {
 					modelLabel: "Gemini model",
 					modelDesc: "A Gemini model id (e.g. gemini-1.5-flash, gemini-1.5-pro).",
 					modelPlaceholder: "gemini-1.5-flash",
@@ -766,12 +850,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				});
 				return;
 			case "xai":
-				this.renderCloudSettings(containerEl, {
-					vendor: "xAI",
-					keyDesc: "Your xAI API key (from console.x.ai). Stored locally in this vault's plugin data.",
-					keyPlaceholder: "xai-...",
-					getKey: () => s.xaiApiKey,
-					setKey: (v) => (s.xaiApiKey = v),
+				this.renderCloudModelSettings(containerEl, {
 					modelLabel: "Grok model",
 					modelDesc: "An xAI model id (e.g. grok-2-latest, grok-beta).",
 					modelPlaceholder: "grok-2-latest",
@@ -782,8 +861,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 	}
 
-	/** Shared API-key + model field set for the cloud (AI SDK) providers. */
-	private renderCloudSettings(
+	private renderCloudCredentialSettings(
 		containerEl: HTMLElement,
 		opts: {
 			vendor: string;
@@ -791,11 +869,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			keyPlaceholder: string;
 			getKey: () => string;
 			setKey: (v: string) => void;
-			modelLabel: string;
-			modelDesc: string;
-			modelPlaceholder: string;
-			getModel: () => string;
-			setModel: (v: string) => void;
 		}
 	): void {
 		new Setting(containerEl)
@@ -808,11 +881,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						opts.setKey(value.trim());
 						await this.plugin.saveSettings();
-						updateBadge();
 					});
 				text.inputEl.type = "password";
 
-				// Show/hide toggle for the otherwise-masked key.
 				const eye = text.inputEl.insertAdjacentElement(
 					"afterend",
 					createEl("button", {
@@ -830,23 +901,19 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						masked ? "Hide API key" : "Show API key"
 					);
 				});
-
-				// Presence badge mirroring the v0 "Valid" pill. This reflects
-				// that a key is set, not a verified key -- use Test connection
-				// for a real round-trip check.
-				const badge = eye.insertAdjacentElement(
-					"afterend",
-					createEl("span", { cls: "cuecraft-key-badge" })
-				) as HTMLSpanElement;
-				const updateBadge = (): void => {
-					const set = opts.getKey().trim().length > 0;
-					badge.setText(set ? "Set" : "Empty");
-					badge.toggleClass("is-set", set);
-					badge.toggleClass("is-empty", !set);
-				};
-				updateBadge();
 			});
+	}
 
+	private renderCloudModelSettings(
+		containerEl: HTMLElement,
+		opts: {
+			modelLabel: string;
+			modelDesc: string;
+			modelPlaceholder: string;
+			getModel: () => string;
+			setModel: (v: string) => void;
+		}
+	): void {
 		new Setting(containerEl)
 			.setName(opts.modelLabel)
 			.setDesc(opts.modelDesc)
@@ -880,6 +947,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				);
 				return;
 			}
+			this.plugin.settings.providerConnectionStatus =
+				recordProviderConnectionSuccess(this.plugin.settings);
+			await this.plugin.saveSettings();
+			this.display();
 			new Notice(`CueCraft: connected to Ollama (${models.length} model(s) available).`);
 		} catch (err) {
 			console.error("CueCraft test connection failed", err);
@@ -893,8 +964,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Notice(`CueCraft: enter your ${provider.label} API key first.`);
 			return;
 		}
-		new Notice(`CueCraft: testing ${provider.label}\u2026`);
+		// new Notice(`CueCraft: testing ${provider.label}\u2026`);
 		const status = await provider.testConnection();
+		if (status.ok) {
+			this.plugin.settings.providerConnectionStatus =
+				recordProviderConnectionSuccess(this.plugin.settings);
+			await this.plugin.saveSettings();
+			this.display();
+		}
 		if (status.ok && provider.id === "anthropic") {
 			const model = describeAnthropicModel(
 				this.plugin.settings.anthropicModel,

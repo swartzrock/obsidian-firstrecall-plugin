@@ -67,12 +67,22 @@ Stopping after one phase is a successful completion of that run. Do not continue
 - [x] Manual Obsidian test instructions
 
 ## Phase 7: Per-Provider Setup Status
-- [ ] Add lightweight setup status indicators for key saved, model selected, and connection tested
-- [ ] Store or derive the most recent successful connection test for the current provider/model combination
-- [ ] Clear or mark connection status stale when provider, model, or API key changes
-- [ ] Add tests for status derivation and stale-status behavior
+- [x] Add lightweight setup status indicators for key saved, model selected, and connection tested
+- [x] Store or derive the most recent successful connection test for the current provider/model combination
+- [x] Clear or mark connection status stale when provider, model, or API key changes
+- [x] Add tests for status derivation and stale-status behavior
+- [x] Update docs/CueCraft-Progress.md and test counts if needed
+- [x] Manual Obsidian test instructions
+
+## Phase 7.5: List Models Support
+- [ ] Add "List Models" support for OpenAI
+- [ ] Add "List Models" support for Gemini
+- [ ] Add "List Models" support for xAI
 - [ ] Update docs/CueCraft-Progress.md and test counts if needed
 - [ ] Manual Obsidian test instructions
+
+
+
 
 ## Phase 8: Advanced Model Details Drawer
 - [ ] Add an optional details area for the selected model
