@@ -190,6 +190,16 @@ export default class CueCraftPlugin extends Plugin {
 					capabilities: null,
 				} as ModelInfo));
 		}
+		if (
+			!("anthropicHasFetchedModels" in settings) &&
+			Array.isArray(
+				(settings as { anthropicAvailableModels?: ModelInfo[] }).anthropicAvailableModels
+			)
+		) {
+			(settings as { anthropicHasFetchedModels?: boolean }).anthropicHasFetchedModels =
+				((settings as { anthropicAvailableModels?: ModelInfo[] }).anthropicAvailableModels
+					?.length ?? 0) > 0;
+		}
 		normalizeAnthropicModelSelection(settings as {
 			anthropicModel: string;
 			anthropicModelSelection?: string;

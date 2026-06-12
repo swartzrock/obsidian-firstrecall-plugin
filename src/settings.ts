@@ -36,7 +36,6 @@ import {
 } from "./cornell-accent";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
-	ANTHROPIC_DEFAULT_MODEL_ID,
 	buildAnthropicModelOptions,
 	describeAnthropicModel,
 	formatAnthropicModelHint,
@@ -70,6 +69,7 @@ export interface CueCraftSettings {
 	anthropicModel: string;
 	anthropicModelSelection: string;
 	anthropicAvailableModels: ModelInfo[];
+	anthropicHasFetchedModels: boolean;
 	anthropicModelRefreshMessage: string;
 	openaiApiKey: string;
 	openaiModel: string;
@@ -101,9 +101,10 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	ollamaHost: "http://localhost:11434",
 	ollamaModel: "llama3.1:8b",
 	anthropicApiKey: "",
-	anthropicModel: ANTHROPIC_DEFAULT_MODEL_ID,
-	anthropicModelSelection: ANTHROPIC_DEFAULT_MODEL_ID,
+	anthropicModel: "",
+	anthropicModelSelection: "",
 	anthropicAvailableModels: [],
+	anthropicHasFetchedModels: false,
 	anthropicModelRefreshMessage: "",
 	openaiApiKey: "",
 	openaiModel: "gpt-4o-mini",
@@ -633,8 +634,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						s.anthropicApiKey = value.trim();
 						s.anthropicAvailableModels = [];
+						s.anthropicHasFetchedModels = false;
 						s.anthropicModelRefreshMessage =
-							"Enter your Anthropic API key, then refresh models to load account-specific Claude options.";
+							"Enter your Anthropic API key, then fetch models to load account-specific Claude options.";
 						this.syncAnthropicModelSelection();
 						await this.plugin.saveSettings();
 					});
@@ -672,18 +674,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		);
 		const hasApiKey = s.anthropicApiKey.trim().length > 0;
 
-		new Setting(containerEl)
-			.setName("Claude model")
-			.setDesc(modelHint)
-			.addDropdown((dd) => {
+		const modelSetting = new Setting(containerEl).setName("Claude model");
+		if (modelHint) modelSetting.setDesc(modelHint);
+		modelSetting.addDropdown((dd) => {
 				dd.addOption(ANTHROPIC_CUSTOM_MODEL_ID, "Custom model ID...");
 				for (const model of modelOptions) {
-					const label = model.recommended
-						? `${model.label} (Recommended)`
-						: model.legacy
-							? `${model.label} (Legacy)`
-							: model.label;
-					dd.addOption(model.id, label);
+					dd.addOption(model.id, model.label);
 				}
 				dd
 					.setValue(
@@ -705,21 +701,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					});
 			});
 
-		new Setting(containerEl)
-			.setName("Refresh models")
-			.setDesc(
-				s.anthropicModelRefreshMessage ||
-				(hasApiKey
-					? "Refresh Anthropic's account-specific model list. CueCraft keeps the curated fallback models even if refresh fails."
-					: "Enter your Anthropic API key first to refresh account-specific models.")
-			)
-			.addButton((btn) =>
-				btn
-					.setButtonText("Refresh models")
-					.setDisabled(!hasApiKey)
-					.onClick(() => void this.refreshAnthropicModels())
-			);
-
 		if (isCustomSelection) {
 			new Setting(containerEl)
 				.setName("Custom model ID")
@@ -735,6 +716,26 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						})
 				);
 		}
+
+		new Setting(containerEl)
+			.setName("Anthropic models")
+			.setDesc(
+				s.anthropicModelRefreshMessage ||
+				(hasApiKey
+					? "Fetch Anthropic's account-specific model list so you can choose from your account."
+					: "Enter your Anthropic API key first to fetch account-specific models.")
+			)
+			.addButton((btn) =>
+				btn
+					.setButtonText(
+						s.anthropicHasFetchedModels
+							? "Refresh models"
+							: "Fetch Anthropic models"
+					)
+					.setDisabled(!hasApiKey)
+					.onClick(() => void this.refreshAnthropicModels())
+			);
+
 	}
 
 	private syncAnthropicModelSelection(): void {
@@ -756,16 +757,16 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return;
 		}
 		const provider = this.plugin.makeProvider();
+		s.anthropicHasFetchedModels = true;
 		if (provider.id !== "anthropic" || !provider.listModels) {
 			s.anthropicAvailableModels = [];
 			s.anthropicModelRefreshMessage =
-				"CueCraft: Anthropic model refresh is unavailable; showing the curated fallback list.";
+				"CueCraft: Anthropic model fetch is unavailable. You can still enter a custom model ID.";
 			this.syncAnthropicModelSelection();
 			await this.plugin.saveSettings();
 			this.display();
 			return;
 		}
-		// new Notice("CueCraft: refreshing Anthropic models…");
 		const anthropicProvider = provider as AnthropicProvider & {
 			listModels(): Promise<ModelInfo[]>;
 		};
@@ -774,9 +775,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		s.anthropicAvailableModels = result.availableModels;
 		s.anthropicModelRefreshMessage = result.message;
-		if (result.usedFallback) {
-			s.anthropicAvailableModels = [];
-		}
 		this.syncAnthropicModelSelection();
 		await this.plugin.saveSettings();
 		this.display();
@@ -960,11 +958,44 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private async testCloudProvider(): Promise<void> {
 		const provider = this.plugin.makeProvider();
-		if (!this.plugin.isProviderConfigured()) {
+		if (
+			this.plugin.settings.provider !== "anthropic" &&
+			!this.plugin.isProviderConfigured()
+		) {
 			new Notice(`CueCraft: enter your ${provider.label} API key first.`);
 			return;
 		}
-		// new Notice(`CueCraft: testing ${provider.label}\u2026`);
+		if (
+			this.plugin.settings.provider === "anthropic" &&
+			!this.plugin.settings.anthropicApiKey.trim()
+		) {
+			new Notice("CueCraft: enter your Anthropic API key first.");
+			return;
+		}
+		if (
+			provider.id === "anthropic" &&
+			!this.plugin.settings.anthropicModel.trim() &&
+			provider.listModels
+		) {
+			const anthropicProvider = provider as AnthropicProvider & {
+				listModels(): Promise<ModelInfo[]>;
+			};
+			try {
+				const models = await anthropicProvider.listModels();
+				this.plugin.settings.providerConnectionStatus =
+					recordProviderConnectionSuccess(this.plugin.settings);
+				await this.plugin.saveSettings();
+				this.display();
+				new Notice(
+					`CueCraft: Connected to Anthropic (${models.length} model${models.length === 1 ? "" : "s"} available).`
+				);
+				return;
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				new Notice(`CueCraft: ${message}`);
+				return;
+			}
+		}
 		const status = await provider.testConnection();
 		if (status.ok) {
 			this.plugin.settings.providerConnectionStatus =

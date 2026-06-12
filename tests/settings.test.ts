@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
-	ANTHROPIC_DEFAULT_MODEL_ID,
 	buildAnthropicModelOptions,
 	describeAnthropicModel,
 	describeAnthropicModelDetails,
@@ -43,27 +42,37 @@ describe("isAnthropicCustomModelSelection", () => {
 		).toBe(true);
 	});
 
-	it("keeps curated models in catalog mode", () => {
+	it("keeps fetched Anthropic models in catalog mode", () => {
 		expect(
 			isAnthropicCustomModelSelection({
 				anthropicModel: "claude-sonnet-4-6",
 				anthropicModelSelection: "claude-sonnet-4-6",
+				anthropicAvailableModels: [
+					modelInfo("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+				],
 			})
 		).toBe(false);
 	});
 });
 
 describe("Anthropic picker defaults", () => {
-	it("defaults Anthropic to Claude Sonnet 4.6", () => {
-		expect(ANTHROPIC_DEFAULT_MODEL_ID).toBe("claude-sonnet-4-6");
-	});
-
-	it("preserves saved curated Anthropic model IDs on load", () => {
+	it("starts Anthropic in custom mode before any models are fetched", () => {
 		const settings = {
-			anthropicModel: "claude-3-5-sonnet-latest",
+			anthropicModel: "",
 		};
 		normalizeAnthropicModelSelection(settings);
-		expect(settings.anthropicModelSelection).toBe("claude-3-5-sonnet-latest");
+		expect(settings.anthropicModelSelection).toBe(ANTHROPIC_CUSTOM_MODEL_ID);
+	});
+
+	it("preserves saved fetched Anthropic model IDs on load", () => {
+		const settings = {
+			anthropicModel: "claude-sonnet-4-6",
+			anthropicAvailableModels: [
+				modelInfo("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+			],
+		};
+		normalizeAnthropicModelSelection(settings);
+		expect(settings.anthropicModelSelection).toBe("claude-sonnet-4-6");
 	});
 
 	it("marks unknown saved Anthropic model IDs as custom on load", () => {
@@ -96,8 +105,12 @@ describe("Anthropic picker defaults", () => {
 		);
 	});
 
-	it("describes curated Anthropic models with friendly labels and raw IDs", () => {
-		expect(describeAnthropicModel("claude-sonnet-4-6")).toEqual({
+	it("describes fetched Anthropic models with friendly labels and raw IDs", () => {
+		expect(
+			describeAnthropicModel("claude-sonnet-4-6", [
+				modelInfo("claude-sonnet-4-6", "Claude Sonnet 4.6"),
+			])
+		).toEqual({
 			label: "Claude Sonnet 4.6",
 			rawId: "claude-sonnet-4-6",
 		});
@@ -110,20 +123,32 @@ describe("Anthropic picker defaults", () => {
 		});
 	});
 
-	it("returns cue-quality hint metadata for curated Anthropic models", () => {
-		expect(describeAnthropicModelDetails("claude-haiku-4-5")).toEqual({
+	it("returns generic hint metadata for fetched Anthropic models", () => {
+		expect(
+			describeAnthropicModelDetails("claude-haiku-4-5", [
+				modelInfo("claude-haiku-4-5", "Claude Haiku 4.5"),
+			])
+		).toEqual({
 			label: "Claude Haiku 4.5",
 			rawId: "claude-haiku-4-5",
 			hint: {
-				quality: "Good",
-				speed: "Fast",
-				cost: "Low",
-				context: "Good",
-				cuecraftHint: "Fast, lower-cost refreshes for frequent cue generation.",
+				quality: "Varies",
+				speed: "Varies",
+				cost: "Varies",
+				context: "Varies",
+				cuecraftHint: "Cue quality depends on the exact custom model you enter.",
 			},
 		});
-		expect(formatAnthropicModelHint("claude-haiku-4-5")).toBe(
-			"Fast · Low · Good"
+		expect(
+			formatAnthropicModelHint("claude-haiku-4-5", [
+				modelInfo("claude-haiku-4-5", "Claude Haiku 4.5"),
+			])
+		).toBe("");
+	});
+
+	it("shows a fetch prompt before any Anthropic models are loaded", () => {
+		expect(formatAnthropicModelHint("", [])).toBe(
+			"Fetch Anthropic models to choose from your account, or enter a custom model ID."
 		);
 	});
 
@@ -140,13 +165,13 @@ describe("Anthropic picker defaults", () => {
 			},
 		});
 		expect(formatAnthropicModelHint("claude-unknown-xyz")).toBe(
-			"Varies · Varies · Varies"
+			""
 		);
 	});
 });
 
 describe("Anthropic model refresh", () => {
-	it("merges refreshed Anthropic models with curated fallback labels", async () => {
+	it("returns fetched Anthropic models with their provider display names", async () => {
 		const refreshed = await refreshAnthropicModelOptions({
 			listModels: async () => [
 				modelInfo("claude-sonnet-4-6", "Claude Sonnet 4.6"),
@@ -154,7 +179,7 @@ describe("Anthropic model refresh", () => {
 				modelInfo("claude-haiku-4-5", "Claude Haiku 4.5"),
 			],
 		});
-		expect(refreshed.usedFallback).toBe(false);
+		expect(refreshed.availableModels).toHaveLength(3);
 		expect(refreshed.options).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({
@@ -167,24 +192,16 @@ describe("Anthropic model refresh", () => {
 				}),
 			])
 		);
-		expect(
-			buildAnthropicModelOptions(refreshed.availableModels).find(
-				(model) => model.id === "claude-sonnet-4-6"
-			)
-		).toMatchObject({
-			label: "Claude Sonnet 4.6",
-			recommended: true,
-		});
-		expect(refreshed.message).toMatch(/account-specific model/i);
+		expect(refreshed.message).toMatch(/Fetched 3 Anthropic models/i);
 	});
 
-	it("omits Anthropic models whose display names already exist in the curated catalog", () => {
+	it("dedupes Anthropic models that share the same display name", () => {
 		const options = buildAnthropicModelOptions([
 			modelInfo("claude-sonnet-4-6-20260101", "Claude Sonnet 4.6"),
 			modelInfo("claude-sonnet-4-6-20260202", "Claude Sonnet 4.6"),
 		]);
 		expect(options.filter((model) => model.label === "Claude Sonnet 4.6")).toHaveLength(1);
-		expect(options.some((model) => model.id === "claude-sonnet-4-6-20260101")).toBe(false);
+		expect(options.some((model) => model.id === "claude-sonnet-4-6-20260101")).toBe(true);
 		expect(options.some((model) => model.id === "claude-sonnet-4-6-20260202")).toBe(false);
 	});
 
@@ -196,7 +213,7 @@ describe("Anthropic model refresh", () => {
 			modelInfo("claude-opus-4-7", "Claude Opus 4.7"),
 			modelInfo("claude-opus-4-1", "Claude Opus 4.1"),
 		]);
-		const discoveredLabels = options.slice(6).map((model) => model.label);
+		const discoveredLabels = options.map((model) => model.label);
 		expect(discoveredLabels).toEqual([
 			"Claude Sonnet 4.5",
 			"Claude Sonnet 4",
@@ -206,15 +223,15 @@ describe("Anthropic model refresh", () => {
 		]);
 	});
 
-	it("falls back to curated Anthropic models when refresh fails", async () => {
+	it("falls back to an empty fetched-model list when refresh fails", async () => {
 		const refreshed = await refreshAnthropicModelOptions({
 			listModels: async () => {
 				throw new Error("network down");
 			},
 		});
-		expect(refreshed.usedFallback).toBe(true);
+		expect(refreshed.availableModels).toEqual([]);
 		expect(refreshed.options).toEqual(buildAnthropicModelOptions());
-		expect(refreshed.message).toMatch(/curated fallback list/i);
+		expect(refreshed.message).toMatch(/custom model ID/i);
 	});
 
 	it("preserves a saved custom Anthropic model when refresh fails", async () => {
