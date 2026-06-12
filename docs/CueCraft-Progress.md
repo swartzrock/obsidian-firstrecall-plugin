@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, a compact Reading-mode `Review in Cornell` entry point, a softer Cornell Classic visual treatment, and a narrower one-sentence `Study takeaway` summary presentation now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 245 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, a compact Reading-mode `Review in Cornell` entry point, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 249 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -84,6 +84,11 @@ Each item links to the PR that delivered it.
   learning objective visible but visually secondary. Generation prompts for both AI SDK providers
   and Ollama now ask for a one-sentence study takeaway while preserving the existing cache fields,
   so older multi-sentence cached summaries still render safely.
+- **Calmer cue supports.** Cornell view now renders cached keyword hints as subtle support text
+  capped at the first three useful terms instead of a pile of rounded chips. Study Mode still
+  hides/reveals the support line, and the full cached keyword arrays remain intact for exports and
+  old-cache compatibility. Richer generated fields such as `hint`, `evidence`, or `answerCheck`
+  are intentionally deferred until there is a clearer need for a cache/schema migration.
 - **Export** — "Export Cues to Markdown" (study sheet) and "Export Cues to Anki (TSV)" commands
   write a sibling file next to the note; pure `export.ts` formatters (`cuesToMarkdown`/`cuesToAnki`,
   TSV-safe) with unit tests. Never modifies the source note (#32).
@@ -95,17 +100,17 @@ Each item links to the PR that delivered it.
 - **Settings reorganized by section (v0 design).** The settings tab is now grouped under
   `setHeading()` sections — **AI model / Cue generation / Note format / Appearance / Study Mode** —
   mirroring the v0 prototype in PR #33. New persisted controls: Auto-generate on save, Cue density
-  (slider, Minimal/Balanced/Thorough), Question style (Recall/Socratic/Exam-style), Generate keyword
-  chips, Auto-write section summary, Render in Reading mode, Fold cue column on mobile, Cue accent
-  color (swatches), Show cue column border, Compact chips. Provider API-key fields gained a show/hide
+  (slider, Minimal/Balanced/Thorough), Question style (Recall/Socratic/Exam-style), Generate cue
+  supports, Auto-write section summary, Render in Reading mode, Fold cue column on mobile, Cue accent
+  color (swatches), Show cue column border, Compact supports. Provider API-key fields gained a show/hide
   eye + a presence badge. New single-source-of-truth modules `cue-generation.ts` (question style +
   density) and `cornell-accent.ts` (accent → CSS class), with unit tests. The existing multi-provider
   config (Ollama + Anthropic/OpenAI/Gemini/Grok + Test connection) is preserved under "AI model" —
   the v0 single-"AI Gateway" concept was intentionally not adopted.
 - **Cue accent color wired (first settings→view feature).** The chosen accent (violet/teal/amber/
-  rose) now tints the Cornell view's keyword chips and cue rail via the `--cuecraft-accent` CSS
+  rose) now tints the Cornell view's support text and cue rail via the `--cuecraft-accent` CSS
   variable; the view re-renders live when the swatch changes. Per the v0 design the question text
-  stays the normal foreground color (the accent is for chips/rail, not the question copy). Accent
+  stays the normal foreground color (the accent is for supports/rail, not the question copy). Accent
   rules use low specificity so style presets that deliberately recolor (legal-pad, minimal) keep
   their look; failed cues keep their red rail via a `:not(.cuecraft-cornell-cue-error)` guard.
 - **Settings controls wired into generation/rendering.** Cue density and question style now feed
@@ -221,15 +226,15 @@ Each item links to the PR that delivered it.
 
 ## Manual Obsidian Test Instructions
 
-For the Study takeaway summary slice:
+For the cue-support polish slice:
 
 1. Reload CueCraft in Obsidian so the latest code is active.
-2. Open Cornell view on a note with a generated summary.
-3. Confirm the summary section is labeled `Study takeaway`, not `Summary`.
-4. Confirm the takeaway block reads in a narrower measure instead of spanning the full width.
-5. Confirm the learning objective still appears when present, but feels visually secondary to the takeaway text.
-6. Regenerate cues for a note and confirm newly generated summaries trend shorter rather than long multi-sentence paragraphs.
-7. Open an older cached note with a longer summary and confirm it still renders safely without migration issues.
+2. Open Cornell view on a note whose cues have several keyword hints.
+3. Confirm each cue shows quiet support text instead of rounded keyword pills.
+4. Confirm only the first three useful evidence terms are visible, even if older cached cues contain more keywords.
+5. Turn on Study Mode and confirm the evidence line is hidden/blurred until that cue is revealed.
+6. Use `Reveal all` and confirm every evidence line becomes visible.
+7. Toggle `Generate cue supports`, `Compact supports`, and cue accent settings to confirm the support line still hides, compacts, and recolors correctly.
 
 For the Anthropic connection-copy slice:
 

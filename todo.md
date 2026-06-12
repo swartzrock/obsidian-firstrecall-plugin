@@ -43,14 +43,14 @@ Stopping after one phase is a successful completion of that run. Do not continue
 - [x] Manual Obsidian test instructions
 
 ## Phase 4: Better Question Supports Instead Of Keyword Chip Piles
-- [ ] Reduce visible supports to a small, useful set such as top three evidence terms
-- [ ] Render supports as subtle hint/evidence text instead of many rounded buttons by default
-- [ ] Preserve Study Mode hide/reveal behavior for supports
-- [ ] Preserve compatibility with existing cached keyword arrays
-- [ ] Decide whether richer fields such as hint, evidence, or answerCheck are needed now or deferred
-- [ ] Add or update tests for support limiting, reveal behavior, and old-cache compatibility
-- [ ] Update docs/CueCraft-Progress.md and test counts if needed
-- [ ] Manual Obsidian test instructions
+- [x] Reduce visible supports to a small, useful set such as top three evidence terms
+- [x] Render supports as subtle hint/evidence text instead of many rounded buttons by default
+- [x] Preserve Study Mode hide/reveal behavior for supports
+- [x] Preserve compatibility with existing cached keyword arrays
+- [x] Decide whether richer fields such as hint, evidence, or answerCheck are needed now or deferred
+- [x] Add or update tests for support limiting, reveal behavior, and old-cache compatibility
+- [x] Update docs/CueCraft-Progress.md and test counts if needed
+- [x] Manual Obsidian test instructions
 
 ## Phase 5: Cornell Appearance Settings For Summary And Supports
 - [ ] Add only the highest-value Cornell appearance controls needed by the polished defaults

@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
 	buildCornellModel,
+	buildCornellSupportPresentation,
+	buildCornellSupportTerms,
 	buildCornellTakeawayPresentation,
 	failedCueCount,
 	pickCornellFile,
@@ -158,6 +160,65 @@ describe("buildCornellTakeawayPresentation", () => {
 				"Sentence one. Sentence two. Sentence three from an older cache.",
 			objective: null,
 		});
+	});
+});
+
+describe("buildCornellSupportPresentation", () => {
+	it("limits visible cue supports to the first three useful evidence terms", () => {
+		expect(
+			buildCornellSupportTerms([" alpha ", "Beta", "alpha", "", "Gamma", "Delta"])
+		).toEqual(["alpha", "Beta", "Gamma"]);
+	});
+
+	it("keeps full cached keyword arrays on the Cornell model for compatibility", () => {
+		const cache = cacheFrom((_s, i) =>
+			i === 0
+				? {
+						keywords: ["a", "b", "c", "d", "e"],
+					}
+				: {}
+		);
+		const model = buildCornellModel(cache, parseSections(NOTE));
+		expect(model.rows[0].keywords).toEqual(["a", "b", "c", "d", "e"]);
+		expect(buildCornellSupportTerms(model.rows[0].keywords)).toEqual([
+			"a",
+			"b",
+			"c",
+		]);
+	});
+
+	it("hides supports in Study Mode until the section is revealed", () => {
+		const hidden = buildCornellSupportPresentation({
+			keywords: ["a", "b", "c", "d"],
+			sectionId: "terms",
+			studyMode: true,
+			revealAll: false,
+			revealedSectionIds: new Set(),
+		});
+		expect(hidden).toEqual({
+			terms: ["a", "b", "c"],
+			hidden: true,
+		});
+
+		const revealed = buildCornellSupportPresentation({
+			keywords: ["a", "b", "c", "d"],
+			sectionId: "terms",
+			studyMode: true,
+			revealAll: false,
+			revealedSectionIds: new Set(["terms"]),
+		});
+		expect(revealed.hidden).toBe(false);
+	});
+
+	it("reveals supports when Study Mode reveal-all is active", () => {
+		const presentation = buildCornellSupportPresentation({
+			keywords: ["a", "b"],
+			sectionId: "terms",
+			studyMode: true,
+			revealAll: true,
+			revealedSectionIds: new Set(),
+		});
+		expect(presentation.hidden).toBe(false);
 	});
 });
 

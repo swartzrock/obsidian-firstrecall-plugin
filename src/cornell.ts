@@ -37,6 +37,13 @@ export interface CornellTakeawayPresentation {
 	objective: string | null;
 }
 
+export const MAX_CORNELL_SUPPORT_TERMS = 3;
+
+export interface CornellSupportPresentation {
+	terms: string[];
+	hidden: boolean;
+}
+
 /**
  * Join a note's cached cues to its freshly parsed sections to produce the
  * Cornell layout model. The notes column follows the *current* document
@@ -90,6 +97,44 @@ export function buildCornellTakeawayPresentation(opts: {
 		label: "Study takeaway",
 		takeaway,
 		objective,
+	};
+}
+
+/**
+ * The cache can keep the full keyword list for exports and compatibility, but
+ * the Cornell cue rail should stay quiet. Show only the strongest few supports.
+ */
+export function buildCornellSupportTerms(
+	keywords: string[],
+	limit = MAX_CORNELL_SUPPORT_TERMS
+): string[] {
+	if (limit <= 0) return [];
+	const seen = new Set<string>();
+	const terms: string[] = [];
+	for (const keyword of keywords) {
+		const term = keyword.trim();
+		if (!term) continue;
+		const key = term.toLowerCase();
+		if (seen.has(key)) continue;
+		seen.add(key);
+		terms.push(term);
+		if (terms.length === limit) break;
+	}
+	return terms;
+}
+
+export function buildCornellSupportPresentation(opts: {
+	keywords: string[];
+	sectionId: string;
+	studyMode: boolean;
+	revealAll: boolean;
+	revealedSectionIds: ReadonlySet<string>;
+}): CornellSupportPresentation {
+	const terms = buildCornellSupportTerms(opts.keywords);
+	const revealed = opts.revealAll || opts.revealedSectionIds.has(opts.sectionId);
+	return {
+		terms,
+		hidden: opts.studyMode && !revealed,
 	};
 }
 

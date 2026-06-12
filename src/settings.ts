@@ -613,8 +613,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(containerEl)
-			.setName("Generate keyword chips")
-			.setDesc("Add short keyword/phrase tags to the cue column for each section.")
+			.setName("Generate cue supports")
+			.setDesc("Add short evidence terms beneath each cue question.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.generateKeywords)
@@ -765,8 +765,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Compact chips")
-			.setDesc("Use smaller keyword chips with tighter spacing.")
+			.setName("Compact supports")
+			.setDesc("Use smaller support text with tighter spacing.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.compactChips)
@@ -805,7 +805,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private renderAccentSwatches(containerEl: HTMLElement): void {
 		new Setting(containerEl)
 			.setName("Cue accent color")
-			.setDesc("Accent used for the cue rail and keyword chips.")
+			.setDesc("Accent used for the cue rail and support text.")
 			.then((setting) => {
 				const wrap = setting.controlEl.createDiv({
 					cls: "cuecraft-swatches",

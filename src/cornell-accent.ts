@@ -1,6 +1,6 @@
 /**
  * Cue accent color (Appearance). Display-only: it tints the cue questions and
- * keyword chips. As with {@link CornellStyle}, the chosen option maps to a CSS
+ * cue supports. As with {@link CornellStyle}, the chosen option maps to a CSS
  * class and `styles.css` carries the actual color (including the settings
  * swatch), so this module stays the single source of truth for the option list
  * while the look lives in CSS.

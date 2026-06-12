@@ -432,8 +432,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-size: var(--font-smallest);
 }
 
-.cuecraft-cuefont-small .cuecraft-cornell-chip {
-	font-size: calc(var(--font-smallest) * 0.9);
+.cuecraft-cuefont-small .cuecraft-cornell-support-text {
+	font-size: var(--font-smallest);
 }
 
 .cuecraft-cuefont-medium .cuecraft-cornell-q {
@@ -444,7 +444,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-size: var(--font-ui-medium);
 }
 
-.cuecraft-cuefont-large .cuecraft-cornell-chip {
+.cuecraft-cuefont-large .cuecraft-cornell-support-text {
 	font-size: var(--font-ui-smaller, var(--font-smallest));
 }
 
@@ -487,14 +487,16 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	display: flex;
 	flex-wrap: wrap;
 	gap: 4px;
+	align-items: baseline;
+	font-size: var(--font-ui-smaller, var(--font-small));
+	color: var(--text-muted);
+	line-height: 1.35;
 }
 
-.cuecraft-cornell-chip {
-	font-size: var(--font-smallest);
+.cuecraft-cornell-support-text {
+	font-size: var(--font-ui-smaller, var(--font-small));
 	color: var(--text-muted);
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 999px;
-	padding: 1px 8px;
+	text-wrap: pretty;
 }
 
 /* Appearance toggles from Settings. */
@@ -507,9 +509,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	margin-top: 5px;
 }
 
-.cuecraft-cornell-compact-chips .cuecraft-cornell-chip {
-	font-size: calc(var(--font-smallest) * 0.9);
-	padding: 0 5px;
+.cuecraft-cornell-compact-chips .cuecraft-cornell-support-text {
+	font-size: var(--font-smallest);
 }
 
 .cuecraft-cornell-no-border .cuecraft-cornell-cuecell {
@@ -698,9 +699,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	color: #2b2a23;
 }
 
-.cuecraft-style-legal-pad .cuecraft-cornell-chip {
+.cuecraft-style-legal-pad .cuecraft-cornell-support-text {
 	color: #6a5d2a;
-	border-color: #c8ba78;
 	font-style: italic;
 }
 
@@ -731,9 +731,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	color: var(--text-muted);
 }
 
-.cuecraft-style-minimal .cuecraft-cornell-chip {
-	border-color: transparent;
-	padding: 1px 4px;
+.cuecraft-style-minimal .cuecraft-cornell-support-text {
+	color: var(--text-faint);
 }
 
 .cuecraft-style-minimal .cuecraft-cornell-title {
@@ -897,16 +896,15 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 /* Apply the chosen accent to the Cornell cue surface. Per the v0 design the
- * accent tints the keyword chips and the cue rail — the question text stays the
+ * accent tints the evidence support text and the cue rail — the question text stays the
  * normal foreground color so it reads as the primary content, and confidence is
  * shown via the per-cue label, not the rail. Failed cues keep their red rail
  * (the `:not()` keeps this rule from overriding it). Low specificity otherwise,
- * so presets that recolor chips (legal-pad, minimal) keep their look. */
+ * so presets that recolor support text (legal-pad, minimal) keep their look. */
 .cuecraft-cornell-cue:not(.cuecraft-cornell-cue-error) {
 	border-left-color: var(--cuecraft-accent, var(--interactive-accent));
 }
 
-.cuecraft-cornell-chip {
+.cuecraft-cornell-support-text {
 	color: var(--cuecraft-accent, var(--text-muted));
-	border-color: var(--cuecraft-accent, var(--background-modifier-border));
 }

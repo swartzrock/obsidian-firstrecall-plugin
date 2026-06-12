@@ -2,6 +2,7 @@ import { ItemView, MarkdownRenderer, Menu, TFile, type WorkspaceLeaf } from "obs
 import type CueCraftPlugin from "./main";
 import { TONE_OPTIONS } from "./main";
 import {
+	buildCornellSupportPresentation,
 	failedCueCount,
 	buildCornellTakeawayPresentation,
 	pickCornellFile,
@@ -111,7 +112,7 @@ export class CornellView extends ItemView {
 		root.addClass(cueColumnWidthClass(this.plugin.settings.cueColumnWidth));
 		for (const f of CUE_FONT_SIZES) root.removeClass(cueFontSizeClass(f.id));
 		root.addClass(cueFontSizeClass(this.plugin.settings.cueFontSize));
-		// Apply the cue accent color (tints cue questions, rail, and chips).
+		// Apply the cue accent color (tints cue questions, rail, and supports).
 		for (const a of CUE_ACCENTS) root.removeClass(cueAccentClass(a.id));
 		root.addClass(cueAccentClass(this.plugin.settings.cueAccent));
 
@@ -386,13 +387,21 @@ export class CornellView extends ItemView {
 
 		cue.createEl("div", { cls: "cuecraft-cornell-q", text: row.question });
 
-		if (this.plugin.settings.generateKeywords && row.keywords.length) {
+		const supports = buildCornellSupportPresentation({
+			keywords: row.keywords,
+			sectionId: row.id,
+			studyMode: this.studyMode,
+			revealAll: this.revealAll,
+			revealedSectionIds: this.revealed,
+		});
+		if (this.plugin.settings.generateKeywords && supports.terms.length) {
 			const kw = cue.createEl("div", { cls: "cuecraft-cornell-kw" });
 			kw.dataset.section = row.id;
-			for (const word of row.keywords) {
-				kw.createEl("span", { cls: "cuecraft-cornell-chip", text: word });
-			}
-			if (this.studyMode && !this.revealed.has(row.id) && !this.revealAll) {
+			kw.createEl("span", {
+				cls: "cuecraft-cornell-support-text",
+				text: supports.terms.join(" \u00b7 "),
+			});
+			if (supports.hidden) {
 				kw.addClass("is-hidden");
 			}
 		}
