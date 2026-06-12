@@ -13,6 +13,8 @@ export interface GoogleProviderOptions {
 	fetchImpl?: FetchFunction;
 	/** Overrides the real AI SDK call in tests. */
 	generator?: ObjectGenerator;
+	/** Overrides the model-list call in tests. */
+	listModelsImpl?: () => Promise<string[]>;
 }
 
 export class GoogleProvider extends AiSdkProvider {
@@ -23,7 +25,32 @@ export class GoogleProvider extends AiSdkProvider {
 			vendor: "Google",
 			model: opts.model,
 			generate: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+			listModels:
+				opts.listModelsImpl ?? (() => listGoogleModels(opts.apiKey, opts.fetchImpl)),
 		});
+	}
+}
+
+async function listGoogleModels(
+	apiKey: string,
+	fetchImpl?: FetchFunction
+): Promise<string[]> {
+	const originalFetch = globalThis.fetch;
+	if (fetchImpl) globalThis.fetch = fetchImpl as typeof fetch;
+	try {
+		const { GoogleGenAI } = await import("@google/genai/web");
+		const client = new GoogleGenAI({ apiKey });
+		const pager = await client.models.list();
+		return pager.page
+			.filter((model) =>
+				(model.supportedActions ?? []).some((action) =>
+					/generatecontent|generatetext/i.test(action)
+				)
+			)
+			.map((model) => model.name?.replace(/^models\//, ""))
+			.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+	} finally {
+		if (fetchImpl) globalThis.fetch = originalFetch;
 	}
 }
 

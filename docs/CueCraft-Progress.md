@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic picker, refresh support, connection-test copy, model hints, provider-aware parallel-request guidance, a cleaner AI setup flow, and per-provider setup status now ship with curated Claude labels, custom ID fallback, preserved saved IDs, merged refreshable model lists from the official Anthropic SDK, and safer concurrency tuning copy). 228 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, and per-provider setup status now ship with custom-model fallback, preserved saved IDs, and provider-safe concurrency tuning copy). 229 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -101,23 +101,22 @@ Each item links to the PR that delivered it.
   Cornell, and Reading mode; "Render in Reading mode" gates the post-processor; "Show cue column
   border", "Compact chips", and "Fold cue column on mobile" now apply CSS classes in Cornell view.
   "Auto-generate on save" now debounces Markdown file modifications and refreshes cues when enabled.
-- **Anthropic picker refinement.** The Anthropic model setting now uses a curated Claude dropdown
-  with friendly labels, a `Custom model ID...` escape hatch, preserved legacy/custom saved IDs, and
-  Claude Sonnet 4.6 as the default/recommended model for new configs. Unit tests cover the default,
-  catalog/custom selection, and preserved-load behavior.
+- **Anthropic picker refinement.** The Anthropic model setting now supports account-fetched Claude
+  models with provider `display_name` labels, a `Custom model ID...` escape hatch, and preserved
+  legacy/custom saved IDs when a model is no longer returned. Unit tests cover custom-vs-fetched
+  selection and preserved-load behavior.
 - **Anthropic connection-test copy.** `Test connection` now reports the friendly Anthropic model
   name alongside the raw ID on success, and uses a more specific unavailable-model notice when the
   selected Claude model is inaccessible. Unit tests cover both the friendly success copy and the
   unavailable-model wording.
-- **Anthropic model hints.** The Anthropic picker now shows a concise CueCraft-specific hint under
-  the model dropdown, with short quality/speed/cost/context metadata for each curated model plus a
-  generic fallback for custom IDs. Unit tests cover curated and fallback hint selection.
-- **Anthropic model refresh.** The Anthropic picker now has a `Refresh models` action that
-  re-fetches Anthropic's account-specific model IDs after an API key is entered, uses the official
-  Anthropic TypeScript SDK model types to pull each model's `display_name`, merges them with the
-  curated fallback list, and keeps the custom-model path visible when refresh fails or a saved
-  custom ID is not returned. Unit tests cover refresh success, refresh failure, and custom-model
-  preservation behavior.
+- **Anthropic model helper copy.** The Anthropic picker now stays quiet once a model is selected,
+  and only shows a fetch prompt before any Claude models have been loaded. Unit tests cover the
+  empty-state prompt and custom/fetched fallback behavior.
+- **Anthropic model refresh.** The Anthropic picker now has a `Fetch Anthropic models` /
+  `Refresh models` action that re-fetches Anthropic's account-specific model IDs after an API key
+  is entered, uses the official Anthropic TypeScript SDK model types to pull each model's
+  `display_name`, and keeps the custom-model path visible when refresh fails or a saved custom ID
+  is not returned. Unit tests cover refresh success, refresh failure, and custom-model preservation behavior.
 - **Parallel cue generation + setting-change regeneration.** Full-note generation now runs section
   cue requests in bounded batches of five while preserving section order for cache/summary output;
   stale-section refresh uses the configured concurrency too. Cue-affecting settings (preset,
@@ -128,11 +127,9 @@ Each item links to the PR that delivered it.
   providers retry rate-limit responses with backoff before surfacing a section failure. Cue-affecting
   settings now ask "Regenerate cues with new settings?" after the user leaves CueCraft settings,
   instead of interrupting settings edits or immediately spending API calls.
-- **Provider-aware parallel guidance.** The **Parallel requests** slider now explains how to tune
-  concurrency for the selected provider/model: faster families like Claude Haiku get a higher-throughput
-  hint, premium/rate-limit-prone cloud models steer users toward fewer parallel requests, and Ollama
-  calls out local machine/model performance. Unit tests cover fast, premium, Ollama, and fallback
-  guidance selection.
+- **Parallel request guidance.** The **Parallel requests** slider now uses one clear,
+  provider-agnostic explanation about safer concurrency and rate-limit recovery. Unit tests cover
+  the shared description text and request-count formatting.
 - **Cleaner AI setup flow.** The AI model section now groups setup into a compact Obsidian-native
   card with explicit steps: choose provider, add credentials and model, test the setup, then tune
   parallel speed. The `Auto-generate on save` toggle now sits as a final optional automation step,
@@ -144,6 +141,11 @@ Each item links to the PR that delivered it.
   changing the current key or model automatically marks that provider's saved connection check stale
   until `Test connection` is run again. Unit tests cover verified, stale, and per-provider fallback
   status derivation.
+- **Provider model-list discovery.** OpenAI, Gemini, xAI, and Ollama providers now expose
+  `listModels()` support in the shared provider layer. `Test connection` can use that model-list
+  path when the model field is blank, so users can verify API-key/local connectivity and see how
+  many models are discoverable before choosing one. Unit tests cover list-model parsing for all
+  four providers.
 - **Low-confidence warnings + per-cue regenerate icon.** High/medium confidence is now treated as
   internal metadata and hidden from the cue UI. Low-confidence cues show a compact warning button
   with the model's rationale in the tooltip, and keep the circle-arrow (↻) regenerate icon visible
@@ -264,12 +266,21 @@ For the per-provider setup status slice:
 5. Run `Test connection` again and confirm the stale status returns to `Connection verified`.
 6. Switch to another provider that has not been tested yet and confirm its setup status shows `Connection untested` independently of the first provider.
 
+For the provider model-list discovery slice:
+
+1. Reload CueCraft in Obsidian so the latest provider code is active.
+2. Open CueCraft settings and choose `OpenAI (ChatGPT)`, enter a valid API key, clear the model field, and click `Test connection`.
+3. Confirm the success notice says CueCraft connected and reports how many OpenAI models are available.
+4. Repeat with `Google (Gemini)` and `xAI (Grok)` using valid keys and an empty model field, and confirm each notice reports discoverable model counts.
+5. Switch to `Ollama (local)`, clear the model field if needed, click `Test connection`, and confirm CueCraft reports locally available models instead of requiring a model name first.
+6. Re-enter or choose a specific model afterward and confirm normal exact-model testing still works as before.
+
 ## How to resume / dev quickstart
 
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (228 tests)
+bun run test       # vitest (229 tests)
 ```
 
 Install into a vault by copying `main.js`, `manifest.json`, `styles.css` into

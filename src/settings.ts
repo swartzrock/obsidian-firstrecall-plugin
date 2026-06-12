@@ -49,6 +49,7 @@ import {
 	recordProviderConnectionSuccess,
 	type ProviderConnectionStatusMap,
 } from "./provider-setup-status";
+import { sortFetchedModelIds } from "./fetched-model-sorting";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
 
@@ -60,6 +61,7 @@ import type { AnthropicProvider } from "./providers/anthropic-provider";
 export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
 export type ProviderId = "ollama" | "anthropic" | "openai" | "google" | "xai";
+const CUSTOM_MODEL_SELECTION_ID = "__custom_model__";
 
 export interface CueCraftSettings {
 	provider: ProviderId;
@@ -73,10 +75,22 @@ export interface CueCraftSettings {
 	anthropicModelRefreshMessage: string;
 	openaiApiKey: string;
 	openaiModel: string;
+	openaiAvailableModels: string[];
+	openaiHasFetchedModels: boolean;
+	openaiModelRefreshMessage: string;
 	googleApiKey: string;
 	googleModel: string;
+	googleAvailableModels: string[];
+	googleHasFetchedModels: boolean;
+	googleModelRefreshMessage: string;
 	xaiApiKey: string;
 	xaiModel: string;
+	xaiAvailableModels: string[];
+	xaiHasFetchedModels: boolean;
+	xaiModelRefreshMessage: string;
+	ollamaAvailableModels: string[];
+	ollamaHasFetchedModels: boolean;
+	ollamaModelRefreshMessage: string;
 	providerConnectionStatus: ProviderConnectionStatusMap;
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
@@ -107,11 +121,23 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	anthropicHasFetchedModels: false,
 	anthropicModelRefreshMessage: "",
 	openaiApiKey: "",
-	openaiModel: "gpt-4o-mini",
+	openaiModel: "",
+	openaiAvailableModels: [],
+	openaiHasFetchedModels: false,
+	openaiModelRefreshMessage: "",
 	googleApiKey: "",
-	googleModel: "gemini-1.5-flash",
+	googleModel: "",
+	googleAvailableModels: [],
+	googleHasFetchedModels: false,
+	googleModelRefreshMessage: "",
 	xaiApiKey: "",
-	xaiModel: "grok-2-latest",
+	xaiModel: "",
+	xaiAvailableModels: [],
+	xaiHasFetchedModels: false,
+	xaiModelRefreshMessage: "",
+	ollamaAvailableModels: [],
+	ollamaHasFetchedModels: false,
+	ollamaModelRefreshMessage: "",
 	providerConnectionStatus: {},
 	cuePreset: "conceptual",
 	studyHideMode: "blur",
@@ -257,7 +283,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					? `Last verified ${new Date(status.testedAt).toLocaleString()}.`
 					: status.connection === "stale"
 						? "The saved connection check no longer matches the current key or model."
-						: "Save the key/host and model, then run Test connection to verify this setup."
+						: "Save the key or host, then run Test connection. Choose a model after the provider is connected."
 			);
 		statusSetting.controlEl.addClass("cuecraft-status-chips");
 		this.renderStatusChip(
@@ -598,6 +624,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.ollamaHost)
 					.onChange(async (value) => {
 						this.plugin.settings.ollamaHost = value.trim();
+						this.plugin.settings.ollamaAvailableModels = [];
+						this.plugin.settings.ollamaHasFetchedModels = false;
+						this.plugin.settings.ollamaModelRefreshMessage =
+							"Enter your Ollama host first to fetch local models.";
 						await this.plugin.saveSettings();
 					})
 			);
@@ -605,17 +635,32 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private renderOllamaModelSettings(containerEl: HTMLElement): void {
+		const s = this.plugin.settings;
+		this.renderFetchedModelSelector(containerEl, {
+			modelLabel: "Ollama model",
+			modelDesc: "Name of an installed Ollama model (e.g. llama3.1:8b).",
+			modelPlaceholder: "llama3.1:8b",
+			customFieldLabel: "Custom model name",
+			customFieldDesc: "Enter the exact Ollama model name CueCraft should use.",
+			availableModels: s.ollamaAvailableModels,
+			getModel: () => s.ollamaModel,
+			setModel: (value) => (s.ollamaModel = value),
+		});
 		new Setting(containerEl)
-			.setName("Ollama model")
-			.setDesc("Name of an installed Ollama model (e.g. llama3.1:8b).")
-			.addText((text) =>
-				text
-					.setPlaceholder("llama3.1:8b")
-					.setValue(this.plugin.settings.ollamaModel)
-					.onChange(async (value) => {
-						this.plugin.settings.ollamaModel = value.trim();
-						await this.plugin.saveSettings();
-					})
+			.setName("Ollama models")
+			.setDesc(
+				s.ollamaModelRefreshMessage ||
+					(s.ollamaHost.trim()
+						? "Fetch locally available Ollama models from the configured host."
+						: "Enter your Ollama host first to fetch local models.")
+			)
+			.addButton((btn) =>
+				btn
+					.setButtonText(
+						s.ollamaHasFetchedModels ? "Refresh models" : "Fetch Ollama models"
+					)
+					.setDisabled(!s.ollamaHost.trim())
+					.onClick(() => void this.refreshOllamaModels())
 			);
 	}
 
@@ -774,7 +819,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			listModels: () => anthropicProvider.listModels(),
 		});
 		s.anthropicAvailableModels = result.availableModels;
-		s.anthropicModelRefreshMessage = result.message;
+		s.anthropicModelRefreshMessage =
+			result.availableModels.length > 0 ? "" : result.message;
 		this.syncAnthropicModelSelection();
 		await this.plugin.saveSettings();
 		this.display();
@@ -796,7 +842,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					keyDesc: "Your OpenAI API key (from platform.openai.com). Stored locally in this vault's plugin data.",
 					keyPlaceholder: "sk-...",
 					getKey: () => s.openaiApiKey,
-					setKey: (v) => (s.openaiApiKey = v),
+					setKey: (v) => {
+						s.openaiApiKey = v;
+						s.openaiAvailableModels = [];
+						s.openaiHasFetchedModels = false;
+						s.openaiModelRefreshMessage =
+							"Enter your OpenAI API key first to fetch available models.";
+					},
 				});
 				return;
 			case "google":
@@ -805,7 +857,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					keyDesc: "Your Google AI (Gemini) API key (from aistudio.google.com). Stored locally in this vault's plugin data.",
 					keyPlaceholder: "AIza...",
 					getKey: () => s.googleApiKey,
-					setKey: (v) => (s.googleApiKey = v),
+					setKey: (v) => {
+						s.googleApiKey = v;
+						s.googleAvailableModels = [];
+						s.googleHasFetchedModels = false;
+						s.googleModelRefreshMessage =
+							"Enter your Google API key first to fetch available models.";
+					},
 				});
 				return;
 			case "xai":
@@ -814,7 +872,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					keyDesc: "Your xAI API key (from console.x.ai). Stored locally in this vault's plugin data.",
 					keyPlaceholder: "xai-...",
 					getKey: () => s.xaiApiKey,
-					setKey: (v) => (s.xaiApiKey = v),
+					setKey: (v) => {
+						s.xaiApiKey = v;
+						s.xaiAvailableModels = [];
+						s.xaiHasFetchedModels = false;
+						s.xaiModelRefreshMessage =
+							"Enter your xAI API key first to fetch available models.";
+					},
 				});
 				return;
 		}
@@ -831,29 +895,53 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				return;
 			case "openai":
 				this.renderCloudModelSettings(containerEl, {
+					providerName: "OpenAI",
 					modelLabel: "OpenAI model",
 					modelDesc: "An OpenAI model id (e.g. gpt-4o-mini, gpt-4o).",
 					modelPlaceholder: "gpt-4o-mini",
 					getModel: () => s.openaiModel,
 					setModel: (v) => (s.openaiModel = v),
+					getApiKey: () => s.openaiApiKey,
+					getAvailableModels: () => s.openaiAvailableModels,
+					getHasFetchedModels: () => s.openaiHasFetchedModels,
+					getRefreshMessage: () => s.openaiModelRefreshMessage,
+					setAvailableModels: (models) => (s.openaiAvailableModels = models),
+					setHasFetchedModels: (value) => (s.openaiHasFetchedModels = value),
+					setRefreshMessage: (value) => (s.openaiModelRefreshMessage = value),
 				});
 				return;
 			case "google":
 				this.renderCloudModelSettings(containerEl, {
+					providerName: "Gemini",
 					modelLabel: "Gemini model",
 					modelDesc: "A Gemini model id (e.g. gemini-1.5-flash, gemini-1.5-pro).",
 					modelPlaceholder: "gemini-1.5-flash",
 					getModel: () => s.googleModel,
 					setModel: (v) => (s.googleModel = v),
+					getApiKey: () => s.googleApiKey,
+					getAvailableModels: () => s.googleAvailableModels,
+					getHasFetchedModels: () => s.googleHasFetchedModels,
+					getRefreshMessage: () => s.googleModelRefreshMessage,
+					setAvailableModels: (models) => (s.googleAvailableModels = models),
+					setHasFetchedModels: (value) => (s.googleHasFetchedModels = value),
+					setRefreshMessage: (value) => (s.googleModelRefreshMessage = value),
 				});
 				return;
 			case "xai":
 				this.renderCloudModelSettings(containerEl, {
+					providerName: "xAI",
 					modelLabel: "Grok model",
 					modelDesc: "An xAI model id (e.g. grok-2-latest, grok-beta).",
 					modelPlaceholder: "grok-2-latest",
 					getModel: () => s.xaiModel,
 					setModel: (v) => (s.xaiModel = v),
+					getApiKey: () => s.xaiApiKey,
+					getAvailableModels: () => s.xaiAvailableModels,
+					getHasFetchedModels: () => s.xaiHasFetchedModels,
+					getRefreshMessage: () => s.xaiModelRefreshMessage,
+					setAvailableModels: (models) => (s.xaiAvailableModels = models),
+					setHasFetchedModels: (value) => (s.xaiHasFetchedModels = value),
+					setRefreshMessage: (value) => (s.xaiModelRefreshMessage = value),
 				});
 				return;
 		}
@@ -902,28 +990,218 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			});
 	}
 
-	private renderCloudModelSettings(
+	private renderFetchedModelSelector(
 		containerEl: HTMLElement,
 		opts: {
 			modelLabel: string;
 			modelDesc: string;
 			modelPlaceholder: string;
+			customFieldLabel: string;
+			customFieldDesc: string;
+			availableModels: string[];
 			getModel: () => string;
 			setModel: (v: string) => void;
 		}
 	): void {
+		const availableModels = sortFetchedModelIds(opts.availableModels);
+		const currentModel = opts.getModel();
+		const hasFetchedModels = availableModels.length > 0;
+		const isCustomSelection =
+			!hasFetchedModels || !availableModels.includes(currentModel);
+
+		if (hasFetchedModels) {
+			new Setting(containerEl)
+				.setName(opts.modelLabel)
+				.setDesc(opts.modelDesc)
+				.addDropdown((dd) => {
+					dd.addOption(CUSTOM_MODEL_SELECTION_ID, "Custom model ID...");
+					for (const model of availableModels) {
+						dd.addOption(model, model);
+					}
+					dd
+						.setValue(
+							isCustomSelection ? CUSTOM_MODEL_SELECTION_ID : currentModel
+						)
+						.onChange(async (value) => {
+							if (value === CUSTOM_MODEL_SELECTION_ID) {
+								opts.setModel("");
+								await this.plugin.saveSettings();
+								this.display();
+								return;
+							}
+							opts.setModel(value);
+							await this.plugin.saveSettings();
+							this.display();
+						});
+				});
+		} else {
+			new Setting(containerEl)
+				.setName(opts.modelLabel)
+				.setDesc(opts.modelDesc)
+				.addText((text) =>
+					text
+						.setPlaceholder(opts.modelPlaceholder)
+						.setValue(currentModel)
+						.onChange(async (value) => {
+							opts.setModel(value.trim());
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+
+		if (isCustomSelection && hasFetchedModels) {
+			new Setting(containerEl)
+				.setName(opts.customFieldLabel)
+				.setDesc(opts.customFieldDesc)
+				.addText((text) =>
+					text
+						.setPlaceholder(opts.modelPlaceholder)
+						.setValue(currentModel)
+						.onChange(async (value) => {
+							opts.setModel(value.trim());
+							await this.plugin.saveSettings();
+						})
+				);
+		}
+	}
+
+	private renderCloudModelSettings(
+		containerEl: HTMLElement,
+		opts: {
+			providerName: string;
+			modelLabel: string;
+			modelDesc: string;
+			modelPlaceholder: string;
+			getModel: () => string;
+			setModel: (v: string) => void;
+			getApiKey: () => string;
+			getAvailableModels: () => string[];
+			getHasFetchedModels: () => boolean;
+			getRefreshMessage: () => string;
+			setAvailableModels: (models: string[]) => void;
+			setHasFetchedModels: (value: boolean) => void;
+			setRefreshMessage: (value: string) => void;
+		}
+	): void {
+		this.renderFetchedModelSelector(containerEl, {
+			modelLabel: opts.modelLabel,
+			modelDesc: opts.modelDesc,
+			modelPlaceholder: opts.modelPlaceholder,
+			customFieldLabel: "Custom model ID",
+			customFieldDesc: `Enter the exact ${opts.providerName} model ID CueCraft should use.`,
+			availableModels: opts.getAvailableModels(),
+			getModel: opts.getModel,
+			setModel: opts.setModel,
+		});
+
 		new Setting(containerEl)
-			.setName(opts.modelLabel)
-			.setDesc(opts.modelDesc)
-			.addText((text) =>
-				text
-					.setPlaceholder(opts.modelPlaceholder)
-					.setValue(opts.getModel())
-					.onChange(async (value) => {
-						opts.setModel(value.trim());
-						await this.plugin.saveSettings();
-					})
+			.setName(`${opts.providerName} models`)
+			.setDesc(
+				opts.getRefreshMessage() ||
+					(opts.getApiKey().trim()
+						? `Fetch ${opts.providerName}'s available model IDs for this account.`
+						: `Enter your ${opts.providerName} API key first to fetch available models.`)
+			)
+			.addButton((btn) =>
+				btn
+					.setButtonText(
+						opts.getHasFetchedModels() ? "Refresh models" : `Fetch ${opts.providerName} models`
+					)
+					.setDisabled(!opts.getApiKey().trim())
+					.onClick(() =>
+						void this.refreshCloudModels({
+							providerName: opts.providerName,
+							getAvailableModels: opts.getAvailableModels,
+							getHasFetchedModels: opts.getHasFetchedModels,
+							getRefreshMessage: opts.getRefreshMessage,
+							setAvailableModels: opts.setAvailableModels,
+							setHasFetchedModels: opts.setHasFetchedModels,
+							setRefreshMessage: opts.setRefreshMessage,
+						})
+					)
 			);
+	}
+
+	private async refreshCloudModels(opts: {
+		providerName: string;
+		getAvailableModels: () => string[];
+		getHasFetchedModels: () => boolean;
+		getRefreshMessage: () => string;
+		setAvailableModels: (models: string[]) => void;
+		setHasFetchedModels: (value: boolean) => void;
+		setRefreshMessage: (value: string) => void;
+	}): Promise<void> {
+		const provider = this.plugin.makeProvider();
+		opts.setHasFetchedModels(true);
+		if (!provider.listModels) {
+			opts.setAvailableModels([]);
+			opts.setRefreshMessage(
+				`CueCraft: ${opts.providerName} model fetch is unavailable.`
+			);
+			await this.plugin.saveSettings();
+			this.display();
+			return;
+		}
+		try {
+			const models = sortFetchedModelIds((await provider.listModels()) as string[]);
+			opts.setAvailableModels(models);
+			opts.setRefreshMessage(
+				models.length > 0
+					? ""
+					: `No ${opts.providerName} models were returned for this account.`
+			);
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			opts.setAvailableModels([]);
+			opts.setRefreshMessage(
+				message
+					? `Could not fetch ${opts.providerName} models (${message}).`
+					: `Could not fetch ${opts.providerName} models.`
+			);
+		}
+		await this.plugin.saveSettings();
+		this.display();
+		const successCount = opts.getAvailableModels().length;
+		new Notice(
+			successCount > 0
+				? `CueCraft: Fetched ${successCount} ${opts.providerName} model${successCount === 1 ? "" : "s"}.`
+				: `CueCraft: ${opts.getRefreshMessage()}`
+		);
+	}
+
+	private async refreshOllamaModels(): Promise<void> {
+		const s = this.plugin.settings;
+		const provider = this.plugin.makeProvider();
+		s.ollamaHasFetchedModels = true;
+		if (provider.id !== "ollama" || !provider.listModels) {
+			s.ollamaAvailableModels = [];
+			s.ollamaModelRefreshMessage =
+				"CueCraft: Ollama model fetch is unavailable.";
+			await this.plugin.saveSettings();
+			this.display();
+			return;
+		}
+		try {
+			const models = sortFetchedModelIds((await provider.listModels()) as string[]);
+			s.ollamaAvailableModels = models;
+			s.ollamaModelRefreshMessage =
+				models.length > 0
+					? ""
+					: "No Ollama models were returned by the configured host.";
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			s.ollamaAvailableModels = [];
+			s.ollamaModelRefreshMessage = message
+				? `Could not fetch Ollama models (${message}).`
+				: "Could not fetch Ollama models.";
+		}
+		await this.plugin.saveSettings();
+		this.display();
+		new Notice(
+			s.ollamaAvailableModels.length > 0
+				? `CueCraft: Fetched ${s.ollamaAvailableModels.length} Ollama model${s.ollamaAvailableModels.length === 1 ? "" : "s"}.`
+				: `CueCraft: ${s.ollamaModelRefreshMessage}`
+		);
 	}
 
 	/** Verify the selected provider is reachable and reports a readable result. */
@@ -958,36 +1236,43 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private async testCloudProvider(): Promise<void> {
 		const provider = this.plugin.makeProvider();
-		if (
-			this.plugin.settings.provider !== "anthropic" &&
-			!this.plugin.isProviderConfigured()
-		) {
-			new Notice(`CueCraft: enter your ${provider.label} API key first.`);
+		const apiKey = (() => {
+			switch (provider.id) {
+				case "anthropic":
+					return this.plugin.settings.anthropicApiKey;
+				case "openai":
+					return this.plugin.settings.openaiApiKey;
+				case "google":
+					return this.plugin.settings.googleApiKey;
+				case "xai":
+					return this.plugin.settings.xaiApiKey;
+				default:
+					return "";
+			}
+		})();
+		if (provider.id !== "ollama" && !apiKey.trim()) {
+			const providerName =
+				provider.id === "anthropic"
+					? "Anthropic"
+					: provider.id === "openai"
+						? "OpenAI"
+						: provider.id === "google"
+							? "Google"
+							: "xAI";
+			new Notice(`CueCraft: enter your ${providerName} API key first.`);
 			return;
 		}
-		if (
-			this.plugin.settings.provider === "anthropic" &&
-			!this.plugin.settings.anthropicApiKey.trim()
-		) {
-			new Notice("CueCraft: enter your Anthropic API key first.");
-			return;
-		}
-		if (
-			provider.id === "anthropic" &&
-			!this.plugin.settings.anthropicModel.trim() &&
-			provider.listModels
-		) {
-			const anthropicProvider = provider as AnthropicProvider & {
-				listModels(): Promise<ModelInfo[]>;
-			};
+		if (provider.listModels) {
 			try {
-				const models = await anthropicProvider.listModels();
+				const models = await provider.listModels();
 				this.plugin.settings.providerConnectionStatus =
 					recordProviderConnectionSuccess(this.plugin.settings);
 				await this.plugin.saveSettings();
 				this.display();
+				const providerName =
+					provider.id === "anthropic" ? "Anthropic" : provider.label;
 				new Notice(
-					`CueCraft: Connected to Anthropic (${models.length} model${models.length === 1 ? "" : "s"} available).`
+					`CueCraft: Connected to ${providerName} (${models.length} model${models.length === 1 ? "" : "s"} available).`
 				);
 				return;
 			} catch (error) {

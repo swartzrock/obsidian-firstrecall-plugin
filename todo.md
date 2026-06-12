@@ -75,11 +75,12 @@ Stopping after one phase is a successful completion of that run. Do not continue
 - [x] Manual Obsidian test instructions
 
 ## Phase 7.5: List Models Support
-- [ ] Add "List Models" support for OpenAI
-- [ ] Add "List Models" support for Gemini
-- [ ] Add "List Models" support for xAI
-- [ ] Update docs/CueCraft-Progress.md and test counts if needed
-- [ ] Manual Obsidian test instructions
+- [x] Add "List Models" support for OpenAI
+- [x] Add "List Models" support for Gemini
+- [x] Add "List Models" support for xAI
+- [x] Add "List Models" support for Ollama
+- [x] Update docs/CueCraft-Progress.md and test counts if needed
+- [x] Manual Obsidian test instructions
 
 
 

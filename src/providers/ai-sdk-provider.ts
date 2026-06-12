@@ -81,6 +81,8 @@ export interface AiSdkProviderConfig {
 	model: string;
 	/** Structured-output call; the real one wraps the AI SDK, tests inject a mock. */
 	generate: ObjectGenerator;
+	/** Optional model-list call for providers that expose discoverable models. */
+	listModels?: () => Promise<unknown[]>;
 }
 
 function formatZodError(error: z.ZodError): string {
@@ -165,6 +167,7 @@ export class AiSdkProvider implements AiProvider {
 	protected readonly vendor: string;
 	protected readonly model: string;
 	private readonly generate: ObjectGenerator;
+	private readonly listModelsImpl?: () => Promise<unknown[]>;
 
 	constructor(config: AiSdkProviderConfig) {
 		this.id = config.id;
@@ -172,6 +175,7 @@ export class AiSdkProvider implements AiProvider {
 		this.vendor = config.vendor;
 		this.model = config.model;
 		this.generate = config.generate;
+		this.listModelsImpl = config.listModels;
 	}
 
 	/** Map AI SDK / network errors to user-readable provider errors. */
@@ -235,6 +239,11 @@ export class AiSdkProvider implements AiProvider {
 		} catch (e) {
 			return { ok: false, message: this.describeError(e) };
 		}
+	}
+
+	async listModels(): Promise<unknown[]> {
+		if (!this.listModelsImpl) return [];
+		return this.listModelsImpl();
 	}
 
 	async generateCue(input: CueInput, signal?: AbortSignal): Promise<CueOutput> {

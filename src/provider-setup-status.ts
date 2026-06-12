@@ -78,6 +78,12 @@ function currentModelValue(settings: ProviderSetupStatusSettings): string {
 	}
 }
 
+function currentConnectionVerificationModelValue(
+	settings: ProviderSetupStatusSettings
+): string {
+	return settings.provider === "ollama" ? currentModelValue(settings) : "";
+}
+
 function djb2Hash(value: string): string {
 	let hash = 5381;
 	for (const char of value) {
@@ -101,7 +107,7 @@ export function recordProviderConnectionSuccess(
 		...(settings.providerConnectionStatus ?? {}),
 		[settings.provider]: {
 			credentialFingerprint: providerCredentialFingerprint(settings),
-			modelId: currentModelValue(settings),
+			modelId: currentConnectionVerificationModelValue(settings),
 			testedAt,
 		},
 	};
@@ -118,7 +124,7 @@ export function deriveProviderSetupStatus(
 	}
 	const isFresh =
 		snapshot.credentialFingerprint === providerCredentialFingerprint(settings) &&
-		snapshot.modelId === currentModelValue(settings);
+		snapshot.modelId === currentConnectionVerificationModelValue(settings);
 	return {
 		keySaved,
 		modelSelected,

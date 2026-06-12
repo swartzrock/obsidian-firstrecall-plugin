@@ -10,6 +10,8 @@ type Ctor = new (opts: {
 	apiKey: string;
 	model: string;
 	generator?: ObjectGenerator;
+	fetchImpl?: typeof fetch;
+	listModelsImpl?: () => Promise<string[]>;
 }) => {
 	id: string;
 	label: string;
@@ -34,6 +36,7 @@ type Ctor = new (opts: {
 		sectionQuestions: string[];
 	}) => Promise<{ summary: string }>;
 	testConnection: () => Promise<{ ok: boolean; message: string }>;
+	listModels: () => Promise<string[]>;
 };
 
 /** Generator returning a fixed object and recording prompts. */
@@ -227,6 +230,27 @@ for (const c of cases) {
 			const status = await make(generator).testConnection();
 			expect(status.ok).toBe(false);
 			expect(status.message).toMatch(/API key/i);
+		});
+
+		it("listModels returns provider model ids", async () => {
+			const provider = new c.Ctor({
+				apiKey: "k",
+				model: c.model,
+				generator: async () => ({ ok: true }) as never,
+				listModelsImpl: async () =>
+					c.id === "openai"
+						? ["gpt-4o-mini", "gpt-4.1"]
+						: c.id === "google"
+							? ["gemini-1.5-flash"]
+							: ["grok-2-latest", "grok-beta"],
+			});
+			expect(await provider.listModels()).toEqual(
+				c.id === "openai"
+					? ["gpt-4o-mini", "gpt-4.1"]
+					: c.id === "google"
+						? ["gemini-1.5-flash"]
+						: ["grok-2-latest", "grok-beta"]
+			);
 		});
 	});
 }

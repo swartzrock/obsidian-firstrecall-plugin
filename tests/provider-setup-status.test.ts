@@ -16,11 +16,11 @@ function baseSettings(
 		anthropicModel: "claude-sonnet-4-6",
 		anthropicAvailableModels: [],
 		openaiApiKey: "",
-		openaiModel: "gpt-4o-mini",
+		openaiModel: "",
 		googleApiKey: "",
-		googleModel: "gemini-1.5-flash",
+		googleModel: "",
 		xaiApiKey: "",
-		xaiModel: "grok-2-latest",
+		xaiModel: "",
 		providerConnectionStatus: {},
 		...overrides,
 	};
@@ -49,13 +49,32 @@ describe("deriveProviderSetupStatus", () => {
 		});
 	});
 
-	it("marks the connection stale when the model changes after a successful test", () => {
+	it("keeps cloud connection verification when only the model changes", () => {
 		const settings = baseSettings();
 		settings.providerConnectionStatus = recordProviderConnectionSuccess(
 			settings,
 			"2026-06-11T00:00:00.000Z"
 		);
 		settings.anthropicModel = "claude-haiku-4-5";
+		expect(deriveProviderSetupStatus(settings)).toEqual({
+			keySaved: true,
+			modelSelected: true,
+			connection: "verified",
+			testedAt: "2026-06-11T00:00:00.000Z",
+		});
+	});
+
+	it("marks Ollama connection stale when the model changes after a successful test", () => {
+		const settings = baseSettings({
+			provider: "ollama",
+			ollamaHost: "http://localhost:11434",
+			ollamaModel: "llama3.1:8b",
+		});
+		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+			settings,
+			"2026-06-11T00:00:00.000Z"
+		);
+		settings.ollamaModel = "llama3.2:latest";
 		expect(deriveProviderSetupStatus(settings)).toEqual({
 			keySaved: true,
 			modelSelected: true,

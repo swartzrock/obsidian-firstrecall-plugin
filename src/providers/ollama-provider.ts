@@ -86,9 +86,13 @@ export class OllamaProvider implements AiProvider {
 	}
 
 	async listModels(): Promise<string[]> {
-		const res = await this.http({ url: `${this.host}/api/tags`, method: "GET" });
-		const body = res.json as { models?: Array<{ name?: string }> } | null;
-		return (body?.models ?? [])
+		const { Ollama } = await import("ollama/browser");
+		const client = new Ollama({
+			host: this.host,
+			fetch: this.fetchViaHttp(),
+		});
+		const response = await client.list();
+		return (response.models ?? [])
 			.map((m) => m.name)
 			.filter((n): n is string => typeof n === "string");
 	}
@@ -184,5 +188,30 @@ export class OllamaProvider implements AiProvider {
 			throw new ProviderError("Ollama returned an unexpected response shape.");
 		}
 		return body.response;
+	}
+
+	private fetchViaHttp(): typeof fetch {
+		return (async (input: RequestInfo | URL, init?: RequestInit) => {
+			const url =
+				typeof input === "string"
+					? input
+					: input instanceof URL
+						? input.toString()
+						: input.url;
+			const headers: Record<string, string> = {};
+			new Headers(init?.headers).forEach((value, key) => {
+				headers[key] = value;
+			});
+			const res = await this.http({
+				url,
+				method: (init?.method as "GET" | "POST" | undefined) ?? "GET",
+				body: (init?.body as string | undefined) ?? undefined,
+				headers,
+			});
+			return new Response(res.text, {
+				status: res.status,
+				headers: res.json && typeof res.json === "object" ? { "content-type": "application/json" } : undefined,
+			});
+		}) as typeof fetch;
 	}
 }
