@@ -24,13 +24,13 @@ Stopping after one phase is a successful completion of that run. Do not continue
 - [x] Manual Obsidian test instructions
 
 ## Phase 2: Softer Cornell Structure And Visual Direction
-- [ ] Soften the title, cue-column divider, and summary rules so they use quiet theme borders instead of harsh lines
-- [ ] Improve cue rail spacing so cue cards feel intentional and questions align cleanly
-- [ ] Decide whether to refine Cornell Classic directly or add a new "Soft Sheet" visual preset
-- [ ] Preserve existing Cornell style presets and display controls
-- [ ] Add or update style tests if a new preset or style id is introduced
-- [ ] Update docs/CueCraft-Progress.md and test counts if needed
-- [ ] Manual Obsidian test instructions
+- [x] Soften the title, cue-column divider, and summary rules so they use quiet theme borders instead of harsh lines
+- [x] Improve cue rail spacing so cue cards feel intentional and questions align cleanly
+- [x] Decide whether to refine Cornell Classic directly or add a new "Soft Sheet" visual preset
+- [x] Preserve existing Cornell style presets and display controls
+- [x] Add or update style tests if a new preset or style id is introduced
+- [x] Update docs/CueCraft-Progress.md and test counts if needed
+- [x] Manual Obsidian test instructions
 
 ## Phase 3: Short Study Takeaway Summary
 - [ ] Change Cornell summary rendering toward a concise "Takeaway" or "Study takeaway" presentation

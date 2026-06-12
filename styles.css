@@ -334,13 +334,16 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	text-align: center;
 	font-size: 1.4em;
 	font-weight: var(--font-bold);
-	padding-bottom: 8px;
-	border-bottom: 2px solid var(--text-muted);
+	padding: 4px 0 12px;
+	margin-bottom: 8px;
+	border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .cuecraft-cornell-grid {
 	display: grid;
 	grid-template-columns: minmax(180px, 260px) 1fr;
+	column-gap: 18px;
+	row-gap: 10px;
 }
 
 /* ---- Typography / layout controls (cue-column width) ---- */
@@ -357,19 +360,41 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-cornell-cuecell {
-	border-right: 2px solid var(--text-muted);
-	padding: 12px 14px 12px 2px;
+	border-right: 1px solid var(--background-modifier-border);
+	align-self: start;
+	padding: 4px 18px 6px 2px;
 }
 
 .cuecraft-cornell-notecell {
-	padding: 12px 4px 12px 18px;
+	align-self: start;
+	padding: 4px 0 6px;
+}
+
+.cuecraft-cornell-grid > :nth-last-child(-n + 2) {
+	padding-bottom: 0;
 }
 
 .cuecraft-cornell-cue {
 	position: relative;
-	border-left: 3px solid var(--interactive-accent);
-	padding-left: 8px;
+	border-left: 2px solid var(--interactive-accent);
+	border-radius: 0 var(--radius-s) var(--radius-s) 0;
+	padding: 10px 26px 10px 12px;
 	padding-right: 26px;
+	background: color-mix(
+		in srgb,
+		var(--background-secondary) 72%,
+		transparent
+	);
+	border-top: 1px solid color-mix(
+		in srgb,
+		var(--background-modifier-border) 70%,
+		transparent
+	);
+	border-bottom: 1px solid color-mix(
+		in srgb,
+		var(--background-modifier-border) 70%,
+		transparent
+	);
 }
 
 .cuecraft-cornell-cue[data-confidence="low"] {
@@ -399,6 +424,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-cornell-q {
 	font-weight: var(--font-semibold);
 	font-size: var(--font-ui-small);
+	line-height: 1.4;
 }
 
 /* ---- Typography / layout controls (cue font size) ---- */
@@ -567,7 +593,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-cornell-heading {
 	font-weight: var(--font-bold);
-	margin-bottom: 2px;
+	margin-bottom: 6px;
 }
 
 .cuecraft-cornell-heading[data-level="1"] {
@@ -583,19 +609,21 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-cornell-summary {
-	border-top: 2px solid var(--text-muted);
-	margin-top: 6px;
-	padding-top: 10px;
+	border-top: 1px solid var(--background-modifier-border);
+	margin-top: 8px;
+	padding: 12px 0 0;
 }
 
 .cuecraft-cornell-summary-label {
 	text-align: center;
 	font-weight: var(--font-bold);
-	margin-bottom: 6px;
+	margin-bottom: 8px;
+	color: var(--text-muted);
 }
 
 .cuecraft-cornell-summary-body {
 	color: var(--text-muted);
+	line-height: 1.55;
 }
 
 .cuecraft-cornell-objective {
@@ -648,6 +676,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-style-legal-pad .cuecraft-cornell-cuecell {
+	border-right-width: 1px;
 	border-right-color: #d98b8b;
 }
 
@@ -677,7 +706,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-style-minimal .cuecraft-cornell-cue {
+	background: transparent;
+	border-top-color: transparent;
+	border-bottom-color: transparent;
 	border-left: 2px solid var(--background-modifier-border);
+	padding-left: 10px;
 }
 
 .cuecraft-style-minimal .cuecraft-cornell-cue[data-confidence] {

@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, and a compact Reading-mode `Review in Cornell` entry point now ship with custom-model fallback, preserved saved IDs, and provider-safe concurrency tuning copy). 235 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, a compact Reading-mode `Review in Cornell` entry point, and a softer Cornell Classic visual treatment now ship with custom-model fallback, preserved saved IDs, and provider-safe concurrency tuning copy). 235 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -75,6 +75,10 @@ Each item links to the PR that delivered it.
   near the top of notes with usable cached cues. It stays hidden when cues are missing, hidden, or
   unusable, and routes through the existing `reviewThisNote` flow so Cornell Study Mode behavior
   remains centralized instead of splitting review logic across two entry points.
+- **Softer Cornell Classic styling.** Cornell Classic now uses quieter theme-border rules for the
+  page title, cue-column divider, and summary boundary, plus more intentional cue-rail spacing and
+  softer cue cards. This was implemented as a direct refinement of the existing Classic preset, so
+  all current style presets and display controls remain intact without adding a new style id.
 - **Export** — "Export Cues to Markdown" (study sheet) and "Export Cues to Anki (TSV)" commands
   write a sibling file next to the note; pure `export.ts` formatters (`cuesToMarkdown`/`cuesToAnki`,
   TSV-safe) with unit tests. Never modifies the source note (#32).
@@ -212,14 +216,14 @@ Each item links to the PR that delivered it.
 
 ## Manual Obsidian Test Instructions
 
-For the Reading-mode Cornell review entry slice:
+For the softer Cornell Classic slice:
 
 1. Reload CueCraft in Obsidian so the latest code is active.
-2. Open a note that already has usable cached cues and switch to Reading view.
-3. Confirm a compact `Review in Cornell` affordance appears once near the top of the rendered note.
-4. Click it and confirm CueCraft opens the Cornell view and enters Study Mode.
-5. Hide cues for that note and confirm the Reading-mode affordance no longer appears.
-6. Open a note with no generated cues, or only unusable/errored cues, and confirm the affordance stays hidden.
+2. Open Cornell view on a note with generated cues and leave the style on `Cornell Classic`.
+3. Confirm the title rule, cue-column divider, and summary rule feel lighter and use quiet theme borders instead of heavy lines.
+4. Confirm cue cards in the left rail have more breathing room and align more cleanly with the notes column.
+5. Switch between the existing style presets and confirm `Exam Prep`, `Legal Pad`, `Minimal`, and `Handwritten` still render and the display controls still work.
+6. Resize the cue width and font controls in the Cornell display row and confirm the softened Classic treatment still behaves correctly.
 
 For the Anthropic connection-copy slice:
 
