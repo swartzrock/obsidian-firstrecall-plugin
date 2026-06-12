@@ -612,6 +612,9 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-top: 1px solid var(--background-modifier-border);
 	margin-top: 8px;
 	padding: 12px 0 0;
+	max-width: 76ch;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 .cuecraft-cornell-summary-label {
@@ -619,15 +622,21 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-weight: var(--font-bold);
 	margin-bottom: 8px;
 	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	font-size: var(--font-ui-smaller);
 }
 
 .cuecraft-cornell-summary-body {
-	color: var(--text-muted);
-	line-height: 1.55;
+	color: var(--text-normal);
+	line-height: 1.6;
+	text-wrap: pretty;
 }
 
 .cuecraft-cornell-objective {
-	margin-top: 8px;
+	margin-top: 10px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
 }
 
 /* =========================================================================

@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
 	buildCornellModel,
+	buildCornellTakeawayPresentation,
 	failedCueCount,
 	pickCornellFile,
 	type CornellFileRef,
@@ -127,6 +128,36 @@ describe("buildCornellModel", () => {
 		const d = model.rows.find((r) => r.heading === "D");
 		expect(d?.hasCue).toBe(false);
 		expect(d?.content).toBe("delta");
+	});
+});
+
+describe("buildCornellTakeawayPresentation", () => {
+	it("presents cached summary fields as a study takeaway without changing the data shape", () => {
+		expect(
+			buildCornellTakeawayPresentation({
+				summary: "A concise stored summary.",
+				learningObjective: "Explain X.",
+			})
+		).toEqual({
+			label: "Study takeaway",
+			takeaway: "A concise stored summary.",
+			objective: "Explain X.",
+		});
+	});
+
+	it("keeps compatibility with older verbose cached summaries", () => {
+		expect(
+			buildCornellTakeawayPresentation({
+				summary:
+					"Sentence one. Sentence two. Sentence three from an older cache.",
+				learningObjective: null,
+			})
+		).toEqual({
+			label: "Study takeaway",
+			takeaway:
+				"Sentence one. Sentence two. Sentence three from an older cache.",
+			objective: null,
+		});
 	});
 });
 

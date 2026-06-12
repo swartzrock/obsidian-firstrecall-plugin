@@ -163,12 +163,16 @@ describe("OllamaProvider.generateCue", () => {
 describe("OllamaProvider.generateSummary", () => {
 	it("returns a validated summary", async () => {
 		const good = JSON.stringify({ summary: "Covers X and Y." });
-		const p = new OllamaProvider(baseOpts(generateClient([good])));
+		const spy = vi.fn(generateClient([good]));
+		const p = new OllamaProvider(baseOpts(spy));
 		const sum = await p.generateSummary({
 			noteTitle: "T",
 			fullText: "text",
 			sectionQuestions: ["Q1"],
 		});
 		expect(sum.summary).toBe("Covers X and Y.");
+		const body = JSON.parse(spy.mock.calls[0][0].body as string);
+		expect(body.prompt).toContain("one concise study takeaway sentence");
+		expect(body.prompt).toContain("learningObjective");
 	});
 });

@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, a compact Reading-mode `Review in Cornell` entry point, and a softer Cornell Classic visual treatment now ship with custom-model fallback, preserved saved IDs, and provider-safe concurrency tuning copy). 235 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, a compact Reading-mode `Review in Cornell` entry point, a softer Cornell Classic visual treatment, and a narrower one-sentence `Study takeaway` summary presentation now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 245 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -79,6 +79,11 @@ Each item links to the PR that delivered it.
   page title, cue-column divider, and summary boundary, plus more intentional cue-rail spacing and
   softer cue cards. This was implemented as a direct refinement of the existing Classic preset, so
   all current style presets and display controls remain intact without adding a new style id.
+- **Study takeaway summary treatment.** Cornell view now presents the cached note summary as a
+  narrower `Study takeaway` block instead of a generic full-width summary band, and keeps the
+  learning objective visible but visually secondary. Generation prompts for both AI SDK providers
+  and Ollama now ask for a one-sentence study takeaway while preserving the existing cache fields,
+  so older multi-sentence cached summaries still render safely.
 - **Export** — "Export Cues to Markdown" (study sheet) and "Export Cues to Anki (TSV)" commands
   write a sibling file next to the note; pure `export.ts` formatters (`cuesToMarkdown`/`cuesToAnki`,
   TSV-safe) with unit tests. Never modifies the source note (#32).
@@ -216,14 +221,15 @@ Each item links to the PR that delivered it.
 
 ## Manual Obsidian Test Instructions
 
-For the softer Cornell Classic slice:
+For the Study takeaway summary slice:
 
 1. Reload CueCraft in Obsidian so the latest code is active.
-2. Open Cornell view on a note with generated cues and leave the style on `Cornell Classic`.
-3. Confirm the title rule, cue-column divider, and summary rule feel lighter and use quiet theme borders instead of heavy lines.
-4. Confirm cue cards in the left rail have more breathing room and align more cleanly with the notes column.
-5. Switch between the existing style presets and confirm `Exam Prep`, `Legal Pad`, `Minimal`, and `Handwritten` still render and the display controls still work.
-6. Resize the cue width and font controls in the Cornell display row and confirm the softened Classic treatment still behaves correctly.
+2. Open Cornell view on a note with a generated summary.
+3. Confirm the summary section is labeled `Study takeaway`, not `Summary`.
+4. Confirm the takeaway block reads in a narrower measure instead of spanning the full width.
+5. Confirm the learning objective still appears when present, but feels visually secondary to the takeaway text.
+6. Regenerate cues for a note and confirm newly generated summaries trend shorter rather than long multi-sentence paragraphs.
+7. Open an older cached note with a longer summary and confirm it still renders safely without migration issues.
 
 For the Anthropic connection-copy slice:
 

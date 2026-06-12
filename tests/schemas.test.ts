@@ -69,6 +69,14 @@ describe("validateCue", () => {
 		if (r.ok) expect(r.value.rationale).toBe("The section is sparse.");
 	});
 
+	it("accepts a nullable rationale from strict structured output", () => {
+		const r = validateCue(
+			'{"question":"Q","keywords":["a","b"],"confidence":"high","rationale":null}'
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.rationale).toBeUndefined();
+	});
+
 	it("falls back to medium for an unrecognized confidence value", () => {
 		const r = validateCue(
 			'{"question":"Q","keywords":["a","b"],"confidence":"sure"}'
@@ -97,6 +105,14 @@ describe("validateSummary", () => {
 			'{"summary":"It covers X and Y.","learningObjective":"Understand X."}'
 		);
 		expect(r.ok).toBe(true);
+	});
+
+	it("accepts a nullable learningObjective from strict structured output", () => {
+		const r = validateSummary(
+			'{"summary":"It covers X and Y.","learningObjective":null}'
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.learningObjective).toBeUndefined();
 	});
 
 	it("rejects a missing summary", () => {

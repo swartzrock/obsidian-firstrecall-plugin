@@ -44,12 +44,18 @@ export const cueOutputSchema = z.object({
 	question: z.string().trim().min(1, "question is required"),
 	keywords: z.preprocess(coerceKeywords, z.array(z.string().min(1)).min(2).max(5)),
 	confidence: z.preprocess(coerceConfidence, confidenceSchema),
-	rationale: z.string().trim().optional(),
+	rationale: z.preprocess(
+		(value) => (value === null ? undefined : value),
+		z.string().trim().optional()
+	),
 });
 
 export const summaryOutputSchema = z.object({
 	summary: z.string().trim().min(1, "summary is required"),
-	learningObjective: z.string().trim().optional(),
+	learningObjective: z.preprocess(
+		(value) => (value === null ? undefined : value),
+		z.string().trim().optional()
+	),
 });
 
 export type CueOutput = z.infer<typeof cueOutputSchema>;

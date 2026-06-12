@@ -31,6 +31,12 @@ export interface CornellModel {
 	learningObjective: string | null;
 }
 
+export interface CornellTakeawayPresentation {
+	label: string;
+	takeaway: string | null;
+	objective: string | null;
+}
+
 /**
  * Join a note's cached cues to its freshly parsed sections to produce the
  * Cornell layout model. The notes column follows the *current* document
@@ -66,6 +72,24 @@ export function buildCornellModel(
 		rows,
 		summary: cache.summary,
 		learningObjective: cache.outline.learningObjective,
+	};
+}
+
+/**
+ * Present the cached summary fields as a study-oriented takeaway without
+ * changing the underlying cache shape. Older multi-sentence summaries remain
+ * readable; newer generations are asked to be shorter via provider prompts.
+ */
+export function buildCornellTakeawayPresentation(opts: {
+	summary: string | null;
+	learningObjective: string | null;
+}): CornellTakeawayPresentation {
+	const takeaway = opts.summary?.trim() || null;
+	const objective = opts.learningObjective?.trim() || null;
+	return {
+		label: "Study takeaway",
+		takeaway,
+		objective,
 	};
 }
 

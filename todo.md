@@ -33,14 +33,14 @@ Stopping after one phase is a successful completion of that run. Do not continue
 - [x] Manual Obsidian test instructions
 
 ## Phase 3: Short Study Takeaway Summary
-- [ ] Change Cornell summary rendering toward a concise "Takeaway" or "Study takeaway" presentation
-- [ ] Constrain summary reading width so it does not become a full-width AI paragraph
-- [ ] Keep the learning objective available but visually secondary
-- [ ] Update summary prompt guidance so providers prefer one-sentence study takeaways
-- [ ] Preserve compatibility with existing cached summaries
-- [ ] Add or update tests for rendering, prompt/schema behavior, and cache compatibility
-- [ ] Update docs/CueCraft-Progress.md and test counts if needed
-- [ ] Manual Obsidian test instructions
+- [x] Change Cornell summary rendering toward a concise "Takeaway" or "Study takeaway" presentation
+- [x] Constrain summary reading width so it does not become a full-width AI paragraph
+- [x] Keep the learning objective available but visually secondary
+- [x] Update summary prompt guidance so providers prefer one-sentence study takeaways
+- [x] Preserve compatibility with existing cached summaries
+- [x] Add or update tests for rendering, prompt/schema behavior, and cache compatibility
+- [x] Update docs/CueCraft-Progress.md and test counts if needed
+- [x] Manual Obsidian test instructions
 
 ## Phase 4: Better Question Supports Instead Of Keyword Chip Piles
 - [ ] Reduce visible supports to a small, useful set such as top three evidence terms

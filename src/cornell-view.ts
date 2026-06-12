@@ -3,6 +3,7 @@ import type CueCraftPlugin from "./main";
 import { TONE_OPTIONS } from "./main";
 import {
 	failedCueCount,
+	buildCornellTakeawayPresentation,
 	pickCornellFile,
 	type CornellModel,
 	type CornellRow,
@@ -444,16 +445,26 @@ export class CornellView extends ItemView {
 	}
 
 	private renderSummary(root: HTMLElement, model: CornellModel): void {
-		if (!model.summary && !model.learningObjective) return;
+		const takeaway = buildCornellTakeawayPresentation({
+			summary: model.summary,
+			learningObjective: model.learningObjective,
+		});
+		if (!takeaway.takeaway && !takeaway.objective) return;
 		const wrap = root.createEl("div", { cls: "cuecraft-cornell-summary" });
-		wrap.createEl("div", { cls: "cuecraft-cornell-summary-label", text: "Summary" });
-		if (model.summary) {
-			wrap.createEl("div", { cls: "cuecraft-cornell-summary-body", text: model.summary });
+		wrap.createEl("div", {
+			cls: "cuecraft-cornell-summary-label",
+			text: takeaway.label,
+		});
+		if (takeaway.takeaway) {
+			wrap.createEl("div", {
+				cls: "cuecraft-cornell-summary-body",
+				text: takeaway.takeaway,
+			});
 		}
-		if (model.learningObjective) {
+		if (takeaway.objective) {
 			const obj = wrap.createEl("div", { cls: "cuecraft-cornell-objective" });
 			obj.createEl("strong", { text: "Objective: " });
-			obj.appendText(model.learningObjective);
+			obj.appendText(takeaway.objective);
 		}
 	}
 

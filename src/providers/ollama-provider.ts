@@ -138,8 +138,8 @@ export class OllamaProvider implements AiProvider {
 			: "";
 		const basePrompt =
 			`Summarize the following note for study review.\n` +
-			`Return ONLY a JSON object with keys: "summary" (3 to 5 sentences capturing the most ` +
-			`important ideas and relationships) and optional "learningObjective" (one short sentence).\n` +
+			`Return ONLY a JSON object with keys: "summary" (one concise study takeaway sentence, not a paragraph) ` +
+			`and optional "learningObjective" (one short sentence).\n` +
 			`\nNote title: ${input.noteTitle}\n` +
 			questions +
 			`\nNote text:\n${input.fullText}\n`;

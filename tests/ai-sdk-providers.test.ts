@@ -71,6 +71,7 @@ for (const c of cases) {
 				question: "What is X?",
 				keywords: ["a", "b", "c", "d", "e", "f"],
 				confidence: "HIGH",
+				rationale: null,
 			});
 			const cue = await make(generator).generateCue({
 				heading: "X",
@@ -80,6 +81,38 @@ for (const c of cases) {
 			expect(cue.question).toBe("What is X?");
 			expect(cue.keywords).toHaveLength(5); // trimmed from 6
 			expect(cue.confidence).toBe("high"); // casing normalized
+		});
+
+		it("uses an OpenAI strict cue schema with nullable rationale", async () => {
+			const generator: ObjectGenerator = async ({ schema }) => {
+				expect(
+					schema.safeParse({
+						question: "Q?",
+						keywords: ["a", "b"],
+						confidence: "high",
+						rationale: null,
+					}).success
+				).toBe(true);
+				expect(
+					schema.safeParse({
+						question: "Q?",
+						keywords: ["a", "b"],
+						confidence: "high",
+					}).success
+				).toBe(false);
+				return {
+					question: "Q?",
+					keywords: ["a", "b"],
+					confidence: "high",
+					rationale: null,
+				} as never;
+			};
+			const cue = await make(generator).generateCue({
+				heading: "H",
+				content: "c",
+				preset: "conceptual",
+			});
+			expect((cue as { rationale?: string }).rationale).toBeUndefined();
 		});
 
 		it("embeds heading, content, context and preset in the prompt", async () => {
@@ -201,7 +234,7 @@ for (const c of cases) {
 		});
 
 		it("returns a validated summary", async () => {
-			const { generator } = fixedGenerator({
+			const { generator, prompts } = fixedGenerator({
 				summary: "A short summary.",
 				learningObjective: "Understand X.",
 			});
@@ -211,6 +244,30 @@ for (const c of cases) {
 				sectionQuestions: ["Q1?"],
 			});
 			expect(out.summary).toBe("A short summary.");
+			expect(prompts[0]).toContain("one concise study takeaway sentence");
+			expect(prompts[0]).toContain("one short sentence");
+		});
+
+		it("uses an OpenAI strict summary schema with nullable learning objective", async () => {
+			const generator: ObjectGenerator = async ({ schema }) => {
+				expect(
+					schema.safeParse({
+						summary: "A short summary.",
+						learningObjective: null,
+					}).success
+				).toBe(true);
+				expect(schema.safeParse({ summary: "A short summary." }).success).toBe(false);
+				return {
+					summary: "A short summary.",
+					learningObjective: null,
+				} as never;
+			};
+			const out = await make(generator).generateSummary({
+				noteTitle: "Note",
+				fullText: "text",
+				sectionQuestions: ["Q1?"],
+			});
+			expect((out as { learningObjective?: string }).learningObjective).toBeUndefined();
 		});
 
 		it("testConnection reports success and names the vendor", async () => {

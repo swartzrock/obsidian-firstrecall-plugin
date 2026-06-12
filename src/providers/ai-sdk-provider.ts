@@ -46,17 +46,17 @@ const cueGenSchema = z.object({
 		.describe("How confident you are this cue tests the section well."),
 	rationale: z
 		.string()
-		.optional()
+		.nullable()
 		.describe("If confidence is low, a short reason why this cue may need review."),
 });
 
 const summaryGenSchema = z.object({
 	summary: z
 		.string()
-		.describe("3 to 5 sentences capturing the most important ideas and relationships."),
+		.describe("One concise study takeaway sentence capturing the most important idea or relationship."),
 	learningObjective: z
 		.string()
-		.optional()
+		.nullable()
 		.describe("One short sentence stating what the reader should be able to do."),
 });
 
@@ -283,6 +283,8 @@ export class AiSdkProvider implements AiProvider {
 			: "";
 		const prompt =
 			`Summarize the following note for study review.\n` +
+			`Write "summary" as one concise study takeaway sentence, not a paragraph.\n` +
+			`If you include "learningObjective", keep it to one short sentence.\n` +
 			`\nNote title: ${input.noteTitle}\n` +
 			questions +
 			`\nNote text:\n${input.fullText}\n`;
