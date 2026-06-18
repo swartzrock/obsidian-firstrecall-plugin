@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+	buildCornellAnswerPresentation,
 	buildCornellModel,
 	buildCornellSupportPresentation,
 	buildCornellSupportTerms,
@@ -187,21 +188,30 @@ describe("buildCornellSupportPresentation", () => {
 		]);
 	});
 
-	it("hides supports in Study Mode until the section is revealed", () => {
-		const hidden = buildCornellSupportPresentation({
-			keywords: ["a", "b", "c", "d"],
+	it("keeps supports readable in Study Mode", () => {
+		expect(
+			buildCornellSupportPresentation({
+				keywords: ["a", "b", "c", "d"],
+			})
+		).toEqual({
+			terms: ["a", "b", "c"],
+		});
+	});
+});
+
+describe("buildCornellAnswerPresentation", () => {
+	it("hides note-side answers in Study Mode until the section is revealed", () => {
+		const hidden = buildCornellAnswerPresentation({
 			sectionId: "terms",
 			studyMode: true,
 			revealAll: false,
 			revealedSectionIds: new Set(),
 		});
 		expect(hidden).toEqual({
-			terms: ["a", "b", "c"],
 			hidden: true,
 		});
 
-		const revealed = buildCornellSupportPresentation({
-			keywords: ["a", "b", "c", "d"],
+		const revealed = buildCornellAnswerPresentation({
 			sectionId: "terms",
 			studyMode: true,
 			revealAll: false,
@@ -210,9 +220,8 @@ describe("buildCornellSupportPresentation", () => {
 		expect(revealed.hidden).toBe(false);
 	});
 
-	it("reveals supports when Study Mode reveal-all is active", () => {
-		const presentation = buildCornellSupportPresentation({
-			keywords: ["a", "b"],
+	it("reveals note-side answers when Study Mode reveal-all is active", () => {
+		const presentation = buildCornellAnswerPresentation({
 			sectionId: "terms",
 			studyMode: true,
 			revealAll: true,

@@ -41,6 +41,9 @@ export const MAX_CORNELL_SUPPORT_TERMS = 3;
 
 export interface CornellSupportPresentation {
 	terms: string[];
+}
+
+export interface CornellAnswerPresentation {
 	hidden: boolean;
 }
 
@@ -125,15 +128,20 @@ export function buildCornellSupportTerms(
 
 export function buildCornellSupportPresentation(opts: {
 	keywords: string[];
+}): CornellSupportPresentation {
+	return {
+		terms: buildCornellSupportTerms(opts.keywords),
+	};
+}
+
+export function buildCornellAnswerPresentation(opts: {
 	sectionId: string;
 	studyMode: boolean;
 	revealAll: boolean;
 	revealedSectionIds: ReadonlySet<string>;
-}): CornellSupportPresentation {
-	const terms = buildCornellSupportTerms(opts.keywords);
+}): CornellAnswerPresentation {
 	const revealed = opts.revealAll || opts.revealedSectionIds.has(opts.sectionId);
 	return {
-		terms,
 		hidden: opts.studyMode && !revealed,
 	};
 }

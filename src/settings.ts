@@ -35,6 +35,11 @@ import {
 	type CueAccent,
 } from "./cornell-accent";
 import {
+	DEFAULT_READING_MODE_DISPLAY,
+	READING_MODE_DISPLAY_OPTIONS,
+	type ReadingModeDisplay,
+} from "./reading-cues";
+import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	buildAnthropicModelOptions,
 	describeAnthropicModel,
@@ -105,6 +110,7 @@ export interface CueCraftSettings {
 	generateKeywords: boolean;
 	autoSummary: boolean;
 	renderInReadingMode: boolean;
+	readingModeDisplay: ReadingModeDisplay;
 	foldCueColumnOnMobile: boolean;
 	cueAccent: CueAccent;
 	showCueBorder: boolean;
@@ -152,6 +158,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	generateKeywords: true,
 	autoSummary: true,
 	renderInReadingMode: true,
+	readingModeDisplay: DEFAULT_READING_MODE_DISPLAY,
 	foldCueColumnOnMobile: true,
 	cueAccent: DEFAULT_CUE_ACCENT,
 	showCueBorder: true,
@@ -661,16 +668,39 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(containerEl)
-			.setName("Render in Reading mode")
-			.setDesc("Show cached CueCraft cues beneath headings in Reading view.")
+			.setName("Show CueCraft in Reading mode")
+			.setDesc("Show a lightweight study surface when viewing notes in Reading mode.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.renderInReadingMode)
 					.onChange(async (value) => {
 						this.plugin.settings.renderInReadingMode = value;
 						await this.plugin.saveSettings();
+						this.plugin.refreshReadingModeSurface();
 					})
 			);
+
+		const readingDisplaySetting = new Setting(containerEl)
+			.setName("Reading mode display")
+			.addDropdown((dd) => {
+				for (const option of READING_MODE_DISPLAY_OPTIONS) {
+					dd.addOption(option.id, option.label);
+				}
+				dd.setValue(this.plugin.settings.readingModeDisplay).onChange(
+					async (value) => {
+						this.plugin.settings.readingModeDisplay =
+							value as ReadingModeDisplay;
+						await this.plugin.saveSettings();
+						readingDisplaySetting.setDesc(readingDisplayDesc());
+						this.plugin.refreshReadingModeSurface();
+					}
+				);
+			});
+		const readingDisplayDesc = (): string =>
+			READING_MODE_DISPLAY_OPTIONS.find(
+				(option) => option.id === this.plugin.settings.readingModeDisplay
+			)?.description ?? "Choose how CueCraft appears in Reading mode.";
+		readingDisplaySetting.setDesc(readingDisplayDesc());
 
 		new Setting(containerEl)
 			.setName("Fold cue column on mobile")

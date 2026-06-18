@@ -48,7 +48,8 @@ import {
 } from "./cue-extension";
 import {
 	buildReadingCueMap,
-	readingReviewAffordanceState,
+	isReadingModeDisplay,
+	readingModeDisplayState,
 } from "./reading-cues";
 import {
 	selectExportableCues,
@@ -61,7 +62,10 @@ import {
 	pillAction,
 	visibilityMenuLabel,
 } from "./visibility";
-import { buildCornellModel, type CornellModel } from "./cornell";
+import {
+	buildCornellModel,
+	type CornellModel,
+} from "./cornell";
 import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
 
@@ -75,12 +79,14 @@ interface PluginData {
 }
 
 const RIBBON_ICON = "graduation-cap";
+const CORNELL_RIBBON_ICON = "columns-2";
 
 export default class CueCraftPlugin extends Plugin {
 	settings: CueCraftSettings = DEFAULT_SETTINGS;
 
 	private statusBarEl: HTMLElement | null = null;
 	private ribbonEl: HTMLElement | null = null;
+	private cornellRibbonEl: HTMLElement | null = null;
 	private studyMode = false;
 	private currentRun: AbortController | null = null;
 	private autoGenerateTimers = new Map<string, number>();
@@ -114,6 +120,11 @@ export default class CueCraftPlugin extends Plugin {
 
 		this.ribbonEl = this.addRibbonIcon(RIBBON_ICON, "CueCraft", () =>
 			this.onRibbonClick()
+		);
+		this.cornellRibbonEl = this.addRibbonIcon(
+			CORNELL_RIBBON_ICON,
+			"CueCraft: Open Cornell view",
+			() => void this.openActiveNoteInCornellView()
 		);
 		this.updateRibbonLabel();
 		this.registerCommands();
@@ -176,6 +187,9 @@ export default class CueCraftPlugin extends Plugin {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
 		const rawSettings = loaded?.settings ?? loaded ?? {};
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
+		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
+			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
+		}
 		const legacyAvailableModelIds = (settings as unknown as {
 			anthropicAvailableModelIds?: string[];
 		}).anthropicAvailableModelIds;
@@ -230,11 +244,14 @@ export default class CueCraftPlugin extends Plugin {
 
 	/** Keep the ribbon tooltip describing what a click will do. */
 	private updateRibbonLabel(): void {
-		if (!this.ribbonEl) return;
-		const label = this.isConfigured()
+		const generateLabel = this.isConfigured()
 			? "CueCraft: Generate cues for this note"
 			: "CueCraft: Set up \u2014 open settings";
-		this.ribbonEl.setAttribute("aria-label", label);
+		this.ribbonEl?.setAttribute("aria-label", generateLabel);
+		this.cornellRibbonEl?.setAttribute(
+			"aria-label",
+			"CueCraft: Open active note in Cornell view"
+		);
 	}
 
 	/** Sets the idle status pill based on the active note's cache (ready/stale/setup). */
@@ -285,6 +302,12 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/** Force the active Reading view to rerender its post-processed cue surface. */
+	refreshReadingModeSurface(): void {
+		this.readingCueMemo = null;
+		const active = this.app.workspace.getActiveFile();
+		if (active) this.refreshActiveReadingView(active);
+	}
+
 	private refreshActiveReadingView(file: TFile): void {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view || view.file?.path !== file.path) return;
@@ -415,8 +438,8 @@ export default class CueCraftPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "open-cornell-view",
-			name: "Open Cornell View",
-			callback: () => void this.activateCornellView(),
+			name: "Open Active Note in Cornell View",
+			callback: () => void this.openActiveNoteInCornellView(),
 		});
 		this.addCommand({
 			id: "review-this-note",
@@ -472,6 +495,18 @@ export default class CueCraftPlugin extends Plugin {
 		if (format === "markdown") {
 			await this.app.workspace.getLeaf(true).openFile(out);
 		}
+	}
+
+	/** Open the current Markdown note in the dedicated Cornell view without entering Study Mode. */
+	private async openActiveNoteInCornellView(target?: TFile): Promise<void> {
+		const file = target ?? this.app.workspace.getActiveFile();
+		if (!file) {
+			new Notice("CueCraft: open a note to view in Cornell.");
+			return;
+		}
+		await this.app.workspace.getLeaf(false).openFile(file);
+		const view = await this.activateCornellView();
+		await view?.render();
 	}
 
 	/**
@@ -563,20 +598,32 @@ export default class CueCraftPlugin extends Plugin {
 		const cache = this.cacheStore.get(path);
 		const isHidden = this.visibility.isHidden(path);
 		if (!this.settings.renderInReadingMode || !cache || isHidden) return;
+		const displayState = readingModeDisplayState({
+			display: this.settings.readingModeDisplay,
+			renderInReadingMode: this.settings.renderInReadingMode,
+			hasCache: true,
+			hasUsableCues: hasUsableCues(cache),
+			isHidden,
+		});
+		if (
+			!displayState.showInlineCues &&
+			!displayState.showReviewButton
+		) {
+			return;
+		}
 
 		const headings = Array.from(
 			el.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")
 		);
-		const reviewState = readingReviewAffordanceState({
-			hasUsableCues: hasUsableCues(cache),
-			isHidden,
-		});
 		for (const heading of headings) {
 			const info = ctx.getSectionInfo(heading);
 			if (!info) continue;
 			const map = this.readingMapFor(path, info.text, cache);
-			if (reviewState.visible && this.maybeInsertReadingReviewEl(path, map, info, heading)) {
-				// continue with cue rendering under the same heading if one exists
+			if (displayState.showReviewButton) {
+				this.maybeInsertReadingReviewEl(path, map, info, heading);
+			}
+			if (!displayState.showInlineCues) {
+				continue;
 			}
 			const cue = map.get(info.lineStart + 1);
 			if (!cue) continue;

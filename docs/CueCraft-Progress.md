@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, a compact Reading-mode `Review in Cornell` entry point, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 249 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, configurable Reading-mode display options, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 255 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -75,6 +75,12 @@ Each item links to the PR that delivered it.
   near the top of notes with usable cached cues. It stays hidden when cues are missing, hidden, or
   unusable, and routes through the existing `reviewThisNote` flow so Cornell Study Mode behavior
   remains centralized instead of splitting review logic across two entry points.
+- **Reading-mode display options.** The Note format settings now expose `Reading mode display`
+  choices for `Inline cues` and `Review button`, with the compact review button as the default.
+  The full Cornell layout is surfaced as a first-class destination through a dedicated ribbon button
+  and the `Open Active Note in Cornell View` command, so edit mode can jump straight to the polished
+  Cornell view without entering Study Mode. Study Mode, reveal state, regenerate controls, and the
+  display toolbar remain anchored in the dedicated Cornell view.
 - **Softer Cornell Classic styling.** Cornell Classic now uses quieter theme-border rules for the
   page title, cue-column divider, and summary boundary, plus more intentional cue-rail spacing and
   softer cue cards. This was implemented as a direct refinement of the existing Classic preset, so
@@ -85,24 +91,25 @@ Each item links to the PR that delivered it.
   and Ollama now ask for a one-sentence study takeaway while preserving the existing cache fields,
   so older multi-sentence cached summaries still render safely.
 - **Calmer cue supports.** Cornell view now renders cached keyword hints as subtle support text
-  capped at the first three useful terms instead of a pile of rounded chips. Study Mode still
-  hides/reveals the support line, and the full cached keyword arrays remain intact for exports and
-  old-cache compatibility. Richer generated fields such as `hint`, `evidence`, or `answerCheck`
-  are intentionally deferred until there is a clearer need for a cache/schema migration.
+  capped at the first three useful terms instead of a pile of rounded chips. Study Mode keeps those
+  supports readable while blurring/revealing the note-side answer text, and the full cached keyword
+  arrays remain intact for exports and old-cache compatibility. Richer generated fields such as
+  `hint`, `evidence`, or `answerCheck` are intentionally deferred until there is a clearer need for
+  a cache/schema migration.
 - **Export** — "Export Cues to Markdown" (study sheet) and "Export Cues to Anki (TSV)" commands
   write a sibling file next to the note; pure `export.ts` formatters (`cuesToMarkdown`/`cuesToAnki`,
   TSV-safe) with unit tests. Never modifies the source note (#32).
 - **"Review this note"** — command + context-menu entry that enables the note's cues (if hidden),
-  opens it in the **Cornell view**, and turns on that view's Study Mode (questions shown, keyword
-  hints blurred for active recall) — the surface where Study Mode is actually visible (#32).
+  opens it in the **Cornell view**, and turns on that view's Study Mode (questions shown, note-side
+  answers blurred for active recall) — the surface where Study Mode is actually visible (#32).
 
 ### Core UX — settings redesign (in progress)
 - **Settings reorganized by section (v0 design).** The settings tab is now grouped under
   `setHeading()` sections — **AI model / Cue generation / Note format / Appearance / Study Mode** —
   mirroring the v0 prototype in PR #33. New persisted controls: Auto-generate on save, Cue density
   (slider, Minimal/Balanced/Thorough), Question style (Recall/Socratic/Exam-style), Generate cue
-  supports, Auto-write section summary, Render in Reading mode, Fold cue column on mobile, Cue accent
-  color (swatches), Show cue column border, Compact supports. Provider API-key fields gained a show/hide
+  supports, Auto-write section summary, Show CueCraft in Reading mode, Reading mode display, Fold cue
+  column on mobile, Cue accent color (swatches), Show cue column border, Compact supports. Provider API-key fields gained a show/hide
   eye + a presence badge. New single-source-of-truth modules `cue-generation.ts` (question style +
   density) and `cornell-accent.ts` (accent → CSS class), with unit tests. The existing multi-provider
   config (Ollama + Anthropic/OpenAI/Gemini/Grok + Test connection) is preserved under "AI model" —
@@ -115,9 +122,9 @@ Each item links to the PR that delivered it.
   their look; failed cues keep their red rail via a `:not(.cuecraft-cornell-cue-error)` guard.
 - **Settings controls wired into generation/rendering.** Cue density and question style now feed
   shared prompt guidance for Ollama and all AI SDK providers; "Auto-write section summary" skips
-  summary generation when off. "Generate keyword chips" hides keyword hints consistently in editor,
-  Cornell, and Reading mode; "Render in Reading mode" gates the post-processor; "Show cue column
-  border", "Compact chips", and "Fold cue column on mobile" now apply CSS classes in Cornell view.
+  summary generation when off. "Generate cue supports" hides support terms consistently in editor,
+  Cornell, and Reading mode; "Show CueCraft in Reading mode" gates the post-processor; "Show cue column
+  border", "Compact supports", and "Fold cue column on mobile" now apply CSS classes in Cornell view.
   "Auto-generate on save" now debounces Markdown file modifications and refreshes cues when enabled.
 - **Anthropic picker refinement.** The Anthropic model setting now supports account-fetched Claude
   models with provider `display_name` labels, a `Custom model ID...` escape hatch, and preserved
@@ -182,7 +189,7 @@ Each item links to the PR that delivered it.
 
 ### Beyond the original v1.0 slice
 - **Cornell view** — dedicated pane: Title → left cue column | main notes → Summary, from cache;
-  **Study Mode** blur/reveal lives on the left keyword hints (#16).
+  **Study Mode** blur/reveal lives on the note-side answer text (#16).
 - **Cornell restart fix** — keep the view populated after an Obsidian restart by falling back to the
   last/most-recent note instead of rendering empty (#20).
 - **Cues render on startup / tab-restore** — push cached cues into the editor via
@@ -226,15 +233,16 @@ Each item links to the PR that delivered it.
 
 ## Manual Obsidian Test Instructions
 
-For the cue-support polish slice:
+For the Reading-mode display and Cornell entry slice:
 
 1. Reload CueCraft in Obsidian so the latest code is active.
-2. Open Cornell view on a note whose cues have several keyword hints.
-3. Confirm each cue shows quiet support text instead of rounded keyword pills.
-4. Confirm only the first three useful evidence terms are visible, even if older cached cues contain more keywords.
-5. Turn on Study Mode and confirm the evidence line is hidden/blurred until that cue is revealed.
-6. Use `Reveal all` and confirm every evidence line becomes visible.
-7. Toggle `Generate cue supports`, `Compact supports`, and cue accent settings to confirm the support line still hides, compacts, and recolors correctly.
+2. Open CueCraft settings, go to Note format, and confirm `Reading mode display` defaults to `Review button`.
+3. Open Reading mode on a note with usable cached cues and confirm only the compact `Review in Cornell` button appears.
+4. Change the display to `Inline cues`, reload Reading mode, and confirm cue cards appear beneath headings without the review button.
+5. From editing mode, click the new Cornell ribbon button and confirm the active note opens in the dedicated Cornell view without entering Study Mode.
+6. Run the `Open Active Note in Cornell View` command from the command palette and confirm it uses the active note.
+7. Click `Review in Cornell` from Reading mode and confirm it still opens the dedicated Cornell view with Study Mode/reveal behavior.
+8. Hide cues for the note or use a note with no cache and confirm no Reading-mode surface appears.
 
 For the Anthropic connection-copy slice:
 

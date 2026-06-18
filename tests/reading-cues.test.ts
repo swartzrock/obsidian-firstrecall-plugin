@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
 	buildReadingCueMap,
+	READING_MODE_DISPLAY_OPTIONS,
+	readingModeDisplayState,
 	readingReviewAffordanceState,
 } from "../src/reading-cues";
 import { buildNoteCache } from "../src/cache";
@@ -121,5 +123,87 @@ describe("readingReviewAffordanceState", () => {
 			visible: false,
 			action: null,
 		});
+	});
+});
+
+describe("readingModeDisplayState", () => {
+	it("keeps Reading mode display choices focused on native Reading surfaces", () => {
+		expect(READING_MODE_DISPLAY_OPTIONS.map((option) => option.id)).toEqual([
+			"inline-cues",
+			"review-button",
+		]);
+	});
+
+	it("shows only the review button for the default Reading mode display", () => {
+		expect(
+			readingModeDisplayState({
+				display: "review-button",
+				renderInReadingMode: true,
+				hasCache: true,
+				hasUsableCues: true,
+				isHidden: false,
+			})
+		).toEqual({
+			showInlineCues: false,
+			showReviewButton: true,
+		});
+	});
+
+	it("shows inline cues only when inline cues are selected", () => {
+		expect(
+			readingModeDisplayState({
+				display: "inline-cues",
+				renderInReadingMode: true,
+				hasCache: true,
+				hasUsableCues: true,
+				isHidden: false,
+			})
+		).toEqual({
+			showInlineCues: true,
+			showReviewButton: false,
+		});
+	});
+
+	it("hides all Reading-mode surfaces when disabled, hidden, uncached, or unusable", () => {
+		const hidden = {
+			showInlineCues: false,
+			showReviewButton: false,
+		};
+		expect(
+			readingModeDisplayState({
+				display: "review-button",
+				renderInReadingMode: false,
+				hasCache: true,
+				hasUsableCues: true,
+				isHidden: false,
+			})
+		).toEqual(hidden);
+		expect(
+			readingModeDisplayState({
+				display: "review-button",
+				renderInReadingMode: true,
+				hasCache: false,
+				hasUsableCues: true,
+				isHidden: false,
+			})
+		).toEqual(hidden);
+		expect(
+			readingModeDisplayState({
+				display: "review-button",
+				renderInReadingMode: true,
+				hasCache: true,
+				hasUsableCues: true,
+				isHidden: true,
+			})
+		).toEqual(hidden);
+		expect(
+			readingModeDisplayState({
+				display: "review-button",
+				renderInReadingMode: true,
+				hasCache: true,
+				hasUsableCues: false,
+				isHidden: false,
+			})
+		).toEqual(hidden);
 	});
 });

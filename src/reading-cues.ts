@@ -16,9 +16,31 @@ import {
 import { parseSections } from "./parser";
 import type { NoteCache } from "./cache";
 
+export const READING_MODE_DISPLAY_OPTIONS = [
+	{
+		id: "inline-cues",
+		label: "Inline cues",
+		description: "Show cached cues beneath their headings in Reading mode.",
+	},
+	{
+		id: "review-button",
+		label: "Review button",
+		description: "Show one compact Review in Cornell button near the first cue.",
+	},
+] as const;
+
+export type ReadingModeDisplay = typeof READING_MODE_DISPLAY_OPTIONS[number]["id"];
+
+export const DEFAULT_READING_MODE_DISPLAY: ReadingModeDisplay = "review-button";
+
 export interface ReadingReviewAffordanceState {
 	visible: boolean;
 	action: "review-this-note" | null;
+}
+
+export interface ReadingModeDisplayState {
+	showInlineCues: boolean;
+	showReviewButton: boolean;
 }
 
 /**
@@ -38,6 +60,29 @@ export function buildReadingCueMap(
 		if (!map.has(cue.line)) map.set(cue.line, cue);
 	}
 	return map;
+}
+
+export function isReadingModeDisplay(value: unknown): value is ReadingModeDisplay {
+	return READING_MODE_DISPLAY_OPTIONS.some((option) => option.id === value);
+}
+
+export function readingModeDisplayState(opts: {
+	display: ReadingModeDisplay;
+	renderInReadingMode: boolean;
+	hasCache: boolean;
+	hasUsableCues: boolean;
+	isHidden: boolean;
+}): ReadingModeDisplayState {
+	if (!opts.renderInReadingMode || !opts.hasCache || opts.isHidden) {
+		return {
+			showInlineCues: false,
+			showReviewButton: false,
+		};
+	}
+	return {
+		showInlineCues: opts.display === "inline-cues",
+		showReviewButton: opts.display === "review-button" && opts.hasUsableCues,
+	};
 }
 
 /**

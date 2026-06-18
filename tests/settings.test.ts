@@ -10,6 +10,7 @@ import {
 	normalizeAnthropicModelSelection,
 	refreshAnthropicModelOptions,
 } from "../src/anthropic-models";
+import { DEFAULT_READING_MODE_DISPLAY } from "../src/reading-cues";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 
 function modelInfo(id: string, display_name: string): ModelInfo {
@@ -23,6 +24,12 @@ function modelInfo(id: string, display_name: string): ModelInfo {
 		capabilities: null,
 	} as ModelInfo;
 }
+
+describe("settings defaults", () => {
+	it("defaults Reading mode to the compact review button", () => {
+		expect(DEFAULT_READING_MODE_DISPLAY).toBe("review-button");
+	});
+});
 
 describe("isAnthropicCustomModelSelection", () => {
 	it("treats unknown Anthropic model IDs as custom", () => {

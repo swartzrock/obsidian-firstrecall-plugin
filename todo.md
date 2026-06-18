@@ -45,28 +45,29 @@ Stopping after one phase is a successful completion of that run. Do not continue
 ## Phase 4: Better Question Supports Instead Of Keyword Chip Piles
 - [x] Reduce visible supports to a small, useful set such as top three evidence terms
 - [x] Render supports as subtle hint/evidence text instead of many rounded buttons by default
-- [x] Preserve Study Mode hide/reveal behavior for supports
+- [x] Preserve Study Mode hide/reveal behavior for note-side answers
 - [x] Preserve compatibility with existing cached keyword arrays
 - [x] Decide whether richer fields such as hint, evidence, or answerCheck are needed now or deferred
 - [x] Add or update tests for support limiting, reveal behavior, and old-cache compatibility
 - [x] Update docs/CueCraft-Progress.md and test counts if needed
 - [x] Manual Obsidian test instructions
 
-## Phase 5: Cornell Appearance Settings For Summary And Supports
-- [ ] Add only the highest-value Cornell appearance controls needed by the polished defaults
-- [ ] If applicable, add settings for Cornell appearance, summary style, and support style
-- [ ] Keep current behavior available where reasonable for users who like keyword chips
-- [ ] Ensure changing these settings refreshes open Cornell views live
-- [ ] Avoid cluttering the Appearance subpage with low-value controls
-- [ ] Add or update tests for defaults, setting persistence, and rendering-class behavior
-- [ ] Update docs/CueCraft-Progress.md and test counts if needed
-- [ ] Manual Obsidian test instructions
+## Phase 5: Reading Mode Display Options And Cornell Entry Points
+- [x] Add a `Reading mode display` setting with options: `Inline cues` and `Review button`
+- [x] Keep the current compact `Review in Cornell` affordance as the default Reading-mode behavior
+- [x] Remove the embedded Reading-mode Cornell layout because the dedicated Cornell view is the better surface
+- [x] Surface the dedicated Cornell view through a separate ribbon action
+- [x] Let users open the active editing note directly in Cornell view without entering Study Mode
+- [x] Keep Study Mode, reveal state, regenerate controls, and display toolbar behavior anchored in the dedicated Cornell view
+- [x] Add or update tests for setting defaults, Reading-mode display selection, and hidden/no-cache behavior
+- [x] Update docs/CueCraft-Progress.md and test counts if needed
+- [x] Manual Obsidian test instructions
 
 ## Phase 6: Final Cornell Review And Regression Pass
 - [ ] Review implementation against every requirement in the Cornell polish plan
 - [ ] Run the full automated test suite and build
 - [ ] Update docs/CueCraft-Progress.md with final Cornell polish status and test count
-- [ ] Confirm manual Obsidian coverage for Reading entry, Cornell open/focus, Study Mode, reveal supports, Refresh stale, per-cue regenerate, appearance settings, and summary readability
+- [ ] Confirm manual Obsidian coverage for Inline cues, Review button, Cornell open/focus, Study Mode, reveal answers, Refresh stale, per-cue regenerate, appearance settings, and summary readability
 - [ ] Provide a full manual Obsidian regression checklist
 
 ## Rules

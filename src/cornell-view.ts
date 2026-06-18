@@ -2,6 +2,7 @@ import { ItemView, MarkdownRenderer, Menu, TFile, type WorkspaceLeaf } from "obs
 import type CueCraftPlugin from "./main";
 import { TONE_OPTIONS } from "./main";
 import {
+	buildCornellAnswerPresentation,
 	buildCornellSupportPresentation,
 	failedCueCount,
 	buildCornellTakeawayPresentation,
@@ -28,15 +29,15 @@ export const VIEW_TYPE_CORNELL = "cuecraft-cornell";
 
 /**
  * A dedicated pane that lays out the active note as Cornell-style study notes:
- * Title -> left cue column (questions + keyword hints) | right main notes ->
- * Summary band. Study Mode blurs the left keyword hints until revealed, so the
+ * Title -> left cue column (questions + supports) | right main notes ->
+ * Summary band. Study Mode blurs note-side answers until revealed, so the
  * recall interaction lives entirely in the cue column.
  */
 export class CornellView extends ItemView {
 	private studyMode = false;
-	/** Section ids whose hints have been revealed in the current study pass. */
+	/** Section ids whose note-side answers have been revealed in the current study pass. */
 	private revealed = new Set<string>();
-	/** When true, all hints are shown regardless of per-cue reveal state. */
+	/** When true, all note-side answers are shown regardless of per-cue reveal state. */
 	private revealAll = false;
 	/** When true, the in-view display-controls row (style/width/font) is shown. */
 	private displayOpen = false;
@@ -70,7 +71,7 @@ export class CornellView extends ItemView {
 	}
 
 	/**
-	 * Turn on this view's Study Mode (questions visible, keyword hints blurred
+	 * Turn on this view's Study Mode (questions visible, note-side answers blurred
 	 * until revealed) and re-render. Used by "Review This Note" so the command
 	 * lands the user in an actually-studying state instead of a no-op toggle.
 	 */
@@ -173,13 +174,21 @@ export class CornellView extends ItemView {
 
 	private renderToolbar(root: HTMLElement, file: TFile): void {
 		const bar = root.createEl("div", { cls: "cuecraft-cornell-toolbar" });
-		const study = bar.createEl("button", {
-			cls: "cuecraft-cornell-btn",
-			text: this.studyMode ? "Study Mode: on" : "Study Mode: off",
+		const study = bar.createEl("label", {
+			cls: "cuecraft-cornell-study-toggle",
 		});
-		study.toggleClass("is-active", this.studyMode);
-		study.addEventListener("click", () => {
-			this.studyMode = !this.studyMode;
+		study.createEl("span", {
+			cls: "cuecraft-cornell-study-label",
+			text: "Study mode",
+		});
+		const toggle = study.createEl("span", { cls: "checkbox-container" });
+		toggle.toggleClass("is-enabled", this.studyMode);
+		const input = toggle.createEl("input");
+		input.type = "checkbox";
+		input.checked = this.studyMode;
+		input.setAttr("aria-label", "Study mode");
+		input.addEventListener("change", () => {
+			this.studyMode = input.checked;
 			this.revealed.clear();
 			this.revealAll = false;
 			void this.render();
@@ -192,26 +201,6 @@ export class CornellView extends ItemView {
 			});
 			refresh.addEventListener("click", () => {
 				void this.plugin.regenerateStaleSections(file);
-			});
-		}
-
-		if (this.studyMode) {
-			const revealAll = bar.createEl("button", {
-				cls: "cuecraft-cornell-btn",
-				text: "Reveal all",
-			});
-			revealAll.addEventListener("click", () => {
-				this.revealAll = true;
-				this.applyReveal(root);
-			});
-			const hideAll = bar.createEl("button", {
-				cls: "cuecraft-cornell-btn",
-				text: "Hide all",
-			});
-			hideAll.addEventListener("click", () => {
-				this.revealAll = false;
-				this.revealed.clear();
-				this.applyReveal(root);
 			});
 		}
 
@@ -389,24 +378,16 @@ export class CornellView extends ItemView {
 
 		const supports = buildCornellSupportPresentation({
 			keywords: row.keywords,
-			sectionId: row.id,
-			studyMode: this.studyMode,
-			revealAll: this.revealAll,
-			revealedSectionIds: this.revealed,
 		});
 		if (this.plugin.settings.generateKeywords && supports.terms.length) {
 			const kw = cue.createEl("div", { cls: "cuecraft-cornell-kw" });
-			kw.dataset.section = row.id;
 			kw.createEl("span", {
 				cls: "cuecraft-cornell-support-text",
 				text: supports.terms.join(" \u00b7 "),
 			});
-			if (supports.hidden) {
-				kw.addClass("is-hidden");
-			}
 		}
 
-		// In Study Mode, clicking a cue toggles its hint's reveal.
+		// In Study Mode, clicking a cue toggles the note-side answer reveal.
 		cue.addEventListener("click", () => {
 			if (!this.studyMode) return;
 			if (this.revealed.has(row.id)) this.revealed.delete(row.id);
@@ -445,6 +426,14 @@ export class CornellView extends ItemView {
 			h.setText(row.heading);
 		}
 		const body = cell.createEl("div", { cls: "cuecraft-cornell-body" });
+		body.dataset.section = row.id;
+		const answer = buildCornellAnswerPresentation({
+			sectionId: row.id,
+			studyMode: this.studyMode,
+			revealAll: this.revealAll,
+			revealedSectionIds: this.revealed,
+		});
+		if (answer.hidden) body.addClass("is-hidden");
 		if (row.content.trim()) {
 			await MarkdownRenderer.render(this.app, row.content, body, file.path, this);
 		} else {
@@ -490,10 +479,10 @@ export class CornellView extends ItemView {
 		menu.showAtMouseEvent(e);
 	}
 
-	/** Apply current reveal state to already-rendered keyword hints (no full re-render). */
+	/** Apply current reveal state to already-rendered note-side answers (no full re-render). */
 	private applyReveal(root: HTMLElement): void {
-		const hints = root.querySelectorAll<HTMLElement>(".cuecraft-cornell-kw");
-		hints.forEach((el) => {
+		const answers = root.querySelectorAll<HTMLElement>(".cuecraft-cornell-body");
+		answers.forEach((el) => {
 			const id = el.dataset.section ?? "";
 			const show = !this.studyMode || this.revealAll || this.revealed.has(id);
 			el.toggleClass("is-hidden", !show);
