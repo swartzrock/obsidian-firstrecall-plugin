@@ -37,6 +37,12 @@
       "skillPath": "plugins/compound-engineering/skills/ce-debug/SKILL.md",
       "computedHash": "580b6eccd2bb333cc3cb508e666a7682a672aed480d9dafb00e4fae71514ba4e"
     },
+    "ce-doc-review": {
+      "source": "everyinc/compound-engineering-plugin",
+      "sourceType": "github",
+      "skillPath": "plugins/compound-engineering/skills/ce-doc-review/SKILL.md",
+      "computedHash": "231f6563e04898c310cee29ecb05bfe200504ddbf4ad3577f4c51e00aa336f34"
+    },
     "ce-frontend-design": {
       "source": "everyinc/compound-engineering-plugin",
       "sourceType": "github",
@@ -144,6 +150,12 @@
       "sourceType": "github",
       "skillPath": "skills/productivity/handoff/SKILL.md",
       "computedHash": "5d0f81e38abe6b984e1feaa731927de5291d040982106ac513cf54ec240e00ec"
+    },
+    "implement": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/implement/SKILL.md",
+      "computedHash": "f7b0f3636d20c12d1596336efa6943346f85c97f6419371347ac96c089dca08f"
     },
     "improve-codebase-architecture": {
       "source": "mattpocock/skills",
