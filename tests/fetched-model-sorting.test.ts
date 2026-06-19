@@ -28,6 +28,28 @@ describe("sortFetchedModelIds", () => {
 		]);
 	});
 
+	it("sorts OpenRouter provider/model IDs by provider then model", () => {
+		expect(
+			sortFetchedModelIds([
+				"openai/gpt-4o",
+				"anthropic/claude-sonnet-4",
+				"google/gemini-1.5-pro",
+				"anthropic/claude-haiku-4",
+				"openai/gpt-4o-mini",
+				"google/gemini-1.5-flash",
+				"meta-llama/llama-3-70b",
+			])
+		).toEqual([
+			"anthropic/claude-haiku-4",
+			"anthropic/claude-sonnet-4",
+			"google/gemini-1.5-flash",
+			"google/gemini-1.5-pro",
+			"meta-llama/llama-3-70b",
+			"openai/gpt-4o",
+			"openai/gpt-4o-mini",
+		]);
+	});
+
 	it("sorts latest and dated variants alphanumerically", () => {
 		expect(
 			sortFetchedModelIds([

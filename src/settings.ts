@@ -55,6 +55,7 @@ import {
 	type ProviderConnectionStatusMap,
 } from "./provider-setup-status";
 import { sortFetchedModelIds } from "./fetched-model-sorting";
+import { resolveModelRefreshDescription } from "./model-refresh";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
 
@@ -1235,7 +1236,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderCloudModelSettings(containerEl, {
 					providerName: "OpenRouter",
 					modelLabel: "OpenRouter model",
-					modelDesc: "An OpenRouter model id (e.g. anthropic/claude-sonnet-4, openai/gpt-4o).",
+					modelDesc: "An OpenRouter model ID in provider/model format (e.g. anthropic/claude-sonnet-4, openai/gpt-4o).",
 					modelPlaceholder: "anthropic/claude-sonnet-4",
 					getModel: () => s.openrouterModel,
 					setModel: (v) => (s.openrouterModel = v),
@@ -1432,15 +1433,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		refreshMessage: string,
 		defaultDescription: string
 	): string {
-		const message = refreshMessage.trim();
-		if (
-			message.startsWith("Could not ") ||
-			message.startsWith("No ") ||
-			message.startsWith("CueCraft:")
-		) {
-			return message;
-		}
-		return defaultDescription;
+		return resolveModelRefreshDescription(refreshMessage, defaultDescription);
 	}
 
 	private async refreshCloudModels(opts: {

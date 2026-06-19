@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (OpenRouter provider plumbing — first-class OpenRouter support via the OpenAI-compatible AI SDK path with attribution headers, model listing against the OpenRouter models endpoint, credential UI, and full provider switch integration; Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, configurable Reading-mode display options, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 270 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (OpenRouter model fetch UX — OpenRouter wired into the fetched-model selector with provider/model format descriptions, model refresh/fetch, custom model preservation, and provider-switch resilience; `resolveModelRefreshDescription` extracted as a standalone testable helper; OpenRouter provider plumbing — first-class OpenRouter support via the OpenAI-compatible AI SDK path with attribution headers, `generateText`-based structured output for broad model compatibility, model listing against the OpenRouter models endpoint, credential UI, and full provider switch integration; per-section and summary generation timing in debug logs; Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, configurable Reading-mode display options, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 283 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -51,7 +51,14 @@ Each item links to the PR that delivered it.
   (`@ai-sdk/openai` with `baseURL: https://openrouter.ai/api/v1`), attribution headers
   (`HTTP-Referer`, `X-Title`), model listing against `GET /models`, credential UI following
   the same local-key pattern as the other cloud providers, and full integration across every
-  provider switch (`isConfigured`, `makeProvider`, setup status, settings display).
+  provider switch (`isConfigured`, `makeProvider`, setup status, settings display). Uses
+  `generateText` with prompt-embedded JSON schema instead of `generateObject` for broad model
+  compatibility.
+- **OpenRouter model fetch UX** — OpenRouter wired into the fetched-model selector path with
+  `provider/model` format descriptions, fetch/refresh controls with OpenRouter-specific copy,
+  custom model entry preserved across refresh, and provider-switching does not lose saved
+  OpenRouter key/model. `resolveModelRefreshDescription` extracted as a standalone module for
+  testability.
 - **Regenerate tone variants** — per-section regenerate offers a tone menu (More conceptual,
   Exam prep, Simpler, Vocabulary), forwarded as a one-off preset override without changing the
   global setting (#27).
@@ -316,11 +323,12 @@ For the provider model-list discovery slice:
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (229 tests)
+bun run test       # vitest (283 tests)
 ```
 
 
 Key source layout: `src/providers/` (provider interface + Ollama + `AiSdkProvider` base and the
-four AI-SDK vendors), `src/generator.ts` (generation + per-section/stale regen), `src/cache.ts`
-(per-note cache + stale detection), `src/cue-extension.ts` (editor decorations), `src/cornell*.ts`
-(Cornell view + model), `src/settings.ts` (provider settings).
+five AI-SDK vendors incl. OpenRouter), `src/generator.ts` (generation + per-section/stale regen),
+`src/cache.ts` (per-note cache + stale detection), `src/cue-extension.ts` (editor decorations),
+`src/cornell*.ts` (Cornell view + model), `src/settings.ts` (provider settings),
+`src/model-refresh.ts` (model-refresh description logic).
