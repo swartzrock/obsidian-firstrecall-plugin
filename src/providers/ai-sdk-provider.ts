@@ -1,6 +1,6 @@
-import { z } from "zod";
-import { generateObject } from "ai";
-import type { LanguageModel } from "ai";
+import { z } from "zod/v3";
+import { generateObject, zodSchema } from "ai";
+import type { LanguageModel, Schema } from "ai";
 import {
 	cueOutputSchema,
 	summaryOutputSchema,
@@ -62,7 +62,7 @@ const summaryGenSchema = z.object({
 
 /** Injectable structured-output call so the provider can be unit-tested. */
 export type ObjectGenerator = <T>(opts: {
-	schema: z.ZodType<T>;
+	schema: z.ZodType<T, z.ZodTypeDef, unknown>;
 	prompt: string;
 	signal?: AbortSignal;
 }) => Promise<T>;
@@ -194,7 +194,7 @@ export class AiSdkProvider implements AiProvider {
 	}
 
 	private async generateWithRetry<T>(opts: {
-		schema: z.ZodType<T>;
+		schema: z.ZodType<T, z.ZodTypeDef, unknown>;
 		prompt: string;
 		signal?: AbortSignal;
 	}): Promise<T> {
@@ -308,11 +308,17 @@ export class AiSdkProvider implements AiProvider {
 
 /** Build the real AI SDK structured-output caller for a resolved model. */
 export function modelGenerator(model: LanguageModel): ObjectGenerator {
-	return async ({ schema, prompt, signal }) => {
-		const { object } = await generateObject({
+	return async function generate<T>({ schema, prompt, signal }: {
+		schema: z.ZodType<T, z.ZodTypeDef, unknown>;
+		prompt: string;
+		signal?: AbortSignal;
+	}): Promise<T> {
+		const sdkSchema: Schema<T> = zodSchema<T>(schema);
+		const { object } = await generateObject<Schema<T>, "object", T>({
 			model,
-			schema,
+			schema: sdkSchema,
 			prompt,
+			output: "object",
 			abortSignal: signal,
 		});
 		return object;

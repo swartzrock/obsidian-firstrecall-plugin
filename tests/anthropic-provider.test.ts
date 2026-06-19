@@ -151,9 +151,10 @@ describe("AnthropicProvider.listModels", () => {
 				max_tokens: 1000,
 				capabilities: null,
 			},
-		] as ModelInfo[];
+		];
 		const fetchMock = async (input: RequestInfo | URL) => {
-			expect(String(input)).toContain("/v1/models");
+			const url = input instanceof Request ? input.url : input.toString();
+			expect(url).toContain("/v1/models");
 			return new Response(
 				JSON.stringify({
 					data: models,
