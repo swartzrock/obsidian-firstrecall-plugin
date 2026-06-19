@@ -6,6 +6,11 @@ import {
 	AiSdkProvider,
 	type ObjectGenerator,
 } from "./ai-sdk-provider";
+import {
+	normalizeOpenRouterModel,
+	type ModelOption,
+	type OpenRouterRawModel,
+} from "../model-options";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
@@ -17,7 +22,7 @@ export interface OpenRouterProviderOptions {
 	/** Overrides the real AI SDK call in tests. */
 	generator?: ObjectGenerator;
 	/** Overrides the model-list call in tests. */
-	listModelsImpl?: () => Promise<string[]>;
+	listModelsImpl?: () => Promise<ModelOption[]>;
 }
 
 export class OpenRouterProvider extends AiSdkProvider {
@@ -29,19 +34,15 @@ export class OpenRouterProvider extends AiSdkProvider {
 			model: opts.model,
 			generate: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
 			listModels:
-				opts.listModelsImpl ?? (() => listOpenRouterModels(opts.apiKey, opts.fetchImpl)),
+				opts.listModelsImpl ?? (() => listOpenRouterModelOptions(opts.apiKey, opts.fetchImpl)),
 		});
 	}
 }
 
-interface OpenRouterModelEntry {
-	id?: string;
-}
-
-async function listOpenRouterModels(
+async function listOpenRouterModelOptions(
 	apiKey: string,
 	fetchImpl?: FetchFunction
-): Promise<string[]> {
+): Promise<ModelOption[]> {
 	const fetchFn = (fetchImpl ?? globalThis.fetch) as typeof fetch | undefined;
 	if (!fetchFn) {
 		throw new Error("OpenRouter model fetch requires a fetch implementation.");
@@ -62,10 +63,13 @@ async function listOpenRouterModels(
 				: `OpenRouter model fetch failed (${response.status}).`
 		);
 	}
-	const body = (await response.json()) as { data?: OpenRouterModelEntry[] };
+	const body = (await response.json()) as { data?: OpenRouterRawModel[] };
 	return (body.data ?? [])
-		.map((model) => model.id)
-		.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+		.filter(
+			(entry) =>
+				typeof entry.id === "string" && entry.id.trim().length > 0
+		)
+		.map(normalizeOpenRouterModel);
 }
 
 function defaultGenerator(
