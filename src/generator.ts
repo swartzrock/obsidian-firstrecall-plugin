@@ -157,6 +157,7 @@ export async function generateNote(
 		const batch = sections.slice(start, start + sectionConcurrency);
 		await Promise.all(
 			batch.map(async (s, offset) => {
+				const t0 = Date.now();
 				const result = await generateSectionCue({
 					section: s,
 					provider,
@@ -166,6 +167,9 @@ export async function generateNote(
 					maxContextChars,
 					signal,
 				});
+				console.debug(
+					`CueCraft section "${s.heading}" ${result.error ? "failed" : "done"} (${((Date.now() - t0) / 1000).toFixed(1)}s)`
+				);
 				results[start + offset] = result;
 				done++;
 				onProgress?.(done, total);
@@ -196,6 +200,7 @@ export async function generateNote(
 		const questions = completedResults
 			.map((r) => r.question)
 			.filter((q): q is string => Boolean(q));
+		const t0 = Date.now();
 		try {
 			const sum = await provider.generateSummary(
 				{
@@ -207,7 +212,9 @@ export async function generateNote(
 			);
 			summary = sum.summary;
 			learningObjective = sum.learningObjective ?? null;
+			console.debug(`CueCraft summary done (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
 		} catch {
+			console.debug(`CueCraft summary failed (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
 			summary = null;
 		}
 	}

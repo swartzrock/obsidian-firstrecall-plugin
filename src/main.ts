@@ -27,6 +27,7 @@ import { AnthropicProvider } from "./providers/anthropic-provider";
 import { OpenAIProvider } from "./providers/openai-provider";
 import { GoogleProvider } from "./providers/google-provider";
 import { XaiProvider } from "./providers/xai-provider";
+import { OpenRouterProvider } from "./providers/openrouter-provider";
 import type { AiProvider, HttpClient } from "./providers/types";
 import { parseSections, type Section } from "./parser";
 import {
@@ -327,6 +328,8 @@ export default class CueCraftPlugin extends Plugin {
 				return Boolean(s.googleApiKey && s.googleModel);
 			case "xai":
 				return Boolean(s.xaiApiKey && s.xaiModel);
+			case "openrouter":
+				return Boolean(s.openrouterApiKey && s.openrouterModel);
 			default:
 				return Boolean(s.ollamaHost && s.ollamaModel);
 		}
@@ -829,6 +832,12 @@ export default class CueCraftPlugin extends Plugin {
 					model: s.xaiModel,
 					fetchImpl,
 				});
+			case "openrouter":
+				return new OpenRouterProvider({
+					apiKey: s.openrouterApiKey,
+					model: s.openrouterModel,
+					fetchImpl,
+				});
 			default:
 				return new OllamaProvider({
 					host: s.ollamaHost,
@@ -859,6 +868,8 @@ export default class CueCraftPlugin extends Plugin {
 				return s.googleModel;
 			case "xai":
 				return s.xaiModel;
+			case "openrouter":
+				return s.openrouterModel;
 			default:
 				return s.ollamaModel;
 		}
@@ -1096,6 +1107,7 @@ export default class CueCraftPlugin extends Plugin {
 		this.currentRun = controller;
 		this.setStatus("generating", { done: 0, total: 0 });
 
+		const startTime = Date.now();
 		try {
 			const result = await generateNote({
 				noteTitle: file.basename,
@@ -1136,7 +1148,8 @@ export default class CueCraftPlugin extends Plugin {
 				new Notice(`CueCraft: auto-generation finished with ${failed} failed section(s).`);
 			}
 			// Rendering/caching of `result` lands with the cue-extension + cache modules.
-			console.debug("CueCraft generation result", result);
+			const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+			console.debug(`CueCraft generation result (${elapsed}s)`, result);
 		} catch (e) {
 			console.error("CueCraft generation failed", e);
 			new Notice("CueCraft: generation failed. See console for details.");
