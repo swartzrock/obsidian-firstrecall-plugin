@@ -1107,6 +1107,7 @@ export default class CueCraftPlugin extends Plugin {
 		this.currentRun = controller;
 		this.setStatus("generating", { done: 0, total: 0 });
 
+		const startTime = Date.now();
 		try {
 			const result = await generateNote({
 				noteTitle: file.basename,
@@ -1147,7 +1148,8 @@ export default class CueCraftPlugin extends Plugin {
 				new Notice(`CueCraft: auto-generation finished with ${failed} failed section(s).`);
 			}
 			// Rendering/caching of `result` lands with the cue-extension + cache modules.
-			console.debug("CueCraft generation result", result);
+			const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+			console.debug(`CueCraft generation result (${elapsed}s)`, result);
 		} catch (e) {
 			console.error("CueCraft generation failed", e);
 			new Notice("CueCraft: generation failed. See console for details.");
