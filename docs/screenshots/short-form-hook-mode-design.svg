@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="980" viewBox="0 0 1440 980" role="img" aria-labelledby="title desc">
+  <title id="title">CueCraft Short-Form Hook Mode design screenshot</title>
+  <desc id="desc">A warm high-energy phone-like study sprint with a large hook question, staged support beats, and final summary-card design notes.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#fff8ed"/>
+      <stop offset="0.52" stop-color="#f6f1e8"/>
+      <stop offset="1" stop-color="#ece0cf"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#f05a28"/>
+      <stop offset="1" stop-color="#f4c430"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="30" stdDeviation="28" flood-color="#3d2a18" flood-opacity="0.24"/>
+    </filter>
+  </defs>
+  <rect width="1440" height="980" fill="url(#bg)"/>
+  <circle cx="140" cy="90" r="330" fill="#f05a28" opacity="0.16"/>
+  <circle cx="1280" cy="140" r="300" fill="#156b72" opacity="0.15"/>
+
+  <g transform="translate(76 76)">
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="16" font-weight="800" letter-spacing="3" fill="#156b72">CUECRAFT STUDY SPRINT CONCEPT</text>
+    <text x="0" y="96" font-family="Arial Black, Arial, sans-serif" font-size="96" font-weight="900" letter-spacing="-8" fill="#211c18">Hook</text>
+    <text x="0" y="182" font-family="Arial Black, Arial, sans-serif" font-size="96" font-weight="900" letter-spacing="-8" fill="#211c18">Mode</text>
+    <text x="0" y="244" font-family="Arial, sans-serif" font-size="24" fill="#6d6259">Questions become title cards.</text>
+    <text x="0" y="282" font-family="Arial, sans-serif" font-size="24" fill="#6d6259">Support terms reveal as beats.</text>
+    <text x="0" y="320" font-family="Arial, sans-serif" font-size="24" fill="#6d6259">The summary lands as the final card.</text>
+
+    <g transform="translate(0 370)">
+      <rect x="0" y="0" width="128" height="42" rx="21" fill="#211c18"/>
+      <text x="22" y="27" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#fffaf1">Opt-in only</text>
+      <rect x="142" y="0" width="180" height="42" rx="21" fill="#fffaf1" stroke="#d5c5ae"/>
+      <text x="162" y="27" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#6d6259">Selectable HTML</text>
+      <rect x="336" y="0" width="190" height="42" rx="21" fill="#fffaf1" stroke="#d5c5ae"/>
+      <text x="356" y="27" font-family="Arial, sans-serif" font-size="15" font-weight="800" fill="#6d6259">Existing cache fields</text>
+    </g>
+  </g>
+
+  <g transform="translate(610 56)" filter="url(#shadow)">
+    <rect x="0" y="0" width="690" height="790" rx="48" fill="#fffaf1" opacity="0.86" stroke="#d5c5ae"/>
+    <rect x="28" y="28" width="634" height="734" rx="36" fill="none" stroke="#211c18" stroke-opacity="0.08" stroke-width="3"/>
+  </g>
+
+  <g transform="translate(770 104)" filter="url(#shadow)">
+    <rect x="0" y="0" width="360" height="680" rx="42" fill="#151210"/>
+    <rect x="16" y="16" width="328" height="648" rx="30" fill="#211c18"/>
+    <text x="34" y="54" font-family="Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="2" fill="#fff8ed" opacity="0.66">HOOK REVIEW</text>
+    <text x="285" y="54" font-family="Arial, sans-serif" font-size="13" font-weight="800" letter-spacing="2" fill="#fff8ed" opacity="0.66">2 / 8</text>
+    <rect x="34" y="76" width="292" height="8" rx="4" fill="#fff8ed" opacity="0.12"/>
+    <rect x="34" y="76" width="122" height="8" rx="4" fill="#f4c430"/>
+
+    <g transform="translate(34 108)">
+      <rect x="0" y="0" width="292" height="440" rx="30" fill="url(#card)"/>
+      <text x="24" y="48" font-family="Arial, sans-serif" font-size="13" font-weight="900" letter-spacing="2" fill="#24150f" opacity="0.66">ANSWER BEFORE HINTS</text>
+      <text x="24" y="146" font-family="Arial Black, Arial, sans-serif" font-size="54" font-weight="900" letter-spacing="-5" fill="#24150f">Chatbot</text>
+      <text x="24" y="198" font-family="Arial Black, Arial, sans-serif" font-size="54" font-weight="900" letter-spacing="-5" fill="#24150f">or agent?</text>
+      <text x="24" y="250" font-family="Arial Black, Arial, sans-serif" font-size="54" font-weight="900" letter-spacing="-5" fill="#24150f">Prove it.</text>
+      <text x="196" y="450" font-family="Arial Black, Arial, sans-serif" font-size="210" font-weight="900" fill="#211c18" opacity="0.09">?</text>
+      <g transform="translate(24 284)">
+        <rect x="0" y="0" width="244" height="44" rx="22" fill="#fffaf1" opacity="0.58" stroke="#211c18" stroke-opacity="0.35" stroke-width="2"/>
+        <text x="16" y="29" font-family="Arial, sans-serif" font-size="17" font-weight="900" fill="#24150f">plans</text>
+        <text x="174" y="29" font-family="Arial, sans-serif" font-size="12" font-weight="900" fill="#24150f">revealed</text>
+        <rect x="0" y="56" width="244" height="44" rx="22" fill="#fffaf1" opacity="0.58" stroke="#211c18" stroke-opacity="0.35" stroke-width="2"/>
+        <text x="16" y="85" font-family="Arial, sans-serif" font-size="17" font-weight="900" fill="#24150f">decides</text>
+        <text x="174" y="85" font-family="Arial, sans-serif" font-size="12" font-weight="900" fill="#24150f">revealed</text>
+        <rect x="0" y="112" width="244" height="44" rx="22" fill="#211c18" opacity="0.18" stroke="#211c18" stroke-opacity="0.35" stroke-width="2" stroke-dasharray="7 6"/>
+        <text x="16" y="141" font-family="Arial, sans-serif" font-size="17" font-weight="900" fill="#24150f" opacity="0.62">uses tools</text>
+        <text x="205" y="141" font-family="Arial, sans-serif" font-size="12" font-weight="900" fill="#24150f" opacity="0.62">tap</text>
+      </g>
+    </g>
+    <rect x="34" y="570" width="136" height="48" rx="18" fill="#fff8ed" opacity="0.12"/>
+    <text x="59" y="601" font-family="Arial, sans-serif" font-size="15" font-weight="900" fill="#fff8ed">Reveal beat</text>
+    <rect x="184" y="570" width="142" height="48" rx="18" fill="#fff8ed"/>
+    <text x="212" y="601" font-family="Arial, sans-serif" font-size="15" font-weight="900" fill="#211c18">Show answer</text>
+  </g>
+
+  <g transform="translate(1140 610)">
+    <rect x="0" y="0" width="230" height="150" rx="26" fill="#fffaf1" stroke="#d5c5ae" filter="url(#shadow)"/>
+    <text x="22" y="40" font-family="Arial, sans-serif" font-size="20" font-weight="900" fill="#211c18">Design posture</text>
+    <text x="22" y="76" font-family="Arial, sans-serif" font-size="16" fill="#6d6259">Energy from scale,</text>
+    <text x="22" y="102" font-family="Arial, sans-serif" font-size="16" fill="#6d6259">color, and pacing.</text>
+    <text x="22" y="128" font-family="Arial, sans-serif" font-size="16" fill="#6d6259">Semantics stay plain.</text>
+  </g>
+
+  <g transform="translate(76 790)">
+    <rect x="0" y="0" width="1288" height="128" rx="34" fill="#156b72"/>
+    <text x="34" y="42" font-family="Arial, sans-serif" font-size="14" font-weight="900" letter-spacing="3" fill="#fff8ed" opacity="0.66">FINAL TITLE CARD</text>
+    <text x="34" y="92" font-family="Arial Black, Arial, sans-serif" font-size="44" font-weight="900" letter-spacing="-3" fill="#fff8ed">Agents compound progress through feedback.</text>
+    <text x="820" y="52" font-family="Arial, sans-serif" font-size="18" fill="#fff8ed" opacity="0.78">A concise synthesis from the cached note summary,</text>
+    <text x="820" y="84" font-family="Arial, sans-serif" font-size="18" fill="#fff8ed" opacity="0.78">optionally paired with the learning objective.</text>
+  </g>
+</svg>

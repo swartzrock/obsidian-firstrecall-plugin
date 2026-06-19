@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>CueCraft Short-Form Hook Mode Design</title>
+	<style>
+		:root {
+			--bg: #f6f1e8;
+			--ink: #211c18;
+			--muted: #6d6259;
+			--panel: #fffaf1;
+			--panel-2: #efe5d5;
+			--line: #d5c5ae;
+			--accent: #f05a28;
+			--accent-2: #156b72;
+			--accent-3: #f4c430;
+			--shadow: 0 24px 70px rgba(61, 42, 24, 0.2);
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			background:
+				radial-gradient(circle at 10% 8%, rgba(240, 90, 40, 0.2), transparent 28rem),
+				radial-gradient(circle at 90% 20%, rgba(21, 107, 114, 0.18), transparent 24rem),
+				linear-gradient(135deg, #fff8ed 0%, var(--bg) 45%, #ece0cf 100%);
+			color: var(--ink);
+		}
+
+		main {
+			width: min(1180px, calc(100vw - 32px));
+			margin: 0 auto;
+			padding: 44px 0 64px;
+		}
+
+		.hero {
+			display: grid;
+			grid-template-columns: minmax(280px, 0.85fr) minmax(340px, 1.15fr);
+			gap: 34px;
+			align-items: stretch;
+		}
+
+		.kicker {
+			margin: 0 0 16px;
+			color: var(--accent-2);
+			font-size: 12px;
+			font-weight: 800;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+		}
+
+		h1 {
+			margin: 0;
+			font-size: clamp(42px, 7vw, 88px);
+			line-height: 0.88;
+			letter-spacing: -0.075em;
+			max-width: 8ch;
+		}
+
+		.lede {
+			max-width: 35rem;
+			font-size: 18px;
+			line-height: 1.55;
+			color: var(--muted);
+		}
+
+		.controls {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-top: 26px;
+		}
+
+		.pill {
+			border: 1px solid var(--line);
+			border-radius: 999px;
+			background: rgba(255, 250, 241, 0.78);
+			padding: 10px 14px;
+			font-size: 13px;
+			font-weight: 750;
+			color: var(--muted);
+		}
+
+		.pill.primary {
+			background: var(--ink);
+			color: #fffaf1;
+			border-color: var(--ink);
+		}
+
+		.stage {
+			position: relative;
+			min-height: 680px;
+			border: 1px solid rgba(33, 28, 24, 0.12);
+			border-radius: 42px;
+			background: linear-gradient(150deg, rgba(255, 250, 241, 0.94), rgba(239, 229, 213, 0.8));
+			box-shadow: var(--shadow);
+			overflow: hidden;
+		}
+
+		.stage::before {
+			content: "";
+			position: absolute;
+			inset: 22px;
+			border: 2px solid rgba(33, 28, 24, 0.08);
+			border-radius: 30px;
+			pointer-events: none;
+		}
+
+		.phone {
+			position: absolute;
+			top: 46px;
+			left: 50%;
+			width: min(350px, calc(100% - 48px));
+			transform: translateX(-50%);
+			border-radius: 38px;
+			background: #151210;
+			padding: 15px;
+			box-shadow: 0 30px 80px rgba(33, 28, 24, 0.42);
+		}
+
+		.screen {
+			min-height: 590px;
+			border-radius: 28px;
+			background:
+				linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 30%),
+				#211c18;
+			color: #fff8ed;
+			overflow: hidden;
+		}
+
+		.screen-top {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 18px 18px 8px;
+			font-size: 11px;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: rgba(255, 248, 237, 0.68);
+		}
+
+		.progress {
+			height: 7px;
+			margin: 0 18px 18px;
+			border-radius: 999px;
+			background: rgba(255, 255, 255, 0.13);
+			overflow: hidden;
+		}
+
+		.progress span {
+			display: block;
+			width: 42%;
+			height: 100%;
+			background: linear-gradient(90deg, var(--accent), var(--accent-3));
+		}
+
+		.hook-card {
+			margin: 0 18px;
+			min-height: 420px;
+			border-radius: 28px;
+			background:
+				linear-gradient(145deg, rgba(240, 90, 40, 0.98), rgba(244, 196, 48, 0.95)),
+				var(--accent);
+			padding: 28px 24px;
+			display: flex;
+			flex-direction: column;
+			justify-content: space-between;
+			position: relative;
+			overflow: hidden;
+		}
+
+		.hook-card::after {
+			content: "?";
+			position: absolute;
+			right: -18px;
+			bottom: -70px;
+			font-size: 220px;
+			font-weight: 950;
+			line-height: 1;
+			color: rgba(33, 28, 24, 0.1);
+		}
+
+		.card-count {
+			position: relative;
+			z-index: 1;
+			font-size: 12px;
+			font-weight: 900;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: rgba(33, 28, 24, 0.66);
+		}
+
+		.hook {
+			position: relative;
+			z-index: 1;
+			margin: 18px 0;
+			font-size: 54px;
+			line-height: 0.9;
+			font-weight: 950;
+			letter-spacing: -0.075em;
+			color: #24150f;
+		}
+
+		.beats {
+			position: relative;
+			z-index: 1;
+			display: grid;
+			gap: 10px;
+		}
+
+		.beat {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			border: 2px solid rgba(33, 28, 24, 0.32);
+			border-radius: 999px;
+			padding: 11px 14px;
+			background: rgba(255, 250, 241, 0.58);
+			color: #24150f;
+			font-size: 15px;
+			font-weight: 900;
+			text-transform: lowercase;
+		}
+
+		.beat.locked {
+			background: rgba(33, 28, 24, 0.18);
+			color: rgba(33, 28, 24, 0.55);
+			border-style: dashed;
+		}
+
+		.actions {
+			display: flex;
+			gap: 10px;
+			padding: 16px 18px 18px;
+		}
+
+		.action {
+			flex: 1;
+			border: 0;
+			border-radius: 18px;
+			padding: 13px 12px;
+			background: rgba(255, 248, 237, 0.12);
+			color: #fff8ed;
+			font-weight: 850;
+		}
+
+		.action.answer { background: #fff8ed; color: #211c18; }
+
+		.side-note {
+			position: absolute;
+			right: 28px;
+			bottom: 28px;
+			width: 260px;
+			padding: 20px;
+			border-radius: 24px;
+			background: rgba(255, 250, 241, 0.88);
+			border: 1px solid rgba(33, 28, 24, 0.12);
+			box-shadow: 0 18px 48px rgba(61, 42, 24, 0.18);
+		}
+
+		.side-note h2, .panel h2 {
+			margin: 0 0 10px;
+			font-size: 18px;
+			letter-spacing: -0.02em;
+		}
+
+		.side-note p, .panel p, .panel li {
+			font-size: 14px;
+			line-height: 1.5;
+			color: var(--muted);
+		}
+
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 18px;
+			margin-top: 34px;
+		}
+
+		.panel {
+			border: 1px solid rgba(33, 28, 24, 0.12);
+			border-radius: 28px;
+			background: rgba(255, 250, 241, 0.72);
+			padding: 22px;
+		}
+
+		.panel strong { color: var(--ink); }
+
+		.summary-card {
+			margin-top: 34px;
+			border-radius: 34px;
+			background: #156b72;
+			color: #fff8ed;
+			padding: 34px;
+			display: grid;
+			grid-template-columns: 0.8fr 1.2fr;
+			gap: 30px;
+			align-items: center;
+		}
+
+		.summary-card .label {
+			font-size: 12px;
+			font-weight: 900;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+			color: rgba(255, 248, 237, 0.66);
+		}
+
+		.summary-card h2 {
+			margin: 10px 0 0;
+			font-size: clamp(34px, 4vw, 58px);
+			line-height: 0.95;
+			letter-spacing: -0.06em;
+		}
+
+		.summary-card p {
+			font-size: 18px;
+			line-height: 1.5;
+			color: rgba(255, 248, 237, 0.78);
+		}
+
+		@media (max-width: 900px) {
+			.hero, .summary-card { grid-template-columns: 1fr; }
+			.stage { min-height: 760px; }
+			.side-note { position: static; width: auto; margin: 600px 22px 22px; }
+			.grid { grid-template-columns: 1fr; }
+		}
+
+		@media (prefers-reduced-motion: no-preference) {
+			.hook-card { animation: card-pop 620ms cubic-bezier(.2,.9,.2,1) both; }
+			.beat { animation: beat-in 500ms ease both; }
+			.beat:nth-child(2) { animation-delay: 120ms; }
+			.beat:nth-child(3) { animation-delay: 220ms; }
+		}
+
+		@keyframes card-pop {
+			from { opacity: 0; transform: translateY(18px) scale(0.97); }
+			to { opacity: 1; transform: translateY(0) scale(1); }
+		}
+
+		@keyframes beat-in {
+			from { opacity: 0; transform: translateX(-12px); }
+			to { opacity: 1; transform: translateX(0); }
+		}
+	</style>
+</head>
+<body>
+	<main>
+		<section class="hero" aria-labelledby="title">
+			<div>
+				<p class="kicker">CueCraft study sprint concept</p>
+				<h1 id="title">Hook Mode</h1>
+				<p class="lede">A high-energy recall surface for when the learner chooses to sprint. Questions become bold title cards, support terms reveal as beats, and the note summary lands as the final card.</p>
+				<div class="controls" aria-label="Mode principles">
+					<span class="pill primary">Opt-in only</span>
+					<span class="pill">Selectable HTML text</span>
+					<span class="pill">Existing cache fields</span>
+					<span class="pill">Study Mode first</span>
+				</div>
+			</div>
+
+			<div class="stage" aria-label="Short-Form Hook Mode phone mockup">
+				<div class="phone">
+					<div class="screen">
+						<div class="screen-top"><span>hook review</span><span>2 / 8</span></div>
+						<div class="progress"><span></span></div>
+						<article class="hook-card" aria-labelledby="hook-question">
+							<div class="card-count">answer before hints</div>
+							<div id="hook-question" class="hook">Chatbot or agent? Prove it.</div>
+							<div class="beats" aria-label="Support beats">
+								<div class="beat"><span>plans</span><span>revealed</span></div>
+								<div class="beat"><span>decides</span><span>revealed</span></div>
+								<div class="beat locked"><span>uses tools</span><span>tap</span></div>
+							</div>
+						</article>
+						<div class="actions">
+							<button class="action" type="button">Reveal beat</button>
+							<button class="action answer" type="button">Show answer</button>
+						</div>
+					</div>
+				</div>
+				<aside class="side-note">
+					<h2>Design posture</h2>
+					<p>Energy comes from scale, color, and pacing. Semantics stay plain: question, beats, and summary are real text so themes, selection, and accessibility still work.</p>
+				</aside>
+			</div>
+		</section>
+
+		<section class="grid" aria-label="Implementation design notes">
+			<article class="panel">
+				<h2>1. Entry point</h2>
+				<p><strong>Study Mode toolbar:</strong> add a temporary Hook Sprint toggle near existing display controls. Keep the default calm Cornell surface unchanged.</p>
+			</article>
+			<article class="panel">
+				<h2>2. Card anatomy</h2>
+				<p><strong>Hook title, staged beats, answer action:</strong> each card maps to one usable cue row and carries the original question for fidelity checks.</p>
+			</article>
+			<article class="panel">
+				<h2>3. Failure states</h2>
+				<p><strong>No silent gaps:</strong> missing or failed cues render as compact skipped cards with regenerate copy so the sprint does not lose orientation.</p>
+			</article>
+		</section>
+
+		<section class="summary-card" aria-label="Final summary card mockup">
+			<div>
+				<div class="label">final title card</div>
+				<h2>Agents compound progress through feedback.</h2>
+			</div>
+			<p>The summary card should feel like the sprint landing: a concise synthesis from the cached note summary, optionally paired with the learning objective as a quieter subtitle.</p>
+		</section>
+	</main>
+</body>
+</html>
