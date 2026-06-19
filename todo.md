@@ -77,16 +77,16 @@ Manual Obsidian test instructions:
 
 ## Phase 2 - OpenRouter Model Fetch UX
 
-- [ ] Wire OpenRouter into the existing fetched-model selector path.
-- [ ] Make the OpenRouter model row describe the model ID format clearly, including the provider/model pattern.
-- [ ] Add refresh/fetch copy specific enough to make it clear models come from OpenRouter.
-- [ ] Preserve the current model value if the fetched model list does not include it.
-- [ ] Preserve custom model entry behavior for OpenRouter.
-- [ ] Ensure switching away from OpenRouter and back does not lose the saved OpenRouter key/model.
-- [ ] Add tests for OpenRouter model refresh, sorted model IDs, refresh status messages, and custom model preservation.
-- [ ] Update `docs/CueCraft-Progress.md` and the test count.
-- [ ] Run `bun run typecheck`.
-- [ ] Run `bun run test`.
+- [x] Wire OpenRouter into the existing fetched-model selector path.
+- [x] Make the OpenRouter model row describe the model ID format clearly, including the provider/model pattern.
+- [x] Add refresh/fetch copy specific enough to make it clear models come from OpenRouter.
+- [x] Preserve the current model value if the fetched model list does not include it.
+- [x] Preserve custom model entry behavior for OpenRouter.
+- [x] Ensure switching away from OpenRouter and back does not lose the saved OpenRouter key/model.
+- [x] Add tests for OpenRouter model refresh, sorted model IDs, refresh status messages, and custom model preservation.
+- [x] Update `docs/CueCraft-Progress.md` and the test count.
+- [x] Run `bun run typecheck`.
+- [x] Run `bun run test`.
 
 Manual Obsidian test instructions:
 
