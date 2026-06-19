@@ -1,8 +1,9 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import type { FetchFunction } from "@ai-sdk/provider-utils";
+import { generateText } from "ai";
+import { z } from "zod/v3";
 import {
 	AiSdkProvider,
-	modelGenerator,
 	type ObjectGenerator,
 } from "./ai-sdk-provider";
 
@@ -69,17 +70,65 @@ async function listOpenRouterModels(
 
 function defaultGenerator(
 	apiKey: string,
-	model: string,
+	modelId: string,
 	fetchImpl?: FetchFunction
 ): ObjectGenerator {
 	const openrouter = createOpenAI({
 		apiKey,
 		baseURL: OPENROUTER_BASE_URL,
 		fetch: fetchImpl,
+		name: "openrouter",
 		headers: {
 			"HTTP-Referer": "https://github.com/swartzrock/obsidian-cuecraft-plugin",
 			"X-Title": "CueCraft",
 		},
 	});
-	return modelGenerator(openrouter(model));
+	const model = openrouter.chat(modelId);
+	return async function generate<T>({ schema, prompt, signal }: {
+		schema: z.ZodType<T, z.ZodTypeDef, unknown>;
+		prompt: string;
+		signal?: AbortSignal;
+	}): Promise<T> {
+		const jsonPrompt =
+			`${prompt}\n\nRespond with ONLY a valid JSON object matching this schema ` +
+			`(no markdown fences, no extra text):\n${JSON.stringify(zodToJsonSchema(schema))}`;
+		const { text } = await generateText({
+			model,
+			prompt: jsonPrompt,
+			abortSignal: signal,
+		});
+		const cleaned = text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "").trim();
+		return JSON.parse(cleaned) as T;
+	};
+}
+
+function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
+	if (schema instanceof z.ZodObject) {
+		const shape = schema.shape as Record<string, z.ZodType>;
+		const properties: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(shape)) {
+			properties[key] = zodToJsonSchema(value);
+		}
+		return { type: "object", properties, required: Object.keys(shape) };
+	}
+	if (schema instanceof z.ZodArray) {
+		return { type: "array", items: zodToJsonSchema(schema.element as z.ZodType) };
+	}
+	if (schema instanceof z.ZodEnum) {
+		return { type: "string", enum: schema.options as string[] };
+	}
+	if (schema instanceof z.ZodNullable) {
+		const inner = zodToJsonSchema(schema.unwrap() as z.ZodType);
+		return { ...inner, nullable: true };
+	}
+	if (schema instanceof z.ZodString) {
+		return { type: "string" };
+	}
+	if (schema instanceof z.ZodNumber) {
+		return { type: "number" };
+	}
+	if (schema instanceof z.ZodBoolean) {
+		return { type: "boolean" };
+	}
+	return { type: "string" };
 }
