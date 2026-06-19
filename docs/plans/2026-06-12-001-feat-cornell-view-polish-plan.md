@@ -3,7 +3,7 @@ title: "feat: Polish Cornell view study experience"
 type: feat
 date: 2026-06-12
 origin: user request and screenshots
-target: cuecraft-devin
+target: cuecraft
 ---
 
 # feat: Polish Cornell view study experience

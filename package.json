@@ -1,5 +1,5 @@
 {
-	"name": "cuecraft-devin",
+	"name": "cuecraft",
 	"version": "0.1.0",
 	"description": "AI-powered active-recall study cues for Obsidian.",
 	"main": "main.js",

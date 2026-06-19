@@ -45,9 +45,6 @@ bun run typecheck
 CI (GitHub Actions) runs `bun install`, `bun run build`, and `bun run test` on every pull
 request — see [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
 
-To try it in Obsidian, symlink or copy `manifest.json`, `main.js`, and `styles.css` into
-`<your-vault>/.obsidian/plugins/cuecraft-devin/`, then enable the plugin in
-**Settings → Community plugins**.
 
 ## License
 

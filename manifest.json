@@ -1,8 +1,8 @@
 {
-	"id": "cuecraft-devin",
-	"name": "CueCraftDevin",
+	"id": "cuecraft",
+	"name": "CueCraft",
 	"version": "0.1.0",
-	"minAppVersion": "1.5.0",
+	"minAppVersion": "1.6.0",
 	"description": "Turn notes into active-recall study sessions: AI-generated Cornell-style cue questions, keywords, and summaries shown beside your note. Non-destructive — your Markdown is never modified.",
 	"author": "swartzrock",
 	"authorUrl": "https://github.com/swartzrock",

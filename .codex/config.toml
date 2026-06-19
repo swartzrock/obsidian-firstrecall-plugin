@@ -5,8 +5,7 @@ mode = "workspace-write"
 
 # Explicitly whitelist the external directories Codex is allowed to modify
 writable_roots = [
-    "/Users/jasonswartz/Code/AI-train-May-26/cornidian/cuecraft-devin",
-    "/Users/jasonswartz/Code/AI-train-May-26/cornidian/worktrees",
+    "/Users/jasonswartz/Code/AI-train-May-26/cuecraft/cuecraft-codex",
     "/Users/jasonswartz/Documents/box",
 ]
 

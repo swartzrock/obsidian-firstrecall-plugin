@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
@@ -128,12 +129,30 @@
 			background: rgba(23, 23, 26, 0.22);
 		}
 
-		.rail-card.one { background: linear-gradient(135deg, var(--lime), var(--mint)); }
-		.rail-card.two { background: linear-gradient(135deg, var(--sun), var(--orange)); }
-		.rail-card.three { background: linear-gradient(135deg, var(--blue), #c4f1ff); }
-		.rail-card.four { background: linear-gradient(135deg, var(--pink), #ffe0f2); }
-		.rail-card.five { background: linear-gradient(135deg, var(--violet), #f0e9ff); color: #ffffff; }
-		.rail-card.five .tick { background: rgba(255, 255, 255, 0.42); }
+		.rail-card.one {
+			background: linear-gradient(135deg, var(--lime), var(--mint));
+		}
+
+		.rail-card.two {
+			background: linear-gradient(135deg, var(--sun), var(--orange));
+		}
+
+		.rail-card.three {
+			background: linear-gradient(135deg, var(--blue), #c4f1ff);
+		}
+
+		.rail-card.four {
+			background: linear-gradient(135deg, var(--pink), #ffe0f2);
+		}
+
+		.rail-card.five {
+			background: linear-gradient(135deg, var(--violet), #f0e9ff);
+			color: #ffffff;
+		}
+
+		.rail-card.five .tick {
+			background: rgba(255, 255, 255, 0.42);
+		}
 
 		main {
 			min-width: 0;
@@ -239,8 +258,13 @@
 			background: var(--rose);
 		}
 
-		.dot:nth-child(2) { background: var(--sun); }
-		.dot:nth-child(3) { background: var(--green); }
+		.dot:nth-child(2) {
+			background: var(--sun);
+		}
+
+		.dot:nth-child(3) {
+			background: var(--green);
+		}
 
 		.editor-demo {
 			display: grid;
@@ -266,11 +290,26 @@
 			min-height: 56px;
 		}
 
-		.demo-mini:nth-child(1) { background: var(--lime); }
-		.demo-mini:nth-child(2) { background: var(--blue); }
-		.demo-mini:nth-child(3) { background: var(--sun); }
-		.demo-mini:nth-child(4) { background: var(--pink); }
-		.demo-mini:nth-child(5) { background: var(--violet); color: #ffffff; }
+		.demo-mini:nth-child(1) {
+			background: var(--lime);
+		}
+
+		.demo-mini:nth-child(2) {
+			background: var(--blue);
+		}
+
+		.demo-mini:nth-child(3) {
+			background: var(--sun);
+		}
+
+		.demo-mini:nth-child(4) {
+			background: var(--pink);
+		}
+
+		.demo-mini:nth-child(5) {
+			background: var(--violet);
+			color: #ffffff;
+		}
 
 		.demo-note {
 			padding: 26px 30px;
@@ -317,12 +356,12 @@
 			margin-top: 44px;
 		}
 
-		.section > h2 {
+		.section>h2 {
 			margin: 0 0 12px;
 			font-size: 1.5rem;
 		}
 
-		.section > p {
+		.section>p {
 			max-width: 72ch;
 			color: var(--muted);
 			margin: 0 0 18px;
@@ -449,10 +488,21 @@
 			color: inherit;
 		}
 
-		.slide-card:nth-child(1) { background: var(--lime); }
-		.slide-card:nth-child(2) { background: var(--blue); }
-		.slide-card:nth-child(3) { background: var(--sun); }
-		.slide-card:nth-child(4) { background: var(--pink); }
+		.slide-card:nth-child(1) {
+			background: var(--lime);
+		}
+
+		.slide-card:nth-child(2) {
+			background: var(--blue);
+		}
+
+		.slide-card:nth-child(3) {
+			background: var(--sun);
+		}
+
+		.slide-card:nth-child(4) {
+			background: var(--pink);
+		}
 
 		.slide-note {
 			padding: 14px;
@@ -546,10 +596,22 @@
 			color: #384252;
 		}
 
-		.level-high { background: #b7f7d0; }
-		.level-med { background: #ffe783; }
-		.level-low { background: #ffb0bd; }
-		.level-blank { background: #e8edf2; color: #667085; }
+		.level-high {
+			background: #b7f7d0;
+		}
+
+		.level-med {
+			background: #ffe783;
+		}
+
+		.level-low {
+			background: #ffb0bd;
+		}
+
+		.level-blank {
+			background: #e8edf2;
+			color: #667085;
+		}
 
 		.radar-legend {
 			display: flex;
@@ -587,10 +649,21 @@
 			box-shadow: 5px 5px 0 #17171a;
 		}
 
-		.panel:nth-child(1) { background: #ebfff8; }
-		.panel:nth-child(2) { background: #fff1b8; }
-		.panel:nth-child(3) { background: #fce7ff; }
-		.panel:nth-child(4) { background: #eaf1ff; }
+		.panel:nth-child(1) {
+			background: #ebfff8;
+		}
+
+		.panel:nth-child(2) {
+			background: #fff1b8;
+		}
+
+		.panel:nth-child(3) {
+			background: #fce7ff;
+		}
+
+		.panel:nth-child(4) {
+			background: #eaf1ff;
+		}
 
 		.panel .tag {
 			display: inline-flex;
@@ -640,9 +713,17 @@
 			color: #ffffff;
 		}
 
-		.phone-card:nth-child(1) { background: linear-gradient(160deg, #ff4f87, #ffbc42); }
-		.phone-card:nth-child(2) { background: linear-gradient(160deg, #32d399, #2563eb); }
-		.phone-card:nth-child(3) { background: linear-gradient(160deg, #8b5cf6, #111827); }
+		.phone-card:nth-child(1) {
+			background: linear-gradient(160deg, #ff4f87, #ffbc42);
+		}
+
+		.phone-card:nth-child(2) {
+			background: linear-gradient(160deg, #32d399, #2563eb);
+		}
+
+		.phone-card:nth-child(3) {
+			background: linear-gradient(160deg, #8b5cf6, #111827);
+		}
 
 		.phone-card .hook {
 			font-size: 1.35rem;
@@ -714,9 +795,17 @@
 			background: #f4ffed;
 		}
 
-		.callout:nth-child(2) { background: #fff6db; }
-		.callout:nth-child(3) { background: #f0f7ff; }
-		.callout:nth-child(4) { background: #fff0f6; }
+		.callout:nth-child(2) {
+			background: #fff6db;
+		}
+
+		.callout:nth-child(3) {
+			background: #f0f7ff;
+		}
+
+		.callout:nth-child(4) {
+			background: #fff0f6;
+		}
 
 		.callout h3 {
 			margin: 0 0 6px;
@@ -829,16 +918,27 @@
 		}
 	</style>
 </head>
+
 <body>
 	<div class="page">
 		<aside class="deck-rail" aria-label="Concept navigation">
 			<p class="rail-title">CueCraft concept deck</p>
 			<nav class="rail-stack">
-				<a class="rail-card one" href="#r1"><span class="num">R1</span><span class="label">Margin slide reel</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
-				<a class="rail-card two" href="#r2"><span class="num">R2</span><span class="label">Concept constellation</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
-				<a class="rail-card three" href="#r3"><span class="num">R3</span><span class="label">Recall radar</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
-				<a class="rail-card four" href="#r4"><span class="num">R4</span><span class="label">Manga review rail</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
-				<a class="rail-card five" href="#r5"><span class="num">R5</span><span class="label">Short-form hook mode</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
+				<a class="rail-card one" href="#r1"><span class="num">R1</span><span class="label">Margin slide
+						reel</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span
+							class="tick"></span><span class="tick"></span></span></a>
+				<a class="rail-card two" href="#r2"><span class="num">R2</span><span class="label">Concept
+						constellation</span><span class="ticks"><span class="tick"></span><span
+							class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
+				<a class="rail-card three" href="#r3"><span class="num">R3</span><span class="label">Recall
+						radar</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span
+							class="tick"></span><span class="tick"></span></span></a>
+				<a class="rail-card four" href="#r4"><span class="num">R4</span><span class="label">Manga review
+						rail</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span
+							class="tick"></span><span class="tick"></span></span></a>
+				<a class="rail-card five" href="#r5"><span class="num">R5</span><span class="label">Short-form hook
+						mode</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span
+							class="tick"></span><span class="tick"></span></span></a>
 			</nav>
 		</aside>
 
@@ -848,16 +948,28 @@
 					<div class="hero-copy">
 						<p class="kicker">Brainstorm requirements</p>
 						<h1>CueCraft graphical study surfaces</h1>
-						<p class="lede">Five visual directions for turning generated questions, keywords, and summaries into stronger reading, comprehension, and retention aids inside an Obsidian CodeMirror study layer.</p>
+						<p class="lede">Five visual directions for turning generated questions, keywords, and summaries
+							into stronger reading, comprehension, and retention aids inside an Obsidian CodeMirror study
+							layer.</p>
 						<dl class="meta-strip" aria-label="Document metadata">
-							<div><dt>date</dt><dd><time datetime="2026-06-18">2026-06-18</time></dd></div>
-							<div><dt>topic</dt><dd>graphical-study-surfaces</dd></div>
-							<div><dt>artifact</dt><dd>HTML concept deck</dd></div>
+							<div>
+								<dt>date</dt>
+								<dd><time datetime="2026-06-18">2026-06-18</time></dd>
+							</div>
+							<div>
+								<dt>topic</dt>
+								<dd>graphical-study-surfaces</dd>
+							</div>
+							<div>
+								<dt>artifact</dt>
+								<dd>HTML concept deck</dd>
+							</div>
 						</dl>
 					</div>
 					<div class="hero-preview" aria-label="Concept preview">
 						<div class="obsidian-window">
-							<div class="window-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+							<div class="window-top"><span class="dot"></span><span class="dot"></span><span
+									class="dot"></span></div>
 							<div class="editor-demo">
 								<div class="demo-margin">
 									<div class="demo-mini">Why does an agent plan?</div>
@@ -870,17 +982,21 @@
 									<h2>Claude for Execs</h2>
 									<div class="note-block">
 										<h3>Terms</h3>
-										<p>Agent, chatbot, Claude, MCP, plugins, and skills form a stack of increasing task autonomy.</p>
-										<span class="inline-hook">Question: How is an agent different from a chatbot?</span>
+										<p>Agent, chatbot, Claude, MCP, plugins, and skills form a stack of increasing
+											task autonomy.</p>
+										<span class="inline-hook">Question: How is an agent different from a
+											chatbot?</span>
 									</div>
 									<div class="note-block">
 										<h3>How to Upskill Employees</h3>
-										<p>Teams encode standards, workflows, and domain knowledge so AI outputs become shippable.</p>
+										<p>Teams encode standards, workflows, and domain knowledge so AI outputs become
+											shippable.</p>
 										<span class="inline-hook">Keywords: standards, tools, review</span>
 									</div>
 									<div class="note-block">
 										<h3>Study Takeaway</h3>
-										<p>Great AI adoption is less about one prompt and more about compounding encoded expertise.</p>
+										<p>Great AI adoption is less about one prompt and more about compounding encoded
+											expertise.</p>
 									</div>
 								</div>
 							</div>
@@ -891,13 +1007,21 @@
 
 			<section class="section" id="summary">
 				<h2>Summary</h2>
-				<p>CueCraft should explore a richer visual study layer where the left margin, cue supports, section state, and final summary become graphical memory scaffolding rather than static text blocks. The proposal keeps the current non-destructive Obsidian layer and selectable HTML text invariant, while testing five expressive surfaces that could become presets or future modes.</p>
+				<p>CueCraft should explore a richer visual study layer where the left margin, cue supports, section
+					state, and final summary become graphical memory scaffolding rather than static text blocks. The
+					proposal keeps the current non-destructive Obsidian layer and selectable HTML text invariant, while
+					testing five expressive surfaces that could become presets or future modes.</p>
 			</section>
 
 			<section class="section" id="problem-frame">
 				<h2>Problem Frame</h2>
-				<p>The current product promise is a retention loop: see a question, try to recall, reveal the source, then check the big picture against a summary. The existing UI already supports this with CodeMirror cue widgets and a Cornell view, but the generated question, keywords, and summary still read mostly like adjacent text. The opportunity is to make the generated structure spatial, graphical, and emotionally memorable without modifying the Markdown file.</p>
-				<p>Directional only - illustrates intended user-facing shape. Exact colors, spacing, copy, and component choices are placeholders for review, not requirements.</p>
+				<p>The current product promise is a retention loop: see a question, try to recall, reveal the source,
+					then check the big picture against a summary. The existing UI already supports this with CodeMirror
+					cue widgets and a Cornell view, but the generated question, keywords, and summary still read mostly
+					like adjacent text. The opportunity is to make the generated structure spatial, graphical, and
+					emotionally memorable without modifying the Markdown file.</p>
+				<p>Directional only - illustrates intended user-facing shape. Exact colors, spacing, copy, and component
+					choices are placeholders for review, not requirements.</p>
 			</section>
 
 			<section class="section" id="requirements">
@@ -907,12 +1031,18 @@
 					<div class="concept-copy">
 						<span class="r-chip">R1.</span>
 						<h3>Margin Slide Reel</h3>
-						<p>Render each section's question as a vivid miniature slide in the left margin. The note remains the reading surface, while the margin becomes a navigable deck of active-recall prompts.</p>
+						<p>Render each section's question as a vivid miniature slide in the left margin. The note
+							remains the reading surface, while the margin becomes a navigable deck of active-recall
+							prompts.</p>
 						<ul class="concept-list">
-							<li><strong>Retention move:</strong> spatial anchors make each section easier to revisit from memory.</li>
-							<li><strong>Question treatment:</strong> big, title-card wording with one section question per slide.</li>
-							<li><strong>Keyword treatment:</strong> three tiny support chips or bars on each slide, not a full tag pile.</li>
-							<li><strong>Summary treatment:</strong> the final slide becomes the study takeaway checkpoint.</li>
+							<li><strong>Retention move:</strong> spatial anchors make each section easier to revisit
+								from memory.</li>
+							<li><strong>Question treatment:</strong> big, title-card wording with one section question
+								per slide.</li>
+							<li><strong>Keyword treatment:</strong> three tiny support chips or bars on each slide, not
+								a full tag pile.</li>
+							<li><strong>Summary treatment:</strong> the final slide becomes the study takeaway
+								checkpoint.</li>
 						</ul>
 					</div>
 					<div>
@@ -927,13 +1057,17 @@
 								</div>
 								<div class="slide-note">
 									<p class="big-question">How is an agent different from a chatbot?</p>
-									<p>Before reading the answer, the learner sees the section as a slide they can mentally place in the note.</p>
-									<div class="keyword-row"><span>plans</span><span>tools</span><span>multi-step</span></div>
-									<div class="slide-summary">Study takeaway: autonomy increases when AI can plan, use tools, and refine across context.</div>
+									<p>Before reading the answer, the learner sees the section as a slide they can
+										mentally place in the note.</p>
+									<div class="keyword-row"><span>plans</span><span>tools</span><span>multi-step</span>
+									</div>
+									<div class="slide-summary">Study takeaway: autonomy increases when AI can plan, use
+										tools, and refine across context.</div>
 								</div>
 							</div>
 						</div>
-						<p class="caption">Best fit: notes with many headings where navigation and recall cues should become one surface.</p>
+						<p class="caption">Best fit: notes with many headings where navigation and recall cues should
+							become one surface.</p>
 					</div>
 				</article>
 
@@ -941,12 +1075,18 @@
 					<div class="concept-copy">
 						<span class="r-chip">R2.</span>
 						<h3>Concept Constellation</h3>
-						<p>Transform keywords into a visible semantic map around the question, then connect those maps into a note-level constellation. The learner sees how terms relate before trying to explain them.</p>
+						<p>Transform keywords into a visible semantic map around the question, then connect those maps
+							into a note-level constellation. The learner sees how terms relate before trying to explain
+							them.</p>
 						<ul class="concept-list">
-							<li><strong>Retention move:</strong> visual association turns isolated keywords into a mental retrieval path.</li>
-							<li><strong>Question treatment:</strong> the question is the central node for each section.</li>
-							<li><strong>Keyword treatment:</strong> keywords become orbiting nodes grouped by role or meaning.</li>
-							<li><strong>Summary treatment:</strong> summary is the bridge sentence that names the pattern across clusters.</li>
+							<li><strong>Retention move:</strong> visual association turns isolated keywords into a
+								mental retrieval path.</li>
+							<li><strong>Question treatment:</strong> the question is the central node for each section.
+							</li>
+							<li><strong>Keyword treatment:</strong> keywords become orbiting nodes grouped by role or
+								meaning.</li>
+							<li><strong>Summary treatment:</strong> summary is the bridge sentence that names the
+								pattern across clusters.</li>
 						</ul>
 					</div>
 					<div>
@@ -954,8 +1094,10 @@
 							<div class="mockup-title"><span>keyword graph</span><span>section memory map</span></div>
 							<svg class="map-svg" viewBox="0 0 640 360" role="img" aria-labelledby="map-title map-desc">
 								<title id="map-title">Concept constellation mockup</title>
-								<desc id="map-desc">A central active recall question is connected to keyword nodes, then linked to a summary bridge.</desc>
-								<rect x="26" y="24" width="238" height="104" rx="8" fill="#ffffff" stroke="#cbd5e1"></rect>
+								<desc id="map-desc">A central active recall question is connected to keyword nodes, then
+									linked to a summary bridge.</desc>
+								<rect x="26" y="24" width="238" height="104" rx="8" fill="#ffffff" stroke="#cbd5e1">
+								</rect>
 								<text x="44" y="52" class="map-small">QUESTION</text>
 								<text x="44" y="82" class="map-label">How does an agent differ</text>
 								<text x="44" y="102" class="map-label">from a chatbot?</text>
@@ -969,19 +1111,27 @@
 								<circle cx="536" cy="244" r="38" fill="#ffd0de" stroke="#f6a0b7"></circle>
 								<text x="512" y="249" class="map-label">decides</text>
 
-								<path d="M264 80 C305 58, 324 58, 344 70" fill="none" stroke="#94a3b8" stroke-width="3"></path>
-								<path d="M264 94 C350 96, 408 100, 458 110" fill="none" stroke="#94a3b8" stroke-width="3"></path>
-								<path d="M254 124 C292 172, 330 196, 364 202" fill="none" stroke="#94a3b8" stroke-width="3"></path>
-								<path d="M444 210 C474 226, 488 236, 498 242" fill="none" stroke="#94a3b8" stroke-width="3"></path>
+								<path d="M264 80 C305 58, 324 58, 344 70" fill="none" stroke="#94a3b8" stroke-width="3">
+								</path>
+								<path d="M264 94 C350 96, 408 100, 458 110" fill="none" stroke="#94a3b8"
+									stroke-width="3"></path>
+								<path d="M254 124 C292 172, 330 196, 364 202" fill="none" stroke="#94a3b8"
+									stroke-width="3"></path>
+								<path d="M444 210 C474 226, 488 236, 498 242" fill="none" stroke="#94a3b8"
+									stroke-width="3"></path>
 
 								<rect x="52" y="244" width="282" height="72" rx="8" fill="#17171a"></rect>
 								<text x="72" y="272" fill="#ffffff" class="map-small">SUMMARY BRIDGE</text>
-								<text x="72" y="296" fill="#ffffff" class="map-label">Autonomy rises when planning,</text>
-								<text x="72" y="316" fill="#ffffff" class="map-label">tool use, and decision loops combine.</text>
-								<path d="M382 232 C346 258, 346 282, 334 284" fill="none" stroke="#17171a" stroke-width="3"></path>
+								<text x="72" y="296" fill="#ffffff" class="map-label">Autonomy rises when
+									planning,</text>
+								<text x="72" y="316" fill="#ffffff" class="map-label">tool use, and decision loops
+									combine.</text>
+								<path d="M382 232 C346 258, 346 282, 334 284" fill="none" stroke="#17171a"
+									stroke-width="3"></path>
 							</svg>
 						</div>
-						<p class="caption">Best fit: concept-heavy notes where keywords should show relationships, not merely hint terms.</p>
+						<p class="caption">Best fit: concept-heavy notes where keywords should show relationships, not
+							merely hint terms.</p>
 					</div>
 				</article>
 
@@ -989,12 +1139,17 @@
 					<div class="concept-copy">
 						<span class="r-chip">R3.</span>
 						<h3>Recall Radar</h3>
-						<p>Show a section-by-section review heatmap that combines cue confidence, freshness, reveal history, and summary coverage. The learner gets a scanable map of what to study first.</p>
+						<p>Show a section-by-section review heatmap that combines cue confidence, freshness, reveal
+							history, and summary coverage. The learner gets a scanable map of what to study first.</p>
 						<ul class="concept-list">
-							<li><strong>Retention move:</strong> attention is guided toward weak, stale, or unrevealed sections.</li>
-							<li><strong>Question treatment:</strong> questions remain visible, but the margin ranks their study urgency.</li>
-							<li><strong>Keyword treatment:</strong> keyword supports are dimmed until the learner asks for a hint.</li>
-							<li><strong>Summary treatment:</strong> summary coverage shows whether the final takeaway reflects all major sections.</li>
+							<li><strong>Retention move:</strong> attention is guided toward weak, stale, or unrevealed
+								sections.</li>
+							<li><strong>Question treatment:</strong> questions remain visible, but the margin ranks
+								their study urgency.</li>
+							<li><strong>Keyword treatment:</strong> keyword supports are dimmed until the learner asks
+								for a hint.</li>
+							<li><strong>Summary treatment:</strong> summary coverage shows whether the final takeaway
+								reflects all major sections.</li>
 						</ul>
 					</div>
 					<div>
@@ -1035,7 +1190,8 @@
 								</div>
 							</div>
 						</div>
-						<p class="caption">Best fit: long notes where learners need review triage more than another block of prose.</p>
+						<p class="caption">Best fit: long notes where learners need review triage more than another
+							block of prose.</p>
 					</div>
 				</article>
 
@@ -1043,25 +1199,41 @@
 					<div class="concept-copy">
 						<span class="r-chip">R4.</span>
 						<h3>Manga Review Rail</h3>
-						<p>Render the study path as a four-panel visual story: setup, tension, reveal, payoff. The left rail becomes a playful sequence that makes the section's answer feel like a narrative beat.</p>
+						<p>Render the study path as a four-panel visual story: setup, tension, reveal, payoff. The left
+							rail becomes a playful sequence that makes the section's answer feel like a narrative beat.
+						</p>
 						<ul class="concept-list">
-							<li><strong>Retention move:</strong> narrative order helps learners reconstruct the answer from story beats.</li>
-							<li><strong>Question treatment:</strong> each panel converts the question into a staged prompt.</li>
-							<li><strong>Keyword treatment:</strong> keywords become props in the panel, not chips below it.</li>
-							<li><strong>Summary treatment:</strong> final panel compresses the section into one "payoff" sentence.</li>
+							<li><strong>Retention move:</strong> narrative order helps learners reconstruct the answer
+								from story beats.</li>
+							<li><strong>Question treatment:</strong> each panel converts the question into a staged
+								prompt.</li>
+							<li><strong>Keyword treatment:</strong> keywords become props in the panel, not chips below
+								it.</li>
+							<li><strong>Summary treatment:</strong> final panel compresses the section into one "payoff"
+								sentence.</li>
 						</ul>
 					</div>
 					<div>
 						<div class="mockup manga-demo">
-							<div class="mockup-title"><span>review story rail</span><span>comic-style sequence</span></div>
+							<div class="mockup-title"><span>review story rail</span><span>comic-style sequence</span>
+							</div>
 							<div class="mockup-body manga-grid">
-								<div class="panel"><span class="tag">SETUP</span><p>Chatbot answers once.</p><span class="sub">keyword: single-turn</span></div>
-								<div class="panel"><span class="tag">TENSION</span><p>The task needs planning.</p><span class="sub">keyword: multi-step</span></div>
-								<div class="panel"><span class="tag">REVEAL</span><p>Agent chooses tools.</p><span class="sub">keyword: actions</span></div>
-								<div class="panel"><span class="tag">PAYOFF</span><p>Autonomy is the difference.</p><span class="sub">summary checkpoint</span></div>
+								<div class="panel"><span class="tag">SETUP</span>
+									<p>Chatbot answers once.</p><span class="sub">keyword: single-turn</span>
+								</div>
+								<div class="panel"><span class="tag">TENSION</span>
+									<p>The task needs planning.</p><span class="sub">keyword: multi-step</span>
+								</div>
+								<div class="panel"><span class="tag">REVEAL</span>
+									<p>Agent chooses tools.</p><span class="sub">keyword: actions</span>
+								</div>
+								<div class="panel"><span class="tag">PAYOFF</span>
+									<p>Autonomy is the difference.</p><span class="sub">summary checkpoint</span>
+								</div>
 							</div>
 						</div>
-						<p class="caption">Best fit: exploratory notes, talks, and tutorials where concept order matters as much as isolated recall.</p>
+						<p class="caption">Best fit: exploratory notes, talks, and tutorials where concept order matters
+							as much as isolated recall.</p>
 					</div>
 				</article>
 
@@ -1069,11 +1241,16 @@
 					<div class="concept-copy">
 						<span class="r-chip">R5.</span>
 						<h3>Short-Form Hook Mode</h3>
-						<p>Offer an optional high-energy review mode where each question is rewritten visually like a short-form title card. This is not the default reading surface; it is a deliberate sprint mode for recall reps.</p>
+						<p>Offer an optional high-energy review mode where each question is rewritten visually like a
+							short-form title card. This is not the default reading surface; it is a deliberate sprint
+							mode for recall reps.</p>
 						<ul class="concept-list">
-							<li><strong>Retention move:</strong> memorable phrasing increases the chance a learner will try the question again.</li>
-							<li><strong>Question treatment:</strong> the active-recall question becomes a bold hook while retaining its answer intent.</li>
-							<li><strong>Keyword treatment:</strong> supports are sequenced as tappable or revealable beats.</li>
+							<li><strong>Retention move:</strong> memorable phrasing increases the chance a learner will
+								try the question again.</li>
+							<li><strong>Question treatment:</strong> the active-recall question becomes a bold hook
+								while retaining its answer intent.</li>
+							<li><strong>Keyword treatment:</strong> supports are sequenced as tappable or revealable
+								beats.</li>
 							<li><strong>Summary treatment:</strong> the note takeaway becomes the final title card.</li>
 						</ul>
 					</div>
@@ -1083,15 +1260,18 @@
 							<div class="mockup-body phone-row">
 								<div class="phone-card">
 									<div class="hook">Chatbot or agent? prove it.</div>
-									<div class="support"><span>plans</span><span>decides</span><span>uses tools</span></div>
+									<div class="support"><span>plans</span><span>decides</span><span>uses tools</span>
+									</div>
 								</div>
 								<div class="phone-card">
 									<div class="hook">What makes AI work shippable?</div>
-									<div class="support"><span>standards</span><span>review</span><span>context</span></div>
+									<div class="support"><span>standards</span><span>review</span><span>context</span>
+									</div>
 								</div>
 								<div class="phone-card">
 									<div class="hook">Why does progress compound?</div>
-									<div class="support"><span>feedback</span><span>knowledge</span><span>reuse</span></div>
+									<div class="support"><span>feedback</span><span>knowledge</span><span>reuse</span>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -1104,13 +1284,39 @@
 				<h2>Acceptance Examples</h2>
 				<table class="requirement-table">
 					<thead>
-						<tr><th>ID</th><th>Example</th><th>Why it matters</th></tr>
+						<tr>
+							<th>ID</th>
+							<th>Example</th>
+							<th>Why it matters</th>
+						</tr>
 					</thead>
 					<tbody>
-						<tr id="ae1"><td>AE1.</td><td>Given cached section cues, when a learner opens a note, then the graphical surface renders beside or around the note without changing Markdown content.</td><td>Preserves CueCraft's non-destructive promise.</td></tr>
-						<tr id="ae2"><td>AE2.</td><td>Given Study Mode is active, when the learner has not revealed a section, then the question remains readable while support terms can be hidden, softened, or staged.</td><td>Protects active recall from becoming passive hint-reading.</td></tr>
-						<tr id="ae3"><td>AE3.</td><td>Given a long note, when the learner scans the visual surface, then weak, stale, unrevealed, or uncovered sections are visually distinguishable without reading every cue.</td><td>Makes review prioritization useful.</td></tr>
-						<tr id="ae4"><td>AE4.</td><td>Given a theme change, when the concept is rendered in Obsidian, then primary question, keyword, and summary text remains normal selectable HTML text with readable contrast.</td><td>Keeps graphical expression compatible with Obsidian themes.</td></tr>
+						<tr id="ae1">
+							<td>AE1.</td>
+							<td>Given cached section cues, when a learner opens a note, then the graphical surface
+								renders beside or around the note without changing Markdown content.</td>
+							<td>Preserves CueCraft's non-destructive promise.</td>
+						</tr>
+						<tr id="ae2">
+							<td>AE2.</td>
+							<td>Given Study Mode is active, when the learner has not revealed a section, then the
+								question remains readable while support terms can be hidden, softened, or staged.</td>
+							<td>Protects active recall from becoming passive hint-reading.</td>
+						</tr>
+						<tr id="ae3">
+							<td>AE3.</td>
+							<td>Given a long note, when the learner scans the visual surface, then weak, stale,
+								unrevealed, or uncovered sections are visually distinguishable without reading every
+								cue.</td>
+							<td>Makes review prioritization useful.</td>
+						</tr>
+						<tr id="ae4">
+							<td>AE4.</td>
+							<td>Given a theme change, when the concept is rendered in Obsidian, then primary question,
+								keyword, and summary text remains normal selectable HTML text with readable contrast.
+							</td>
+							<td>Keeps graphical expression compatible with Obsidian themes.</td>
+						</tr>
 					</tbody>
 				</table>
 			</section>
@@ -1120,19 +1326,23 @@
 				<div class="callout-grid">
 					<div class="callout">
 						<h3>Graphical, not decorative</h3>
-						<p>Each concept must teach orientation, relationship, priority, sequence, or final synthesis. Purely decorative skins do not count.</p>
+						<p>Each concept must teach orientation, relationship, priority, sequence, or final synthesis.
+							Purely decorative skins do not count.</p>
 					</div>
 					<div class="callout">
 						<h3>Use existing generated fields first</h3>
-						<p>Question, keywords, confidence, rationale, summary, and learning objective are enough to prototype these visuals before changing generation schemas.</p>
+						<p>Question, keywords, confidence, rationale, summary, and learning objective are enough to
+							prototype these visuals before changing generation schemas.</p>
 					</div>
 					<div class="callout">
 						<h3>Make energy a mode</h3>
-						<p>High-color manga and hook cards are valuable in review contexts, but calm Cornell reading should remain available.</p>
+						<p>High-color manga and hook cards are valuable in review contexts, but calm Cornell reading
+							should remain available.</p>
 					</div>
 					<div class="callout">
 						<h3>Keep text real</h3>
-						<p>Question, keyword, and summary text should remain selectable and readable as HTML. SVG and CSS carry layout, relationships, and emphasis.</p>
+						<p>Question, keyword, and summary text should remain selectable and readable as HTML. SVG and
+							CSS carry layout, relationships, and emphasis.</p>
 					</div>
 				</div>
 			</section>
@@ -1141,14 +1351,37 @@
 				<h2>Success Criteria</h2>
 				<table class="requirement-table">
 					<thead>
-						<tr><th>Signal</th><th>Target</th></tr>
+						<tr>
+							<th>Signal</th>
+							<th>Target</th>
+						</tr>
 					</thead>
 					<tbody>
-						<tr><td>Recall</td><td>Learners can answer a section question before revealing the note body more often than with the plain cue card.</td></tr>
-						<tr><td>Comprehension</td><td>Learners can explain how keywords relate to the question, not just repeat the terms.</td></tr>
-						<tr><td>Retention</td><td>Learners can return to a note later and use the visual surface to reconstruct its major sections.</td></tr>
-						<tr><td>Theme safety</td><td>Primary text stays readable in light theme, dark theme, and at least one community theme.</td></tr>
-						<tr><td>Carrying cost</td><td>The first build can prototype one concept without changing cached Markdown or requiring a new provider contract.</td></tr>
+						<tr>
+							<td>Recall</td>
+							<td>Learners can answer a section question before revealing the note body more often than
+								with the plain cue card.</td>
+						</tr>
+						<tr>
+							<td>Comprehension</td>
+							<td>Learners can explain how keywords relate to the question, not just repeat the terms.
+							</td>
+						</tr>
+						<tr>
+							<td>Retention</td>
+							<td>Learners can return to a note later and use the visual surface to reconstruct its major
+								sections.</td>
+						</tr>
+						<tr>
+							<td>Theme safety</td>
+							<td>Primary text stays readable in light theme, dark theme, and at least one community
+								theme.</td>
+						</tr>
+						<tr>
+							<td>Carrying cost</td>
+							<td>The first build can prototype one concept without changing cached Markdown or requiring
+								a new provider contract.</td>
+						</tr>
 					</tbody>
 				</table>
 			</section>
@@ -1194,20 +1427,37 @@
 			<section class="section" id="sources-research">
 				<h2>Sources / Research</h2>
 				<ul class="sources">
-					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/README.md"><code>README.md</code></a> - product promise: non-destructive active-recall study cues for Obsidian.</li>
-					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/docs/CueCraft-MVP-Scope.md"><code>docs/CueCraft-MVP-Scope.md</code></a> - core retention loop and MVP display constraints.</li>
-					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/docs/CueCraft-v1-User-Stories.md"><code>docs/CueCraft-v1-User-Stories.md</code></a> - editor cue display, Study Mode, and summary acceptance criteria.</li>
-					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/src/cue-extension.ts"><code>src/cue-extension.ts</code></a> - current CodeMirror cue widget shape.</li>
-					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/src/cornell-view.ts"><code>src/cornell-view.ts</code></a> - current Cornell rendering for cue cells, support terms, Study Mode, and summary.</li>
-					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/src/cornell.ts"><code>src/cornell.ts</code></a> - current model fields available to visual surfaces.</li>
-					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/docs/plans/2026-06-12-001-feat-cornell-view-polish-plan.md"><code>docs/plans/2026-06-12-001-feat-cornell-view-polish-plan.md</code></a> - prior polish direction for softer Cornell structure, study takeaway, and keyword supports.</li>
+					<li><a
+							href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/README.md"><code>README.md</code></a>
+						- product promise: non-destructive active-recall study cues for Obsidian.</li>
+					<li><a
+							href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/docs/CueCraft-MVP-Scope.md"><code>docs/CueCraft-MVP-Scope.md</code></a>
+						- core retention loop and MVP display constraints.</li>
+					<li><a
+							href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/docs/CueCraft-v1-User-Stories.md"><code>docs/CueCraft-v1-User-Stories.md</code></a>
+						- editor cue display, Study Mode, and summary acceptance criteria.</li>
+					<li><a
+							href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/cue-extension.ts"><code>src/cue-extension.ts</code></a>
+						- current CodeMirror cue widget shape.</li>
+					<li><a
+							href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/cornell-view.ts"><code>src/cornell-view.ts</code></a>
+						- current Cornell rendering for cue cells, support terms, Study Mode, and summary.</li>
+					<li><a
+							href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/cornell.ts"><code>src/cornell.ts</code></a>
+						- current model fields available to visual surfaces.</li>
+					<li><a
+							href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/docs/plans/2026-06-12-001-feat-cornell-view-polish-plan.md"><code>docs/plans/2026-06-12-001-feat-cornell-view-polish-plan.md</code></a>
+						- prior polish direction for softer Cornell structure, study takeaway, and keyword supports.
+					</li>
 				</ul>
 			</section>
 
 			<footer class="composition-signal">
-				Composed 2026-06-18T22:46Z by ce-brainstorm from the user prompt requesting five graphical improvements to CueCraft summary, question, and keyword display.
+				Composed 2026-06-18T22:46Z by ce-brainstorm from the user prompt requesting five graphical improvements
+				to CueCraft summary, question, and keyword display.
 			</footer>
 		</main>
 	</div>
 </body>
+
 </html>

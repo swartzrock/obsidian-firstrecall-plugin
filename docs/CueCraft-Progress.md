@@ -314,9 +314,6 @@ bun run build      # tsc -noEmit + esbuild -> main.js
 bun run test       # vitest (229 tests)
 ```
 
-Install into a vault by copying `main.js`, `manifest.json`, `styles.css` into
-`<vault>/.obsidian/plugins/cuecraft-devin/`, then enable CueCraft in Community plugins.
-Set a provider in Settings (Ollama needs a running local server + model; cloud providers need an API key).
 
 Key source layout: `src/providers/` (provider interface + Ollama + `AiSdkProvider` base and the
 four AI-SDK vendors), `src/generator.ts` (generation + per-section/stale regen), `src/cache.ts`
