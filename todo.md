@@ -47,24 +47,24 @@ Rules:
 
 ## Phase 1 - OpenRouter Provider Plumbing
 
-- [ ] Add `openrouter` to `ProviderId` and every provider switch that must recognize it.
-- [ ] Add OpenRouter settings fields to `CueCraftSettings` and `DEFAULT_SETTINGS`:
+- [x] Add `openrouter` to `ProviderId` and every provider switch that must recognize it.
+- [x] Add OpenRouter settings fields to `CueCraftSettings` and `DEFAULT_SETTINGS`:
   - `openrouterApiKey`
   - `openrouterModel`
   - `openrouterAvailableModels`
   - `openrouterHasFetchedModels`
   - `openrouterModelRefreshMessage`
-- [ ] Add OpenRouter to provider display names, selected model labels, and setup/status maps.
-- [ ] Add OpenRouter credential UI using the same local-key pattern as the other cloud providers.
-- [ ] Add OpenRouter to `isConfigured()` and `makeProvider()` in `src/main.ts`.
-- [ ] Create `src/providers/openrouter-provider.ts`.
-- [ ] Implement OpenRouter generation through the OpenAI-compatible AI SDK path with base URL `https://openrouter.ai/api/v1`.
-- [ ] Add minimal OpenRouter attribution headers if supported by the existing fetch path, without sending vault or note content as metadata.
-- [ ] Implement `listModels()` against OpenRouter's models endpoint and return string IDs for this first phase.
-- [ ] Add provider tests covering generation, connection testing, model listing, API key handling, and abort behavior.
-- [ ] Update `docs/CueCraft-Progress.md` and the test count.
-- [ ] Run `bun run typecheck`.
-- [ ] Run `bun run test`.
+- [x] Add OpenRouter to provider display names, selected model labels, and setup/status maps.
+- [x] Add OpenRouter credential UI using the same local-key pattern as the other cloud providers.
+- [x] Add OpenRouter to `isConfigured()` and `makeProvider()` in `src/main.ts`.
+- [x] Create `src/providers/openrouter-provider.ts`.
+- [x] Implement OpenRouter generation through the OpenAI-compatible AI SDK path with base URL `https://openrouter.ai/api/v1`.
+- [x] Add minimal OpenRouter attribution headers if supported by the existing fetch path, without sending vault or note content as metadata.
+- [x] Implement `listModels()` against OpenRouter's models endpoint and return string IDs for this first phase.
+- [x] Add provider tests covering generation, connection testing, model listing, API key handling, and abort behavior.
+- [x] Update `docs/CueCraft-Progress.md` and the test count.
+- [x] Run `bun run typecheck`.
+- [x] Run `bun run test`.
 
 Manual Obsidian test instructions:
 

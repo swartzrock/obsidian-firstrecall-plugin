@@ -5,7 +5,8 @@ export type ProviderSetupStatusId =
 	| "anthropic"
 	| "openai"
 	| "google"
-	| "xai";
+	| "xai"
+	| "openrouter";
 
 export interface ProviderConnectionSnapshot {
 	credentialFingerprint: string;
@@ -19,6 +20,7 @@ export interface ProviderConnectionStatusMap {
 	openai?: ProviderConnectionSnapshot;
 	google?: ProviderConnectionSnapshot;
 	xai?: ProviderConnectionSnapshot;
+	openrouter?: ProviderConnectionSnapshot;
 }
 
 export interface ProviderSetupStatusSettings {
@@ -34,6 +36,8 @@ export interface ProviderSetupStatusSettings {
 	googleModel: string;
 	xaiApiKey: string;
 	xaiModel: string;
+	openrouterApiKey: string;
+	openrouterModel: string;
 	providerConnectionStatus?: ProviderConnectionStatusMap;
 }
 
@@ -60,6 +64,8 @@ function currentCredentialValue(settings: ProviderSetupStatusSettings): string {
 			return trimValue(settings.googleApiKey);
 		case "xai":
 			return trimValue(settings.xaiApiKey);
+		case "openrouter":
+			return trimValue(settings.openrouterApiKey);
 	}
 }
 
@@ -75,6 +81,8 @@ function currentModelValue(settings: ProviderSetupStatusSettings): string {
 			return trimValue(settings.googleModel);
 		case "xai":
 			return trimValue(settings.xaiModel);
+		case "openrouter":
+			return trimValue(settings.openrouterModel);
 	}
 }
 

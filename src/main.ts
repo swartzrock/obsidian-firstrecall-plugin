@@ -27,6 +27,7 @@ import { AnthropicProvider } from "./providers/anthropic-provider";
 import { OpenAIProvider } from "./providers/openai-provider";
 import { GoogleProvider } from "./providers/google-provider";
 import { XaiProvider } from "./providers/xai-provider";
+import { OpenRouterProvider } from "./providers/openrouter-provider";
 import type { AiProvider, HttpClient } from "./providers/types";
 import { parseSections, type Section } from "./parser";
 import {
@@ -327,6 +328,8 @@ export default class CueCraftPlugin extends Plugin {
 				return Boolean(s.googleApiKey && s.googleModel);
 			case "xai":
 				return Boolean(s.xaiApiKey && s.xaiModel);
+			case "openrouter":
+				return Boolean(s.openrouterApiKey && s.openrouterModel);
 			default:
 				return Boolean(s.ollamaHost && s.ollamaModel);
 		}
@@ -829,6 +832,12 @@ export default class CueCraftPlugin extends Plugin {
 					model: s.xaiModel,
 					fetchImpl,
 				});
+			case "openrouter":
+				return new OpenRouterProvider({
+					apiKey: s.openrouterApiKey,
+					model: s.openrouterModel,
+					fetchImpl,
+				});
 			default:
 				return new OllamaProvider({
 					host: s.ollamaHost,
@@ -859,6 +868,8 @@ export default class CueCraftPlugin extends Plugin {
 				return s.googleModel;
 			case "xai":
 				return s.xaiModel;
+			case "openrouter":
+				return s.openrouterModel;
 			default:
 				return s.ollamaModel;
 		}

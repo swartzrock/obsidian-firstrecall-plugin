@@ -21,6 +21,8 @@ function baseSettings(
 		googleModel: "",
 		xaiApiKey: "",
 		xaiModel: "",
+		openrouterApiKey: "",
+		openrouterModel: "",
 		providerConnectionStatus: {},
 		...overrides,
 	};

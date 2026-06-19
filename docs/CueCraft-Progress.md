@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, configurable Reading-mode display options, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 255 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (OpenRouter provider plumbing — first-class OpenRouter support via the OpenAI-compatible AI SDK path with attribution headers, model listing against the OpenRouter models endpoint, credential UI, and full provider switch integration; Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, configurable Reading-mode display options, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 270 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -47,6 +47,11 @@ Each item links to the PR that delivered it.
   CORS-safe via Obsidian `requestUrl` (#19).
 - **OpenAI / Gemini / Grok providers** — shared `AiSdkProvider` base + three vendor subclasses;
   per-provider key/model settings + Test connection (#21).
+- **OpenRouter provider** — first-class OpenRouter support via the OpenAI-compatible AI SDK path
+  (`@ai-sdk/openai` with `baseURL: https://openrouter.ai/api/v1`), attribution headers
+  (`HTTP-Referer`, `X-Title`), model listing against `GET /models`, credential UI following
+  the same local-key pattern as the other cloud providers, and full integration across every
+  provider switch (`isConfigured`, `makeProvider`, setup status, settings display).
 - **Regenerate tone variants** — per-section regenerate offers a tone menu (More conceptual,
   Exam prep, Simpler, Vocabulary), forwarded as a one-off preset override without changing the
   global setting (#27).

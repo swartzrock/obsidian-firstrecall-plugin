@@ -3,6 +3,7 @@ import { z } from "zod";
 import { OpenAIProvider } from "../src/providers/openai-provider";
 import { GoogleProvider } from "../src/providers/google-provider";
 import { XaiProvider } from "../src/providers/xai-provider";
+import { OpenRouterProvider } from "../src/providers/openrouter-provider";
 import type { ObjectGenerator } from "../src/providers/ai-sdk-provider";
 import { ProviderError, ProviderRateLimitError } from "../src/providers/types";
 
@@ -53,6 +54,7 @@ const cases: Array<{ name: string; Ctor: Ctor; id: string; vendor: RegExp; model
 	{ name: "OpenAIProvider", Ctor: OpenAIProvider, id: "openai", vendor: /OpenAI/, model: "gpt-4o-mini" },
 	{ name: "GoogleProvider", Ctor: GoogleProvider, id: "google", vendor: /Google/, model: "gemini-1.5-flash" },
 	{ name: "XaiProvider", Ctor: XaiProvider, id: "xai", vendor: /xAI/, model: "grok-2-latest" },
+	{ name: "OpenRouterProvider", Ctor: OpenRouterProvider, id: "openrouter", vendor: /OpenRouter/, model: "anthropic/claude-sonnet-4" },
 ];
 
 for (const c of cases) {
@@ -290,24 +292,20 @@ for (const c of cases) {
 		});
 
 		it("listModels returns provider model ids", async () => {
+			const modelsByProvider: Record<string, string[]> = {
+				openai: ["gpt-4o-mini", "gpt-4.1"],
+				google: ["gemini-1.5-flash"],
+				xai: ["grok-2-latest", "grok-beta"],
+				openrouter: ["anthropic/claude-sonnet-4", "openai/gpt-4o"],
+			};
+			const expected = modelsByProvider[c.id] ?? ["grok-2-latest", "grok-beta"];
 			const provider = new c.Ctor({
 				apiKey: "k",
 				model: c.model,
 				generator: async () => ({ ok: true }) as never,
-				listModelsImpl: async () =>
-					c.id === "openai"
-						? ["gpt-4o-mini", "gpt-4.1"]
-						: c.id === "google"
-							? ["gemini-1.5-flash"]
-							: ["grok-2-latest", "grok-beta"],
+				listModelsImpl: async () => expected,
 			});
-			expect(await provider.listModels()).toEqual(
-				c.id === "openai"
-					? ["gpt-4o-mini", "gpt-4.1"]
-					: c.id === "google"
-						? ["gemini-1.5-flash"]
-						: ["grok-2-latest", "grok-beta"]
-			);
+			expect(await provider.listModels()).toEqual(expected);
 		});
 	});
 }

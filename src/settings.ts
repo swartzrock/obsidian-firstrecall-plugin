@@ -65,7 +65,7 @@ import type { AnthropicProvider } from "./providers/anthropic-provider";
  */
 export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
-export type ProviderId = "ollama" | "anthropic" | "openai" | "google" | "xai";
+export type ProviderId = "ollama" | "anthropic" | "openai" | "google" | "xai" | "openrouter";
 const CUSTOM_MODEL_SELECTION_ID = "__custom_model__";
 type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
 
@@ -94,6 +94,11 @@ export interface CueCraftSettings {
 	xaiAvailableModels: string[];
 	xaiHasFetchedModels: boolean;
 	xaiModelRefreshMessage: string;
+	openrouterApiKey: string;
+	openrouterModel: string;
+	openrouterAvailableModels: string[];
+	openrouterHasFetchedModels: boolean;
+	openrouterModelRefreshMessage: string;
 	ollamaAvailableModels: string[];
 	ollamaHasFetchedModels: boolean;
 	ollamaModelRefreshMessage: string;
@@ -142,6 +147,11 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	xaiAvailableModels: [],
 	xaiHasFetchedModels: false,
 	xaiModelRefreshMessage: "",
+	openrouterApiKey: "",
+	openrouterModel: "",
+	openrouterAvailableModels: [],
+	openrouterHasFetchedModels: false,
+	openrouterModelRefreshMessage: "",
 	ollamaAvailableModels: [],
 	ollamaHasFetchedModels: false,
 	ollamaModelRefreshMessage: "",
@@ -205,7 +215,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				break;
 			default:
 				containerEl.createEl("p", {
-					text: "CueCraft generates study cues using a local Ollama model or a frontier model (Claude, ChatGPT, Gemini, Grok). Your Markdown files are never modified.",
+					text: "CueCraft generates study cues using a local Ollama model, a frontier model (Claude, ChatGPT, Gemini, Grok), or any model via OpenRouter. Your Markdown files are never modified.",
 					cls: "cuecraft-settings-intro",
 				});
 				this.renderSettingsHome(containerEl);
@@ -363,6 +373,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				return "Gemini";
 			case "xai":
 				return "xAI";
+			case "openrouter":
+				return "OpenRouter";
 		}
 	}
 
@@ -386,6 +398,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				return settings.googleModel.trim();
 			case "xai":
 				return settings.xaiModel.trim();
+			case "openrouter":
+				return settings.openrouterModel.trim();
 			case "ollama":
 				return settings.ollamaModel.trim();
 		}
@@ -419,6 +433,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.addOption("openai", "OpenAI (ChatGPT)")
 					.addOption("google", "Google (Gemini)")
 					.addOption("xai", "xAI (Grok)")
+					.addOption("openrouter", "OpenRouter")
 					.setValue(this.plugin.settings.provider)
 					.onChange(async (value) => {
 						this.plugin.settings.provider = value as ProviderId;
@@ -1138,6 +1153,21 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					},
 				});
 				return;
+			case "openrouter":
+				this.renderCloudCredentialSettings(containerEl, {
+					vendor: "OpenRouter",
+					keyDesc: "Your OpenRouter API key (from openrouter.ai/keys). Stored locally in this vault's plugin data.",
+					keyPlaceholder: "sk-or-...",
+					getKey: () => s.openrouterApiKey,
+					setKey: (v) => {
+						s.openrouterApiKey = v;
+						s.openrouterAvailableModels = [];
+						s.openrouterHasFetchedModels = false;
+						s.openrouterModelRefreshMessage =
+							"Enter your OpenRouter API key first to fetch available models.";
+					},
+				});
+				return;
 		}
 	}
 
@@ -1199,6 +1229,23 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					setAvailableModels: (models) => (s.xaiAvailableModels = models),
 					setHasFetchedModels: (value) => (s.xaiHasFetchedModels = value),
 					setRefreshMessage: (value) => (s.xaiModelRefreshMessage = value),
+				});
+				return;
+			case "openrouter":
+				this.renderCloudModelSettings(containerEl, {
+					providerName: "OpenRouter",
+					modelLabel: "OpenRouter model",
+					modelDesc: "An OpenRouter model id (e.g. anthropic/claude-sonnet-4, openai/gpt-4o).",
+					modelPlaceholder: "anthropic/claude-sonnet-4",
+					getModel: () => s.openrouterModel,
+					setModel: (v) => (s.openrouterModel = v),
+					getApiKey: () => s.openrouterApiKey,
+					getAvailableModels: () => s.openrouterAvailableModels,
+					getHasFetchedModels: () => s.openrouterHasFetchedModels,
+					getRefreshMessage: () => s.openrouterModelRefreshMessage,
+					setAvailableModels: (models) => (s.openrouterAvailableModels = models),
+					setHasFetchedModels: (value) => (s.openrouterHasFetchedModels = value),
+					setRefreshMessage: (value) => (s.openrouterModelRefreshMessage = value),
 				});
 				return;
 		}
@@ -1520,6 +1567,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					return this.plugin.settings.googleApiKey;
 				case "xai":
 					return this.plugin.settings.xaiApiKey;
+				case "openrouter":
+					return this.plugin.settings.openrouterApiKey;
 				default:
 					return "";
 			}
@@ -1532,7 +1581,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						? "OpenAI"
 						: provider.id === "google"
 							? "Google"
-							: "xAI";
+							: provider.id === "openrouter"
+								? "OpenRouter"
+								: "xAI";
 			new Notice(`CueCraft: enter your ${providerName} API key first.`);
 			return;
 		}
