@@ -147,3 +147,5 @@ main.js
 
 # Obsidian local config
 data.json
+
+.DS_Store

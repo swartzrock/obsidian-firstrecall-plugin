@@ -1,0 +1,1213 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>CueCraft Graphical Study Surfaces</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--ink: #17171a;
+			--muted: #5d6470;
+			--paper: #fcfcf8;
+			--panel: #ffffff;
+			--line: #d9dfd2;
+			--mint: #2dd4bf;
+			--lime: #a3e635;
+			--sun: #facc15;
+			--orange: #fb923c;
+			--rose: #fb7185;
+			--pink: #f472b6;
+			--violet: #8b5cf6;
+			--blue: #38bdf8;
+			--green: #22c55e;
+			--shadow: 0 16px 50px rgba(23, 23, 26, 0.12);
+			--radius: 8px;
+		}
+
+		* {
+			box-sizing: border-box;
+			letter-spacing: 0;
+		}
+
+		html {
+			scroll-behavior: smooth;
+		}
+
+		body {
+			margin: 0;
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			color: var(--ink);
+			background:
+				linear-gradient(90deg, #202124 0 88px, transparent 88px),
+				linear-gradient(180deg, #f9fff0 0, #fff7f7 38%, #f4fffd 68%, #fffefa 100%);
+			line-height: 1.45;
+		}
+
+		a {
+			color: inherit;
+			text-decoration-color: rgba(23, 23, 26, 0.35);
+			text-underline-offset: 3px;
+		}
+
+		code {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			font-size: 0.92em;
+			background: rgba(23, 23, 26, 0.06);
+			border: 1px solid rgba(23, 23, 26, 0.08);
+			border-radius: 5px;
+			padding: 0.08rem 0.26rem;
+		}
+
+		.page {
+			display: grid;
+			grid-template-columns: 232px minmax(0, 1fr);
+			gap: 36px;
+			max-width: 1280px;
+			margin: 0 auto;
+			padding: 32px 32px 64px;
+		}
+
+		.deck-rail {
+			position: sticky;
+			top: 24px;
+			align-self: start;
+			color: #ffffff;
+			padding-top: 8px;
+		}
+
+		.rail-title {
+			font-size: 0.82rem;
+			font-weight: 800;
+			text-transform: uppercase;
+			margin: 0 0 14px;
+		}
+
+		.rail-stack {
+			display: grid;
+			gap: 10px;
+		}
+
+		.rail-card {
+			display: block;
+			color: #17171a;
+			text-decoration: none;
+			border-radius: var(--radius);
+			padding: 10px;
+			min-height: 88px;
+			border: 1px solid rgba(255, 255, 255, 0.65);
+			box-shadow: 0 10px 22px rgba(0, 0, 0, 0.16);
+		}
+
+		.rail-card span {
+			display: block;
+		}
+
+		.rail-card .num {
+			font-size: 0.78rem;
+			font-weight: 900;
+		}
+
+		.rail-card .label {
+			margin-top: 8px;
+			font-size: 0.86rem;
+			line-height: 1.1;
+			font-weight: 850;
+		}
+
+		.rail-card .ticks {
+			display: grid;
+			grid-template-columns: repeat(4, 1fr);
+			gap: 4px;
+			margin-top: 10px;
+		}
+
+		.tick {
+			height: 7px;
+			border-radius: 3px;
+			background: rgba(23, 23, 26, 0.22);
+		}
+
+		.rail-card.one { background: linear-gradient(135deg, var(--lime), var(--mint)); }
+		.rail-card.two { background: linear-gradient(135deg, var(--sun), var(--orange)); }
+		.rail-card.three { background: linear-gradient(135deg, var(--blue), #c4f1ff); }
+		.rail-card.four { background: linear-gradient(135deg, var(--pink), #ffe0f2); }
+		.rail-card.five { background: linear-gradient(135deg, var(--violet), #f0e9ff); color: #ffffff; }
+		.rail-card.five .tick { background: rgba(255, 255, 255, 0.42); }
+
+		main {
+			min-width: 0;
+		}
+
+		.hero {
+			background: var(--panel);
+			border: 1px solid rgba(23, 23, 26, 0.1);
+			border-radius: var(--radius);
+			box-shadow: var(--shadow);
+			overflow: hidden;
+		}
+
+		.hero-grid {
+			display: grid;
+			grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+			gap: 0;
+		}
+
+		.hero-copy {
+			padding: 36px;
+		}
+
+		.kicker {
+			margin: 0 0 12px;
+			font-size: 0.78rem;
+			font-weight: 850;
+			text-transform: uppercase;
+			color: #216155;
+		}
+
+		h1 {
+			margin: 0;
+			font-size: 2.35rem;
+			line-height: 1;
+			max-width: 12ch;
+		}
+
+		.lede {
+			margin: 18px 0 0;
+			max-width: 58ch;
+			color: var(--muted);
+			font-size: 1rem;
+		}
+
+		.meta-strip {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 10px;
+			margin-top: 24px;
+		}
+
+		.meta-strip div {
+			border-radius: var(--radius);
+			padding: 10px;
+			background: #f1f5e8;
+			border: 1px solid rgba(23, 23, 26, 0.08);
+		}
+
+		.meta-strip dt {
+			font-size: 0.72rem;
+			font-weight: 850;
+			text-transform: uppercase;
+			color: var(--muted);
+			margin-bottom: 2px;
+		}
+
+		.meta-strip dd {
+			margin: 0;
+			font-weight: 750;
+		}
+
+		.hero-preview {
+			background:
+				linear-gradient(90deg, #26292f 0 82px, transparent 82px),
+				#eef4f1;
+			padding: 24px;
+			border-left: 1px solid rgba(23, 23, 26, 0.1);
+		}
+
+		.obsidian-window {
+			background: #fbfbfb;
+			border: 1px solid #cdd4cd;
+			border-radius: var(--radius);
+			overflow: hidden;
+			box-shadow: 0 18px 40px rgba(23, 23, 26, 0.18);
+		}
+
+		.window-top {
+			height: 34px;
+			background: #ecefed;
+			border-bottom: 1px solid #d7ddd6;
+			display: flex;
+			align-items: center;
+			gap: 7px;
+			padding: 0 12px;
+		}
+
+		.dot {
+			width: 10px;
+			height: 10px;
+			border-radius: 50%;
+			background: var(--rose);
+		}
+
+		.dot:nth-child(2) { background: var(--sun); }
+		.dot:nth-child(3) { background: var(--green); }
+
+		.editor-demo {
+			display: grid;
+			grid-template-columns: 104px minmax(0, 1fr);
+			min-height: 430px;
+		}
+
+		.demo-margin {
+			background: #202124;
+			padding: 12px 10px;
+			display: grid;
+			align-content: start;
+			gap: 9px;
+		}
+
+		.demo-mini {
+			border-radius: 6px;
+			padding: 7px;
+			font-size: 0.64rem;
+			line-height: 1.1;
+			font-weight: 850;
+			color: #151515;
+			min-height: 56px;
+		}
+
+		.demo-mini:nth-child(1) { background: var(--lime); }
+		.demo-mini:nth-child(2) { background: var(--blue); }
+		.demo-mini:nth-child(3) { background: var(--sun); }
+		.demo-mini:nth-child(4) { background: var(--pink); }
+		.demo-mini:nth-child(5) { background: var(--violet); color: #ffffff; }
+
+		.demo-note {
+			padding: 26px 30px;
+			background: #ffffff;
+		}
+
+		.demo-note h2 {
+			margin: 0 0 20px;
+			font-size: 1.45rem;
+		}
+
+		.note-block {
+			position: relative;
+			margin: 0 0 24px;
+			padding: 0 0 0 18px;
+			border-left: 2px solid #e6ebe5;
+		}
+
+		.note-block h3 {
+			margin: 0 0 8px;
+			font-size: 1.02rem;
+		}
+
+		.note-block p {
+			margin: 0;
+			max-width: 48ch;
+			color: #4b5563;
+		}
+
+		.inline-hook {
+			margin-top: 9px;
+			display: inline-flex;
+			gap: 8px;
+			align-items: center;
+			background: #fff2bd;
+			border: 1px solid #e8cf70;
+			border-radius: 999px;
+			padding: 5px 10px;
+			font-size: 0.78rem;
+			font-weight: 800;
+		}
+
+		.section {
+			margin-top: 44px;
+		}
+
+		.section > h2 {
+			margin: 0 0 12px;
+			font-size: 1.5rem;
+		}
+
+		.section > p {
+			max-width: 72ch;
+			color: var(--muted);
+			margin: 0 0 18px;
+		}
+
+		.concept {
+			display: grid;
+			grid-template-columns: minmax(280px, 0.88fr) minmax(420px, 1.12fr);
+			gap: 28px;
+			padding: 34px 0;
+			border-top: 1px solid rgba(23, 23, 26, 0.14);
+		}
+
+		.concept:first-of-type {
+			border-top: 0;
+		}
+
+		.concept h3 {
+			margin: 0 0 10px;
+			font-size: 1.36rem;
+			line-height: 1.1;
+		}
+
+		.r-chip {
+			display: inline-flex;
+			align-items: center;
+			border-radius: 999px;
+			background: #17171a;
+			color: #ffffff;
+			font-size: 0.74rem;
+			font-weight: 850;
+			padding: 4px 9px;
+			margin-bottom: 12px;
+		}
+
+		.concept-copy p {
+			color: var(--muted);
+			margin: 0 0 16px;
+			max-width: 58ch;
+		}
+
+		.concept-list {
+			display: grid;
+			gap: 8px;
+			padding: 0;
+			margin: 16px 0 0;
+			list-style: none;
+		}
+
+		.concept-list li {
+			padding: 9px 10px;
+			border-radius: var(--radius);
+			background: rgba(255, 255, 255, 0.74);
+			border: 1px solid rgba(23, 23, 26, 0.08);
+		}
+
+		.concept-list strong {
+			color: inherit;
+		}
+
+		.mockup {
+			position: relative;
+			min-height: 350px;
+			border-radius: var(--radius);
+			border: 1px solid rgba(23, 23, 26, 0.12);
+			background: var(--panel);
+			box-shadow: 0 14px 36px rgba(23, 23, 26, 0.1);
+			overflow: hidden;
+		}
+
+		.mockup-title {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 10px;
+			padding: 12px 14px;
+			border-bottom: 1px solid rgba(23, 23, 26, 0.1);
+			font-size: 0.8rem;
+			font-weight: 850;
+			text-transform: uppercase;
+			background: #f6f7f2;
+		}
+
+		.mockup-title span:last-child {
+			color: var(--muted);
+			font-weight: 700;
+			text-transform: none;
+		}
+
+		.mockup-body {
+			padding: 16px;
+		}
+
+		.caption {
+			margin: 12px 0 0;
+			color: var(--muted);
+			font-size: 0.82rem;
+		}
+
+		.slide-demo {
+			display: grid;
+			grid-template-columns: 132px minmax(0, 1fr);
+			gap: 16px;
+		}
+
+		.slide-strip {
+			display: grid;
+			gap: 8px;
+		}
+
+		.slide-card {
+			border-radius: var(--radius);
+			padding: 10px;
+			min-height: 70px;
+			font-weight: 850;
+			font-size: 0.72rem;
+			color: #17171a;
+			display: grid;
+			align-content: space-between;
+		}
+
+		.slide-card b {
+			font-size: 1.2rem;
+			color: inherit;
+		}
+
+		.slide-card:nth-child(1) { background: var(--lime); }
+		.slide-card:nth-child(2) { background: var(--blue); }
+		.slide-card:nth-child(3) { background: var(--sun); }
+		.slide-card:nth-child(4) { background: var(--pink); }
+
+		.slide-note {
+			padding: 14px;
+			border-radius: var(--radius);
+			background: #ffffff;
+			border: 1px solid #dfe5db;
+		}
+
+		.big-question {
+			font-size: 1.42rem;
+			font-weight: 900;
+			line-height: 1.04;
+			margin: 0 0 14px;
+		}
+
+		.keyword-row {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 7px;
+			margin: 12px 0;
+		}
+
+		.keyword-row span {
+			background: #edf7e0;
+			border: 1px solid #cfe3b7;
+			border-radius: 999px;
+			padding: 5px 9px;
+			font-size: 0.78rem;
+			font-weight: 750;
+		}
+
+		.slide-summary {
+			margin-top: 18px;
+			padding: 12px;
+			border-radius: var(--radius);
+			background: #17171a;
+			color: #ffffff;
+			font-weight: 750;
+		}
+
+		.map-demo {
+			min-height: 412px;
+			background: #f8fbff;
+		}
+
+		.map-svg {
+			width: 100%;
+			height: 360px;
+			display: block;
+		}
+
+		.map-label {
+			font: 750 13px ui-sans-serif, system-ui, sans-serif;
+			fill: #17171a;
+		}
+
+		.map-small {
+			font: 700 11px ui-sans-serif, system-ui, sans-serif;
+			fill: #384252;
+		}
+
+		.radar-grid {
+			display: grid;
+			grid-template-columns: 90px repeat(5, 1fr);
+			gap: 6px;
+			align-items: stretch;
+		}
+
+		.radar-cell {
+			min-height: 42px;
+			border-radius: 7px;
+			border: 1px solid rgba(23, 23, 26, 0.08);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 6px;
+			text-align: center;
+			font-size: 0.72rem;
+			font-weight: 800;
+		}
+
+		.radar-head {
+			background: #17171a;
+			color: #ffffff;
+		}
+
+		.radar-label {
+			justify-content: flex-start;
+			text-align: left;
+			background: #f3f5f0;
+			color: #384252;
+		}
+
+		.level-high { background: #b7f7d0; }
+		.level-med { background: #ffe783; }
+		.level-low { background: #ffb0bd; }
+		.level-blank { background: #e8edf2; color: #667085; }
+
+		.radar-legend {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-top: 14px;
+		}
+
+		.radar-legend span {
+			border-radius: 999px;
+			padding: 4px 9px;
+			font-size: 0.76rem;
+			font-weight: 760;
+			border: 1px solid rgba(23, 23, 26, 0.08);
+		}
+
+		.manga-demo {
+			background:
+				repeating-linear-gradient(115deg, rgba(23, 23, 26, 0.06) 0 2px, transparent 2px 10px),
+				#fff8fd;
+		}
+
+		.manga-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+		}
+
+		.panel {
+			min-height: 130px;
+			border: 3px solid #17171a;
+			border-radius: 6px;
+			background: #ffffff;
+			padding: 12px;
+			box-shadow: 5px 5px 0 #17171a;
+		}
+
+		.panel:nth-child(1) { background: #ebfff8; }
+		.panel:nth-child(2) { background: #fff1b8; }
+		.panel:nth-child(3) { background: #fce7ff; }
+		.panel:nth-child(4) { background: #eaf1ff; }
+
+		.panel .tag {
+			display: inline-flex;
+			border-radius: 999px;
+			background: #17171a;
+			color: #ffffff;
+			font-size: 0.68rem;
+			font-weight: 850;
+			padding: 3px 7px;
+			margin-bottom: 8px;
+		}
+
+		.panel p {
+			margin: 0;
+			font-size: 1rem;
+			line-height: 1.15;
+			font-weight: 900;
+		}
+
+		.panel .sub {
+			display: block;
+			margin-top: 9px;
+			font-size: 0.75rem;
+			color: #384252;
+			font-weight: 750;
+		}
+
+		.shorts-demo {
+			background: #161719;
+		}
+
+		.phone-row {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 12px;
+		}
+
+		.phone-card {
+			aspect-ratio: 9 / 16;
+			border-radius: var(--radius);
+			overflow: hidden;
+			border: 1px solid rgba(255, 255, 255, 0.22);
+			padding: 12px;
+			display: grid;
+			align-content: space-between;
+			min-height: 300px;
+			color: #ffffff;
+		}
+
+		.phone-card:nth-child(1) { background: linear-gradient(160deg, #ff4f87, #ffbc42); }
+		.phone-card:nth-child(2) { background: linear-gradient(160deg, #32d399, #2563eb); }
+		.phone-card:nth-child(3) { background: linear-gradient(160deg, #8b5cf6, #111827); }
+
+		.phone-card .hook {
+			font-size: 1.35rem;
+			line-height: 0.96;
+			font-weight: 950;
+			text-transform: uppercase;
+		}
+
+		.phone-card .support {
+			display: grid;
+			gap: 6px;
+			font-size: 0.78rem;
+			font-weight: 850;
+		}
+
+		.phone-card .support span {
+			display: inline-flex;
+			width: fit-content;
+			border-radius: 999px;
+			background: rgba(255, 255, 255, 0.88);
+			color: #17171a;
+			padding: 4px 8px;
+		}
+
+		.requirement-table {
+			width: 100%;
+			border-collapse: collapse;
+			background: #ffffff;
+			border: 1px solid rgba(23, 23, 26, 0.1);
+			border-radius: var(--radius);
+			overflow: hidden;
+			display: table;
+		}
+
+		.requirement-table th,
+		.requirement-table td {
+			padding: 12px 14px;
+			border-bottom: 1px solid rgba(23, 23, 26, 0.08);
+			text-align: left;
+			vertical-align: top;
+		}
+
+		.requirement-table th {
+			background: #17171a;
+			color: #ffffff;
+			font-size: 0.78rem;
+			text-transform: uppercase;
+		}
+
+		.requirement-table tr:last-child td {
+			border-bottom: 0;
+		}
+
+		.requirement-table td:first-child {
+			font-weight: 900;
+			white-space: nowrap;
+		}
+
+		.callout-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 14px;
+		}
+
+		.callout {
+			border-radius: var(--radius);
+			padding: 14px;
+			border: 1px solid rgba(23, 23, 26, 0.08);
+			background: #f4ffed;
+		}
+
+		.callout:nth-child(2) { background: #fff6db; }
+		.callout:nth-child(3) { background: #f0f7ff; }
+		.callout:nth-child(4) { background: #fff0f6; }
+
+		.callout h3 {
+			margin: 0 0 6px;
+			font-size: 1rem;
+		}
+
+		.callout p,
+		.callout ul {
+			margin: 0;
+			color: var(--muted);
+		}
+
+		.callout ul {
+			padding-left: 1.1rem;
+		}
+
+		.sources {
+			display: grid;
+			gap: 10px;
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+
+		.sources li {
+			background: #ffffff;
+			border: 1px solid rgba(23, 23, 26, 0.1);
+			border-radius: var(--radius);
+			padding: 12px 14px;
+		}
+
+		.composition-signal {
+			margin-top: 42px;
+			padding-top: 18px;
+			border-top: 1px solid rgba(23, 23, 26, 0.14);
+			color: var(--muted);
+			font-size: 0.84rem;
+		}
+
+		@media (max-width: 980px) {
+			body {
+				background: linear-gradient(180deg, #f9fff0 0, #fff7f7 48%, #f4fffd 100%);
+			}
+
+			.page {
+				display: block;
+				padding: 20px 16px 48px;
+			}
+
+			.deck-rail {
+				position: static;
+				color: var(--ink);
+				margin-bottom: 18px;
+			}
+
+			.rail-stack {
+				grid-template-columns: repeat(5, minmax(130px, 1fr));
+				overflow-x: auto;
+				padding-bottom: 6px;
+			}
+
+			.hero-grid,
+			.concept {
+				grid-template-columns: 1fr;
+			}
+
+			.hero-preview {
+				border-left: 0;
+				border-top: 1px solid rgba(23, 23, 26, 0.1);
+			}
+
+			.callout-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		@media (max-width: 640px) {
+			h1 {
+				font-size: 1.9rem;
+			}
+
+			.hero-copy {
+				padding: 24px;
+			}
+
+			.meta-strip {
+				grid-template-columns: 1fr;
+			}
+
+			.editor-demo,
+			.slide-demo,
+			.phone-row {
+				grid-template-columns: 1fr;
+			}
+
+			.demo-margin,
+			.slide-strip {
+				grid-template-columns: repeat(3, minmax(90px, 1fr));
+				overflow-x: auto;
+			}
+
+			.radar-grid {
+				grid-template-columns: 76px repeat(5, minmax(70px, 1fr));
+				overflow-x: auto;
+			}
+
+			.manga-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="page">
+		<aside class="deck-rail" aria-label="Concept navigation">
+			<p class="rail-title">CueCraft concept deck</p>
+			<nav class="rail-stack">
+				<a class="rail-card one" href="#r1"><span class="num">R1</span><span class="label">Margin slide reel</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
+				<a class="rail-card two" href="#r2"><span class="num">R2</span><span class="label">Concept constellation</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
+				<a class="rail-card three" href="#r3"><span class="num">R3</span><span class="label">Recall radar</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
+				<a class="rail-card four" href="#r4"><span class="num">R4</span><span class="label">Manga review rail</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
+				<a class="rail-card five" href="#r5"><span class="num">R5</span><span class="label">Short-form hook mode</span><span class="ticks"><span class="tick"></span><span class="tick"></span><span class="tick"></span><span class="tick"></span></span></a>
+			</nav>
+		</aside>
+
+		<main>
+			<header class="hero">
+				<div class="hero-grid">
+					<div class="hero-copy">
+						<p class="kicker">Brainstorm requirements</p>
+						<h1>CueCraft graphical study surfaces</h1>
+						<p class="lede">Five visual directions for turning generated questions, keywords, and summaries into stronger reading, comprehension, and retention aids inside an Obsidian CodeMirror study layer.</p>
+						<dl class="meta-strip" aria-label="Document metadata">
+							<div><dt>date</dt><dd><time datetime="2026-06-18">2026-06-18</time></dd></div>
+							<div><dt>topic</dt><dd>graphical-study-surfaces</dd></div>
+							<div><dt>artifact</dt><dd>HTML concept deck</dd></div>
+						</dl>
+					</div>
+					<div class="hero-preview" aria-label="Concept preview">
+						<div class="obsidian-window">
+							<div class="window-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+							<div class="editor-demo">
+								<div class="demo-margin">
+									<div class="demo-mini">Why does an agent plan?</div>
+									<div class="demo-mini">Tools unlock action</div>
+									<div class="demo-mini">Feedback compounds</div>
+									<div class="demo-mini">Review checkpoint</div>
+									<div class="demo-mini">Final takeaway</div>
+								</div>
+								<div class="demo-note">
+									<h2>Claude for Execs</h2>
+									<div class="note-block">
+										<h3>Terms</h3>
+										<p>Agent, chatbot, Claude, MCP, plugins, and skills form a stack of increasing task autonomy.</p>
+										<span class="inline-hook">Question: How is an agent different from a chatbot?</span>
+									</div>
+									<div class="note-block">
+										<h3>How to Upskill Employees</h3>
+										<p>Teams encode standards, workflows, and domain knowledge so AI outputs become shippable.</p>
+										<span class="inline-hook">Keywords: standards, tools, review</span>
+									</div>
+									<div class="note-block">
+										<h3>Study Takeaway</h3>
+										<p>Great AI adoption is less about one prompt and more about compounding encoded expertise.</p>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</header>
+
+			<section class="section" id="summary">
+				<h2>Summary</h2>
+				<p>CueCraft should explore a richer visual study layer where the left margin, cue supports, section state, and final summary become graphical memory scaffolding rather than static text blocks. The proposal keeps the current non-destructive Obsidian layer and selectable HTML text invariant, while testing five expressive surfaces that could become presets or future modes.</p>
+			</section>
+
+			<section class="section" id="problem-frame">
+				<h2>Problem Frame</h2>
+				<p>The current product promise is a retention loop: see a question, try to recall, reveal the source, then check the big picture against a summary. The existing UI already supports this with CodeMirror cue widgets and a Cornell view, but the generated question, keywords, and summary still read mostly like adjacent text. The opportunity is to make the generated structure spatial, graphical, and emotionally memorable without modifying the Markdown file.</p>
+				<p>Directional only - illustrates intended user-facing shape. Exact colors, spacing, copy, and component choices are placeholders for review, not requirements.</p>
+			</section>
+
+			<section class="section" id="requirements">
+				<h2>Requirements</h2>
+
+				<article class="concept" id="r1">
+					<div class="concept-copy">
+						<span class="r-chip">R1.</span>
+						<h3>Margin Slide Reel</h3>
+						<p>Render each section's question as a vivid miniature slide in the left margin. The note remains the reading surface, while the margin becomes a navigable deck of active-recall prompts.</p>
+						<ul class="concept-list">
+							<li><strong>Retention move:</strong> spatial anchors make each section easier to revisit from memory.</li>
+							<li><strong>Question treatment:</strong> big, title-card wording with one section question per slide.</li>
+							<li><strong>Keyword treatment:</strong> three tiny support chips or bars on each slide, not a full tag pile.</li>
+							<li><strong>Summary treatment:</strong> the final slide becomes the study takeaway checkpoint.</li>
+						</ul>
+					</div>
+					<div>
+						<div class="mockup">
+							<div class="mockup-title"><span>left-margin deck</span><span>CodeMirror overlay</span></div>
+							<div class="mockup-body slide-demo">
+								<div class="slide-strip">
+									<div class="slide-card"><b>01</b><span>Agent vs chatbot?</span></div>
+									<div class="slide-card"><b>02</b><span>What gets encoded?</span></div>
+									<div class="slide-card"><b>03</b><span>Why feedback loops?</span></div>
+									<div class="slide-card"><b>04</b><span>Final synthesis</span></div>
+								</div>
+								<div class="slide-note">
+									<p class="big-question">How is an agent different from a chatbot?</p>
+									<p>Before reading the answer, the learner sees the section as a slide they can mentally place in the note.</p>
+									<div class="keyword-row"><span>plans</span><span>tools</span><span>multi-step</span></div>
+									<div class="slide-summary">Study takeaway: autonomy increases when AI can plan, use tools, and refine across context.</div>
+								</div>
+							</div>
+						</div>
+						<p class="caption">Best fit: notes with many headings where navigation and recall cues should become one surface.</p>
+					</div>
+				</article>
+
+				<article class="concept" id="r2">
+					<div class="concept-copy">
+						<span class="r-chip">R2.</span>
+						<h3>Concept Constellation</h3>
+						<p>Transform keywords into a visible semantic map around the question, then connect those maps into a note-level constellation. The learner sees how terms relate before trying to explain them.</p>
+						<ul class="concept-list">
+							<li><strong>Retention move:</strong> visual association turns isolated keywords into a mental retrieval path.</li>
+							<li><strong>Question treatment:</strong> the question is the central node for each section.</li>
+							<li><strong>Keyword treatment:</strong> keywords become orbiting nodes grouped by role or meaning.</li>
+							<li><strong>Summary treatment:</strong> summary is the bridge sentence that names the pattern across clusters.</li>
+						</ul>
+					</div>
+					<div>
+						<div class="mockup map-demo">
+							<div class="mockup-title"><span>keyword graph</span><span>section memory map</span></div>
+							<svg class="map-svg" viewBox="0 0 640 360" role="img" aria-labelledby="map-title map-desc">
+								<title id="map-title">Concept constellation mockup</title>
+								<desc id="map-desc">A central active recall question is connected to keyword nodes, then linked to a summary bridge.</desc>
+								<rect x="26" y="24" width="238" height="104" rx="8" fill="#ffffff" stroke="#cbd5e1"></rect>
+								<text x="44" y="52" class="map-small">QUESTION</text>
+								<text x="44" y="82" class="map-label">How does an agent differ</text>
+								<text x="44" y="102" class="map-label">from a chatbot?</text>
+
+								<circle cx="382" cy="76" r="38" fill="#b7f7d0" stroke="#80d69f"></circle>
+								<text x="356" y="81" class="map-label">plans</text>
+								<circle cx="500" cy="112" r="42" fill="#ffe783" stroke="#e6c849"></circle>
+								<text x="468" y="117" class="map-label">uses tools</text>
+								<circle cx="408" cy="202" r="44" fill="#d7ebff" stroke="#9cc9f2"></circle>
+								<text x="380" y="207" class="map-label">multi-step</text>
+								<circle cx="536" cy="244" r="38" fill="#ffd0de" stroke="#f6a0b7"></circle>
+								<text x="512" y="249" class="map-label">decides</text>
+
+								<path d="M264 80 C305 58, 324 58, 344 70" fill="none" stroke="#94a3b8" stroke-width="3"></path>
+								<path d="M264 94 C350 96, 408 100, 458 110" fill="none" stroke="#94a3b8" stroke-width="3"></path>
+								<path d="M254 124 C292 172, 330 196, 364 202" fill="none" stroke="#94a3b8" stroke-width="3"></path>
+								<path d="M444 210 C474 226, 488 236, 498 242" fill="none" stroke="#94a3b8" stroke-width="3"></path>
+
+								<rect x="52" y="244" width="282" height="72" rx="8" fill="#17171a"></rect>
+								<text x="72" y="272" fill="#ffffff" class="map-small">SUMMARY BRIDGE</text>
+								<text x="72" y="296" fill="#ffffff" class="map-label">Autonomy rises when planning,</text>
+								<text x="72" y="316" fill="#ffffff" class="map-label">tool use, and decision loops combine.</text>
+								<path d="M382 232 C346 258, 346 282, 334 284" fill="none" stroke="#17171a" stroke-width="3"></path>
+							</svg>
+						</div>
+						<p class="caption">Best fit: concept-heavy notes where keywords should show relationships, not merely hint terms.</p>
+					</div>
+				</article>
+
+				<article class="concept" id="r3">
+					<div class="concept-copy">
+						<span class="r-chip">R3.</span>
+						<h3>Recall Radar</h3>
+						<p>Show a section-by-section review heatmap that combines cue confidence, freshness, reveal history, and summary coverage. The learner gets a scanable map of what to study first.</p>
+						<ul class="concept-list">
+							<li><strong>Retention move:</strong> attention is guided toward weak, stale, or unrevealed sections.</li>
+							<li><strong>Question treatment:</strong> questions remain visible, but the margin ranks their study urgency.</li>
+							<li><strong>Keyword treatment:</strong> keyword supports are dimmed until the learner asks for a hint.</li>
+							<li><strong>Summary treatment:</strong> summary coverage shows whether the final takeaway reflects all major sections.</li>
+						</ul>
+					</div>
+					<div>
+						<div class="mockup">
+							<div class="mockup-title"><span>study radar</span><span>review priority</span></div>
+							<div class="mockup-body">
+								<div class="radar-grid" aria-label="Recall radar table">
+									<div class="radar-cell radar-head">Section</div>
+									<div class="radar-cell radar-head">Cue</div>
+									<div class="radar-cell radar-head">Hint</div>
+									<div class="radar-cell radar-head">Fresh</div>
+									<div class="radar-cell radar-head">Reveal</div>
+									<div class="radar-cell radar-head">Summary</div>
+									<div class="radar-cell radar-label">Terms</div>
+									<div class="radar-cell level-high">clear</div>
+									<div class="radar-cell level-med">peeked</div>
+									<div class="radar-cell level-high">fresh</div>
+									<div class="radar-cell level-low">hidden</div>
+									<div class="radar-cell level-high">covered</div>
+									<div class="radar-cell radar-label">Upskill</div>
+									<div class="radar-cell level-med">okay</div>
+									<div class="radar-cell level-high">ready</div>
+									<div class="radar-cell level-low">stale</div>
+									<div class="radar-cell level-low">hidden</div>
+									<div class="radar-cell level-med">partial</div>
+									<div class="radar-cell radar-label">Progress</div>
+									<div class="radar-cell level-low">weak</div>
+									<div class="radar-cell level-med">peeked</div>
+									<div class="radar-cell level-high">fresh</div>
+									<div class="radar-cell level-high">revealed</div>
+									<div class="radar-cell level-blank">missing</div>
+								</div>
+								<div class="radar-legend">
+									<span class="level-high">review later</span>
+									<span class="level-med">review soon</span>
+									<span class="level-low">review now</span>
+									<span class="level-blank">no signal</span>
+								</div>
+							</div>
+						</div>
+						<p class="caption">Best fit: long notes where learners need review triage more than another block of prose.</p>
+					</div>
+				</article>
+
+				<article class="concept" id="r4">
+					<div class="concept-copy">
+						<span class="r-chip">R4.</span>
+						<h3>Manga Review Rail</h3>
+						<p>Render the study path as a four-panel visual story: setup, tension, reveal, payoff. The left rail becomes a playful sequence that makes the section's answer feel like a narrative beat.</p>
+						<ul class="concept-list">
+							<li><strong>Retention move:</strong> narrative order helps learners reconstruct the answer from story beats.</li>
+							<li><strong>Question treatment:</strong> each panel converts the question into a staged prompt.</li>
+							<li><strong>Keyword treatment:</strong> keywords become props in the panel, not chips below it.</li>
+							<li><strong>Summary treatment:</strong> final panel compresses the section into one "payoff" sentence.</li>
+						</ul>
+					</div>
+					<div>
+						<div class="mockup manga-demo">
+							<div class="mockup-title"><span>review story rail</span><span>comic-style sequence</span></div>
+							<div class="mockup-body manga-grid">
+								<div class="panel"><span class="tag">SETUP</span><p>Chatbot answers once.</p><span class="sub">keyword: single-turn</span></div>
+								<div class="panel"><span class="tag">TENSION</span><p>The task needs planning.</p><span class="sub">keyword: multi-step</span></div>
+								<div class="panel"><span class="tag">REVEAL</span><p>Agent chooses tools.</p><span class="sub">keyword: actions</span></div>
+								<div class="panel"><span class="tag">PAYOFF</span><p>Autonomy is the difference.</p><span class="sub">summary checkpoint</span></div>
+							</div>
+						</div>
+						<p class="caption">Best fit: exploratory notes, talks, and tutorials where concept order matters as much as isolated recall.</p>
+					</div>
+				</article>
+
+				<article class="concept" id="r5">
+					<div class="concept-copy">
+						<span class="r-chip">R5.</span>
+						<h3>Short-Form Hook Mode</h3>
+						<p>Offer an optional high-energy review mode where each question is rewritten visually like a short-form title card. This is not the default reading surface; it is a deliberate sprint mode for recall reps.</p>
+						<ul class="concept-list">
+							<li><strong>Retention move:</strong> memorable phrasing increases the chance a learner will try the question again.</li>
+							<li><strong>Question treatment:</strong> the active-recall question becomes a bold hook while retaining its answer intent.</li>
+							<li><strong>Keyword treatment:</strong> supports are sequenced as tappable or revealable beats.</li>
+							<li><strong>Summary treatment:</strong> the note takeaway becomes the final title card.</li>
+						</ul>
+					</div>
+					<div>
+						<div class="mockup shorts-demo">
+							<div class="mockup-title"><span>hook review</span><span>vertical sprint</span></div>
+							<div class="mockup-body phone-row">
+								<div class="phone-card">
+									<div class="hook">Chatbot or agent? prove it.</div>
+									<div class="support"><span>plans</span><span>decides</span><span>uses tools</span></div>
+								</div>
+								<div class="phone-card">
+									<div class="hook">What makes AI work shippable?</div>
+									<div class="support"><span>standards</span><span>review</span><span>context</span></div>
+								</div>
+								<div class="phone-card">
+									<div class="hook">Why does progress compound?</div>
+									<div class="support"><span>feedback</span><span>knowledge</span><span>reuse</span></div>
+								</div>
+							</div>
+						</div>
+						<p class="caption">Best fit: optional Study Mode sessions, not calm note reading.</p>
+					</div>
+				</article>
+			</section>
+
+			<section class="section" id="acceptance-examples">
+				<h2>Acceptance Examples</h2>
+				<table class="requirement-table">
+					<thead>
+						<tr><th>ID</th><th>Example</th><th>Why it matters</th></tr>
+					</thead>
+					<tbody>
+						<tr id="ae1"><td>AE1.</td><td>Given cached section cues, when a learner opens a note, then the graphical surface renders beside or around the note without changing Markdown content.</td><td>Preserves CueCraft's non-destructive promise.</td></tr>
+						<tr id="ae2"><td>AE2.</td><td>Given Study Mode is active, when the learner has not revealed a section, then the question remains readable while support terms can be hidden, softened, or staged.</td><td>Protects active recall from becoming passive hint-reading.</td></tr>
+						<tr id="ae3"><td>AE3.</td><td>Given a long note, when the learner scans the visual surface, then weak, stale, unrevealed, or uncovered sections are visually distinguishable without reading every cue.</td><td>Makes review prioritization useful.</td></tr>
+						<tr id="ae4"><td>AE4.</td><td>Given a theme change, when the concept is rendered in Obsidian, then primary question, keyword, and summary text remains normal selectable HTML text with readable contrast.</td><td>Keeps graphical expression compatible with Obsidian themes.</td></tr>
+					</tbody>
+				</table>
+			</section>
+
+			<section class="section" id="key-decisions">
+				<h2>Key Decisions</h2>
+				<div class="callout-grid">
+					<div class="callout">
+						<h3>Graphical, not decorative</h3>
+						<p>Each concept must teach orientation, relationship, priority, sequence, or final synthesis. Purely decorative skins do not count.</p>
+					</div>
+					<div class="callout">
+						<h3>Use existing generated fields first</h3>
+						<p>Question, keywords, confidence, rationale, summary, and learning objective are enough to prototype these visuals before changing generation schemas.</p>
+					</div>
+					<div class="callout">
+						<h3>Make energy a mode</h3>
+						<p>High-color manga and hook cards are valuable in review contexts, but calm Cornell reading should remain available.</p>
+					</div>
+					<div class="callout">
+						<h3>Keep text real</h3>
+						<p>Question, keyword, and summary text should remain selectable and readable as HTML. SVG and CSS carry layout, relationships, and emphasis.</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="section" id="success-criteria">
+				<h2>Success Criteria</h2>
+				<table class="requirement-table">
+					<thead>
+						<tr><th>Signal</th><th>Target</th></tr>
+					</thead>
+					<tbody>
+						<tr><td>Recall</td><td>Learners can answer a section question before revealing the note body more often than with the plain cue card.</td></tr>
+						<tr><td>Comprehension</td><td>Learners can explain how keywords relate to the question, not just repeat the terms.</td></tr>
+						<tr><td>Retention</td><td>Learners can return to a note later and use the visual surface to reconstruct its major sections.</td></tr>
+						<tr><td>Theme safety</td><td>Primary text stays readable in light theme, dark theme, and at least one community theme.</td></tr>
+						<tr><td>Carrying cost</td><td>The first build can prototype one concept without changing cached Markdown or requiring a new provider contract.</td></tr>
+					</tbody>
+				</table>
+			</section>
+
+			<section class="section" id="scope-boundaries">
+				<h2>Scope Boundaries</h2>
+				<div class="callout-grid">
+					<div class="callout">
+						<h3>In scope</h3>
+						<ul>
+							<li>Directional HTML mockups for five graphical study surfaces.</li>
+							<li>Future UI requirements for question, keyword, and summary display.</li>
+							<li>Ideas that could render as a non-destructive Obsidian layer.</li>
+						</ul>
+					</div>
+					<div class="callout">
+						<h3>Deferred for planning</h3>
+						<ul>
+							<li>Exact CodeMirror placement mechanics.</li>
+							<li>Settings taxonomy and default preset choice.</li>
+							<li>Whether richer generated fields are needed after display prototypes.</li>
+						</ul>
+					</div>
+					<div class="callout">
+						<h3>Out of scope</h3>
+						<ul>
+							<li>Implementing plugin code in this brainstorm.</li>
+							<li>Replacing the calm Cornell view entirely.</li>
+							<li>Spaced-repetition scheduling or scoring systems.</li>
+						</ul>
+					</div>
+					<div class="callout">
+						<h3>Assumptions</h3>
+						<ul>
+							<li>Obsidian CodeMirror can host richer HTML decorations than the current cue widget.</li>
+							<li>The first prototype can use current cache fields and CSS/SVG decorations.</li>
+							<li>Expressive review modes are acceptable as opt-in surfaces.</li>
+						</ul>
+					</div>
+				</div>
+			</section>
+
+			<section class="section" id="sources-research">
+				<h2>Sources / Research</h2>
+				<ul class="sources">
+					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/README.md"><code>README.md</code></a> - product promise: non-destructive active-recall study cues for Obsidian.</li>
+					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/docs/CueCraft-MVP-Scope.md"><code>docs/CueCraft-MVP-Scope.md</code></a> - core retention loop and MVP display constraints.</li>
+					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/docs/CueCraft-v1-User-Stories.md"><code>docs/CueCraft-v1-User-Stories.md</code></a> - editor cue display, Study Mode, and summary acceptance criteria.</li>
+					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/src/cue-extension.ts"><code>src/cue-extension.ts</code></a> - current CodeMirror cue widget shape.</li>
+					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/src/cornell-view.ts"><code>src/cornell-view.ts</code></a> - current Cornell rendering for cue cells, support terms, Study Mode, and summary.</li>
+					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/src/cornell.ts"><code>src/cornell.ts</code></a> - current model fields available to visual surfaces.</li>
+					<li><a href="https://github.com/swartzrock/cuecraft-devin/blob/main/docs/plans/2026-06-12-001-feat-cornell-view-polish-plan.md"><code>docs/plans/2026-06-12-001-feat-cornell-view-polish-plan.md</code></a> - prior polish direction for softer Cornell structure, study takeaway, and keyword supports.</li>
+				</ul>
+			</section>
+
+			<footer class="composition-signal">
+				Composed 2026-06-18T22:46Z by ce-brainstorm from the user prompt requesting five graphical improvements to CueCraft summary, question, and keyword display.
+			</footer>
+		</main>
+	</div>
+</body>
+</html>
