@@ -109,7 +109,7 @@ Manual Obsidian test instructions:
   - `supportedParameters`
   - `source`
 - [x] Add helper functions to normalize string IDs and OpenRouter model objects into the same display-ready shape.
-- [x] Add stable sorting helpers that put recommended/current models first, then sort human-readably.
+- [x] Add stable sorting helpers that keep the current model first, then sort human-readably.
 - [x] Keep persisted selected model values as strings.
 - [x] Avoid storing raw OpenRouter payloads in settings; store only normalized metadata needed for display and compatibility checks.
 - [x] Update OpenRouter model fetching to retain metadata when available.
@@ -156,7 +156,7 @@ Manual Obsidian test instructions:
 ## Phase 5 - Compatibility Badges And Warnings
 
 - [x] Use model metadata to detect likely structured-output support, especially OpenRouter `supported_parameters`.
-- [x] Add concise model badges such as `Recommended`, `Structured output`, `Large context`, or `Low cost` only when they help selection.
+- [x] Add concise model badges such as `Structured output`, `Large context`, or `Low cost` only when they help selection.
 - [x] Keep badges visually restrained and avoid turning every metadata field into a chip.
 - [x] Show a warning when the selected model appears to lack structured-output support.
 - [x] Make the warning explanatory but non-blocking: users can still choose the model.
@@ -170,7 +170,7 @@ Manual Obsidian test instructions:
 
 - Reload CueCraft in Obsidian.
 - Fetch OpenRouter models.
-- Confirm recommended or structured-output-friendly models are easy to identify.
+- Confirm structured-output-friendly models are easy to identify.
 - Select a model without structured-output metadata and confirm a non-blocking warning appears.
 - Select a structured-output-friendly model and confirm the warning clears.
 - Generate cues to confirm warnings do not prevent normal operation.
@@ -212,7 +212,7 @@ Manual Obsidian test instructions:
 
 - Reload CueCraft in Obsidian.
 - Test the full AI setup flow for OpenRouter from a fresh provider selection.
-- Fetch models, search/select a recommended model, test connection, close settings, and reopen settings.
+- Fetch models, search/select a structured-output-friendly model, test connection, close settings, and reopen settings.
 - Generate cues for a short note and a multi-heading note.
 - Change the selected OpenRouter model, confirm setup status updates correctly, re-test connection, and regenerate cues.
 - Spot-check one existing direct provider to confirm it was not broken.

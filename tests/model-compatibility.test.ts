@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
 	isLargeContextModel,
 	isLowCostModel,
-	isRecommendedCueCraftModel,
 	modelCompatibilityBadges,
 	modelCompatibilityWarning,
 	modelStructuredOutputSupport,
@@ -56,7 +55,7 @@ describe("modelCompatibilityBadges", () => {
 			})
 		);
 		expect(badges).toEqual([
-			"Recommended",
+			"Structured output",
 			"Large context",
 			"Low cost",
 		]);
@@ -100,7 +99,7 @@ describe("modelCompatibilityWarning", () => {
 });
 
 describe("sortCueCraftModelOptions", () => {
-	it("prefers recommended and structured-output models without hiding others", () => {
+	it("prefers structured-output models without hiding others", () => {
 		const sorted = sortCueCraftModelOptions([
 			opt("legacy/model", { supportedParameters: ["temperature"] }),
 			opt("small/structured", { supportedParameters: ["response_format"] }),
@@ -117,7 +116,7 @@ describe("sortCueCraftModelOptions", () => {
 		]);
 	});
 
-	it("keeps the current model first even when it is not recommended", () => {
+	it("keeps the current model first even when it lacks compatibility traits", () => {
 		const sorted = sortCueCraftModelOptions(
 			[
 				opt("anthropic/claude-sonnet-4", {
@@ -140,6 +139,5 @@ describe("model compatibility predicates", () => {
 		});
 		expect(isLargeContextModel(model)).toBe(true);
 		expect(isLowCostModel(model)).toBe(true);
-		expect(isRecommendedCueCraftModel(model)).toBe(true);
 	});
 });

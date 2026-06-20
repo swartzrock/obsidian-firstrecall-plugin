@@ -40,19 +40,9 @@ export function isLowCostModel(option: ModelOption): boolean {
 	return option.pricing.prompt <= 0.000001 && option.pricing.completion <= 0.000005;
 }
 
-export function isRecommendedCueCraftModel(option: ModelOption): boolean {
-	if (modelStructuredOutputSupport(option) !== "supported") return false;
-	return (
-		/claude|gpt-4o|gemini/i.test(`${option.id} ${option.label}`) ||
-		isLargeContextModel(option)
-	);
-}
-
 export function modelCompatibilityBadges(option: ModelOption): string[] {
 	const badges: string[] = [];
-	if (isRecommendedCueCraftModel(option)) {
-		badges.push("Recommended");
-	} else if (modelStructuredOutputSupport(option) === "supported") {
+	if (modelStructuredOutputSupport(option) === "supported") {
 		badges.push("Structured output");
 	}
 	if (isLargeContextModel(option)) badges.push("Large context");
@@ -72,7 +62,6 @@ export function modelCompatibilityWarning(option: ModelOption | null): string {
 
 function cueCraftSortScore(option: ModelOption): number {
 	let score = 0;
-	if (isRecommendedCueCraftModel(option)) score += 8;
 	if (modelStructuredOutputSupport(option) === "supported") score += 4;
 	if (isLargeContextModel(option)) score += 2;
 	if (isLowCostModel(option)) score += 1;
