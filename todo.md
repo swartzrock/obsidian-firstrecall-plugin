@@ -155,16 +155,16 @@ Manual Obsidian test instructions:
 
 ## Phase 5 - Compatibility Badges And Warnings
 
-- [ ] Use model metadata to detect likely structured-output support, especially OpenRouter `supported_parameters`.
-- [ ] Add concise model badges such as `Recommended`, `Structured output`, `Large context`, or `Low cost` only when they help selection.
-- [ ] Keep badges visually restrained and avoid turning every metadata field into a chip.
-- [ ] Show a warning when the selected model appears to lack structured-output support.
-- [ ] Make the warning explanatory but non-blocking: users can still choose the model.
-- [ ] Prefer CueCraft-suitable models in sorting without hiding the rest of the list.
-- [ ] Add tests for compatibility detection, badge selection, and warning copy helpers.
-- [ ] Update `docs/CueCraft-Progress.md` and the test count.
-- [ ] Run `bun run typecheck`.
-- [ ] Run `bun run test`.
+- [x] Use model metadata to detect likely structured-output support, especially OpenRouter `supported_parameters`.
+- [x] Add concise model badges such as `Recommended`, `Structured output`, `Large context`, or `Low cost` only when they help selection.
+- [x] Keep badges visually restrained and avoid turning every metadata field into a chip.
+- [x] Show a warning when the selected model appears to lack structured-output support.
+- [x] Make the warning explanatory but non-blocking: users can still choose the model.
+- [x] Prefer CueCraft-suitable models in sorting without hiding the rest of the list.
+- [x] Add tests for compatibility detection, badge selection, and warning copy helpers.
+- [x] Update `docs/CueCraft-Progress.md` and the test count.
+- [x] Run `bun run typecheck`.
+- [x] Run `bun run test`.
 
 Manual Obsidian test instructions:
 

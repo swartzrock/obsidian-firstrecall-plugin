@@ -62,7 +62,14 @@ import {
 	type ModelOption,
 	type ModelOptionSource,
 } from "./model-options";
-import { renderModelCombobox } from "./model-combobox";
+import {
+	buildModelComboboxOptions,
+	renderModelCombobox,
+} from "./model-combobox";
+import {
+	modelCompatibilityBadges,
+	modelCompatibilityWarning,
+} from "./model-compatibility";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
 
@@ -1330,10 +1337,25 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						sortFetchedModelIds(opts.availableModels),
 						opts.modelOptionSource
 					);
+		const selectedOption = buildModelComboboxOptions({
+			options: modelOptions,
+			currentModelId: currentModel,
+			source: opts.modelOptionSource,
+		}).find((option) => option.id === currentModel.trim()) ?? null;
 
 		const modelSetting = new Setting(containerEl)
 			.setName(opts.modelLabel)
 			.setDesc(opts.modelDesc);
+		const warning =
+			opts.modelOptionSource === "openrouter"
+				? modelCompatibilityWarning(selectedOption)
+				: "";
+		if (warning) {
+			modelSetting.descEl.createDiv({
+				cls: "cuecraft-model-compatibility-warning",
+				text: warning,
+			});
+		}
 		renderModelCombobox({
 			containerEl: modelSetting.controlEl,
 			value: currentModel,
@@ -1342,9 +1364,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			placeholder: opts.modelPlaceholder,
 			emptyMessage: "No fetched models match. Press Enter or leave the field to keep a custom model ID.",
 			onCommit: async (value) => {
+				const previousValue = opts.getModel().trim();
 				opts.setModel(value);
 				await this.plugin.saveSettings();
+				if (value !== previousValue) this.display();
 			},
+			badgesForOption: modelCompatibilityBadges,
 		});
 	}
 
