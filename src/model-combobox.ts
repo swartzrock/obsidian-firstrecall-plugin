@@ -148,22 +148,21 @@ export function renderModelCombobox(opts: {
 					id: optionId,
 					type: "button",
 					role: "option",
+					title: option.id,
 					"aria-selected": index === activeIndex ? "true" : "false",
 				},
 			});
 			if (index === activeIndex) {
 				inputEl.setAttr("aria-activedescendant", optionId);
 			}
-			const labelEl = optionEl.createDiv({
+			optionEl.createDiv({
 				cls: "cuecraft-model-combobox-option-label",
 				text: option.label || option.id,
 			});
 			const detailText =
-				option.label && option.label !== option.id
-					? `${option.id} · ${option.provider}`
-					: option.provider;
+				option.label && option.label !== option.id ? option.id : "";
 			if (detailText) {
-				labelEl.createDiv({
+				optionEl.createDiv({
 					cls: "cuecraft-model-combobox-option-detail",
 					text: detailText,
 				});
