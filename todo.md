@@ -199,14 +199,14 @@ Manual Obsidian test instructions:
 
 ## Phase 7 - Documentation And Final QA
 
-- [ ] Update README or user-facing docs that list supported AI providers.
-- [ ] Update `docs/CueCraft-Progress.md` with the full OpenRouter/model-picker status and final test count.
-- [ ] Confirm all new settings have sensible defaults and do not expose API keys.
-- [ ] Confirm no `.env` files, vault notes, or local credentials were touched.
-- [ ] Run `bun run typecheck`.
-- [ ] Run `bun run test`.
-- [ ] Run the normal build command if different from the user's background `bun run dev` flow.
-- [ ] Review the settings page visually in Obsidian for spacing, focus states, and text overflow.
+- [x] Update README or user-facing docs that list supported AI providers.
+- [x] Update `docs/CueCraft-Progress.md` with the full OpenRouter/model-picker status and final test count.
+- [x] Confirm all new settings have sensible defaults and do not expose API keys.
+- [x] Confirm no `.env` files, vault notes, or local credentials were touched.
+- [x] Run `bun run typecheck`. _(Bun could not read the current directory in this environment; the equivalent `./node_modules/.bin/tsc -noEmit -skipLibCheck` passed.)_
+- [x] Run `bun run test`. _(Bun could not read the current directory in this environment; the equivalent Vitest command passed with 319 tests.)_
+- [x] Run the normal build command if different from the user's background `bun run dev` flow. _(The equivalent production bundle command `node esbuild.config.mjs production` passed.)_
+- [ ] Review the settings page visually in Obsidian for spacing, focus states, and text overflow. _(Manual maintainer QA remains; automated typecheck, production bundle, and unit tests passed in this run.)_
 
 Manual Obsidian test instructions:
 

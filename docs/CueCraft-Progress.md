@@ -12,8 +12,9 @@ _Last updated: 2026-06 (Exact selected-model verification — cloud providers no
 
 **The full core loop is shipped and proven end-to-end** (note → parse → generate → cache →
 display → study), the two biggest risks are retired (theme-safe CM6 cue rendering; a provider
-producing reliable validated structured cues), and provider breadth now covers a local model
-plus four frontier models. What remains is mostly **breadth and UX polish**, not core risk.
+producing reliable validated structured cues), and provider breadth now covers a local model,
+four direct frontier providers, and OpenRouter. What remains is mostly **breadth and UX polish**,
+not core risk.
 
 Rough completion against the full V1.0 → V2 vision: **~72%**, with 100% of the MVP core loop,
 all of V1.1 done, V1.2 (presets + typography/layout + in-view controls) effectively
@@ -258,7 +259,7 @@ Each item links to the PR that delivered it.
     rather than building a scheduler.
 
 ### Cross-cutting / nice-to-haves
-- **Live end-to-end provider testing.** The four cloud providers are built + unit-tested against
+- **Live end-to-end provider testing.** The cloud/router providers are built + unit-tested against
   mocks but not yet verified against the real APIs (needs keys). Anthropic key was requested for
   org-wide save but not yet provided.
 - **Ollama hardening (optional).** Small local models occasionally emit non-JSON. The provider
@@ -268,6 +269,17 @@ Each item links to the PR that delivered it.
 ---
 
 ## Manual Obsidian Test Instructions
+
+For the OpenRouter and searchable model-picker final QA slice:
+
+1. Reload CueCraft in Obsidian so the latest code is active.
+2. Open CueCraft settings, go to AI model, select `OpenRouter`, and enter a valid OpenRouter API key.
+3. Click `Fetch OpenRouter models`, search by provider or model text, and select a recommended or structured-output-friendly model.
+4. Confirm badges stay visually restrained and unsupported or unknown OpenRouter models show a non-blocking warning.
+5. Click `Test connection` and confirm the success notice/status verifies the selected model.
+6. Change the selected OpenRouter model and confirm setup status becomes stale until `Test connection` is run again.
+7. Type a custom model ID, close and reopen settings, and confirm the custom ID persists.
+8. Generate cues for a short note and spot-check one existing direct provider to confirm the picker and connection flow still work.
 
 For the Reading-mode display and Cornell entry slice:
 
@@ -347,7 +359,7 @@ For the provider model-list discovery slice:
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (301 tests)
+bun run test       # vitest (319 tests)
 ```
 
 
@@ -356,4 +368,6 @@ five AI-SDK vendors incl. OpenRouter), `src/generator.ts` (generation + per-sect
 `src/cache.ts` (per-note cache + stale detection), `src/cue-extension.ts` (editor decorations),
 `src/cornell*.ts` (Cornell view + model), `src/settings.ts` (provider settings),
 `src/model-options.ts` (normalized model metadata + helpers),
+`src/model-combobox.ts` (searchable model picker),
+`src/model-compatibility.ts` (compatibility badges/warnings),
 `src/model-refresh.ts` (model-refresh description logic).
