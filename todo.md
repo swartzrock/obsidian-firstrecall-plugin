@@ -99,8 +99,8 @@ Manual Obsidian test instructions:
 
 ## Phase 3 - Model Metadata Layer
 
-- [ ] Add a small model metadata module, such as `src/model-options.ts`.
-- [ ] Define a normalized model option shape with at least:
+- [x] Add a small model metadata module, such as `src/model-options.ts`.
+- [x] Define a normalized model option shape with at least:
   - `id`
   - `label`
   - `provider`
@@ -108,16 +108,16 @@ Manual Obsidian test instructions:
   - `pricing`
   - `supportedParameters`
   - `source`
-- [ ] Add helper functions to normalize string IDs and OpenRouter model objects into the same display-ready shape.
-- [ ] Add stable sorting helpers that put recommended/current models first, then sort human-readably.
-- [ ] Keep persisted selected model values as strings.
-- [ ] Avoid storing raw OpenRouter payloads in settings; store only normalized metadata needed for display and compatibility checks.
-- [ ] Update OpenRouter model fetching to retain metadata when available.
-- [ ] Adapt existing string-only model arrays through the normalization helper so current providers keep working.
-- [ ] Add unit tests for OpenRouter model metadata parsing, string fallback normalization, and sorting.
-- [ ] Update `docs/CueCraft-Progress.md` and the test count.
-- [ ] Run `bun run typecheck`.
-- [ ] Run `bun run test`.
+- [x] Add helper functions to normalize string IDs and OpenRouter model objects into the same display-ready shape.
+- [x] Add stable sorting helpers that put recommended/current models first, then sort human-readably.
+- [x] Keep persisted selected model values as strings.
+- [x] Avoid storing raw OpenRouter payloads in settings; store only normalized metadata needed for display and compatibility checks.
+- [x] Update OpenRouter model fetching to retain metadata when available.
+- [x] Adapt existing string-only model arrays through the normalization helper so current providers keep working.
+- [x] Add unit tests for OpenRouter model metadata parsing, string fallback normalization, and sorting.
+- [x] Update `docs/CueCraft-Progress.md` and the test count.
+- [x] Run `bun run typecheck`.
+- [x] Run `bun run test`.
 
 Manual Obsidian test instructions:
 

@@ -56,6 +56,7 @@ import {
 } from "./provider-setup-status";
 import { sortFetchedModelIds } from "./fetched-model-sorting";
 import { resolveModelRefreshDescription } from "./model-refresh";
+import { isModelOption, type ModelOption } from "./model-options";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
 
@@ -98,6 +99,7 @@ export interface CueCraftSettings {
 	openrouterApiKey: string;
 	openrouterModel: string;
 	openrouterAvailableModels: string[];
+	openrouterModelOptions: ModelOption[];
 	openrouterHasFetchedModels: boolean;
 	openrouterModelRefreshMessage: string;
 	ollamaAvailableModels: string[];
@@ -151,6 +153,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	openrouterApiKey: "",
 	openrouterModel: "",
 	openrouterAvailableModels: [],
+	openrouterModelOptions: [],
 	openrouterHasFetchedModels: false,
 	openrouterModelRefreshMessage: "",
 	ollamaAvailableModels: [],
@@ -1163,6 +1166,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					setKey: (v) => {
 						s.openrouterApiKey = v;
 						s.openrouterAvailableModels = [];
+						s.openrouterModelOptions = [];
 						s.openrouterHasFetchedModels = false;
 						s.openrouterModelRefreshMessage =
 							"Enter your OpenRouter API key first to fetch available models.";
@@ -1247,6 +1251,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					setAvailableModels: (models) => (s.openrouterAvailableModels = models),
 					setHasFetchedModels: (value) => (s.openrouterHasFetchedModels = value),
 					setRefreshMessage: (value) => (s.openrouterModelRefreshMessage = value),
+					setModelOptions: (options) => (s.openrouterModelOptions = options),
 				});
 				return;
 		}
@@ -1386,6 +1391,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			setAvailableModels: (models: string[]) => void;
 			setHasFetchedModels: (value: boolean) => void;
 			setRefreshMessage: (value: string) => void;
+			setModelOptions?: (options: ModelOption[]) => void;
 		}
 	): void {
 		this.renderFetchedModelSelector(containerEl, {
@@ -1424,6 +1430,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 							setAvailableModels: opts.setAvailableModels,
 							setHasFetchedModels: opts.setHasFetchedModels,
 							setRefreshMessage: opts.setRefreshMessage,
+							setModelOptions: opts.setModelOptions,
 						})
 					)
 			);
@@ -1444,11 +1451,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		setAvailableModels: (models: string[]) => void;
 		setHasFetchedModels: (value: boolean) => void;
 		setRefreshMessage: (value: string) => void;
+		setModelOptions?: (options: ModelOption[]) => void;
 	}): Promise<void> {
 		const provider = this.plugin.makeProvider();
 		opts.setHasFetchedModels(true);
 		if (!provider.listModels) {
 			opts.setAvailableModels([]);
+			opts.setModelOptions?.([]);
 			opts.setRefreshMessage(
 				`CueCraft: ${opts.providerName} model fetch is unavailable.`
 			);
@@ -1457,7 +1466,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return;
 		}
 		try {
-			const models = sortFetchedModelIds((await provider.listModels()) as string[]);
+			const raw = await provider.listModels();
+			let ids: string[];
+			if (raw.length > 0 && isModelOption(raw[0])) {
+				const options = raw as ModelOption[];
+				ids = options.map((o) => o.id);
+				opts.setModelOptions?.(options);
+			} else {
+				ids = raw as string[];
+				opts.setModelOptions?.([]);
+			}
+			const models = sortFetchedModelIds(ids);
 			opts.setAvailableModels(models);
 			opts.setRefreshMessage(
 				models.length > 0
@@ -1467,6 +1486,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			opts.setAvailableModels([]);
+			opts.setModelOptions?.([]);
 			opts.setRefreshMessage(
 				message
 					? `Could not fetch ${opts.providerName} models (${message}).`

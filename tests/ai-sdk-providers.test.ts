@@ -6,13 +6,14 @@ import { XaiProvider } from "../src/providers/xai-provider";
 import { OpenRouterProvider } from "../src/providers/openrouter-provider";
 import type { ObjectGenerator } from "../src/providers/ai-sdk-provider";
 import { ProviderError, ProviderRateLimitError } from "../src/providers/types";
+import { normalizeStringId, type ModelOption } from "../src/model-options";
 
 type Ctor = new (opts: {
 	apiKey: string;
 	model: string;
 	generator?: ObjectGenerator;
 	fetchImpl?: typeof fetch;
-	listModelsImpl?: () => Promise<string[]>;
+	listModelsImpl?: () => Promise<string[] | ModelOption[]>;
 }) => {
 	id: string;
 	label: string;
@@ -37,7 +38,7 @@ type Ctor = new (opts: {
 		sectionQuestions: string[];
 	}) => Promise<{ summary: string }>;
 	testConnection: () => Promise<{ ok: boolean; message: string }>;
-	listModels: () => Promise<string[]>;
+	listModels: () => Promise<unknown[]>;
 };
 
 /** Generator returning a fixed object and recording prompts. */
@@ -292,20 +293,29 @@ for (const c of cases) {
 		});
 
 		it("listModels returns provider model ids", async () => {
-			const modelsByProvider: Record<string, string[]> = {
+			const modelIdsByProvider: Record<string, string[]> = {
 				openai: ["gpt-4o-mini", "gpt-4.1"],
 				google: ["gemini-1.5-flash"],
 				xai: ["grok-2-latest", "grok-beta"],
 				openrouter: ["anthropic/claude-sonnet-4", "openai/gpt-4o"],
 			};
-			const expected = modelsByProvider[c.id] ?? ["grok-2-latest", "grok-beta"];
+			const ids = modelIdsByProvider[c.id] ?? ["grok-2-latest", "grok-beta"];
+			const expected: string[] | ModelOption[] =
+				c.id === "openrouter"
+					? ids.map((id) => normalizeStringId(id, "openrouter"))
+					: ids;
 			const provider = new c.Ctor({
 				apiKey: "k",
 				model: c.model,
 				generator: async () => ({ ok: true }) as never,
 				listModelsImpl: async () => expected,
 			});
-			expect(await provider.listModels()).toEqual(expected);
+			const result = await provider.listModels();
+			if (c.id === "openrouter") {
+				expect((result as ModelOption[]).map((m) => m.id)).toEqual(ids);
+			} else {
+				expect(result).toEqual(expected);
+			}
 		});
 	});
 }
