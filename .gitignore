@@ -149,3 +149,5 @@ main.js
 data.json
 
 .DS_Store
+
+hosts.yml
