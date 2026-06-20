@@ -129,19 +129,19 @@ Manual Obsidian test instructions:
 
 ## Phase 4 - Searchable Model Combobox
 
-- [ ] Build a reusable model combobox component, preferably in its own file if it keeps `src/settings.ts` smaller.
-- [ ] Support mouse selection, keyboard navigation, `Enter`, `Escape`, and blur behavior.
-- [ ] Filter client-side by model ID, label, provider, and useful badges.
-- [ ] Show a clear empty state when no fetched suggestions match.
-- [ ] Allow custom typed model IDs without forcing the user to pick a fetched suggestion.
-- [ ] Keep the current saved model visible even when suggestions are empty or stale.
-- [ ] Replace the existing fetched-model selector with the combobox for OpenRouter and the generic cloud providers.
-- [ ] Reuse the combobox for Anthropic curated/fetched model selection if this can be done without a broad rewrite; otherwise leave Anthropic for a follow-up phase and document why.
-- [ ] Add theme-safe CSS in `styles.css`.
-- [ ] Add tests for filtering helpers, custom value handling, and selected-value preservation.
-- [ ] Update `docs/CueCraft-Progress.md` and the test count.
-- [ ] Run `bun run typecheck`.
-- [ ] Run `bun run test`.
+- [x] Build a reusable model combobox component, preferably in its own file if it keeps `src/settings.ts` smaller.
+- [x] Support mouse selection, keyboard navigation, `Enter`, `Escape`, and blur behavior.
+- [x] Filter client-side by model ID, label, provider, and useful badges.
+- [x] Show a clear empty state when no fetched suggestions match.
+- [x] Allow custom typed model IDs without forcing the user to pick a fetched suggestion.
+- [x] Keep the current saved model visible even when suggestions are empty or stale.
+- [x] Replace the existing fetched-model selector with the combobox for OpenRouter and the generic cloud providers.
+- [x] Reuse the combobox for Anthropic curated/fetched model selection if this can be done without a broad rewrite; otherwise leave Anthropic for a follow-up phase and document why.
+- [x] Add theme-safe CSS in `styles.css`.
+- [x] Add tests for filtering helpers, custom value handling, and selected-value preservation.
+- [x] Update `docs/CueCraft-Progress.md` and the test count.
+- [x] Run `bun run typecheck`.
+- [x] Run `bun run test`.
 
 Manual Obsidian test instructions:
 

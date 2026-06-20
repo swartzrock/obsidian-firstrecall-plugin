@@ -1,0 +1,243 @@
+import {
+	normalizeStringId,
+	sortModelOptions,
+	type ModelOption,
+	type ModelOptionSource,
+} from "./model-options";
+
+let nextComboboxId = 0;
+
+export function buildModelComboboxOptions(opts: {
+	options: ModelOption[];
+	currentModelId: string;
+	source: ModelOptionSource;
+}): ModelOption[] {
+	const byId = new Map<string, ModelOption>();
+	for (const option of opts.options) {
+		if (option.id.trim()) byId.set(option.id, option);
+	}
+	const currentModelId = opts.currentModelId.trim();
+	if (currentModelId && !byId.has(currentModelId)) {
+		byId.set(currentModelId, normalizeStringId(currentModelId, opts.source));
+	}
+	return sortModelOptions([...byId.values()], currentModelId);
+}
+
+export function modelOptionSearchText(
+	option: ModelOption,
+	badges: string[] = []
+): string {
+	return [
+		option.id,
+		option.label,
+		option.provider,
+		option.source,
+		...badges,
+	]
+		.filter(Boolean)
+		.join(" ")
+		.toLowerCase();
+}
+
+export function filterModelOptions(
+	options: ModelOption[],
+	query: string,
+	badgesForOption: (option: ModelOption) => string[] = () => []
+): ModelOption[] {
+	const normalizedQuery = query.trim().toLowerCase();
+	if (!normalizedQuery) return options;
+	return options.filter((option) =>
+		modelOptionSearchText(option, badgesForOption(option)).includes(
+			normalizedQuery
+		)
+	);
+}
+
+export function renderModelCombobox(opts: {
+	containerEl: HTMLElement;
+	value: string;
+	options: ModelOption[];
+	source: ModelOptionSource;
+	placeholder: string;
+	emptyMessage: string;
+	onCommit: (value: string) => void | Promise<void>;
+	badgesForOption?: (option: ModelOption) => string[];
+}): void {
+	const comboboxId = `cuecraft-model-combobox-${++nextComboboxId}`;
+	const listboxId = `${comboboxId}-list`;
+	const badgesForOption = opts.badgesForOption ?? (() => []);
+	let isOpen = false;
+	let activeIndex = 0;
+
+	const rootEl = opts.containerEl.createDiv({
+		cls: "cuecraft-model-combobox",
+	});
+	const inputEl = rootEl.createEl("input", {
+		cls: "cuecraft-model-combobox-input",
+		attr: {
+			id: comboboxId,
+			type: "text",
+			role: "combobox",
+			"aria-controls": listboxId,
+			"aria-expanded": "false",
+			"aria-autocomplete": "list",
+			placeholder: opts.placeholder,
+		},
+	});
+	inputEl.value = opts.value;
+
+	const listEl = rootEl.createDiv({
+		cls: "cuecraft-model-combobox-list cuecraft-model-combobox-list-hidden",
+		attr: { id: listboxId, role: "listbox" },
+	});
+
+	const catalog = () =>
+		buildModelComboboxOptions({
+			options: opts.options,
+			currentModelId: inputEl.value,
+			source: opts.source,
+		});
+	const matches = () =>
+		filterModelOptions(catalog(), inputEl.value, badgesForOption);
+
+	const closeList = () => {
+		isOpen = false;
+		inputEl.setAttr("aria-expanded", "false");
+		inputEl.removeAttribute("aria-activedescendant");
+		listEl.addClass("cuecraft-model-combobox-list-hidden");
+	};
+
+	const commitValue = (value: string) => {
+		const nextValue = value.trim();
+		inputEl.value = nextValue;
+		void opts.onCommit(nextValue);
+	};
+
+	const chooseOption = (option: ModelOption) => {
+		commitValue(option.id);
+		closeList();
+	};
+
+	const renderList = () => {
+		listEl.replaceChildren();
+		if (!isOpen) {
+			closeList();
+			return;
+		}
+		const visibleOptions = matches();
+		listEl.removeClass("cuecraft-model-combobox-list-hidden");
+		inputEl.setAttr("aria-expanded", "true");
+		if (visibleOptions.length === 0) {
+			listEl.createDiv({
+				cls: "cuecraft-model-combobox-empty",
+				text: opts.emptyMessage,
+			});
+			inputEl.removeAttribute("aria-activedescendant");
+			return;
+		}
+
+		activeIndex = Math.max(
+			0,
+			Math.min(activeIndex, visibleOptions.length - 1)
+		);
+		for (const [index, option] of visibleOptions.entries()) {
+			const optionId = `${comboboxId}-option-${index}`;
+			const optionEl = listEl.createEl("button", {
+				cls: "cuecraft-model-combobox-option",
+				attr: {
+					id: optionId,
+					type: "button",
+					role: "option",
+					title: option.id,
+					"aria-selected": index === activeIndex ? "true" : "false",
+				},
+			});
+			if (index === activeIndex) {
+				inputEl.setAttr("aria-activedescendant", optionId);
+			}
+			optionEl.createDiv({
+				cls: "cuecraft-model-combobox-option-label",
+				text: option.label || option.id,
+			});
+			const detailText =
+				option.label && option.label !== option.id ? option.id : "";
+			if (detailText) {
+				optionEl.createDiv({
+					cls: "cuecraft-model-combobox-option-detail",
+					text: detailText,
+				});
+			}
+			const badges = badgesForOption(option);
+			if (badges.length > 0) {
+				const badgeRow = optionEl.createDiv({
+					cls: "cuecraft-model-combobox-badges",
+				});
+				for (const badge of badges) {
+					badgeRow.createSpan({
+						cls: "cuecraft-model-combobox-badge",
+						text: badge,
+					});
+				}
+			}
+			optionEl.addEventListener("mousedown", (event) => {
+				event.preventDefault();
+				chooseOption(option);
+			});
+		}
+	};
+
+	inputEl.addEventListener("focus", () => {
+		isOpen = true;
+		activeIndex = 0;
+		renderList();
+	});
+	inputEl.addEventListener("input", () => {
+		isOpen = true;
+		activeIndex = 0;
+		renderList();
+	});
+	inputEl.addEventListener("keydown", (event) => {
+		const visibleOptions = matches();
+		if (event.key === "ArrowDown") {
+			event.preventDefault();
+			isOpen = true;
+			activeIndex =
+				visibleOptions.length === 0
+					? 0
+					: (activeIndex + 1) % visibleOptions.length;
+			renderList();
+			return;
+		}
+		if (event.key === "ArrowUp") {
+			event.preventDefault();
+			isOpen = true;
+			activeIndex =
+				visibleOptions.length === 0
+					? 0
+					: (activeIndex - 1 + visibleOptions.length) %
+						visibleOptions.length;
+			renderList();
+			return;
+		}
+		if (event.key === "Enter") {
+			event.preventDefault();
+			if (isOpen && visibleOptions[activeIndex]) {
+				chooseOption(visibleOptions[activeIndex]);
+				return;
+			}
+			commitValue(inputEl.value);
+			closeList();
+			return;
+		}
+		if (event.key === "Escape") {
+			event.preventDefault();
+			closeList();
+		}
+	});
+	inputEl.addEventListener("blur", () => {
+		window.setTimeout(() => {
+			commitValue(inputEl.value);
+			closeList();
+		}, 100);
+	});
+}
