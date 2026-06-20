@@ -87,10 +87,9 @@ export function renderModelCombobox(opts: {
 	inputEl.value = opts.value;
 
 	const listEl = rootEl.createDiv({
-		cls: "cuecraft-model-combobox-list",
+		cls: "cuecraft-model-combobox-list cuecraft-model-combobox-list-hidden",
 		attr: { id: listboxId, role: "listbox" },
 	});
-	listEl.style.display = "none";
 
 	const catalog = () =>
 		buildModelComboboxOptions({
@@ -105,7 +104,7 @@ export function renderModelCombobox(opts: {
 		isOpen = false;
 		inputEl.setAttr("aria-expanded", "false");
 		inputEl.removeAttribute("aria-activedescendant");
-		listEl.style.display = "none";
+		listEl.addClass("cuecraft-model-combobox-list-hidden");
 	};
 
 	const commitValue = (value: string) => {
@@ -126,7 +125,7 @@ export function renderModelCombobox(opts: {
 			return;
 		}
 		const visibleOptions = matches();
-		listEl.style.display = "";
+		listEl.removeClass("cuecraft-model-combobox-list-hidden");
 		inputEl.setAttr("aria-expanded", "true");
 		if (visibleOptions.length === 0) {
 			listEl.createDiv({

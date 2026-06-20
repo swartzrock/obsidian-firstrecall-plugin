@@ -150,6 +150,10 @@
 	padding: 4px;
 }
 
+.cuecraft-model-combobox-list-hidden {
+	display: none;
+}
+
 .cuecraft-model-combobox-option {
 	display: block;
 	width: 100%;
