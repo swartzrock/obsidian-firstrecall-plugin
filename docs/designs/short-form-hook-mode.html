@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+	<title>CueCraft Short-Form Hook Mode — Left Margin Design</title>
+	<style>
+		:root {
+			--app-bg: #f7f1e7;
+			--sidebar: #e7ddff;
+			--editor: #fffdf8;
+			--ink: #202025;
+			--muted: #6f6a75;
+			--line: #dfd8cc;
+			--rail-bg: #f2eadc;
+			--card-bg: #201915;
+			--hook-hot: #ff8a24;
+			--hook-warm: #f6c446;
+			--hook-cool: #1f7f7d;
+			--accent: #f0aa20;
+			--shadow: 0 22px 60px rgba(31, 24, 18, 0.18);
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		}
+
+		* { box-sizing: border-box; }
+
+		body {
+			margin: 0;
+			min-height: 100vh;
+			background:
+				radial-gradient(circle at 18% 8%, rgba(240, 170, 32, 0.16), transparent 24rem),
+				linear-gradient(135deg, #fffaf1 0%, #f6efe4 58%, #efe6d4 100%);
+			color: var(--ink);
+		}
+
+		main {
+			width: min(1320px, calc(100vw - 36px));
+			margin: 0 auto;
+			padding: 34px 0 56px;
+		}
+
+		.header {
+			display: grid;
+			grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr);
+			gap: 28px;
+			align-items: end;
+			margin-bottom: 24px;
+		}
+
+		.kicker {
+			margin: 0 0 10px;
+			color: var(--hook-cool);
+			font-size: 12px;
+			font-weight: 850;
+			letter-spacing: 0.16em;
+			text-transform: uppercase;
+		}
+
+		h1 {
+			margin: 0;
+			font-size: clamp(36px, 5vw, 62px);
+			line-height: 1;
+			letter-spacing: -0.045em;
+		}
+
+		.lede {
+			margin: 0;
+			max-width: 48rem;
+			font-size: 18px;
+			line-height: 1.55;
+			color: var(--muted);
+		}
+
+		.window {
+			border: 1px solid rgba(32, 32, 37, 0.14);
+			border-radius: 18px;
+			background: var(--editor);
+			box-shadow: var(--shadow);
+			overflow: hidden;
+		}
+
+		.titlebar {
+			height: 54px;
+			display: grid;
+			grid-template-columns: 170px 1fr 170px;
+			align-items: center;
+			gap: 16px;
+			padding: 0 18px;
+			background: #eeeaf6;
+			border-bottom: 1px solid rgba(32, 32, 37, 0.12);
+			font-size: 13px;
+			color: #514b5d;
+		}
+
+		.lights {
+			display: flex;
+			gap: 8px;
+		}
+
+		.light {
+			width: 11px;
+			height: 11px;
+			border-radius: 999px;
+		}
+
+		.light.red { background: #ff5f57; }
+		.light.yellow { background: #febc2e; }
+		.light.green { background: #28c840; }
+
+		.search {
+			justify-self: center;
+			width: min(360px, 100%);
+			border: 1px solid rgba(32, 32, 37, 0.14);
+			border-radius: 9px;
+			background: #fff;
+			padding: 8px 12px;
+			color: #686172;
+		}
+
+		.status-pill {
+			justify-self: end;
+			border-radius: 999px;
+			background: #201f24;
+			color: #fff;
+			padding: 8px 12px;
+			font-size: 12px;
+			font-weight: 750;
+		}
+
+		.app {
+			display: grid;
+			grid-template-columns: 176px 1fr;
+			min-height: 760px;
+		}
+
+		.sidebar {
+			background: var(--sidebar);
+			border-right: 1px solid rgba(32, 32, 37, 0.1);
+			padding: 18px 14px;
+		}
+
+		.sidebar h2 {
+			margin: 0 0 16px;
+			font-size: 13px;
+			font-weight: 850;
+			color: #564f67;
+		}
+
+		.file {
+			display: block;
+			padding: 8px 10px;
+			border-radius: 8px;
+			font-size: 13px;
+			color: #5f5870;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.file.active {
+			background: rgba(104, 94, 172, 0.13);
+			color: #302a45;
+			font-weight: 800;
+		}
+
+		.editor-shell {
+			position: relative;
+			display: grid;
+			grid-template-columns: 190px minmax(420px, 1fr);
+			gap: 42px;
+			padding: 76px 54px 72px 48px;
+			background: #fffdf8;
+		}
+
+		.hook-rail {
+			align-self: start;
+			position: sticky;
+			top: 24px;
+			display: grid;
+			gap: 48px;
+			padding: 12px;
+			border-radius: 22px;
+			background: var(--rail-bg);
+			border: 1px solid rgba(32, 32, 37, 0.08);
+		}
+
+		.rail-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 2px 4px 0;
+			font-size: 10px;
+			font-weight: 900;
+			letter-spacing: 0.14em;
+			text-transform: uppercase;
+			color: #776a57;
+		}
+
+		.hook-card {
+			position: relative;
+			border-radius: 20px;
+			background: var(--card-bg);
+			padding: 9px;
+			box-shadow: 0 14px 30px rgba(31, 24, 18, 0.22);
+		}
+
+		.hook-card.active {
+			outline: 3px solid rgba(240, 170, 32, 0.42);
+		}
+
+		.card-inner {
+			position: relative;
+			min-height: 104px;
+			border-radius: 16px;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			padding: 14px 15px;
+			background: linear-gradient(145deg, var(--hook-hot), var(--hook-warm));
+			overflow: hidden;
+		}
+
+
+		.hook-card.align-dogs { margin-top: 2px; }
+		.hook-card.align-terms { margin-top: 44px; }
+		.hook-card.align-upskill { margin-top: 50px; }
+
+		.card-status {
+			position: relative;
+			z-index: 1;
+			align-self: flex-start;
+			width: 18px;
+			height: 18px;
+			margin-bottom: 8px;
+			border-radius: 999px;
+			display: inline-grid;
+			place-items: center;
+			font-size: 11px;
+			font-weight: 800;
+			background: rgba(255, 253, 248, 0.52);
+			color: rgba(32, 25, 21, 0.68);
+		}
+
+		.card-inner.teal .card-status { color: rgba(8, 47, 51, 0.66); }
+
+		.card-inner.teal {
+			background: linear-gradient(145deg, #1d7c83, #60b9ae);
+		}
+
+		.card-inner::after {
+			content: "?";
+			position: absolute;
+			right: -4px;
+			bottom: -28px;
+			font-size: 86px;
+			font-weight: 850;
+			line-height: 1;
+			color: rgba(32, 25, 21, 0.1);
+		}
+
+		.card-meta {
+			position: relative;
+			z-index: 1;
+			display: flex;
+			justify-content: space-between;
+			gap: 8px;
+			font-size: 9px;
+			font-weight: 950;
+			letter-spacing: 0.12em;
+			text-transform: uppercase;
+			color: rgba(32, 25, 21, 0.7);
+		}
+
+		.card-inner.teal .card-meta,
+		.card-inner.teal .hook-title {
+			color: #082f33;
+		}
+
+		.hook-title {
+			position: relative;
+			z-index: 1;
+			margin: 0;
+			font-size: 18px;
+			line-height: 1.02;
+			letter-spacing: -0.035em;
+			font-weight: 780;
+			color: #211915;
+		}
+
+		.summary-mini {
+			margin-top: 28px;
+			border-radius: 26px;
+			background: var(--hook-cool);
+			padding: 24px;
+			color: #fffaf1;
+		}
+
+		.summary-mini .card-meta {
+			color: rgba(255, 250, 241, 0.68);
+		}
+
+		.summary-mini .summary-title {
+			margin: 12px 0 0;
+			font-size: 34px;
+			line-height: 0.95;
+			letter-spacing: -0.06em;
+			font-weight: 950;
+		}
+
+		.note {
+			max-width: 720px;
+			padding-top: 16px;
+		}
+
+		.note h2 {
+			position: relative;
+			margin: 0 0 8px;
+			font-size: 28px;
+			line-height: 1.15;
+			letter-spacing: -0.035em;
+		}
+
+		.note h2::before {
+			content: "";
+			position: absolute;
+			left: -14px;
+			top: 5px;
+			width: 4px;
+			height: 28px;
+			border-radius: 4px;
+			background: var(--accent);
+		}
+
+		.note section { margin-bottom: 56px; }
+
+		.note p,
+		.note li {
+			font-size: 16px;
+			line-height: 1.6;
+			color: #37333d;
+		}
+
+		.note ol { padding-left: 22px; }
+
+		.note mark {
+			background: rgba(240, 170, 32, 0.22);
+			border-radius: 4px;
+			padding: 0 2px;
+		}
+
+		.design-notes {
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 16px;
+			margin-top: 22px;
+		}
+
+		.panel {
+			border: 1px solid rgba(32, 32, 37, 0.12);
+			border-radius: 24px;
+			background: rgba(255, 253, 248, 0.72);
+			padding: 20px;
+		}
+
+		.panel h2 {
+			margin: 0 0 8px;
+			font-size: 18px;
+		}
+
+		.panel p {
+			margin: 0;
+			font-size: 14px;
+			line-height: 1.5;
+			color: var(--muted);
+		}
+
+
+		.explainer-card {
+			position: relative;
+			margin-top: 24px;
+			border: 1px solid rgba(32, 32, 37, 0.12);
+			border-radius: 30px;
+			background: linear-gradient(135deg, #fffaf1 0%, #f4eadb 100%);
+			box-shadow: 0 18px 48px rgba(31, 24, 18, 0.12);
+			padding: 26px;
+			overflow: hidden;
+		}
+
+		.explainer-card h2 {
+			margin: 0 0 8px;
+			font-size: 26px;
+			letter-spacing: -0.04em;
+		}
+
+		.explainer-card > p {
+			max-width: 58rem;
+			margin: 0 0 20px;
+			font-size: 15px;
+			line-height: 1.55;
+			color: var(--muted);
+		}
+
+		.explainer-graph {
+			width: 100%;
+			height: auto;
+			display: block;
+		}
+
+		.graph-node {
+			fill: #fffdf8;
+			stroke: #d8c7af;
+			stroke-width: 1.5;
+		}
+
+		.graph-node.primary {
+			fill: #ffe4b8;
+			stroke: #f0aa20;
+		}
+
+		.graph-node.cool {
+			fill: #d8efec;
+			stroke: #1f7f7d;
+		}
+
+		.graph-title {
+			font-size: 14px;
+			font-weight: 900;
+			fill: #202025;
+		}
+
+		.graph-copy {
+			font-size: 12px;
+			fill: #6f6a75;
+		}
+
+		.graph-arrow {
+			stroke: #a87817;
+			stroke-width: 2;
+			fill: none;
+			marker-end: url(#arrowhead);
+		}
+
+		@media (max-width: 980px) {
+			.header,
+			.app,
+			.editor-shell,
+			.design-notes {
+				grid-template-columns: 1fr;
+			}
+
+			.sidebar { display: none; }
+
+			.editor-shell {
+				padding: 28px 20px 44px;
+				gap: 22px;
+			}
+
+			.hook-rail {
+				position: static;
+				grid-template-columns: repeat(2, minmax(150px, 1fr));
+			}
+
+			.rail-header { grid-column: 1 / -1; }
+		}
+
+		@media (prefers-reduced-motion: no-preference) {
+			.hook-card { animation: rail-card-in 520ms cubic-bezier(.2,.9,.2,1) both; }
+			.hook-card:nth-of-type(2) { animation-delay: 80ms; }
+			.hook-card:nth-of-type(3) { animation-delay: 150ms; }
+			.hook-card:nth-of-type(4) { animation-delay: 220ms; }
+		}
+
+		@keyframes rail-card-in {
+			from { opacity: 0; transform: translateX(-14px) scale(0.97); }
+			to { opacity: 1; transform: translateX(0) scale(1); }
+		}
+	</style>
+</head>
+<body>
+	<main>
+		<header class="header">
+			<div>
+				<p class="kicker">CueCraft editor-margin concept</p>
+				<h1>Hook Mode lives beside the note.</h1>
+			</div>
+			<p class="lede">This design uses warm amber, honey, parchment, and calm teal tones to feel energetic without feeling unsafe. Each hook card is intentionally small and vertically aligned with its note section, so the relationship is obvious without section numbers or extra labels.</p>
+		</header>
+
+		<section class="window" aria-label="Obsidian editor with CueCraft Hook Mode left rail">
+			<div class="titlebar">
+				<div class="lights" aria-hidden="true">
+					<span class="light red"></span>
+					<span class="light yellow"></span>
+					<span class="light green"></span>
+				</div>
+				<div class="search">claude22</div>
+				<div class="status-pill">CueCraft: Hook Mode</div>
+			</div>
+
+			<div class="app">
+				<aside class="sidebar" aria-label="Obsidian file explorer mockup">
+					<h2>Claude for Execs</h2>
+					<span class="file">Claude for Execs</span>
+					<span class="file active">claude22</span>
+					<span class="file">Cloddy</span>
+					<span class="file">exciting-cornell-notes...</span>
+					<span class="file">Landscape Research R...</span>
+				</aside>
+
+				<div class="editor-shell">
+					<aside class="hook-rail" aria-label="CueCraft hook cards aligned to note sections">
+						<div class="rail-header"><span>Hook review</span><span>section cards</span></div>
+
+						<article class="hook-card active align-dogs" aria-labelledby="hook-dogs">
+							<div class="card-inner">
+								<div class="card-status" title="Current section" aria-label="Current section">●</div>
+								<h2 id="hook-dogs" class="hook-title">Who are the dogs we love?</h2>
+							</div>
+						</article>
+
+						<article class="hook-card align-terms" aria-labelledby="hook-terms">
+							<div class="card-inner teal">
+								<div class="card-status" title="Upcoming section" aria-label="Upcoming section">○</div>
+								<h2 id="hook-terms" class="hook-title">Chatbot or agent? Prove it.</h2>
+							</div>
+						</article>
+
+						<article class="hook-card align-upskill" aria-labelledby="hook-upskill">
+							<div class="card-inner">
+								<div class="card-status" title="Upcoming section" aria-label="Upcoming section">○</div>
+								<h2 id="hook-upskill" class="hook-title">How do employees get AI-shippable?</h2>
+							</div>
+						</article>
+					</aside>
+
+					<article class="note" aria-label="Markdown note body mockup">
+						<section>
+							<h2>Dogs We Love</h2>
+							<ol>
+								<li><mark>Tzimmes</mark> is a dog</li>
+								<li>So is Tonks</li>
+							</ol>
+						</section>
+
+						<section>
+							<h2>Terms</h2>
+							<ol>
+								<li>Agent - Independent AI that can plan, decide, and use tools to complete a task.</li>
+								<li>Chatbot - single-turn interaction AI app. Not good at multi-step tasks.</li>
+								<li>Claude Code - works from the dev env, can do complex dev tasks.</li>
+								<li>Plugins - customize Claude for a role/team, with tools, workflows, and knowledge sources.</li>
+							</ol>
+						</section>
+
+						<section>
+							<h2>How To Upskill Employees</h2>
+							<p>Tailor AI training around standards, terms, tools, and institutional knowledge to do tasks and create shippable content.</p>
+							<ol>
+								<li>Requires encoding organizational knowledge.</li>
+								<li>Teach methodology, compliance, brand voice, and reporting standards.</li>
+								<li>Reduce time to collect info, get answers, and visualize results.</li>
+							</ol>
+						</section>
+							<aside class="summary-mini" aria-labelledby="summary-hook">
+								<div class="card-meta"><span>Summary</span><span>after review</span></div>
+								<h2 id="summary-hook" class="summary-title">Agents compound progress through feedback.</h2>
+							</aside>
+					</article>
+				</div>
+			</div>
+		</section>
+
+
+		<section class="explainer-card" aria-labelledby="explainer-title">
+			<h2 id="explainer-title">How the simpler rail works</h2>
+			<p>This single graph explains the simplified design: cards are small because they no longer carry support beats or section indexes. Their vertical position identifies the matching Markdown section, while the summary appears after the note instead of in the left rail.</p>
+			<svg class="explainer-graph" viewBox="0 0 1120 360" role="img" aria-labelledby="graph-title graph-desc">
+				<title id="graph-title">Simplified Hook Mode rail graph</title>
+				<desc id="graph-desc">A graph explaining that card alignment maps cards to note sections, the status icons mark current versus upcoming sections, and the final summary sits below the note.</desc>
+				<defs>
+					<marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+						<path d="M0,0 L0,6 L9,3 z" fill="#a87817" />
+					</marker>
+				</defs>
+
+				<rect class="graph-node primary" x="36" y="42" width="220" height="112" rx="22" />
+				<text class="graph-title" x="66" y="80">Small hook card</text>
+				<text class="graph-copy" x="66" y="108">Only the recall prompt</text>
+				<text class="graph-copy" x="66" y="132">plus a tiny state icon.</text>
+
+				<rect class="graph-node" x="36" y="202" width="220" height="96" rx="22" />
+				<text class="graph-title" x="66" y="240">● / ○ status</text>
+				<text class="graph-copy" x="66" y="268">Current vs upcoming section.</text>
+
+				<rect class="graph-node primary" x="450" y="42" width="250" height="112" rx="26" />
+				<text class="graph-title" x="486" y="80">Vertical alignment</text>
+				<text class="graph-copy" x="486" y="108">Position maps the card</text>
+				<text class="graph-copy" x="486" y="132">to its Markdown section.</text>
+
+				<rect class="graph-node" x="450" y="202" width="250" height="96" rx="26" />
+				<text class="graph-title" x="486" y="240">No support beats</text>
+				<text class="graph-copy" x="486" y="268">Hints stay out of the card.</text>
+
+				<rect class="graph-node" x="864" y="42" width="220" height="112" rx="22" />
+				<text class="graph-title" x="896" y="80">Markdown section</text>
+				<text class="graph-copy" x="896" y="108">The note remains the</text>
+				<text class="graph-copy" x="896" y="132">source of orientation.</text>
+
+				<rect class="graph-node cool" x="864" y="202" width="220" height="96" rx="22" />
+				<text class="graph-title" x="896" y="240">Bottom summary</text>
+				<text class="graph-copy" x="896" y="268">Appears after the note.</text>
+
+				<path class="graph-arrow" d="M256 98 C334 98, 370 98, 450 98" />
+				<path class="graph-arrow" d="M700 98 C770 98, 796 98, 864 98" />
+				<path class="graph-arrow" d="M256 250 C334 250, 370 250, 450 250" />
+				<path class="graph-arrow" d="M700 250 C770 250, 796 250, 864 250" />
+			</svg>
+		</section>
+
+		<section class="design-notes" aria-label="Design implications">
+			<article class="panel">
+				<h2>Placement</h2>
+				<p>The hook cards live in the editor's left cue margin, aligned beside note content rather than centered as a separate mobile sprint.</p>
+			</article>
+			<article class="panel">
+				<h2>Density</h2>
+				<p>Each note section gets a compact card sized for vertical alignment. The card should not include section indexes, support beats, or loud status words.</p>
+			</article>
+			<article class="panel">
+				<h2>Interaction</h2>
+				<p>Clicking a card scrolls or focuses the corresponding Markdown section. Keyword hints can live in a later detail state, not the default small card.</p>
+			</article>
+		</section>
+	</main>
+</body>
+</html>
