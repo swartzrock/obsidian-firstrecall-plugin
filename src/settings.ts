@@ -56,7 +56,13 @@ import {
 } from "./provider-setup-status";
 import { sortFetchedModelIds } from "./fetched-model-sorting";
 import { resolveModelRefreshDescription } from "./model-refresh";
-import { isModelOption, type ModelOption } from "./model-options";
+import {
+	isModelOption,
+	normalizeModelIds,
+	type ModelOption,
+	type ModelOptionSource,
+} from "./model-options";
+import { renderModelCombobox } from "./model-combobox";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
 
@@ -68,7 +74,6 @@ import type { AnthropicProvider } from "./providers/anthropic-provider";
 export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
 export type ProviderId = "ollama" | "anthropic" | "openai" | "google" | "xai" | "openrouter";
-const CUSTOM_MODEL_SELECTION_ID = "__custom_model__";
 type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
 
 export interface CueCraftSettings {
@@ -912,9 +917,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			modelLabel: "Ollama model",
 			modelDesc: "Name of an installed Ollama model (e.g. llama3.1:8b).",
 			modelPlaceholder: "llama3.1:8b",
-			customFieldLabel: "Custom model name",
-			customFieldDesc: "Enter the exact Ollama model name CueCraft should use.",
 			availableModels: s.ollamaAvailableModels,
+			modelOptionSource: "ollama",
 			getModel: () => s.ollamaModel,
 			setModel: (value) => (s.ollamaModel = value),
 		});
@@ -1191,6 +1195,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					modelLabel: "OpenAI model",
 					modelDesc: "An OpenAI model id (e.g. gpt-4o-mini, gpt-4o).",
 					modelPlaceholder: "gpt-4o-mini",
+					modelOptionSource: "openai",
 					getModel: () => s.openaiModel,
 					setModel: (v) => (s.openaiModel = v),
 					getApiKey: () => s.openaiApiKey,
@@ -1208,6 +1213,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					modelLabel: "Gemini model",
 					modelDesc: "A Gemini model id (e.g. gemini-1.5-flash, gemini-1.5-pro).",
 					modelPlaceholder: "gemini-1.5-flash",
+					modelOptionSource: "google",
 					getModel: () => s.googleModel,
 					setModel: (v) => (s.googleModel = v),
 					getApiKey: () => s.googleApiKey,
@@ -1225,6 +1231,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					modelLabel: "Grok model",
 					modelDesc: "An xAI model id (e.g. grok-2-latest, grok-beta).",
 					modelPlaceholder: "grok-2-latest",
+					modelOptionSource: "xai",
 					getModel: () => s.xaiModel,
 					setModel: (v) => (s.xaiModel = v),
 					getApiKey: () => s.xaiApiKey,
@@ -1242,10 +1249,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					modelLabel: "OpenRouter model",
 					modelDesc: "An OpenRouter model ID in provider/model format (e.g. anthropic/claude-sonnet-4, openai/gpt-4o).",
 					modelPlaceholder: "anthropic/claude-sonnet-4",
+					modelOptionSource: "openrouter",
 					getModel: () => s.openrouterModel,
 					setModel: (v) => (s.openrouterModel = v),
 					getApiKey: () => s.openrouterApiKey,
 					getAvailableModels: () => s.openrouterAvailableModels,
+					getModelOptions: () => s.openrouterModelOptions,
 					getHasFetchedModels: () => s.openrouterHasFetchedModels,
 					getRefreshMessage: () => s.openrouterModelRefreshMessage,
 					setAvailableModels: (models) => (s.openrouterAvailableModels = models),
@@ -1306,73 +1315,37 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			modelLabel: string;
 			modelDesc: string;
 			modelPlaceholder: string;
-			customFieldLabel: string;
-			customFieldDesc: string;
 			availableModels: string[];
+			modelOptions?: ModelOption[];
+			modelOptionSource: ModelOptionSource;
 			getModel: () => string;
 			setModel: (v: string) => void;
 		}
 	): void {
-		const availableModels = sortFetchedModelIds(opts.availableModels);
 		const currentModel = opts.getModel();
-		const hasFetchedModels = availableModels.length > 0;
-		const isCustomSelection =
-			!hasFetchedModels || !availableModels.includes(currentModel);
+		const modelOptions =
+			opts.modelOptions && opts.modelOptions.length > 0
+				? opts.modelOptions
+				: normalizeModelIds(
+						sortFetchedModelIds(opts.availableModels),
+						opts.modelOptionSource
+					);
 
-		if (hasFetchedModels) {
-			new Setting(containerEl)
-				.setName(opts.modelLabel)
-				.setDesc(opts.modelDesc)
-				.addDropdown((dd) => {
-					dd.addOption(CUSTOM_MODEL_SELECTION_ID, "Custom model ID...");
-					for (const model of availableModels) {
-						dd.addOption(model, model);
-					}
-					dd
-						.setValue(
-							isCustomSelection ? CUSTOM_MODEL_SELECTION_ID : currentModel
-						)
-						.onChange(async (value) => {
-							if (value === CUSTOM_MODEL_SELECTION_ID) {
-								opts.setModel("");
-								await this.plugin.saveSettings();
-								this.display();
-								return;
-							}
-							opts.setModel(value);
-							await this.plugin.saveSettings();
-							this.display();
-						});
-				});
-		} else {
-			new Setting(containerEl)
-				.setName(opts.modelLabel)
-				.setDesc(opts.modelDesc)
-				.addText((text) =>
-					text
-						.setPlaceholder(opts.modelPlaceholder)
-						.setValue(currentModel)
-						.onChange(async (value) => {
-							opts.setModel(value.trim());
-							await this.plugin.saveSettings();
-						})
-				);
-		}
-
-		if (isCustomSelection && hasFetchedModels) {
-			new Setting(containerEl)
-				.setName(opts.customFieldLabel)
-				.setDesc(opts.customFieldDesc)
-				.addText((text) =>
-					text
-						.setPlaceholder(opts.modelPlaceholder)
-						.setValue(currentModel)
-						.onChange(async (value) => {
-							opts.setModel(value.trim());
-							await this.plugin.saveSettings();
-						})
-				);
-		}
+		const modelSetting = new Setting(containerEl)
+			.setName(opts.modelLabel)
+			.setDesc(opts.modelDesc);
+		renderModelCombobox({
+			containerEl: modelSetting.controlEl,
+			value: currentModel,
+			options: modelOptions,
+			source: opts.modelOptionSource,
+			placeholder: opts.modelPlaceholder,
+			emptyMessage: "No fetched models match. Press Enter or leave the field to keep a custom model ID.",
+			onCommit: async (value) => {
+				opts.setModel(value);
+				await this.plugin.saveSettings();
+			},
+		});
 	}
 
 	private renderCloudModelSettings(
@@ -1382,10 +1355,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			modelLabel: string;
 			modelDesc: string;
 			modelPlaceholder: string;
+			modelOptionSource: ModelOptionSource;
 			getModel: () => string;
 			setModel: (v: string) => void;
 			getApiKey: () => string;
 			getAvailableModels: () => string[];
+			getModelOptions?: () => ModelOption[];
 			getHasFetchedModels: () => boolean;
 			getRefreshMessage: () => string;
 			setAvailableModels: (models: string[]) => void;
@@ -1398,9 +1373,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			modelLabel: opts.modelLabel,
 			modelDesc: opts.modelDesc,
 			modelPlaceholder: opts.modelPlaceholder,
-			customFieldLabel: "Custom model ID",
-			customFieldDesc: `Enter the exact ${opts.providerName} model ID CueCraft should use.`,
 			availableModels: opts.getAvailableModels(),
+			modelOptions: opts.getModelOptions?.(),
+			modelOptionSource: opts.modelOptionSource,
 			getModel: opts.getModel,
 			setModel: opts.setModel,
 		});
