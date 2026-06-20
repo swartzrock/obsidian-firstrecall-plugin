@@ -281,6 +281,7 @@ for (const c of cases) {
 			const status = await make(generator).testConnection();
 			expect(status.ok).toBe(true);
 			expect(status.message).toMatch(c.vendor);
+			expect(status.message).toContain(c.model);
 		});
 
 		it("testConnection reports a readable failure on auth error", async () => {

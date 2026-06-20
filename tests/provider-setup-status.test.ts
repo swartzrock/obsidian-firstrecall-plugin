@@ -51,7 +51,7 @@ describe("deriveProviderSetupStatus", () => {
 		});
 	});
 
-	it("keeps cloud connection verification when only the model changes", () => {
+	it("marks cloud connection stale when the selected model changes", () => {
 		const settings = baseSettings();
 		settings.providerConnectionStatus = recordProviderConnectionSuccess(
 			settings,
@@ -61,7 +61,26 @@ describe("deriveProviderSetupStatus", () => {
 		expect(deriveProviderSetupStatus(settings)).toEqual({
 			keySaved: true,
 			modelSelected: true,
-			connection: "verified",
+			connection: "stale",
+			testedAt: "2026-06-11T00:00:00.000Z",
+		});
+	});
+
+	it("marks OpenRouter connection stale when its selected model changes", () => {
+		const settings = baseSettings({
+			provider: "openrouter",
+			openrouterApiKey: "sk-or-test",
+			openrouterModel: "anthropic/claude-sonnet-4",
+		});
+		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+			settings,
+			"2026-06-11T00:00:00.000Z"
+		);
+		settings.openrouterModel = "openai/gpt-4o";
+		expect(deriveProviderSetupStatus(settings)).toEqual({
+			keySaved: true,
+			modelSelected: true,
+			connection: "stale",
 			testedAt: "2026-06-11T00:00:00.000Z",
 		});
 	});

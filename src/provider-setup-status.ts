@@ -89,7 +89,7 @@ function currentModelValue(settings: ProviderSetupStatusSettings): string {
 function currentConnectionVerificationModelValue(
 	settings: ProviderSetupStatusSettings
 ): string {
-	return settings.provider === "ollama" ? currentModelValue(settings) : "";
+	return currentModelValue(settings);
 }
 
 function djb2Hash(value: string): string {
