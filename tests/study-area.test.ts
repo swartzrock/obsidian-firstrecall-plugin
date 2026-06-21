@@ -1,0 +1,162 @@
+import { describe, expect, it } from "vitest";
+import { buildNoteCache, type NoteCache } from "../src/cache";
+import { parseSections } from "../src/parser";
+import {
+	classifyStudyAreaNote,
+	eligibleStudyAreaPaths,
+	isExcludedPath,
+	isStudyAreaPath,
+	loadStudyAreas,
+	type StudyArea,
+} from "../src/study-area";
+import type { NoteGenerationResult } from "../src/generator";
+
+const NOTE = "# A\nalpha\n## B\nbeta";
+
+function area(overrides: Partial<StudyArea> = {}): StudyArea {
+	return {
+		id: "area-1",
+		name: "Biology",
+		parentPath: "Courses/Biology",
+		excludedPaths: [],
+		maintenanceMode: "paused",
+		createdAt: "2026-06-21T00:00:00.000Z",
+		...overrides,
+	};
+}
+
+function buildCache(markdown = NOTE): NoteCache {
+	const sections = parseSections(markdown).map((section) => ({
+		id: section.id,
+		heading: section.heading,
+		level: section.level,
+		lineNumber: section.lineNumber,
+		contentHash: section.contentHash,
+		keywords: ["cell"],
+		question: `Q:${section.heading}`,
+		confidence: "high" as const,
+		rationale: null,
+		error: null,
+	}));
+	const result: NoteGenerationResult = {
+		sections,
+		summary: "summary",
+		learningObjective: "learn biology",
+		canceled: false,
+	};
+	return buildNoteCache({
+		result,
+		provider: "ollama",
+		model: "llama3.1:8b",
+		preset: "conceptual",
+		generationMode: "whole-note-context",
+		noteModifiedAt: 100,
+		generatedAt: "2026-06-21T00:00:00.000Z",
+	});
+}
+
+describe("study area path matching", () => {
+	it("includes descendant Markdown notes and excludes sibling folders", () => {
+		const studyArea = area();
+		expect(isStudyAreaPath(studyArea, "Courses/Biology/Week 1.md")).toBe(true);
+		expect(isStudyAreaPath(studyArea, "Courses/Biology/Sub/Week 2.md")).toBe(true);
+		expect(isStudyAreaPath(studyArea, "Courses/Biology.md")).toBe(false);
+		expect(isStudyAreaPath(studyArea, "Courses/Biology Lab/Week 1.md")).toBe(false);
+		expect(isStudyAreaPath(studyArea, "Courses/Biology/asset.pdf")).toBe(false);
+	});
+
+	it("uses explicit exclusions for notes and subfolders", () => {
+		const studyArea = area({
+			excludedPaths: ["Courses/Biology/private.md", "Courses/Biology/Drafts"],
+		});
+		expect(isExcludedPath("Courses/Biology/private.md", studyArea.excludedPaths)).toBe(true);
+		expect(isExcludedPath("Courses/Biology/Drafts/a.md", studyArea.excludedPaths)).toBe(true);
+		expect(eligibleStudyAreaPaths(studyArea, [
+			"Courses/Biology/private.md",
+			"Courses/Biology/Drafts/a.md",
+			"Courses/Biology/Public/a.md",
+			"Courses/Chemistry/a.md",
+		])).toEqual(["Courses/Biology/Public/a.md"]);
+	});
+});
+
+describe("study area readiness", () => {
+	it("classifies hidden and excluded notes as skipped", () => {
+		const studyArea = area({ excludedPaths: ["Courses/Biology/private.md"] });
+		expect(classifyStudyAreaNote(studyArea, {
+			path: "Courses/Biology/private.md",
+			cache: null,
+			currentSections: [],
+		})).toEqual({
+			path: "Courses/Biology/private.md",
+			readiness: "skipped",
+			reason: "excluded",
+		});
+		expect(classifyStudyAreaNote(studyArea, {
+			path: "Courses/Biology/Public.md",
+			cache: null,
+			currentSections: [],
+			hidden: true,
+		}).readiness).toBe("skipped");
+	});
+
+	it("classifies uncached notes as uncued", () => {
+		expect(classifyStudyAreaNote(area(), {
+			path: "Courses/Biology/Week 1.md",
+			cache: null,
+			currentSections: parseSections(NOTE),
+		}).readiness).toBe("uncued");
+	});
+
+	it("classifies cached notes as ready, stale, or failed", () => {
+		const cache = buildCache();
+		const studyArea = area();
+		expect(classifyStudyAreaNote(studyArea, {
+			path: "Courses/Biology/Week 1.md",
+			cache,
+			currentSections: parseSections(NOTE),
+		}).readiness).toBe("ready");
+		expect(classifyStudyAreaNote(studyArea, {
+			path: "Courses/Biology/Week 1.md",
+			cache,
+			currentSections: parseSections("# A\nedited\n## B\nbeta"),
+		}).readiness).toBe("stale");
+		expect(classifyStudyAreaNote(studyArea, {
+			path: "Courses/Biology/Week 1.md",
+			cache: {
+				...cache,
+				sections: [{ ...cache.sections[0], error: "boom" }, cache.sections[1]],
+			},
+			currentSections: parseSections(NOTE),
+		}).readiness).toBe("failed");
+	});
+});
+
+describe("loadStudyAreas", () => {
+	it("loads legacy or invalid settings defensively", () => {
+		expect(loadStudyAreas(undefined)).toEqual([]);
+		expect(loadStudyAreas({})).toEqual([]);
+		expect(loadStudyAreas([{ id: "", parentPath: "Courses" }, "bad"])).toEqual([]);
+	});
+
+	it("normalizes valid persisted study areas", () => {
+		expect(loadStudyAreas([
+			{
+				id: "bio",
+				name: "",
+				parentPath: "/Courses/Biology/",
+				excludedPaths: ["/Courses/Biology/Drafts/", 42],
+				maintenanceMode: "unknown",
+			},
+		])).toEqual([
+			{
+				id: "bio",
+				name: "Biology",
+				parentPath: "Courses/Biology",
+				excludedPaths: ["Courses/Biology/Drafts"],
+				maintenanceMode: "paused",
+				createdAt: "1970-01-01T00:00:00.000Z",
+			},
+		]);
+	});
+});
