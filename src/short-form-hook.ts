@@ -161,6 +161,6 @@ function visibleSectionText(row: CornellRow): string {
 		.replace(/`([^`]*)`/g, "$1")
 		.replace(/!\[[^\]]*]\([^)]*\)/g, " ")
 		.replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
-		.replace(/[#>*_~`|\[\]()-]+/g, " ")
+		.replace(/[#>*_~`|[\]()-]+/g, " ")
 		.replace(/\s+/g, " ");
 }
