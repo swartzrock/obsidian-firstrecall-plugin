@@ -521,10 +521,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			.setName("Setup status")
 			.setDesc(
 				status.connection === "verified" && status.testedAt
-					? `Last verified ${new Date(status.testedAt).toLocaleString()}.`
+					? status.modelSelected
+						? `Last verified the current key and selected model ${new Date(status.testedAt).toLocaleString()}.`
+						: `Last verified provider access ${new Date(status.testedAt).toLocaleString()}. Choose a model and test again to verify generation with that model.`
 					: status.connection === "stale"
-						? "The saved connection check no longer matches the current key or model."
-						: "Save the key or host, then run Test connection. Choose a model after the provider is connected."
+						? "The saved connection check no longer matches the current key or selected model."
+						: "Save the key or host, choose a model, then run Test connection. Without a selected model, CueCraft checks provider access only."
 			);
 		statusSetting.controlEl.addClass("cuecraft-status-chips");
 		this.renderStatusChip(
@@ -1600,7 +1602,23 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Notice(`CueCraft: enter your ${providerName} API key first.`);
 			return;
 		}
-		if (provider.listModels) {
+		const selectedModel = (() => {
+			switch (provider.id) {
+				case "anthropic":
+					return this.plugin.settings.anthropicModel.trim();
+				case "openai":
+					return this.plugin.settings.openaiModel.trim();
+				case "google":
+					return this.plugin.settings.googleModel.trim();
+				case "xai":
+					return this.plugin.settings.xaiModel.trim();
+				case "openrouter":
+					return this.plugin.settings.openrouterModel.trim();
+				default:
+					return "";
+			}
+		})();
+		if (!selectedModel && provider.listModels) {
 			try {
 				const models = await provider.listModels();
 				this.plugin.settings.providerConnectionStatus =
@@ -1610,7 +1628,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				const providerName =
 					provider.id === "anthropic" ? "Anthropic" : provider.label;
 				new Notice(
-					`CueCraft: Connected to ${providerName} (${models.length} model${models.length === 1 ? "" : "s"} available).`
+					`CueCraft: Connected to ${providerName} (${models.length} model${models.length === 1 ? "" : "s"} available). Choose a model and test again to verify generation with that model.`
 				);
 				return;
 			} catch (error) {
@@ -1634,6 +1652,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Notice(
 				`CueCraft: Connected to Anthropic with ${model.label} (${model.rawId}).`
 			);
+			return;
+		}
+		if (status.ok) {
+			new Notice(`CueCraft: ${status.message}`);
 			return;
 		}
 		if (

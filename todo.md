@@ -177,16 +177,16 @@ Manual Obsidian test instructions:
 
 ## Phase 6 - Exact Model Verification
 
-- [ ] Revisit `src/provider-setup-status.ts` so cloud model changes can make setup status stale when appropriate.
-- [ ] Decide whether exact-model verification applies to all cloud providers or only OpenRouter, then document the rationale in code or progress notes.
-- [ ] Update `testCloudProvider()` so a selected model is actually tested, not just the provider API key/model-list endpoint.
-- [ ] Keep a reasonable key-only/list-model check for cases where no model has been selected yet.
-- [ ] Improve setup status copy so users understand whether the key, provider, and selected model are verified.
-- [ ] Update tests that currently expect cloud model changes to keep verification fresh.
-- [ ] Add tests for OpenRouter model-change staleness and exact selected-model connection testing.
-- [ ] Update `docs/CueCraft-Progress.md` and the test count.
-- [ ] Run `bun run typecheck`.
-- [ ] Run `bun run test`.
+- [x] Revisit `src/provider-setup-status.ts` so cloud model changes can make setup status stale when appropriate.
+- [x] Decide whether exact-model verification applies to all cloud providers or only OpenRouter, then document the rationale in code or progress notes.
+- [x] Update `testCloudProvider()` so a selected model is actually tested, not just the provider API key/model-list endpoint.
+- [x] Keep a reasonable key-only/list-model check for cases where no model has been selected yet.
+- [x] Improve setup status copy so users understand whether the key, provider, and selected model are verified.
+- [x] Update tests that currently expect cloud model changes to keep verification fresh.
+- [x] Add tests for OpenRouter model-change staleness and exact selected-model connection testing.
+- [x] Update `docs/CueCraft-Progress.md` and the test count.
+- [x] Run `bun run typecheck`.
+- [x] Run `bun run test`.
 
 Manual Obsidian test instructions:
 
