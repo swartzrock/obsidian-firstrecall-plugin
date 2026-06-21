@@ -72,6 +72,10 @@ import {
 } from "./model-compatibility";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
+import {
+	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
+	type StudyArea,
+} from "./study-area";
 
 /**
  * CueCraft supports a local provider (Ollama) and several cloud providers via
@@ -124,6 +128,8 @@ export interface CueCraftSettings {
 	cueColumnWidth: CueColumnWidth;
 	cueFontSize: CueFontSize;
 	autoGenerateOnSave: boolean;
+	studyAreaAutomationEnabled: boolean;
+	studyAreas: StudyArea[];
 	sectionConcurrency: number;
 	cueDensity: CueDensity;
 	questionStyle: QuestionStyle;
@@ -178,6 +184,8 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
 	autoGenerateOnSave: false,
+	studyAreaAutomationEnabled: DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
+	studyAreas: [],
 	sectionConcurrency: 5,
 	cueDensity: DEFAULT_CUE_DENSITY,
 	questionStyle: DEFAULT_QUESTION_STYLE,

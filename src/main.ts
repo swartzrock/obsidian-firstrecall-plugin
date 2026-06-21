@@ -69,6 +69,7 @@ import {
 } from "./cornell";
 import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
+import { loadStudyAreas } from "./study-area";
 
 /** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
 type CueStatus = "setup" | "ready" | "generating" | "stale" | "study" | "hidden";
@@ -188,6 +189,14 @@ export default class CueCraftPlugin extends Plugin {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
 		const rawSettings = loaded?.settings ?? loaded ?? {};
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
+		settings.studyAreas = loadStudyAreas(
+			(settings as { studyAreas?: unknown }).studyAreas
+		);
+		settings.studyAreaAutomationEnabled =
+			typeof (settings as { studyAreaAutomationEnabled?: unknown })
+				.studyAreaAutomationEnabled === "boolean"
+				? settings.studyAreaAutomationEnabled
+				: DEFAULT_SETTINGS.studyAreaAutomationEnabled;
 		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
 		}
