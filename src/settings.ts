@@ -1,10 +1,13 @@
 import {
 	App,
+	FuzzySuggestModal,
 	Notice,
 	PluginSettingTab,
 	Setting,
+	TFolder,
 	requestUrl,
 	setIcon,
+	type TextComponent,
 } from "obsidian";
 import type CueCraftPlugin from "./main";
 import {
@@ -741,17 +744,29 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			flowEl,
 			"1. Create a study area",
-			"Enter a parent folder path. CueCraft previews matching Markdown notes before broad generation."
+			"Choose a parent folder. CueCraft previews matching Markdown notes before broad generation."
 		);
 		let parentPath = "";
+		let parentPathInput: TextComponent | null = null;
 		new Setting(flowEl)
 			.setName("Parent folder")
 			.setDesc("Descendant Markdown notes become eligible; hidden and excluded notes stay skipped.")
-			.addText((text) =>
+			.addText((text) => {
+				parentPathInput = text;
 				text
 					.setPlaceholder("Courses/Biology")
 					.onChange((value) => {
 						parentPath = value;
+					});
+			})
+			.addButton((btn) =>
+				btn
+					.setButtonText("Choose")
+					.onClick(() => {
+						new StudyAreaFolderSuggestModal(this.app, (folder) => {
+							parentPath = folder.path;
+							parentPathInput?.setValue(folder.path);
+						}).open();
 					})
 			)
 			.addButton((btn) =>
@@ -1797,5 +1812,31 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return;
 		}
 		new Notice(`CueCraft: ${status.message}`);
+	}
+}
+
+class StudyAreaFolderSuggestModal extends FuzzySuggestModal<TFolder> {
+	constructor(
+		app: App,
+		private readonly onChooseFolder: (folder: TFolder) => void
+	) {
+		super(app);
+		this.setPlaceholder("Choose a parent folder...");
+	}
+
+	getItems(): TFolder[] {
+		return this.app.vault
+			.getAllLoadedFiles()
+			.filter((file): file is TFolder => file instanceof TFolder)
+			.filter((folder) => Boolean(folder.path))
+			.sort((a, b) => a.path.localeCompare(b.path));
+	}
+
+	getItemText(folder: TFolder): string {
+		return folder.path;
+	}
+
+	onChooseItem(folder: TFolder): void {
+		this.onChooseFolder(folder);
 	}
 }
