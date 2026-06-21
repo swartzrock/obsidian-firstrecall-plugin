@@ -792,6 +792,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	position: relative;
 	width: 100%;
 	max-width: 168px;
+	min-width: 0;
 	min-height: 78px;
 	display: flex;
 	flex-direction: column;
@@ -813,6 +814,15 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
 	cursor: pointer;
 	animation: cuecraft-hook-card-in 140ms ease-out;
+}
+
+.cuecraft-hook-mode button.cuecraft-hook-card {
+	height: auto;
+	min-height: 78px;
+	align-items: stretch;
+	box-sizing: border-box;
+	line-height: normal;
+	white-space: normal;
 }
 
 .cuecraft-hook-card:hover,
@@ -856,11 +866,13 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-hook-title {
+	max-width: 100%;
 	overflow-wrap: anywhere;
 	color: var(--text-normal);
 	font-size: var(--font-ui-small);
 	font-weight: var(--font-semibold);
 	line-height: 1.25;
+	hyphens: auto;
 	text-wrap: pretty;
 	user-select: text;
 }
