@@ -1,13 +1,11 @@
 import {
 	App,
-	FuzzySuggestModal,
 	Notice,
 	PluginSettingTab,
 	Setting,
 	TFolder,
 	requestUrl,
 	setIcon,
-	type TextComponent,
 } from "obsidian";
 import type CueCraftPlugin from "./main";
 import {
@@ -731,6 +729,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	// ── Study areas ───────────────────────────────────────────────────────
+	private studyAreaFolderPaths(): string[] {
+		return this.app.vault
+			.getAllLoadedFiles()
+			.filter((file): file is TFolder => file instanceof TFolder)
+			.map((folder) => normalizeVaultPath(folder.path))
+			.filter(Boolean)
+			.sort((a, b) => a.localeCompare(b));
+	}
+
 	private renderStudyAreasSection(
 		containerEl: HTMLElement,
 		showHeading: boolean
@@ -746,39 +753,48 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			"1. Create a study area",
 			"Choose a parent folder. CueCraft previews matching Markdown notes before broad generation."
 		);
-		let parentPath = "";
-		let parentPathInput: TextComponent | null = null;
-		new Setting(flowEl)
-			.setName("Parent folder")
-			.setDesc("Descendant Markdown notes become eligible; hidden and excluded notes stay skipped.")
-			.addText((text) => {
-				parentPathInput = text;
-				text
-					.setPlaceholder("Courses/Biology")
-					.onChange((value) => {
-						parentPath = value;
-					});
-			})
-			.addButton((btn) =>
-				btn
-					.setButtonText("Choose")
-					.onClick(() => {
-						new StudyAreaFolderSuggestModal(this.app, (folder) => {
-							parentPath = folder.path;
-							parentPathInput?.setValue(folder.path);
-						}).open();
-					})
+		const folderPaths = this.studyAreaFolderPaths();
+		const assignedFolderPaths = new Set(
+			this.plugin.settings.studyAreas.map((area) =>
+				normalizeVaultPath(area.parentPath)
 			)
-			.addButton((btn) =>
-				btn
-					.setButtonText("Create")
-					.onClick(async () => {
-						const area = await this.plugin.createStudyArea(
-							normalizeVaultPath(parentPath)
-						);
-						if (area) this.display();
-					})
-			);
+		);
+		const availableFolderPaths = folderPaths.filter(
+			(path) => !assignedFolderPaths.has(path)
+		);
+		const parentFolderSetting = new Setting(flowEl)
+			.setName("Parent folder")
+			.setDesc("Type to filter existing vault folders; hidden and excluded notes stay skipped.");
+		renderModelCombobox({
+			containerEl: parentFolderSetting.controlEl,
+			value: "",
+			options: normalizeModelIds(availableFolderPaths, "string"),
+			source: "string",
+			placeholder: availableFolderPaths.length
+				? "Choose a folder..."
+				: "No unassigned folders",
+			emptyMessage: availableFolderPaths.length
+				? "No matching folders. Choose an existing vault folder."
+				: "No unassigned folders found.",
+			onCommit: async (value) => {
+				const normalized = normalizeVaultPath(value);
+				if (!normalized) return;
+				if (assignedFolderPaths.has(normalized)) {
+					new Notice("CueCraft: that study area already exists.");
+					this.display();
+					return;
+				}
+				if (!folderPaths.includes(normalized)) {
+					new Notice(`CueCraft: "${normalized}" is not an existing folder.`);
+					this.display();
+					return;
+				}
+				const area = await this.plugin.createStudyArea(normalized);
+				if (area) this.display();
+			},
+			renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
+			suggestionsLabel: "folder suggestions",
+		});
 
 		this.renderSettingsFlowHeading(
 			flowEl,
@@ -1812,31 +1828,5 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return;
 		}
 		new Notice(`CueCraft: ${status.message}`);
-	}
-}
-
-class StudyAreaFolderSuggestModal extends FuzzySuggestModal<TFolder> {
-	constructor(
-		app: App,
-		private readonly onChooseFolder: (folder: TFolder) => void
-	) {
-		super(app);
-		this.setPlaceholder("Choose a parent folder...");
-	}
-
-	getItems(): TFolder[] {
-		return this.app.vault
-			.getAllLoadedFiles()
-			.filter((file): file is TFolder => file instanceof TFolder)
-			.filter((folder) => Boolean(folder.path))
-			.sort((a, b) => a.path.localeCompare(b.path));
-	}
-
-	getItemText(folder: TFolder): string {
-		return folder.path;
-	}
-
-	onChooseItem(folder: TFolder): void {
-		this.onChooseFolder(folder);
 	}
 }
