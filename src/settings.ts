@@ -751,11 +751,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const createEl = containerEl.createDiv({
 			cls: "cuecraft-settings-flow",
 		});
-		this.renderSettingsFlowHeading(
-			createEl,
-			"Add a parent folder",
-			"Choose an existing vault folder to make its Markdown notes eligible for CueCraft generation."
-		);
 		const folderPaths = this.studyAreaFolderPaths();
 		const assignedFolderPaths = new Set(
 			this.plugin.settings.studyAreas.map((area) =>
@@ -803,14 +798,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const manageEl = containerEl.createDiv({
 			cls: "cuecraft-settings-flow",
 		});
-		this.renderSettingsFlowHeading(
-			manageEl,
-			"Automatic maintenance",
-			"Control whether CueCraft may refresh enabled study areas after notes are saved."
-		);
 		new Setting(manageEl)
-			.setName("Refresh study areas on note save")
-			.setDesc("Master switch for save-time refreshes. Manual backfill and retry still work when this is off.")
+			.setName("Auto-update cues for saved notes")
+			.setDesc("When on, saving a note in a study area marked Maintain on save queues that note for stale or failed cue regeneration. It does not refresh this list or regenerate the whole folder.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.studyAreaAutomationEnabled)
@@ -820,11 +810,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					})
 			);
 
-		this.renderSettingsFlowHeading(
-			manageEl,
-			"Configured study areas",
-			"Preview folder scope, pause maintenance, manage exclusions, and retry failed generation."
-		);
 		if (!this.plugin.settings.studyAreas.length) {
 			manageEl.createDiv({
 				cls: "cuecraft-settings-flow-desc",
