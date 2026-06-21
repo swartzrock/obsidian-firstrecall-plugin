@@ -157,8 +157,14 @@
 }
 
 .cuecraft-model-combobox-option {
-	display: block;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: flex-start;
+	gap: 2px;
 	width: 100%;
+	height: auto;
+	min-height: unset;
 	overflow: hidden;
 	border: 0;
 	border-radius: var(--radius-s);
@@ -175,6 +181,7 @@
 }
 
 .cuecraft-model-combobox-option-label {
+	width: 100%;
 	overflow: hidden;
 	font-size: var(--font-ui-small);
 	font-weight: var(--font-medium);
@@ -185,6 +192,7 @@
 
 .cuecraft-model-combobox-option-detail,
 .cuecraft-model-combobox-empty {
+	width: 100%;
 	overflow: hidden;
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
@@ -211,6 +219,13 @@
 	font-size: var(--font-smallest);
 	line-height: 1.2;
 	padding: 2px 5px;
+}
+
+.cuecraft-model-compatibility-warning {
+	margin-top: 6px;
+	color: var(--text-warning);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.35;
 }
 
 @media (max-width: 700px) {

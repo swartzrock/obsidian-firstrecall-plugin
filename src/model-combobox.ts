@@ -1,9 +1,9 @@
 import {
 	normalizeStringId,
-	sortModelOptions,
 	type ModelOption,
 	type ModelOptionSource,
 } from "./model-options";
+import { sortCueCraftModelOptions } from "./model-compatibility";
 
 let nextComboboxId = 0;
 
@@ -20,7 +20,7 @@ export function buildModelComboboxOptions(opts: {
 	if (currentModelId && !byId.has(currentModelId)) {
 		byId.set(currentModelId, normalizeStringId(currentModelId, opts.source));
 	}
-	return sortModelOptions([...byId.values()], currentModelId);
+	return sortCueCraftModelOptions([...byId.values()], currentModelId);
 }
 
 export function modelOptionSearchText(
