@@ -1170,7 +1170,6 @@ export default class CueCraftPlugin extends Plugin {
 		};
 		this.settings.studyAreas = [...this.settings.studyAreas, area];
 		await this.saveSettings();
-		new Notice(`CueCraft: created study area "${area.name}".`);
 		return area;
 	}
 

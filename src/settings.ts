@@ -812,15 +812,20 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		new Setting(containerEl).setName("Study Areas").setHeading();
+		const studyAreasEl = containerEl.createDiv({
+			cls: "cuecraft-settings-flow",
+		});
 		if (!this.plugin.settings.studyAreas.length) {
-			flowEl.createDiv({
+			studyAreasEl.createDiv({
 				cls: "cuecraft-settings-flow-desc",
 				text: "No study areas yet.",
 			});
 			return;
 		}
 		for (const area of this.plugin.settings.studyAreas) {
-			const setting = new Setting(flowEl)
+			const setting = new Setting(studyAreasEl)
 				.setName(area.name)
 				.setDesc(
 					`${area.parentPath} · ${
