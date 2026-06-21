@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { buildNoteCache, type NoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import {
+	DEFAULT_STUDY_AREAS,
+	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
 	classifyStudyAreaNote,
 	eligibleStudyAreaPaths,
 	isExcludedPath,
@@ -14,6 +16,13 @@ import {
 import type { NoteGenerationResult } from "../src/generator";
 
 const NOTE = "# A\nalpha\n## B\nbeta";
+
+describe("study area defaults", () => {
+	it("starts with no study areas and study-area automation paused", () => {
+		expect(DEFAULT_STUDY_AREAS).toEqual([]);
+		expect(DEFAULT_STUDY_AREA_AUTOMATION_ENABLED).toBe(false);
+	});
+});
 
 function area(overrides: Partial<StudyArea> = {}): StudyArea {
 	return {

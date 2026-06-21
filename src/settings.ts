@@ -73,7 +73,9 @@ import {
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
 import {
+	DEFAULT_STUDY_AREAS,
 	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
+	normalizeVaultPath,
 	type StudyArea,
 } from "./study-area";
 
@@ -86,6 +88,9 @@ export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
 export type ProviderId = "ollama" | "anthropic" | "openai" | "google" | "xai" | "openrouter";
 type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
+type CueCraftSettingsSubpage =
+	| SettingsSubpage
+	| "study-areas";
 
 export interface CueCraftSettings {
 	provider: ProviderId;
@@ -185,7 +190,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
 	autoGenerateOnSave: false,
 	studyAreaAutomationEnabled: DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
-	studyAreas: [],
+	studyAreas: DEFAULT_STUDY_AREAS,
 	sectionConcurrency: 5,
 	cueDensity: DEFAULT_CUE_DENSITY,
 	questionStyle: DEFAULT_QUESTION_STYLE,
@@ -201,7 +206,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 
 export class CueCraftSettingTab extends PluginSettingTab {
 	private plugin: CueCraftPlugin;
-	private currentSubpage: SettingsSubpage = "home";
+	private currentSubpage: CueCraftSettingsSubpage = "home";
 
 	constructor(app: App, plugin: CueCraftPlugin) {
 		super(app, plugin);
@@ -236,6 +241,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					"Cornell view styling, layout, cue accents, and visual density."
 				);
 				this.renderAppearanceSection(containerEl, false);
+				break;
+			case "study-areas":
+				this.renderSubpageHeader(
+					containerEl,
+					"Study areas",
+					"Manage parent-folder automation, previews, exclusions, and retry."
+				);
+				this.renderStudyAreasSection(containerEl, false);
 				break;
 			default:
 				containerEl.createEl("p", {
@@ -274,6 +287,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			description: "Adjust Cornell view styling, sizing, accents, and compact display options.",
 			summary: this.appearanceSummary(),
 			onOpen: () => this.openSubpage("appearance"),
+		});
+		this.renderSettingsNavCard(navEl, {
+			title: "Study areas",
+			description: "Make parent folders study-ready with previewed backfill and opt-in maintenance.",
+			summary: this.studyAreasSummary(),
+			onOpen: () => this.openSubpage("study-areas"),
 		});
 
 		this.renderNoteFormatSection(containerEl, true);
@@ -353,7 +372,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		);
 	}
 
-	private openSubpage(subpage: SettingsSubpage): void {
+	private openSubpage(subpage: CueCraftSettingsSubpage): void {
 		this.currentSubpage = subpage;
 		this.display();
 	}
@@ -383,6 +402,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				(item) => item.id === this.plugin.settings.cornellStyle
 			)?.label ?? "Custom";
 		return `${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
+	}
+
+	private studyAreasSummary(): string {
+		const count = this.plugin.settings.studyAreas.length;
+		const enabled = this.plugin.settings.studyAreas.filter(
+			(area) => area.maintenanceMode === "maintain-on-save"
+		).length;
+		if (!count) return "No study areas · automation paused";
+		return `${count} area${count === 1 ? "" : "s"} · ${enabled} maintaining on save`;
 	}
 
 	private providerDisplayName(provider: ProviderId): string {
@@ -697,6 +725,93 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+	}
+
+	// ── Study areas ───────────────────────────────────────────────────────
+	private renderStudyAreasSection(
+		containerEl: HTMLElement,
+		showHeading: boolean
+	): void {
+		if (showHeading) {
+			new Setting(containerEl).setName("Study areas").setHeading();
+		}
+		const flowEl = containerEl.createDiv({
+			cls: "cuecraft-settings-flow",
+		});
+		this.renderSettingsFlowHeading(
+			flowEl,
+			"1. Create a study area",
+			"Enter a parent folder path. CueCraft previews matching Markdown notes before broad generation."
+		);
+		let parentPath = "";
+		new Setting(flowEl)
+			.setName("Parent folder")
+			.setDesc("Descendant Markdown notes become eligible; hidden and excluded notes stay skipped.")
+			.addText((text) =>
+				text
+					.setPlaceholder("Courses/Biology")
+					.onChange((value) => {
+						parentPath = value;
+					})
+			)
+			.addButton((btn) =>
+				btn
+					.setButtonText("Create")
+					.onClick(async () => {
+						const area = await this.plugin.createStudyArea(
+							normalizeVaultPath(parentPath)
+						);
+						if (area) this.display();
+					})
+			);
+
+		this.renderSettingsFlowHeading(
+			flowEl,
+			"2. Manage generation",
+			"Preview counts, confirm backfill, pause maintenance, exclude notes, and retry failed work."
+		);
+		new Setting(flowEl)
+			.setName("Global study-area automation")
+			.setDesc("Turn this on only after reviewing study-area scope and provider cost risk.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.studyAreaAutomationEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.studyAreaAutomationEnabled = value;
+						await this.plugin.saveSettings();
+					})
+			);
+		if (!this.plugin.settings.studyAreas.length) {
+			flowEl.createDiv({
+				cls: "cuecraft-settings-flow-desc",
+				text: "No study areas yet.",
+			});
+			return;
+		}
+		for (const area of this.plugin.settings.studyAreas) {
+			const setting = new Setting(flowEl)
+				.setName(area.name)
+				.setDesc(
+					`${area.parentPath} · ${
+						area.maintenanceMode === "maintain-on-save"
+							? "maintain on save"
+							: "paused"
+					}`
+				);
+			setting.controlEl.addClass("cuecraft-status-chips");
+			this.renderStatusChip(
+				setting.controlEl,
+				area.maintenanceMode === "maintain-on-save" ? "Maintaining" : "Paused",
+				area.maintenanceMode === "maintain-on-save"
+					? "is-positive"
+					: "is-muted"
+			);
+			setting.addButton((btn) =>
+				btn
+					.setButtonText("Manage")
+					.onClick(() => this.plugin.openStudyAreaManager(area.id))
+			);
+		}
 	}
 
 	// ── Note format ───────────────────────────────────────────────────────
