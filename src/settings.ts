@@ -247,7 +247,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderSubpageHeader(
 					containerEl,
 					"Study areas",
-					"Manage parent-folder automation, previews, exclusions, and retry."
+					""
 				);
 				this.renderStudyAreasSection(containerEl, false);
 				break;
@@ -322,10 +322,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			text: title,
 		});
 		titleSetting.descEl.empty();
-		titleSetting.descEl.createDiv({
-			cls: "cuecraft-settings-subpage-desc",
-			text: description,
-		});
+		if (description) {
+			titleSetting.descEl.createDiv({
+				cls: "cuecraft-settings-subpage-desc",
+				text: description,
+			});
+		}
 	}
 
 	private renderSettingsNavCard(
@@ -745,13 +747,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (showHeading) {
 			new Setting(containerEl).setName("Study areas").setHeading();
 		}
-		const flowEl = containerEl.createDiv({
+		new Setting(containerEl).setName("Create Study Area").setHeading();
+		const createEl = containerEl.createDiv({
 			cls: "cuecraft-settings-flow",
 		});
 		this.renderSettingsFlowHeading(
-			flowEl,
-			"1. Create a study area",
-			"Choose a parent folder. CueCraft previews matching Markdown notes before broad generation."
+			createEl,
+			"Add a parent folder",
+			"Choose an existing vault folder to make its Markdown notes eligible for CueCraft generation."
 		);
 		const folderPaths = this.studyAreaFolderPaths();
 		const assignedFolderPaths = new Set(
@@ -762,7 +765,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const availableFolderPaths = folderPaths.filter(
 			(path) => !assignedFolderPaths.has(path)
 		);
-		const parentFolderSetting = new Setting(flowEl)
+		const parentFolderSetting = new Setting(createEl)
 			.setName("Parent folder")
 			.setDesc("Type to filter existing vault folders; hidden and excluded notes stay skipped.");
 		renderModelCombobox({
@@ -796,14 +799,18 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			suggestionsLabel: "folder suggestions",
 		});
 
+		new Setting(containerEl).setName("Manage Study Areas").setHeading();
+		const manageEl = containerEl.createDiv({
+			cls: "cuecraft-settings-flow",
+		});
 		this.renderSettingsFlowHeading(
-			flowEl,
-			"2. Manage generation",
-			"Preview counts, confirm backfill, pause maintenance, exclude notes, and retry failed work."
+			manageEl,
+			"Automatic maintenance",
+			"Control whether CueCraft may refresh enabled study areas after notes are saved."
 		);
-		new Setting(flowEl)
-			.setName("Global study-area automation")
-			.setDesc("Turn this on only after reviewing study-area scope and provider cost risk.")
+		new Setting(manageEl)
+			.setName("Refresh study areas on note save")
+			.setDesc("Master switch for save-time refreshes. Manual backfill and retry still work when this is off.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.studyAreaAutomationEnabled)
@@ -813,19 +820,20 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl).setName("Study Areas").setHeading();
-		const studyAreasEl = containerEl.createDiv({
-			cls: "cuecraft-settings-flow",
-		});
+		this.renderSettingsFlowHeading(
+			manageEl,
+			"Configured study areas",
+			"Preview folder scope, pause maintenance, manage exclusions, and retry failed generation."
+		);
 		if (!this.plugin.settings.studyAreas.length) {
-			studyAreasEl.createDiv({
+			manageEl.createDiv({
 				cls: "cuecraft-settings-flow-desc",
 				text: "No study areas yet.",
 			});
 			return;
 		}
 		for (const area of this.plugin.settings.studyAreas) {
-			const setting = new Setting(studyAreasEl)
+			const setting = new Setting(manageEl)
 				.setName(area.name)
 				.setDesc(
 					`${area.parentPath} · ${
