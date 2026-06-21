@@ -35,7 +35,6 @@ export interface ShortFormHookModel {
 export type ShortFormHookCardState = "current" | "upcoming";
 export type ShortFormHookTitleDensity = "standard" | "long" | "dense";
 
-const MAX_HOOK_TITLE_LENGTH = 104;
 const MIN_HOOK_CONTENT_WORDS = 3;
 
 export function buildShortFormHookModel(
@@ -60,9 +59,7 @@ export function buildShortFormHookTitle(question: string | null): string | null 
 	if (!normalized) return null;
 
 	const withoutTerminalQuestion = normalized.replace(/[?\s]+$/g, "").trim();
-	const title = withoutTerminalQuestion || normalized;
-	if (title.length <= MAX_HOOK_TITLE_LENGTH) return title;
-	return trimToWordBoundary(title, MAX_HOOK_TITLE_LENGTH);
+	return withoutTerminalQuestion || normalized;
 }
 
 export function buildShortFormHookSummary(opts: {
@@ -166,12 +163,4 @@ function visibleSectionText(row: CornellRow): string {
 		.replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
 		.replace(/[#>*_~`|\[\]()-]+/g, " ")
 		.replace(/\s+/g, " ");
-}
-
-function trimToWordBoundary(text: string, maxLength: number): string {
-	const target = text.slice(0, maxLength - 3).trimEnd();
-	const lastSpace = target.lastIndexOf(" ");
-	const trimmed =
-		lastSpace > Math.floor(maxLength * 0.6) ? target.slice(0, lastSpace) : target;
-	return `${trimmed}...`;
 }

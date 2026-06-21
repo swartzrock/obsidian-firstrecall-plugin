@@ -67,12 +67,12 @@ describe("buildShortFormHookTitle", () => {
 		expect(buildShortFormHookTitle(null)).toBeNull();
 	});
 
-	it("keeps long titles compact without mutating the source question", () => {
-		const title = buildShortFormHookTitle(
-			"How does a retrieval cue help learners reconstruct the original answer intent when the section is dense with details, caveats, examples, and implementation notes?"
+	it("keeps long titles intact without adding ellipses", () => {
+		const question =
+			"How does a retrieval cue help learners reconstruct the original answer intent when the section is dense with details, caveats, examples, and implementation notes?";
+		expect(buildShortFormHookTitle(question)).toBe(
+			"How does a retrieval cue help learners reconstruct the original answer intent when the section is dense with details, caveats, examples, and implementation notes"
 		);
-		expect(title?.length).toBeLessThanOrEqual(104);
-		expect(title).toMatch(/\.\.\.$/);
 	});
 });
 
