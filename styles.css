@@ -801,8 +801,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 /* ---- Short-Form Hook Mode ---- */
 .cuecraft-hook-mode {
-	--cuecraft-hook-rail-width: 220px;
-	--cuecraft-hook-column-gap: 36px;
+	--cuecraft-hook-rail-width: 280px;
+	--cuecraft-hook-column-gap: 40px;
 }
 
 .cuecraft-hook-mode .cuecraft-cornell-title {
@@ -817,7 +817,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	max-width: calc(var(--cuecraft-hook-rail-width) + var(--cuecraft-hook-column-gap) + 72ch);
 	margin: 0 auto;
 	grid-template-columns:
-		minmax(200px, var(--cuecraft-hook-rail-width))
+		minmax(240px, var(--cuecraft-hook-rail-width))
 		minmax(0, 72ch);
 	column-gap: var(--cuecraft-hook-column-gap);
 	justify-content: center;
@@ -841,7 +841,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	width: 100%;
 	max-width: none;
 	min-width: 0;
-	min-height: 110px;
+	min-height: 126px;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
@@ -889,7 +889,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-hook-mode button.cuecraft-hook-card {
 	height: auto;
-	min-height: 110px;
+	min-height: 126px;
 	align-items: stretch;
 	box-sizing: border-box;
 	line-height: normal;
@@ -927,7 +927,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	max-width: 100%;
 	overflow-wrap: anywhere;
 	color: inherit;
-	font-size: 0.98rem;
+	font-size: 1rem;
 	font-weight: var(--font-bold);
 	line-height: 1.08;
 	hyphens: auto;

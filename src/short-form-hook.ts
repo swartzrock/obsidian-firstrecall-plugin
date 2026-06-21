@@ -34,7 +34,8 @@ export interface ShortFormHookModel {
 
 export type ShortFormHookCardState = "current" | "upcoming";
 
-const MAX_HOOK_TITLE_LENGTH = 96;
+const MAX_HOOK_TITLE_LENGTH = 118;
+const MIN_HOOK_CONTENT_WORDS = 3;
 
 export function buildShortFormHookModel(
 	model: CornellModel
@@ -111,6 +112,8 @@ export function applyShortFormHookFocusState(
 }
 
 function buildShortFormHookCard(row: CornellRow): ShortFormHookRailCard | null {
+	if (!hasMeaningfulHookSource(row)) return null;
+
 	const hookTitle = buildShortFormHookTitle(row.question);
 	if (row.hasCue && row.question && hookTitle) {
 		return {
@@ -132,6 +135,26 @@ function buildShortFormHookCard(row: CornellRow): ShortFormHookRailCard | null {
 		};
 	}
 	return null;
+}
+
+function hasMeaningfulHookSource(row: CornellRow): boolean {
+	const text = visibleSectionText(row).trim();
+	if (!text) return false;
+	return text.split(/\s+/).filter(Boolean).length >= MIN_HOOK_CONTENT_WORDS;
+}
+
+function visibleSectionText(row: CornellRow): string {
+	let content = row.content.trim();
+	if (row.level === 0) {
+		content = content.replace(/^---\n[\s\S]*?\n---\s*/u, "").trim();
+	}
+	return content
+		.replace(/```[\s\S]*?```/g, " ")
+		.replace(/`([^`]*)`/g, "$1")
+		.replace(/!\[[^\]]*]\([^)]*\)/g, " ")
+		.replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+		.replace(/[#>*_~`|\[\]()-]+/g, " ")
+		.replace(/\s+/g, " ");
 }
 
 function trimToWordBoundary(text: string, maxLength: number): string {
