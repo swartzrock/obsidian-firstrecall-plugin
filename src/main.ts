@@ -53,6 +53,10 @@ import {
 	readingModeDisplayState,
 } from "./reading-cues";
 import {
+	DEFAULT_CORNELL_DISPLAY_MODE,
+	isCornellDisplayMode,
+} from "./cornell-display";
+import {
 	selectExportableCues,
 	cuesToMarkdown,
 	cuesToAnki,
@@ -190,6 +194,13 @@ export default class CueCraftPlugin extends Plugin {
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
 		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
+		}
+		if (
+			!isCornellDisplayMode(
+				(settings as { cornellDisplayMode?: unknown }).cornellDisplayMode
+			)
+		) {
+			settings.cornellDisplayMode = DEFAULT_CORNELL_DISPLAY_MODE;
 		}
 		const legacyAvailableModelIds = (settings as unknown as {
 			anthropicAvailableModelIds?: string[];

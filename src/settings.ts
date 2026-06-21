@@ -35,6 +35,12 @@ import {
 	type CueAccent,
 } from "./cornell-accent";
 import {
+	CORNELL_DISPLAY_MODES,
+	DEFAULT_CORNELL_DISPLAY_MODE,
+	cornellDisplayModeOption,
+	type CornellDisplayMode,
+} from "./cornell-display";
+import {
 	DEFAULT_READING_MODE_DISPLAY,
 	READING_MODE_DISPLAY_OPTIONS,
 	type ReadingModeDisplay,
@@ -120,6 +126,7 @@ export interface CueCraftSettings {
 	providerConnectionStatus: ProviderConnectionStatusMap;
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
+	cornellDisplayMode: CornellDisplayMode;
 	cornellStyle: CornellStyle;
 	cueColumnWidth: CueColumnWidth;
 	cueFontSize: CueFontSize;
@@ -174,6 +181,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	providerConnectionStatus: {},
 	cuePreset: "conceptual",
 	studyHideMode: "blur",
+	cornellDisplayMode: DEFAULT_CORNELL_DISPLAY_MODE,
 	cornellStyle: DEFAULT_CORNELL_STYLE,
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
@@ -370,11 +378,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private appearanceSummary(): string {
+		const mode = cornellDisplayModeOption(
+			this.plugin.settings.cornellDisplayMode
+		).label;
 		const style =
 			CORNELL_STYLES.find(
 				(item) => item.id === this.plugin.settings.cornellStyle
 			)?.label ?? "Custom";
-		return `${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
+		return `${mode} · ${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
 	}
 
 	private providerDisplayName(provider: ProviderId): string {
@@ -756,6 +767,27 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (showHeading) {
 			new Setting(containerEl).setName("Appearance").setHeading();
 		}
+
+		const displaySetting = new Setting(containerEl)
+			.setName("Cornell display mode")
+			.addDropdown((dd) => {
+				for (const option of CORNELL_DISPLAY_MODES) {
+					dd.addOption(option.id, option.label);
+				}
+				dd.setValue(this.plugin.settings.cornellDisplayMode).onChange(
+					async (value) => {
+						this.plugin.settings.cornellDisplayMode =
+							value as CornellDisplayMode;
+						await this.plugin.saveSettings();
+						this.plugin.refreshCornellViews();
+						displaySetting.setDesc(displayDesc());
+					}
+				);
+			});
+		const displayDesc = (): string =>
+			cornellDisplayModeOption(this.plugin.settings.cornellDisplayMode)
+				.description;
+		displaySetting.setDesc(displayDesc());
 
 		const styleSetting = new Setting(containerEl)
 			.setName("Cornell view style")
