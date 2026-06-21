@@ -32,6 +32,8 @@ export interface ShortFormHookModel {
 	summary: ShortFormHookSummaryCard | null;
 }
 
+export type ShortFormHookCardState = "current" | "upcoming";
+
 const MAX_HOOK_TITLE_LENGTH = 96;
 
 export function buildShortFormHookModel(
@@ -73,6 +75,39 @@ export function buildShortFormHookSummary(opts: {
 		takeaway,
 		objective,
 	};
+}
+
+export function shortFormHookCardState(
+	card: ShortFormHookRailCard,
+	currentSectionId: string | null
+): ShortFormHookCardState {
+	return currentSectionId === card.sectionId ? "current" : "upcoming";
+}
+
+export function shortFormHookStatusIcon(
+	state: ShortFormHookCardState
+): string {
+	return state === "current" ? "\u2022" : "\u25e6";
+}
+
+export function shortFormHookFocusLabel(card: ShortFormHookRailCard): string {
+	const section = card.heading.trim() || "section";
+	return `Focus ${section}`;
+}
+
+export function applyShortFormHookFocusState(
+	root: ParentNode,
+	currentSectionId: string | null
+): void {
+	const cards = root.querySelectorAll<HTMLElement>(".cuecraft-hook-card-action");
+	cards.forEach((card) => {
+		const state =
+			card.dataset.section === currentSectionId ? "current" : "upcoming";
+		card.classList.toggle("is-current", state === "current");
+		card.setAttribute("aria-current", state === "current" ? "location" : "false");
+		const status = card.querySelector<HTMLElement>(".cuecraft-hook-status");
+		if (status) status.textContent = shortFormHookStatusIcon(state);
+	});
 }
 
 function buildShortFormHookCard(row: CornellRow): ShortFormHookRailCard | null {

@@ -1,9 +1,15 @@
+import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import { buildCornellModel } from "../src/cornell";
 import {
+	applyShortFormHookFocusState,
 	buildShortFormHookModel,
 	buildShortFormHookSummary,
 	buildShortFormHookTitle,
+	shortFormHookCardState,
+	shortFormHookFocusLabel,
+	shortFormHookStatusIcon,
+	type ShortFormHookRailCard,
 } from "../src/short-form-hook";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
@@ -144,5 +150,78 @@ describe("buildShortFormHookModel", () => {
 				learningObjective: null,
 			})
 		).toBeNull();
+	});
+});
+
+describe("short-form hook focus presentation", () => {
+	it("marks only the focused section as current", () => {
+		const model = buildCornellModel(cacheFrom(), parseSections(NOTE));
+		const hook = buildShortFormHookModel(model);
+		expect(shortFormHookCardState(hook.cards[0], hook.cards[0].sectionId)).toBe(
+			"current"
+		);
+		expect(shortFormHookCardState(hook.cards[1], hook.cards[0].sectionId)).toBe(
+			"upcoming"
+		);
+		expect(shortFormHookCardState(hook.cards[0], null)).toBe("upcoming");
+	});
+
+	it("keeps status icons quiet and label text action-oriented", () => {
+		const model = buildCornellModel(cacheFrom(), parseSections(NOTE));
+		const card = buildShortFormHookModel(model).cards[0];
+		expect(shortFormHookStatusIcon("current")).toBe("\u2022");
+		expect(shortFormHookStatusIcon("upcoming")).toBe("\u25e6");
+		expect(shortFormHookFocusLabel(card)).toBe("Focus A");
+	});
+
+	it("uses a generic focus label when a card has no heading", () => {
+		const card: ShortFormHookRailCard = {
+			kind: "hook",
+			sectionId: "intro",
+			heading: "",
+			hookTitle: "Intro",
+			originalQuestion: "What opens this note?",
+			confidence: "high",
+		};
+		expect(shortFormHookFocusLabel(card)).toBe("Focus section");
+	});
+
+	it("updates rail focus state without replacing note content", () => {
+		const dom = new JSDOM(`
+			<div>
+				<button class="cuecraft-hook-card-action" data-section="a" aria-current="false">
+					<span class="cuecraft-hook-status">\u25e6</span>
+					<span>Alpha hook</span>
+				</button>
+				<button class="cuecraft-hook-card-action" data-section="b" aria-current="false">
+					<span class="cuecraft-hook-status">\u25e6</span>
+					<span>Beta hook</span>
+				</button>
+				<section class="cuecraft-cornell-body" data-section="a">alpha</section>
+				<section class="cuecraft-cornell-body" data-section="b">beta</section>
+			</div>
+		`);
+		const root = dom.window.document.body;
+		const noteBodies = Array.from(
+			root.querySelectorAll<HTMLElement>(".cuecraft-cornell-body")
+		);
+		const before = noteBodies.map((body) => body.innerHTML);
+
+		applyShortFormHookFocusState(root, "b");
+
+		const cards = Array.from(
+			root.querySelectorAll<HTMLElement>(".cuecraft-hook-card-action")
+		);
+		expect(cards[0].classList.contains("is-current")).toBe(false);
+		expect(cards[0].getAttribute("aria-current")).toBe("false");
+		expect(cards[0].querySelector(".cuecraft-hook-status")?.textContent).toBe(
+			"\u25e6"
+		);
+		expect(cards[1].classList.contains("is-current")).toBe(true);
+		expect(cards[1].getAttribute("aria-current")).toBe("location");
+		expect(cards[1].querySelector(".cuecraft-hook-status")?.textContent).toBe(
+			"\u2022"
+		);
+		expect(noteBodies.map((body) => body.innerHTML)).toEqual(before);
 	});
 });
