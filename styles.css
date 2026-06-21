@@ -766,6 +766,179 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-size: var(--font-ui-smaller);
 }
 
+/* ---- Short-Form Hook Mode prototype ---- */
+.cuecraft-hook-mode .cuecraft-cornell-grid {
+	grid-template-columns: minmax(120px, 178px) 1fr;
+	column-gap: 20px;
+}
+
+.cuecraft-hook-mode .cuecraft-cornell-cuecell {
+	border-right-color: color-mix(
+		in srgb,
+		var(--interactive-accent) 24%,
+		var(--background-modifier-border)
+	);
+	padding: 4px 16px 6px 0;
+}
+
+.cuecraft-hook-cell {
+	display: flex;
+	justify-content: flex-end;
+}
+
+.cuecraft-hook-card {
+	position: relative;
+	width: 100%;
+	max-width: 168px;
+	min-height: 78px;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 6px;
+	padding: 10px 11px;
+	border: 1px solid
+		color-mix(in srgb, var(--interactive-accent) 30%, var(--background-modifier-border));
+	border-left-width: 3px;
+	border-radius: var(--radius-s);
+	background: color-mix(
+		in srgb,
+		var(--background-secondary) 84%,
+		var(--interactive-accent) 16%
+	);
+	color: var(--text-normal);
+	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+	animation: cuecraft-hook-card-in 140ms ease-out;
+}
+
+.cuecraft-hook-card[data-confidence="low"] {
+	border-color: color-mix(
+		in srgb,
+		var(--color-red) 55%,
+		var(--background-modifier-border)
+	);
+}
+
+.cuecraft-hook-status {
+	width: 18px;
+	height: 18px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 50%;
+	background: color-mix(in srgb, var(--background-primary) 76%, transparent);
+	color: var(--text-muted);
+	font-size: var(--font-smallest);
+	font-weight: var(--font-bold);
+	line-height: 1;
+}
+
+.cuecraft-hook-title {
+	overflow-wrap: anywhere;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+	line-height: 1.25;
+	text-wrap: pretty;
+	user-select: text;
+}
+
+.cuecraft-hook-card-failed {
+	border-color: color-mix(
+		in srgb,
+		var(--text-error) 45%,
+		var(--background-modifier-border)
+	);
+	background: color-mix(
+		in srgb,
+		var(--background-secondary) 88%,
+		var(--background-modifier-error) 12%
+	);
+}
+
+.cuecraft-hook-card-failed .cuecraft-hook-status,
+.cuecraft-hook-card-failed .cuecraft-hook-title {
+	color: var(--text-error);
+}
+
+.cuecraft-hook-regen {
+	align-self: flex-start;
+	padding: 2px 7px;
+	border-radius: var(--radius-s);
+	font-size: var(--font-smallest);
+	line-height: 1.2;
+	cursor: pointer;
+}
+
+.cuecraft-hook-summary {
+	max-width: 72ch;
+	margin: 18px auto 0;
+	padding: 14px 16px;
+	border: 1px solid
+		color-mix(in srgb, var(--interactive-accent) 28%, var(--background-modifier-border));
+	border-radius: var(--radius-s);
+	background: color-mix(
+		in srgb,
+		var(--background-secondary) 86%,
+		var(--color-cyan, var(--interactive-accent)) 14%
+	);
+	color: var(--text-normal);
+}
+
+.cuecraft-hook-summary-label {
+	margin-bottom: 8px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-bold);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.cuecraft-hook-summary-body {
+	color: var(--text-normal);
+	line-height: 1.55;
+	text-wrap: pretty;
+	user-select: text;
+}
+
+.cuecraft-hook-objective {
+	margin-top: 10px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.4;
+}
+
+@keyframes cuecraft-hook-card-in {
+	from {
+		opacity: 0;
+		transform: translateY(3px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cuecraft-hook-card {
+		animation: none;
+	}
+}
+
+@media (max-width: 700px) {
+	.cuecraft-cornell-fold-mobile.cuecraft-hook-mode .cuecraft-cornell-grid {
+		display: block;
+	}
+
+	.cuecraft-cornell-fold-mobile.cuecraft-hook-mode .cuecraft-hook-cell {
+		justify-content: flex-start;
+	}
+
+	.cuecraft-cornell-fold-mobile.cuecraft-hook-mode .cuecraft-hook-card {
+		max-width: none;
+		min-height: 0;
+	}
+}
+
 /* =========================================================================
  * Cornell view — visual style presets (V1.2).
  * Each preset is scoped under .cuecraft-style-<id> on the view root so only

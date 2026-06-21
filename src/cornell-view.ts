@@ -11,6 +11,11 @@ import {
 	type CornellRow,
 } from "./cornell";
 import {
+	buildShortFormHookModel,
+	type ShortFormHookModel,
+	type ShortFormHookRailCard,
+} from "./short-form-hook";
+import {
 	CORNELL_STYLES,
 	cornellStyleClass,
 	type CornellStyle,
@@ -41,6 +46,8 @@ export class CornellView extends ItemView {
 	private revealAll = false;
 	/** When true, the in-view display-controls row (style/width/font) is shown. */
 	private displayOpen = false;
+	/** Transient prototype display mode for compact hook cards. */
+	private hookMode = false;
 	/** The last Markdown note we rendered, used as a fallback on restart. */
 	private lastFile: TFile | null = null;
 
@@ -76,6 +83,7 @@ export class CornellView extends ItemView {
 	 * lands the user in an actually-studying state instead of a no-op toggle.
 	 */
 	async enterStudyMode(): Promise<void> {
+		this.hookMode = false;
 		this.studyMode = true;
 		this.revealed.clear();
 		this.revealAll = false;
@@ -88,6 +96,7 @@ export class CornellView extends ItemView {
 		root.empty();
 		root.addClass("cuecraft-cornell");
 		root.toggleClass("cuecraft-cornell-study", this.studyMode);
+		root.toggleClass("cuecraft-hook-mode", this.hookMode);
 		root.toggleClass(
 			"cuecraft-cornell-hide-keywords",
 			!this.plugin.settings.generateKeywords
@@ -134,10 +143,14 @@ export class CornellView extends ItemView {
 
 		this.renderToolbar(root, file);
 		if (this.displayOpen) this.renderDisplayRow(root);
-		this.renderFailedBanner(root, built.model, file);
+		if (!this.hookMode) this.renderFailedBanner(root, built.model, file);
 		root.createEl("div", { cls: "cuecraft-cornell-title", text: built.title });
-		await this.renderGrid(root, built.model, file);
-		this.renderSummary(root, built.model);
+		const hookModel = this.hookMode
+			? buildShortFormHookModel(built.model)
+			: null;
+		await this.renderGrid(root, built.model, file, hookModel);
+		if (hookModel) this.renderHookSummary(root, hookModel);
+		else this.renderSummary(root, built.model);
 	}
 
 	/**
@@ -226,6 +239,8 @@ export class CornellView extends ItemView {
 	private renderDisplayRow(root: HTMLElement): void {
 		const row = root.createEl("div", { cls: "cuecraft-cornell-display" });
 
+		this.renderHookModeControl(row);
+
 		const styleCtl = row.createEl("div", { cls: "cuecraft-cornell-ctl" });
 		styleCtl.createEl("label", {
 			cls: "cuecraft-cornell-ctl-label",
@@ -262,6 +277,30 @@ export class CornellView extends ItemView {
 				this.plugin.settings.cueFontSize = id as CueFontSize;
 			}
 		);
+	}
+
+	private renderHookModeControl(row: HTMLElement): void {
+		const ctl = row.createEl("div", { cls: "cuecraft-cornell-ctl" });
+		ctl.createEl("label", {
+			cls: "cuecraft-cornell-ctl-label",
+			text: "Mode",
+		});
+		const seg = ctl.createEl("div", { cls: "cuecraft-cornell-seg" });
+		for (const opt of [
+			{ id: "classic", label: "Classic" },
+			{ id: "hook", label: "Hook rail" },
+		]) {
+			const btn = seg.createEl("button", {
+				cls: "cuecraft-cornell-seg-btn",
+				text: opt.label,
+			});
+			const isHook = opt.id === "hook";
+			btn.toggleClass("is-on", this.hookMode === isHook);
+			btn.addEventListener("click", () => {
+				this.setHookMode(isHook);
+				void this.render();
+			});
+		}
 	}
 
 	/** A small segmented-button group used by the display-controls row. */
@@ -322,13 +361,75 @@ export class CornellView extends ItemView {
 	private async renderGrid(
 		root: HTMLElement,
 		model: CornellModel,
-		file: TFile
+		file: TFile,
+		hookModel: ShortFormHookModel | null = null
 	): Promise<void> {
 		const grid = root.createEl("div", { cls: "cuecraft-cornell-grid" });
+		const hookCardsBySection = hookModel
+			? new Map(hookModel.cards.map((card) => [card.sectionId, card]))
+			: null;
 		for (const row of model.rows) {
-			this.renderCueCell(grid, row, file);
+			if (hookCardsBySection) {
+				this.renderHookCell(grid, row, hookCardsBySection.get(row.id), file);
+			} else {
+				this.renderCueCell(grid, row, file);
+			}
 			await this.renderNoteCell(grid, row, file);
 		}
+	}
+
+	private renderHookCell(
+		grid: HTMLElement,
+		row: CornellRow,
+		card: ShortFormHookRailCard | undefined,
+		file: TFile
+	): void {
+		const cell = grid.createEl("div", {
+			cls: "cuecraft-cornell-cuecell cuecraft-hook-cell",
+		});
+		if (!card) return;
+
+		const cue = cell.createEl("div", { cls: "cuecraft-hook-card" });
+		cue.dataset.section = row.id;
+		if (card.kind === "hook") {
+			if (card.confidence) cue.dataset.confidence = card.confidence;
+			cue.setAttr("title", card.originalQuestion);
+			cue.createEl("span", {
+				cls: "cuecraft-hook-status",
+				text: "?",
+				attr: { "aria-hidden": "true" },
+			});
+			cue.createEl("div", {
+				cls: "cuecraft-hook-title",
+				text: card.hookTitle,
+				attr: { "aria-label": card.originalQuestion },
+			});
+			return;
+		}
+
+		cue.addClass("cuecraft-hook-card-failed");
+		cue.setAttr("title", card.error);
+		cue.createEl("span", {
+			cls: "cuecraft-hook-status",
+			text: "!",
+			attr: { "aria-hidden": "true" },
+		});
+		cue.createEl("div", {
+			cls: "cuecraft-hook-title",
+			text: card.label,
+		});
+		const regen = cue.createEl("button", {
+			cls: "cuecraft-hook-regen",
+			text: "Retry",
+			attr: {
+				"aria-label": `Regenerate cue for ${row.heading || "section"}`,
+				title: "Regenerate cue",
+			},
+		});
+		regen.addEventListener("click", (e) => {
+			e.stopPropagation();
+			this.showToneMenu(e, file, row.id);
+		});
 	}
 
 	private renderCueCell(grid: HTMLElement, row: CornellRow, file: TFile): void {
@@ -464,6 +565,38 @@ export class CornellView extends ItemView {
 			obj.createEl("strong", { text: "Objective: " });
 			obj.appendText(takeaway.objective);
 		}
+	}
+
+	private renderHookSummary(
+		root: HTMLElement,
+		model: ShortFormHookModel
+	): void {
+		const summary = model.summary;
+		if (!summary) return;
+		const wrap = root.createEl("div", { cls: "cuecraft-hook-summary" });
+		wrap.createEl("div", {
+			cls: "cuecraft-hook-summary-label",
+			text: summary.label,
+		});
+		if (summary.takeaway) {
+			wrap.createEl("div", {
+				cls: "cuecraft-hook-summary-body",
+				text: summary.takeaway,
+			});
+		}
+		if (summary.objective) {
+			const obj = wrap.createEl("div", { cls: "cuecraft-hook-objective" });
+			obj.createEl("strong", { text: "Objective: " });
+			obj.appendText(summary.objective);
+		}
+	}
+
+	private setHookMode(enabled: boolean): void {
+		this.hookMode = enabled;
+		if (!enabled) return;
+		this.studyMode = false;
+		this.revealed.clear();
+		this.revealAll = false;
 	}
 
 	/** Show a tone picker menu then regenerate the chosen section with that tone. */
