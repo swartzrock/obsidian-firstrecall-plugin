@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	buildModelComboboxOptions,
+	buildModelComboboxSuggestions,
 	filterModelOptions,
 	modelOptionSearchText,
 } from "../src/model-combobox";
@@ -94,6 +95,37 @@ describe("filterModelOptions", () => {
 
 	it("returns all options for an empty query", () => {
 		expect(filterModelOptions(options, "  ")).toHaveLength(3);
+	});
+});
+
+describe("buildModelComboboxSuggestions", () => {
+	it("filters by query without adding the transient search text as a custom option", () => {
+		const suggestions = buildModelComboboxSuggestions({
+			options: [
+				opt("qwen/qwen3-8b", { label: "Qwen: Qwen3 8B" }),
+				opt("qwen/qwen3-14b", { label: "Qwen: Qwen3 14B" }),
+			],
+			selectedModelId: "",
+			query: "qwen3",
+			source: "openrouter",
+		});
+		expect(suggestions.map((option) => option.id)).toEqual([
+			"qwen/qwen3-8b",
+			"qwen/qwen3-14b",
+		]);
+		expect(suggestions.map((option) => option.id)).not.toContain("qwen3");
+	});
+
+	it("still preserves a saved custom model when it matches the query", () => {
+		const suggestions = buildModelComboboxSuggestions({
+			options: [opt("qwen/qwen3-8b")],
+			selectedModelId: "custom/private-model",
+			query: "custom",
+			source: "openrouter",
+		});
+		expect(suggestions.map((option) => option.id)).toEqual([
+			"custom/private-model",
+		]);
 	});
 });
 

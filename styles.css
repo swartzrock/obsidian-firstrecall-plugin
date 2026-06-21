@@ -134,6 +134,39 @@
 .cuecraft-model-combobox-input {
 	width: 100%;
 	min-width: 220px;
+	padding-inline-end: 34px;
+	text-overflow: ellipsis;
+}
+
+.cuecraft-model-combobox-toggle {
+	position: absolute;
+	z-index: 1;
+	inset-block-start: 50%;
+	inset-inline-end: 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	box-shadow: none;
+	color: var(--text-muted);
+	cursor: pointer;
+	transform: translateY(-50%);
+}
+
+.cuecraft-model-combobox-toggle:hover,
+.cuecraft-model-combobox-open .cuecraft-model-combobox-toggle {
+	color: var(--text-normal);
+	background: transparent;
+	box-shadow: none;
+}
+
+.cuecraft-model-combobox-toggle svg {
+	width: 16px;
+	height: 16px;
 }
 
 .cuecraft-model-combobox-list {

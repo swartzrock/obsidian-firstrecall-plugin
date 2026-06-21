@@ -53,6 +53,24 @@ export function filterModelOptions(
 	);
 }
 
+export function buildModelComboboxSuggestions(opts: {
+	options: ModelOption[];
+	selectedModelId: string;
+	query: string;
+	source: ModelOptionSource;
+	badgesForOption?: (option: ModelOption) => string[];
+}): ModelOption[] {
+	return filterModelOptions(
+		buildModelComboboxOptions({
+			options: opts.options,
+			currentModelId: opts.selectedModelId,
+			source: opts.source,
+		}),
+		opts.query,
+		opts.badgesForOption
+	);
+}
+
 export function renderModelCombobox(opts: {
 	containerEl: HTMLElement;
 	value: string;
@@ -61,6 +79,7 @@ export function renderModelCombobox(opts: {
 	placeholder: string;
 	emptyMessage: string;
 	onCommit: (value: string) => void | Promise<void>;
+	renderToggleIcon?: (containerEl: HTMLElement) => void;
 	badgesForOption?: (option: ModelOption) => string[];
 }): void {
 	const comboboxId = `cuecraft-model-combobox-${++nextComboboxId}`;
@@ -68,6 +87,7 @@ export function renderModelCombobox(opts: {
 	const badgesForOption = opts.badgesForOption ?? (() => []);
 	let isOpen = false;
 	let activeIndex = 0;
+	let committedModelId = opts.value.trim();
 
 	const rootEl = opts.containerEl.createDiv({
 		cls: "cuecraft-model-combobox",
@@ -86,29 +106,44 @@ export function renderModelCombobox(opts: {
 	});
 	inputEl.value = opts.value;
 
+	const toggleEl = rootEl.createEl("button", {
+		cls: "cuecraft-model-combobox-toggle",
+		attr: {
+			type: "button",
+			"aria-label": "Show model suggestions",
+			title: "Show model suggestions",
+			tabindex: "-1",
+		},
+	});
+	opts.renderToggleIcon?.(toggleEl);
+
 	const listEl = rootEl.createDiv({
 		cls: "cuecraft-model-combobox-list cuecraft-model-combobox-list-hidden",
 		attr: { id: listboxId, role: "listbox" },
 	});
 
-	const catalog = () =>
-		buildModelComboboxOptions({
-			options: opts.options,
-			currentModelId: inputEl.value,
-			source: opts.source,
-		});
 	const matches = () =>
-		filterModelOptions(catalog(), inputEl.value, badgesForOption);
+		buildModelComboboxSuggestions({
+			options: opts.options,
+			selectedModelId: committedModelId,
+			query: inputEl.value,
+			source: opts.source,
+			badgesForOption,
+		});
 
 	const closeList = () => {
 		isOpen = false;
 		inputEl.setAttr("aria-expanded", "false");
 		inputEl.removeAttribute("aria-activedescendant");
+		toggleEl.setAttr("aria-label", "Show model suggestions");
+		toggleEl.setAttr("title", "Show model suggestions");
+		rootEl.removeClass("cuecraft-model-combobox-open");
 		listEl.addClass("cuecraft-model-combobox-list-hidden");
 	};
 
 	const commitValue = (value: string) => {
 		const nextValue = value.trim();
+		committedModelId = nextValue;
 		inputEl.value = nextValue;
 		void opts.onCommit(nextValue);
 	};
@@ -125,8 +160,11 @@ export function renderModelCombobox(opts: {
 			return;
 		}
 		const visibleOptions = matches();
+		rootEl.addClass("cuecraft-model-combobox-open");
 		listEl.removeClass("cuecraft-model-combobox-list-hidden");
 		inputEl.setAttr("aria-expanded", "true");
+		toggleEl.setAttr("aria-label", "Hide model suggestions");
+		toggleEl.setAttr("title", "Hide model suggestions");
 		if (visibleOptions.length === 0) {
 			listEl.createDiv({
 				cls: "cuecraft-model-combobox-empty",
@@ -186,6 +224,20 @@ export function renderModelCombobox(opts: {
 		}
 	};
 
+	toggleEl.addEventListener("mousedown", (event) => {
+		event.preventDefault();
+	});
+	toggleEl.addEventListener("click", (event) => {
+		event.preventDefault();
+		if (isOpen) {
+			closeList();
+			return;
+		}
+		isOpen = true;
+		activeIndex = 0;
+		renderList();
+		inputEl.focus();
+	});
 	inputEl.addEventListener("focus", () => {
 		isOpen = true;
 		activeIndex = 0;

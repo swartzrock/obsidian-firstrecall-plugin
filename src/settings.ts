@@ -925,7 +925,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderFetchedModelSelector(containerEl, {
 			modelLabel: "Ollama model",
 			modelDesc: "Name of an installed Ollama model (e.g. llama3.1:8b).",
-			modelPlaceholder: "llama3.1:8b",
+			modelPlaceholder: "Select a model",
 			availableModels: s.ollamaAvailableModels,
 			modelOptionSource: "ollama",
 			getModel: () => s.ollamaModel,
@@ -1203,7 +1203,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					providerName: "OpenAI",
 					modelLabel: "OpenAI model",
 					modelDesc: "An OpenAI model id (e.g. gpt-4o-mini, gpt-4o).",
-					modelPlaceholder: "gpt-4o-mini",
+					modelPlaceholder: "Select a model",
 					modelOptionSource: "openai",
 					getModel: () => s.openaiModel,
 					setModel: (v) => (s.openaiModel = v),
@@ -1221,7 +1221,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					providerName: "Gemini",
 					modelLabel: "Gemini model",
 					modelDesc: "A Gemini model id (e.g. gemini-1.5-flash, gemini-1.5-pro).",
-					modelPlaceholder: "gemini-1.5-flash",
+					modelPlaceholder: "Select a model",
 					modelOptionSource: "google",
 					getModel: () => s.googleModel,
 					setModel: (v) => (s.googleModel = v),
@@ -1239,7 +1239,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					providerName: "xAI",
 					modelLabel: "Grok model",
 					modelDesc: "An xAI model id (e.g. grok-2-latest, grok-beta).",
-					modelPlaceholder: "grok-2-latest",
+					modelPlaceholder: "Select a model",
 					modelOptionSource: "xai",
 					getModel: () => s.xaiModel,
 					setModel: (v) => (s.xaiModel = v),
@@ -1257,7 +1257,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					providerName: "OpenRouter",
 					modelLabel: "OpenRouter model",
 					modelDesc: "An OpenRouter model ID in provider/model format (e.g. anthropic/claude-sonnet-4, openai/gpt-4o).",
-					modelPlaceholder: "anthropic/claude-sonnet-4",
+					modelPlaceholder: "Select a model",
 					modelOptionSource: "openrouter",
 					getModel: () => s.openrouterModel,
 					setModel: (v) => (s.openrouterModel = v),
@@ -1371,6 +1371,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				await this.plugin.saveSettings();
 				if (value !== previousValue) this.display();
 			},
+			renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
 			badgesForOption: modelCompatibilityBadges,
 		});
 	}
