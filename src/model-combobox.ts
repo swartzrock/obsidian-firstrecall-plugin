@@ -53,6 +53,24 @@ export function filterModelOptions(
 	);
 }
 
+export function buildModelComboboxSuggestions(opts: {
+	options: ModelOption[];
+	selectedModelId: string;
+	query: string;
+	source: ModelOptionSource;
+	badgesForOption?: (option: ModelOption) => string[];
+}): ModelOption[] {
+	return filterModelOptions(
+		buildModelComboboxOptions({
+			options: opts.options,
+			currentModelId: opts.selectedModelId,
+			source: opts.source,
+		}),
+		opts.query,
+		opts.badgesForOption
+	);
+}
+
 export function renderModelCombobox(opts: {
 	containerEl: HTMLElement;
 	value: string;
@@ -69,6 +87,7 @@ export function renderModelCombobox(opts: {
 	const badgesForOption = opts.badgesForOption ?? (() => []);
 	let isOpen = false;
 	let activeIndex = 0;
+	let committedModelId = opts.value.trim();
 
 	const rootEl = opts.containerEl.createDiv({
 		cls: "cuecraft-model-combobox",
@@ -103,14 +122,14 @@ export function renderModelCombobox(opts: {
 		attr: { id: listboxId, role: "listbox" },
 	});
 
-	const catalog = () =>
-		buildModelComboboxOptions({
-			options: opts.options,
-			currentModelId: inputEl.value,
-			source: opts.source,
-		});
 	const matches = () =>
-		filterModelOptions(catalog(), inputEl.value, badgesForOption);
+		buildModelComboboxSuggestions({
+			options: opts.options,
+			selectedModelId: committedModelId,
+			query: inputEl.value,
+			source: opts.source,
+			badgesForOption,
+		});
 
 	const closeList = () => {
 		isOpen = false;
@@ -124,6 +143,7 @@ export function renderModelCombobox(opts: {
 
 	const commitValue = (value: string) => {
 		const nextValue = value.trim();
+		committedModelId = nextValue;
 		inputEl.value = nextValue;
 		void opts.onCommit(nextValue);
 	};
