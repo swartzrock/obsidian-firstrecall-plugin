@@ -33,8 +33,9 @@ export interface ShortFormHookModel {
 }
 
 export type ShortFormHookCardState = "current" | "upcoming";
+export type ShortFormHookTitleDensity = "standard" | "long" | "dense";
 
-const MAX_HOOK_TITLE_LENGTH = 118;
+const MAX_HOOK_TITLE_LENGTH = 104;
 const MIN_HOOK_CONTENT_WORDS = 3;
 
 export function buildShortFormHookModel(
@@ -94,6 +95,16 @@ export function shortFormHookStatusIcon(
 export function shortFormHookFocusLabel(card: ShortFormHookRailCard): string {
 	const section = card.heading.trim() || "section";
 	return `Focus ${section}`;
+}
+
+export function shortFormHookTitleDensity(
+	title: string
+): ShortFormHookTitleDensity {
+	const normalized = title.replace(/\s+/g, " ").trim();
+	const wordCount = normalized ? normalized.split(" ").length : 0;
+	if (normalized.length > 88 || wordCount > 13) return "dense";
+	if (normalized.length > 66 || wordCount > 10) return "long";
+	return "standard";
 }
 
 export function applyShortFormHookFocusState(

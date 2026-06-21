@@ -801,8 +801,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 /* ---- Short-Form Hook Mode ---- */
 .cuecraft-hook-mode {
-	--cuecraft-hook-rail-width: 280px;
-	--cuecraft-hook-column-gap: 40px;
+	--cuecraft-hook-rail-width: 340px;
+	--cuecraft-hook-column-gap: 44px;
 }
 
 .cuecraft-hook-mode .cuecraft-cornell-title {
@@ -817,7 +817,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	max-width: calc(var(--cuecraft-hook-rail-width) + var(--cuecraft-hook-column-gap) + 72ch);
 	margin: 0 auto;
 	grid-template-columns:
-		minmax(240px, var(--cuecraft-hook-rail-width))
+		minmax(280px, var(--cuecraft-hook-rail-width))
 		minmax(0, 72ch);
 	column-gap: var(--cuecraft-hook-column-gap);
 	justify-content: center;
@@ -841,7 +841,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	width: 100%;
 	max-width: none;
 	min-width: 0;
-	min-height: 126px;
+	min-height: 136px;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
@@ -889,7 +889,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-hook-mode button.cuecraft-hook-card {
 	height: auto;
-	min-height: 126px;
+	min-height: 136px;
 	align-items: stretch;
 	box-sizing: border-box;
 	line-height: normal;
@@ -921,6 +921,22 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	display: none;
 }
 
+.cuecraft-hook-card[data-title-density="long"] {
+	min-height: 148px;
+}
+
+.cuecraft-hook-mode button.cuecraft-hook-card[data-title-density="long"] {
+	min-height: 148px;
+}
+
+.cuecraft-hook-card[data-title-density="dense"] {
+	min-height: 164px;
+}
+
+.cuecraft-hook-mode button.cuecraft-hook-card[data-title-density="dense"] {
+	min-height: 164px;
+}
+
 .cuecraft-hook-title {
 	position: relative;
 	z-index: 1;
@@ -933,6 +949,16 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	hyphens: auto;
 	text-wrap: pretty;
 	user-select: text;
+}
+
+.cuecraft-hook-card[data-title-density="long"] .cuecraft-hook-title {
+	font-size: 0.94rem;
+	line-height: 1.06;
+}
+
+.cuecraft-hook-card[data-title-density="dense"] .cuecraft-hook-title {
+	font-size: 0.86rem;
+	line-height: 1.04;
 }
 
 .cuecraft-hook-card-failed {

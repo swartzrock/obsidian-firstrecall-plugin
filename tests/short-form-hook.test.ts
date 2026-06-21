@@ -9,6 +9,7 @@ import {
 	shortFormHookCardState,
 	shortFormHookFocusLabel,
 	shortFormHookStatusIcon,
+	shortFormHookTitleDensity,
 	type ShortFormHookRailCard,
 } from "../src/short-form-hook";
 import { buildNoteCache } from "../src/cache";
@@ -70,8 +71,24 @@ describe("buildShortFormHookTitle", () => {
 		const title = buildShortFormHookTitle(
 			"How does a retrieval cue help learners reconstruct the original answer intent when the section is dense with details, caveats, examples, and implementation notes?"
 		);
-		expect(title?.length).toBeLessThanOrEqual(118);
+		expect(title?.length).toBeLessThanOrEqual(104);
 		expect(title).toMatch(/\.\.\.$/);
+	});
+});
+
+describe("shortFormHookTitleDensity", () => {
+	it("classifies hook titles by display density", () => {
+		expect(shortFormHookTitleDensity("Short hook")).toBe("standard");
+		expect(
+			shortFormHookTitleDensity(
+				"How does CueCraft keep notes readable while adding useful study cues"
+			)
+		).toBe("long");
+		expect(
+			shortFormHookTitleDensity(
+				"How does CueCraft turn an ordinary Obsidian note into a controlled active-recall study surface without changing Markdown"
+			)
+		).toBe("dense");
 	});
 });
 
