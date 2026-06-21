@@ -6,6 +6,7 @@ import {
 	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
 	classifyStudyAreaNote,
 	eligibleStudyAreaPaths,
+	findMaintainedStudyAreaForPath,
 	isExcludedPath,
 	isStudyAreaPath,
 	loadStudyAreas,
@@ -88,6 +89,62 @@ describe("study area path matching", () => {
 			"Courses/Biology/Public/a.md",
 			"Courses/Chemistry/a.md",
 		])).toEqual(["Courses/Biology/Public/a.md"]);
+	});
+});
+
+describe("study area maintenance matching", () => {
+	it("matches edited notes inside enabled study areas only", () => {
+		const maintained = area({ maintenanceMode: "maintain-on-save" });
+		expect(
+			findMaintainedStudyAreaForPath(
+				[maintained],
+				"Courses/Biology/Week 1.md",
+				true
+			)
+		)?.toEqual(maintained);
+		expect(
+			findMaintainedStudyAreaForPath(
+				[maintained],
+				"Courses/Chemistry/Week 1.md",
+				true
+			)
+		).toBeNull();
+		expect(
+			findMaintainedStudyAreaForPath(
+				[area({ maintenanceMode: "paused" })],
+				"Courses/Biology/Week 1.md",
+				true
+			)
+		).toBeNull();
+		expect(
+			findMaintainedStudyAreaForPath(
+				[maintained],
+				"Courses/Biology/Week 1.md",
+				false
+			)
+		).toBeNull();
+	});
+
+	it("skips hidden and excluded notes", () => {
+		const maintained = area({
+			maintenanceMode: "maintain-on-save",
+			excludedPaths: ["Courses/Biology/Drafts"],
+		});
+		expect(
+			findMaintainedStudyAreaForPath(
+				[maintained],
+				"Courses/Biology/Drafts/a.md",
+				true
+			)
+		).toBeNull();
+		expect(
+			findMaintainedStudyAreaForPath(
+				[maintained],
+				"Courses/Biology/Public/a.md",
+				true,
+				true
+			)
+		).toBeNull();
 	});
 });
 

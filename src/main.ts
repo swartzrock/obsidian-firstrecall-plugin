@@ -72,6 +72,7 @@ import {
 import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
 import {
+	findMaintainedStudyAreaForPath,
 	isDescendantPath,
 	loadStudyAreas,
 	normalizeVaultPath,
@@ -105,6 +106,7 @@ export default class CueCraftPlugin extends Plugin {
 	private studyMode = false;
 	private currentRun: AbortController | null = null;
 	private autoGenerateTimers = new Map<string, number>();
+	private studyAreaMaintenanceTimers = new Map<string, number>();
 	private cueSettingsChanged = false;
 	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {}, hidden: {} };
 	private cacheStore!: CacheStore;
@@ -195,6 +197,10 @@ export default class CueCraftPlugin extends Plugin {
 			window.clearTimeout(timer);
 		}
 		this.autoGenerateTimers.clear();
+		for (const timer of this.studyAreaMaintenanceTimers.values()) {
+			window.clearTimeout(timer);
+		}
+		this.studyAreaMaintenanceTimers.clear();
 		this.currentRun?.abort();
 	}
 
@@ -918,20 +924,40 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private scheduleAutoGenerate(file: TFile): void {
-		if (
-			!this.settings.autoGenerateOnSave ||
-			file.extension !== "md" ||
-			this.visibility.isHidden(file.path)
-		) {
+		if (file.extension !== "md") {
 			return;
 		}
-		const existing = this.autoGenerateTimers.get(file.path);
+		const hidden = this.visibility.isHidden(file.path);
+		if (this.settings.autoGenerateOnSave && !hidden) {
+			const existing = this.autoGenerateTimers.get(file.path);
+			if (existing) window.clearTimeout(existing);
+			const timer = window.setTimeout(() => {
+				this.autoGenerateTimers.delete(file.path);
+				void this.generateCuesForFile(file, { automatic: true });
+			}, 1200);
+			this.autoGenerateTimers.set(file.path, timer);
+		}
+		this.scheduleStudyAreaMaintenance(file, hidden);
+	}
+
+	private scheduleStudyAreaMaintenance(file: TFile, hidden: boolean): void {
+		const area = findMaintainedStudyAreaForPath(
+			this.settings.studyAreas,
+			file.path,
+			this.settings.studyAreaAutomationEnabled,
+			hidden
+		);
+		if (!area) return;
+		const existing = this.studyAreaMaintenanceTimers.get(file.path);
 		if (existing) window.clearTimeout(existing);
 		const timer = window.setTimeout(() => {
-			this.autoGenerateTimers.delete(file.path);
-			void this.generateCuesForFile(file, { automatic: true });
+			this.studyAreaMaintenanceTimers.delete(file.path);
+			void this.runStudyArea(area.id, "maintain-note", {
+				automatic: true,
+				targetFile: file,
+			});
 		}, 1200);
-		this.autoGenerateTimers.set(file.path, timer);
+		this.studyAreaMaintenanceTimers.set(file.path, timer);
 	}
 
 	/** Open a fuzzy picker listing the active note's sections, then regen. */
@@ -1189,15 +1215,19 @@ export default class CueCraftPlugin extends Plugin {
 
 	async runStudyArea(
 		areaId: string,
-		mode: StudyAreaPlanMode = "backfill"
+		mode: StudyAreaPlanMode = "backfill",
+		opts: { automatic?: boolean; targetFile?: TFile } = {}
 	): Promise<StudyAreaRunSummary | null> {
 		if (this.currentRun) {
+			if (opts.automatic) return null;
 			this.currentRun.abort();
 			new Notice("CueCraft: cancelling generation...");
 			return null;
 		}
 		if (!this.isConfigured()) {
-			new Notice("CueCraft: set up your AI provider in Settings first.");
+			if (!opts.automatic) {
+				new Notice("CueCraft: set up your AI provider in Settings first.");
+			}
 			return null;
 		}
 		const area = this.findStudyArea(areaId);
@@ -1205,13 +1235,19 @@ export default class CueCraftPlugin extends Plugin {
 			new Notice("CueCraft: study area no longer exists.");
 			return null;
 		}
-		const plan = await this.buildStudyAreaPlan(area, mode);
+		const plan = await this.buildStudyAreaPlan(
+			area,
+			mode,
+			opts.targetFile ? [opts.targetFile] : undefined
+		);
 		if (!plan.items.length) {
-			new Notice(
-				mode === "retry-failed"
-					? "CueCraft: no failed study-area work to retry."
-					: "CueCraft: this study area is already ready."
-			);
+			if (!opts.automatic) {
+				new Notice(
+					mode === "retry-failed"
+						? "CueCraft: no failed study-area work to retry."
+						: "CueCraft: this study area is already ready."
+				);
+			}
 			return summarizeStudyAreaRun(plan, {});
 		}
 
@@ -1279,7 +1315,9 @@ export default class CueCraftPlugin extends Plugin {
 			this.currentRun = null;
 			await this.updateStatusForFile(this.app.workspace.getActiveFile());
 			this.refreshCornellViews();
-			new Notice(this.studyAreaSummaryNotice(area, summary));
+			if (!opts.automatic || summary.failed) {
+				new Notice(this.studyAreaSummaryNotice(area, summary));
+			}
 		}
 		return summary;
 	}
@@ -1290,11 +1328,14 @@ export default class CueCraftPlugin extends Plugin {
 
 	private async buildStudyAreaPlan(
 		area: StudyArea,
-		mode: StudyAreaPlanMode
+		mode: StudyAreaPlanMode,
+		targetFiles?: readonly TFile[]
 	): Promise<StudyAreaGenerationPlan> {
-		const files = this.app.vault
-			.getMarkdownFiles()
-			.filter((file) => isDescendantPath(file.path, area.parentPath));
+		const files =
+			targetFiles ??
+			this.app.vault
+				.getMarkdownFiles()
+				.filter((file) => isDescendantPath(file.path, area.parentPath));
 		const snapshots = await Promise.all(
 			files.map(async (file) => {
 				const markdown = await this.app.vault.cachedRead(file);

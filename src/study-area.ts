@@ -119,6 +119,22 @@ export function eligibleStudyAreaPaths(
 	return paths.filter((path) => isStudyAreaPath(area, path));
 }
 
+export function findMaintainedStudyAreaForPath(
+	areas: readonly StudyArea[],
+	path: string,
+	automationEnabled: boolean,
+	hidden = false
+): StudyArea | null {
+	if (!automationEnabled || hidden || !isMarkdownPath(path)) return null;
+	return (
+		areas.find(
+			(area) =>
+				area.maintenanceMode === "maintain-on-save" &&
+				isStudyAreaPath(area, path)
+		) ?? null
+	);
+}
+
 export function classifyStudyAreaNote(
 	area: Pick<StudyArea, "parentPath" | "excludedPaths">,
 	note: StudyAreaNoteSnapshot
