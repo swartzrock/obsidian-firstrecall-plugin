@@ -145,6 +145,10 @@ export function renderModelCombobox(opts: {
 
 	const commitValue = (value: string) => {
 		const nextValue = value.trim();
+		if (nextValue === committedModelId) {
+			inputEl.value = nextValue;
+			return;
+		}
 		committedModelId = nextValue;
 		inputEl.value = nextValue;
 		void opts.onCommit(nextValue);
@@ -188,7 +192,6 @@ export function renderModelCombobox(opts: {
 					id: optionId,
 					type: "button",
 					role: "option",
-					title: option.id,
 					"aria-selected": index === activeIndex ? "true" : "false",
 				},
 			});

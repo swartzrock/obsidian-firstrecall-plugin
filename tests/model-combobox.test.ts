@@ -1,9 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { JSDOM } from "jsdom";
+import { afterEach, describe, expect, it } from "vitest";
 import {
 	buildModelComboboxOptions,
 	buildModelComboboxSuggestions,
 	filterModelOptions,
 	modelOptionSearchText,
+	renderModelCombobox,
 } from "../src/model-combobox";
 import { normalizeStringId, type ModelOption } from "../src/model-options";
 
@@ -13,6 +15,93 @@ function opt(
 ): ModelOption {
 	return { ...normalizeStringId(id, "openrouter"), ...overrides };
 }
+
+type ObsidianDomOptions = {
+	cls?: string;
+	text?: string;
+	attr?: Record<string, string>;
+};
+
+type ObsidianElementPrototype = HTMLElement & {
+	createDiv(opts?: ObsidianDomOptions): HTMLDivElement;
+	createEl(tag: string, opts?: ObsidianDomOptions): HTMLElement;
+	addClass(cls: string): void;
+	removeClass(cls: string): void;
+	setAttr(name: string, value: string): void;
+};
+
+type TestGlobals = typeof globalThis & {
+	window?: Window;
+	document?: Document;
+};
+
+const testGlobals = globalThis as TestGlobals;
+const originalWindow = testGlobals.window;
+const originalDocument = testGlobals.document;
+
+function applyDomOptions(el: HTMLElement, opts: ObsidianDomOptions = {}) {
+	if (opts.cls) el.className = opts.cls;
+	if (opts.text) el.textContent = opts.text;
+	for (const [name, value] of Object.entries(opts.attr ?? {})) {
+		el.setAttribute(name, value);
+	}
+}
+
+function setupComboboxDom(): JSDOM {
+	const dom = new JSDOM("<div id=\"root\"></div>", {
+		pretendToBeVisual: true,
+	});
+	testGlobals.window = dom.window as unknown as Window;
+	testGlobals.document = dom.window.document;
+	const proto = dom.window.HTMLElement
+		.prototype as unknown as ObsidianElementPrototype;
+	proto.createDiv = function (
+		this: HTMLElement,
+		opts?: ObsidianDomOptions
+	): HTMLDivElement {
+		const el = this.ownerDocument.createElement("div");
+		applyDomOptions(el, opts);
+		this.appendChild(el);
+		return el;
+	};
+	proto.createEl = function (
+		this: HTMLElement,
+		tag: string,
+		opts?: ObsidianDomOptions
+	): HTMLElement {
+		const el = this.ownerDocument.createElement(tag);
+		applyDomOptions(el, opts);
+		this.appendChild(el);
+		return el;
+	};
+	proto.addClass = function (this: HTMLElement, cls: string): void {
+		this.classList.add(...cls.split(" "));
+	};
+	proto.removeClass = function (this: HTMLElement, cls: string): void {
+		this.classList.remove(...cls.split(" "));
+	};
+	proto.setAttr = function (
+		this: HTMLElement,
+		name: string,
+		value: string
+	): void {
+		this.setAttribute(name, value);
+	};
+	return dom;
+}
+
+afterEach(() => {
+	if (originalWindow) {
+		testGlobals.window = originalWindow;
+	} else {
+		delete testGlobals.window;
+	}
+	if (originalDocument) {
+		testGlobals.document = originalDocument;
+	} else {
+		delete testGlobals.document;
+	}
+});
 
 describe("buildModelComboboxOptions", () => {
 	it("keeps the current custom model visible when it is not in fetched options", () => {
@@ -134,5 +223,44 @@ describe("modelOptionSearchText", () => {
 		expect(
 			modelOptionSearchText(opt("openai/gpt-4o"), ["Low cost"])
 		).toContain("low cost");
+	});
+});
+
+describe("renderModelCombobox", () => {
+	it("commits a selected option once when blur follows mouse selection", async () => {
+		const dom = setupComboboxDom();
+		const container = dom.window.document.getElementById("root");
+		if (!container) throw new Error("Missing test root");
+		const commits: string[] = [];
+
+		renderModelCombobox({
+			containerEl: container,
+			value: "",
+			options: [normalizeStringId("ClaudeNotes", "string")],
+			source: "string",
+			placeholder: "Choose a folder...",
+			emptyMessage: "No matching folders.",
+			onCommit: (value) => {
+				commits.push(value);
+			},
+		});
+
+		const input = container.querySelector<HTMLInputElement>("input");
+		if (!input) throw new Error("Missing combobox input");
+		input.dispatchEvent(new dom.window.Event("focus"));
+		const option = container.querySelector<HTMLButtonElement>("[role='option']");
+		if (!option) throw new Error("Missing combobox option");
+
+		expect(option.getAttribute("title")).toBeNull();
+		option.dispatchEvent(
+			new dom.window.MouseEvent("mousedown", {
+				bubbles: true,
+				cancelable: true,
+			})
+		);
+		input.dispatchEvent(new dom.window.FocusEvent("blur"));
+		await new Promise((resolve) => dom.window.setTimeout(resolve, 150));
+
+		expect(commits).toEqual(["ClaudeNotes"]);
 	});
 });
