@@ -800,9 +800,27 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 /* ---- Short-Form Hook Mode ---- */
+.cuecraft-hook-mode {
+	--cuecraft-hook-rail-width: 220px;
+	--cuecraft-hook-column-gap: 36px;
+}
+
+.cuecraft-hook-mode .cuecraft-cornell-title {
+	max-width: calc(var(--cuecraft-hook-rail-width) + var(--cuecraft-hook-column-gap) + 72ch);
+	margin-left: auto;
+	margin-right: auto;
+	padding-left: calc(var(--cuecraft-hook-rail-width) + var(--cuecraft-hook-column-gap));
+	text-align: left;
+}
+
 .cuecraft-hook-mode .cuecraft-cornell-grid {
-	grid-template-columns: minmax(0, 178px) minmax(0, 1fr);
-	column-gap: 20px;
+	max-width: calc(var(--cuecraft-hook-rail-width) + var(--cuecraft-hook-column-gap) + 72ch);
+	margin: 0 auto;
+	grid-template-columns:
+		minmax(200px, var(--cuecraft-hook-rail-width))
+		minmax(0, 72ch);
+	column-gap: var(--cuecraft-hook-column-gap);
+	justify-content: center;
 }
 
 .cuecraft-hook-mode .cuecraft-cornell-cuecell {
@@ -811,13 +829,13 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		var(--interactive-accent) 24%,
 		var(--background-modifier-border)
 	);
-	padding: 4px 16px 6px 0;
+	padding: 8px 0 12px;
 }
 
 .cuecraft-hook-cell {
 	display: flex;
 	flex-direction: column;
-	align-items: flex-end;
+	align-items: stretch;
 	justify-content: flex-end;
 	min-width: 0;
 }
@@ -825,34 +843,57 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-hook-card {
 	position: relative;
 	width: 100%;
-	max-width: 168px;
+	max-width: none;
 	min-width: 0;
-	min-height: 78px;
+	min-height: 110px;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
-	gap: 6px;
-	padding: 10px 11px;
+	gap: 8px;
+	padding: 40px 18px 18px;
 	font: inherit;
 	text-align: left;
-	border: 1px solid
-		color-mix(in srgb, var(--interactive-accent) 30%, var(--background-modifier-border));
-	border-left-width: 3px;
-	border-radius: var(--radius-s);
-	background: color-mix(
-		in srgb,
-		var(--background-secondary) 84%,
-		var(--interactive-accent) 16%
+	border: 4px solid color-mix(in srgb, var(--text-normal) 82%, transparent);
+	border-radius: 18px;
+	background: linear-gradient(
+		145deg,
+		color-mix(in srgb, var(--color-orange, #ff8a24) 78%, var(--background-primary)),
+		color-mix(in srgb, var(--color-yellow, #f6c446) 58%, var(--background-secondary))
 	);
-	color: var(--text-normal);
-	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+	color: color-mix(in srgb, var(--text-normal) 94%, #201915);
+	box-shadow: 0 14px 30px rgba(31, 24, 18, 0.18);
 	cursor: pointer;
+	overflow: hidden;
 	animation: cuecraft-hook-card-in 140ms ease-out;
+}
+
+.cuecraft-hook-cell:nth-child(4n + 3) .cuecraft-hook-card {
+	background: linear-gradient(
+		145deg,
+		color-mix(in srgb, var(--color-cyan, #1f7f7d) 62%, var(--background-secondary)),
+		color-mix(in srgb, var(--interactive-accent) 34%, var(--background-primary))
+	);
+}
+
+.cuecraft-hook-card::after {
+	content: "?";
+	position: absolute;
+	right: 4px;
+	bottom: -28px;
+	color: color-mix(
+		in srgb,
+		var(--text-normal) 12%,
+		transparent
+	);
+	font-size: 82px;
+	font-weight: 850;
+	line-height: 1;
+	pointer-events: none;
 }
 
 .cuecraft-hook-mode button.cuecraft-hook-card {
 	height: auto;
-	min-height: 78px;
+	min-height: 110px;
 	align-items: stretch;
 	box-sizing: border-box;
 	line-height: normal;
@@ -882,8 +923,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-hook-status {
 	position: absolute;
-	top: 7px;
-	right: 8px;
+	top: 14px;
+	left: 16px;
 	width: 18px;
 	height: 18px;
 	display: inline-flex;
@@ -895,6 +936,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-size: var(--font-smallest);
 	font-weight: var(--font-bold);
 	line-height: 1;
+	z-index: 1;
 }
 
 .cuecraft-hook-card.is-current .cuecraft-hook-status {
@@ -903,13 +945,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-hook-title {
+	position: relative;
+	z-index: 1;
 	max-width: 100%;
-	padding-right: 16px;
 	overflow-wrap: anywhere;
-	color: var(--text-normal);
-	font-size: var(--font-ui-small);
-	font-weight: var(--font-semibold);
-	line-height: 1.25;
+	color: inherit;
+	font-size: 0.98rem;
+	font-weight: var(--font-bold);
+	line-height: 1.08;
 	hyphens: auto;
 	text-wrap: pretty;
 	user-select: text;
@@ -1006,6 +1049,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 @media (max-width: 700px) {
+	.cuecraft-cornell-fold-mobile.cuecraft-hook-mode .cuecraft-cornell-title {
+		padding-left: 0;
+		text-align: center;
+	}
+
 	.cuecraft-cornell-fold-mobile.cuecraft-hook-mode .cuecraft-cornell-grid {
 		display: block;
 	}
@@ -1017,7 +1065,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 	.cuecraft-cornell-fold-mobile.cuecraft-hook-mode .cuecraft-hook-card {
 		max-width: none;
-		min-height: 0;
+		min-height: 96px;
 	}
 }
 
