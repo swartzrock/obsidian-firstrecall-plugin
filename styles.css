@@ -816,6 +816,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-hook-cell {
 	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
 	justify-content: flex-end;
 }
 
@@ -823,12 +825,15 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	position: relative;
 	width: 100%;
 	max-width: 168px;
+	min-width: 0;
 	min-height: 78px;
 	display: flex;
 	flex-direction: column;
 	justify-content: center;
 	gap: 6px;
 	padding: 10px 11px;
+	font: inherit;
+	text-align: left;
 	border: 1px solid
 		color-mix(in srgb, var(--interactive-accent) 30%, var(--background-modifier-border));
 	border-left-width: 3px;
@@ -840,7 +845,30 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	);
 	color: var(--text-normal);
 	box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+	cursor: pointer;
 	animation: cuecraft-hook-card-in 140ms ease-out;
+}
+
+.cuecraft-hook-mode button.cuecraft-hook-card {
+	height: auto;
+	min-height: 78px;
+	align-items: stretch;
+	box-sizing: border-box;
+	line-height: normal;
+	white-space: normal;
+}
+
+.cuecraft-hook-card:hover,
+.cuecraft-hook-card:focus-visible,
+.cuecraft-hook-card.is-current {
+	border-color: var(--interactive-accent);
+	box-shadow: 0 0 0 2px
+		color-mix(in srgb, var(--interactive-accent) 24%, transparent);
+}
+
+.cuecraft-hook-card:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
 }
 
 .cuecraft-hook-card[data-confidence="low"] {
@@ -852,6 +880,9 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-hook-status {
+	position: absolute;
+	top: 7px;
+	right: 8px;
 	width: 18px;
 	height: 18px;
 	display: inline-flex;
@@ -865,12 +896,20 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	line-height: 1;
 }
 
+.cuecraft-hook-card.is-current .cuecraft-hook-status {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
 .cuecraft-hook-title {
+	max-width: 100%;
+	padding-right: 16px;
 	overflow-wrap: anywhere;
 	color: var(--text-normal);
 	font-size: var(--font-ui-small);
 	font-weight: var(--font-semibold);
 	line-height: 1.25;
+	hyphens: auto;
 	text-wrap: pretty;
 	user-select: text;
 }
@@ -895,11 +934,18 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-hook-regen {
 	align-self: flex-start;
+	margin-top: 6px;
 	padding: 2px 7px;
 	border-radius: var(--radius-s);
 	font-size: var(--font-smallest);
 	line-height: 1.2;
 	cursor: pointer;
+}
+
+.cuecraft-hook-mode .cuecraft-cornell-body:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 4px;
+	border-radius: var(--radius-s);
 }
 
 .cuecraft-hook-summary {
@@ -963,6 +1009,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	}
 
 	.cuecraft-cornell-fold-mobile.cuecraft-hook-mode .cuecraft-hook-cell {
+		align-items: stretch;
 		justify-content: flex-start;
 	}
 

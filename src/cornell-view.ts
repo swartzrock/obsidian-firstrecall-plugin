@@ -11,7 +11,11 @@ import {
 	type CornellRow,
 } from "./cornell";
 import {
+	applyShortFormHookFocusState,
 	buildShortFormHookModel,
+	shortFormHookCardState,
+	shortFormHookFocusLabel,
+	shortFormHookStatusIcon,
 	type ShortFormHookModel,
 	type ShortFormHookRailCard,
 } from "./short-form-hook";
@@ -48,6 +52,7 @@ export class CornellView extends ItemView {
 	private displayOpen = false;
 	/** Transient prototype display mode for compact hook cards. */
 	private hookMode = false;
+	private focusedHookSectionId: string | null = null;
 	/** The last Markdown note we rendered, used as a fallback on restart. */
 	private lastFile: TFile | null = null;
 
@@ -202,6 +207,7 @@ export class CornellView extends ItemView {
 		input.setAttr("aria-label", "Study mode");
 		input.addEventListener("change", () => {
 			this.studyMode = input.checked;
+			if (this.studyMode) this.setHookMode(false);
 			this.revealed.clear();
 			this.revealAll = false;
 			void this.render();
@@ -389,16 +395,26 @@ export class CornellView extends ItemView {
 		});
 		if (!card) return;
 
-		const cue = cell.createEl("div", { cls: "cuecraft-hook-card" });
+		const state = shortFormHookCardState(card, this.focusedHookSectionId);
+		const cue = cell.createEl("button", {
+			cls: "cuecraft-hook-card cuecraft-hook-card-action",
+			attr: {
+				type: "button",
+				"aria-label": shortFormHookFocusLabel(card),
+				"aria-current": state === "current" ? "location" : "false",
+			},
+		});
 		cue.dataset.section = row.id;
+		cue.toggleClass("is-current", state === "current");
+		cue.addEventListener("click", () => this.focusHookSection(row.id));
+		cue.createEl("span", {
+			cls: "cuecraft-hook-status",
+			text: shortFormHookStatusIcon(state),
+			attr: { "aria-hidden": "true" },
+		});
 		if (card.kind === "hook") {
 			if (card.confidence) cue.dataset.confidence = card.confidence;
 			cue.setAttr("title", card.originalQuestion);
-			cue.createEl("span", {
-				cls: "cuecraft-hook-status",
-				text: "?",
-				attr: { "aria-hidden": "true" },
-			});
 			cue.createEl("div", {
 				cls: "cuecraft-hook-title",
 				text: card.hookTitle,
@@ -409,16 +425,11 @@ export class CornellView extends ItemView {
 
 		cue.addClass("cuecraft-hook-card-failed");
 		cue.setAttr("title", card.error);
-		cue.createEl("span", {
-			cls: "cuecraft-hook-status",
-			text: "!",
-			attr: { "aria-hidden": "true" },
-		});
 		cue.createEl("div", {
 			cls: "cuecraft-hook-title",
 			text: card.label,
 		});
-		const regen = cue.createEl("button", {
+		const regen = cell.createEl("button", {
 			cls: "cuecraft-hook-regen",
 			text: "Retry",
 			attr: {
@@ -528,6 +539,7 @@ export class CornellView extends ItemView {
 		}
 		const body = cell.createEl("div", { cls: "cuecraft-cornell-body" });
 		body.dataset.section = row.id;
+		if (this.hookMode) body.tabIndex = -1;
 		const answer = buildCornellAnswerPresentation({
 			sectionId: row.id,
 			studyMode: this.studyMode,
@@ -593,10 +605,36 @@ export class CornellView extends ItemView {
 
 	private setHookMode(enabled: boolean): void {
 		this.hookMode = enabled;
+		this.focusedHookSectionId = null;
 		if (!enabled) return;
 		this.studyMode = false;
 		this.revealed.clear();
 		this.revealAll = false;
+	}
+
+	private focusHookSection(sectionId: string): void {
+		this.focusedHookSectionId = sectionId;
+		applyShortFormHookFocusState(this.contentEl, this.focusedHookSectionId);
+		const target = this.findSectionBody(sectionId);
+		if (!target) return;
+		target.scrollIntoView({
+			block: "center",
+			behavior: this.prefersReducedMotion() ? "auto" : "smooth",
+		});
+		target.focus({ preventScroll: true });
+	}
+
+	private findSectionBody(sectionId: string): HTMLElement | null {
+		const bodies =
+			this.contentEl.querySelectorAll<HTMLElement>(".cuecraft-cornell-body");
+		for (const body of bodies) {
+			if (body.dataset.section === sectionId) return body;
+		}
+		return null;
+	}
+
+	private prefersReducedMotion(): boolean {
+		return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 	}
 
 	/** Show a tone picker menu then regenerate the chosen section with that tone. */
