@@ -47,7 +47,25 @@ describe("study area labels", () => {
 				failed: 0,
 				skipped: 2,
 			})
-		).toBe("4 ready · 0 uncued · 1 needs updating · 0 failed · 2 skipped");
+		).toBe("4 ready · 1 needs updating · 2 not eligible");
+		expect(
+			formatStudyAreaReadinessCounts({
+				ready: 0,
+				uncued: 3,
+				stale: 0,
+				failed: 0,
+				skipped: 1,
+			})
+		).toBe("3 need cues · 1 not eligible");
+		expect(
+			formatStudyAreaReadinessCounts({
+				ready: 0,
+				uncued: 0,
+				stale: 0,
+				failed: 0,
+				skipped: 0,
+			})
+		).toBe("No notes found");
 	});
 });
 

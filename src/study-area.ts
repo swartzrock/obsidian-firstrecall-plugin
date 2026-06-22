@@ -110,17 +110,25 @@ export function studyAreaMaintenanceLabel(
 export function formatStudyAreaReadinessCounts(
 	counts: StudyAreaReadinessCounts
 ): string {
-	const staleLabel =
-		counts.stale === 1
-			? "1 needs updating"
-			: `${counts.stale} need updating`;
-	return [
-		`${counts.ready} ready`,
-		`${counts.uncued} uncued`,
-		staleLabel,
-		`${counts.failed} failed`,
-		`${counts.skipped} skipped`,
-	].join(" · ");
+	const parts: string[] = [];
+	if (counts.ready) parts.push(`${counts.ready} ready`);
+	if (counts.uncued) {
+		parts.push(
+			counts.uncued === 1
+				? "1 needs cues"
+				: `${counts.uncued} need cues`
+		);
+	}
+	if (counts.stale) {
+		parts.push(
+			counts.stale === 1
+				? "1 needs updating"
+				: `${counts.stale} need updating`
+		);
+	}
+	if (counts.failed) parts.push(`${counts.failed} failed`);
+	if (counts.skipped) parts.push(`${counts.skipped} not eligible`);
+	return parts.length ? parts.join(" · ") : "No notes found";
 }
 
 export function isDescendantPath(path: string, parentPath: string): boolean {

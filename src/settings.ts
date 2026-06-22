@@ -298,7 +298,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		this.renderSettingsNavCard(navEl, {
 			title: "Study areas",
-			description: "Make parent folders study-ready with previewed backfill and opt-in maintenance.",
+			description: "Generate cues for study areas and keep saved notes updated.",
 			summary: this.studyAreasSummary(),
 			onOpen: () => this.openSubpage("study-areas"),
 		});
@@ -798,7 +798,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					? "Entire vault is already managed. Remove it to choose a specific folder."
 					: hasStudyAreas
 					? "Type to filter existing vault folders. Remove folder study areas to choose Entire vault."
-					: "Choose Entire vault or a parent folder; hidden notes stay skipped."
+					: "Choose Entire vault or a parent folder; hidden notes are not eligible."
 			);
 		renderModelCombobox({
 			containerEl: parentFolderSetting.controlEl,
@@ -918,7 +918,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		);
 
 		const backfillBtn = setting.controlEl.createEl("button", {
-			text: "Backfill",
+			text: "Generate Cues",
 			attr: { type: "button" },
 		});
 		backfillBtn.addClass("mod-cta");
@@ -928,6 +928,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			attr: { type: "button" },
 		});
 		retryBtn.disabled = true;
+		retryBtn.hidden = true;
 		const removeBtn = setting.controlEl.createEl("button", {
 			cls: "clickable-icon cuecraft-study-area-remove",
 			attr: { type: "button", "aria-label": `Remove ${area.name}` },
@@ -944,11 +945,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			const plan = latestPlan ?? await this.plugin.previewStudyArea(area.id);
 			const count = plan?.items.length ?? 0;
 			new StudyAreaConfirmModal(this.app, {
-				title: "Run study area backfill?",
-				message: `Generate or update ${count} note${
+				title: "Generate study area cues?",
+				message: `Generate missing or outdated cues for ${count} note${
 					count === 1 ? "" : "s"
 				} in ${area.name}?`,
-				confirmText: "Run backfill",
+				confirmText: "Generate Cues",
 				onConfirm: async () => {
 					await this.plugin.runStudyArea(area.id, "backfill");
 					this.display();
@@ -982,11 +983,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			countsEl.setText("Study area no longer exists.");
 			backfillBtn.disabled = true;
 			retryBtn.disabled = true;
+			retryBtn.hidden = true;
 			return;
 		}
 		countsEl.setText(formatStudyAreaReadinessCounts(plan.counts));
 		backfillBtn.disabled = plan.items.length === 0;
 		retryBtn.disabled = plan.counts.failed === 0;
+		retryBtn.hidden = plan.counts.failed === 0;
 	}
 
 	// ── Note format ───────────────────────────────────────────────────────

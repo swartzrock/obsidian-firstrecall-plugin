@@ -458,7 +458,7 @@ export default class CueCraftPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "run-study-area-backfill",
-			name: "Run Study Area Backfill...",
+			name: "Generate Study Area Cues...",
 			callback: () => this.pickStudyAreaAndRun("backfill"),
 		});
 		this.addCommand({
@@ -1208,7 +1208,7 @@ export default class CueCraftPlugin extends Plugin {
 			name: studyAreaNameForParentPath(normalized),
 			parentPath: normalized,
 			excludedPaths: [],
-			maintenanceMode: "paused",
+			maintenanceMode: "maintain-on-save",
 			createdAt: new Date().toISOString(),
 		};
 		this.settings.studyAreas = [...this.settings.studyAreas, area];
@@ -1483,7 +1483,10 @@ export default class CueCraftPlugin extends Plugin {
 		if (summary.canceled) {
 			return `CueCraft: cancelled ${area.name} - kept ${summary.completed}, ${summary.remaining} remaining.`;
 		}
-		return `CueCraft: ${area.name} run complete - ${summary.completed} done, ${summary.failed} failed, ${summary.skipped} skipped.`;
+		const parts = [`${summary.completed} done`];
+		if (summary.failed) parts.push(`${summary.failed} failed`);
+		if (summary.skipped) parts.push(`${summary.skipped} not eligible`);
+		return `CueCraft: ${area.name} run complete - ${parts.join(", ")}.`;
 	}
 
 	private async generateCuesForFile(
