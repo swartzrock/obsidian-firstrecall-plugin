@@ -84,13 +84,22 @@ import {
 } from "./study-area";
 
 /**
- * CueCraft supports a local provider (Ollama) and several cloud providers via
- * the Vercel AI SDK (Anthropic, OpenAI, Google, xAI). Each cloud provider keeps
- * its own API key + model id; only the selected provider's fields are surfaced.
+ * CueCraft supports a local provider (Ollama), local CLI providers, and several
+ * cloud providers via the Vercel AI SDK (Anthropic, OpenAI, Google, xAI). Each
+ * cloud provider keeps its own API key + model id; only the selected provider's
+ * fields are surfaced.
  */
 export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
-export type ProviderId = "ollama" | "anthropic" | "openai" | "google" | "xai" | "openrouter";
+export type ProviderId =
+	| "ollama"
+	| "anthropic"
+	| "openai"
+	| "google"
+	| "xai"
+	| "openrouter"
+	| "codex-cli"
+	| "claude-cli";
 type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
 
 export interface CueCraftSettings {
@@ -124,6 +133,10 @@ export interface CueCraftSettings {
 	openrouterModelOptions: ModelOption[];
 	openrouterHasFetchedModels: boolean;
 	openrouterModelRefreshMessage: string;
+	codexCliCommand: string;
+	codexCliModel: string;
+	claudeCliCommand: string;
+	claudeCliModel: string;
 	ollamaAvailableModels: string[];
 	ollamaHasFetchedModels: boolean;
 	ollamaModelRefreshMessage: string;
@@ -181,6 +194,10 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	openrouterModelOptions: [],
 	openrouterHasFetchedModels: false,
 	openrouterModelRefreshMessage: "",
+	codexCliCommand: "codex",
+	codexCliModel: "",
+	claudeCliCommand: "claude",
+	claudeCliModel: "",
 	ollamaAvailableModels: [],
 	ollamaHasFetchedModels: false,
 	ollamaModelRefreshMessage: "",
@@ -410,6 +427,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				return "xAI";
 			case "openrouter":
 				return "OpenRouter";
+			case "codex-cli":
+				return "Codex CLI";
+			case "claude-cli":
+				return "Claude CLI";
 		}
 	}
 
@@ -435,6 +456,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				return settings.xaiModel.trim();
 			case "openrouter":
 				return settings.openrouterModel.trim();
+			case "codex-cli":
+				return settings.codexCliModel.trim() || "CLI default";
+			case "claude-cli":
+				return settings.claudeCliModel.trim() || "CLI default";
 			case "ollama":
 				return settings.ollamaModel.trim();
 		}

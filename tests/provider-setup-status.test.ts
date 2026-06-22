@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	CLI_DEFAULT_MODEL_SENTINEL,
 	deriveProviderSetupStatus,
 	recordProviderConnectionSuccess,
 	type ProviderSetupStatusSettings,
@@ -23,6 +24,10 @@ function baseSettings(
 		xaiModel: "",
 		openrouterApiKey: "",
 		openrouterModel: "",
+		codexCliCommand: "codex",
+		codexCliModel: "",
+		claudeCliCommand: "claude",
+		claudeCliModel: "",
 		providerConnectionStatus: {},
 		...overrides,
 	};
@@ -130,6 +135,81 @@ describe("deriveProviderSetupStatus", () => {
 			keySaved: true,
 			modelSelected: true,
 			connection: "untested",
+		});
+	});
+
+	it("treats Codex CLI default model as selected setup state", () => {
+		expect(
+			deriveProviderSetupStatus(
+				baseSettings({
+					provider: "codex-cli",
+					codexCliCommand: "codex",
+					codexCliModel: "",
+				})
+			)
+		).toEqual({
+			keySaved: true,
+			modelSelected: true,
+			connection: "untested",
+		});
+	});
+
+	it("records the CLI default sentinel when no CLI model override is configured", () => {
+		const settings = baseSettings({
+			provider: "codex-cli",
+			codexCliCommand: "codex",
+			codexCliModel: "",
+		});
+		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+			settings,
+			"2026-06-11T00:00:00.000Z"
+		);
+		expect(settings.providerConnectionStatus["codex-cli"]?.modelId).toBe(
+			CLI_DEFAULT_MODEL_SENTINEL
+		);
+		expect(deriveProviderSetupStatus(settings)).toEqual({
+			keySaved: true,
+			modelSelected: true,
+			connection: "verified",
+			testedAt: "2026-06-11T00:00:00.000Z",
+		});
+	});
+
+	it("marks a verified Codex CLI connection stale when its command changes", () => {
+		const settings = baseSettings({
+			provider: "codex-cli",
+			codexCliCommand: "codex",
+			codexCliModel: "",
+		});
+		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+			settings,
+			"2026-06-11T00:00:00.000Z"
+		);
+		settings.codexCliCommand = "/opt/homebrew/bin/codex";
+		expect(deriveProviderSetupStatus(settings)).toEqual({
+			keySaved: true,
+			modelSelected: true,
+			connection: "stale",
+			testedAt: "2026-06-11T00:00:00.000Z",
+		});
+	});
+
+	it("marks a verified Claude CLI connection stale when its model override changes", () => {
+		const settings = baseSettings({
+			provider: "claude-cli",
+			claudeCliCommand: "claude",
+			claudeCliModel: "",
+		});
+		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+			settings,
+			"2026-06-11T00:00:00.000Z"
+		);
+		settings.claudeCliModel = "sonnet";
+		expect(deriveProviderSetupStatus(settings)).toEqual({
+			keySaved: true,
+			modelSelected: true,
+			connection: "stale",
+			testedAt: "2026-06-11T00:00:00.000Z",
 		});
 	});
 });
