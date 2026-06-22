@@ -58,10 +58,25 @@ describe("LocalCommandRunner", () => {
 		process.close(0);
 
 		await expect(result).resolves.toMatchObject({ exitCode: 0 });
-		expect(calls[0][2].env?.PATH).toBe(
-			buildLocalCliPath("/usr/bin")
-		);
+		expect(calls[0][2].env?.PATH).toBe(buildLocalCliPath("/usr/bin"));
 		expect(calls[0][2].env?.PATH).toContain("/opt/homebrew/bin");
+	});
+
+	it("merges request-specific environment values", async () => {
+		const process = new FakeProcess();
+		const { runner, calls } = makeRunner(process);
+		const result = runner.run({
+			command: "claude",
+			env: { CLAUDE_CODE_SIMPLE: "1" },
+		});
+
+		process.close(0);
+
+		await expect(result).resolves.toMatchObject({ exitCode: 0 });
+		expect(calls[0][2].env).toMatchObject({
+			CLAUDE_CODE_SIMPLE: "1",
+			PATH: buildLocalCliPath("/usr/bin"),
+		});
 	});
 
 	it("leaves absolute command paths on the configured environment PATH", async () => {

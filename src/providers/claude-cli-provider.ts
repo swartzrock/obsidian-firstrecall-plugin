@@ -20,6 +20,17 @@ import {
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const STATUS_TIMEOUT_MS = 15_000;
+const CLAUDE_CLI_ENV: NodeJS.ProcessEnv = {
+	CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
+	CLAUDE_CODE_DISABLE_ARTIFACT: "1",
+	CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
+	CLAUDE_CODE_DISABLE_BUNDLED_SKILLS: "1",
+	CLAUDE_CODE_DISABLE_WORKFLOWS: "1",
+	CLAUDE_CODE_SAFE_MODE: "1",
+	CLAUDE_CODE_SIMPLE: "1",
+	CLAUDE_CODE_SKIP_PROMPT_HISTORY: "1",
+	DISABLE_AUTOUPDATER: "1",
+};
 
 const PRESET_GUIDANCE: Record<string, string> = {
 	conceptual: "Favor a single conceptual question that tests understanding, not trivia.",
@@ -53,6 +64,15 @@ const SUMMARY_JSON_SCHEMA = JSON.stringify({
 		learningObjective: { type: "string" },
 	},
 	required: ["summary"],
+	additionalProperties: false,
+});
+
+const CONNECTION_JSON_SCHEMA = JSON.stringify({
+	type: "object",
+	properties: {
+		ok: { type: "boolean" },
+	},
+	required: ["ok"],
 	additionalProperties: false,
 });
 
@@ -114,22 +134,6 @@ function isAuthMissing(output: string): boolean {
 	);
 }
 
-function authStatusLooksOk(stdout: string): boolean {
-	try {
-		const parsed = JSON.parse(stdout);
-		const record = asRecord(parsed);
-		if (!record) return false;
-		if (record.authenticated === false || record.loggedIn === false) return false;
-		if (record.authenticated === true || record.loggedIn === true) return true;
-		const status = typeof record.status === "string" ? record.status : "";
-		if (/not|unauth|logged.?out/i.test(status)) return false;
-		if (/auth|login|valid|active/i.test(status)) return true;
-		return true;
-	} catch {
-		return !isAuthMissing(stdout);
-	}
-}
-
 export class ClaudeCliProvider implements AiProvider {
 	readonly id = "claude-cli";
 	readonly label = "Claude CLI";
@@ -153,17 +157,16 @@ export class ClaudeCliProvider implements AiProvider {
 
 	async testConnection(): Promise<ProviderStatus> {
 		try {
-			const result = await this.runner.run({
-				command: this.command,
-				args: ["auth", "status", "--json"],
-				cwd: this.cwd,
-				timeoutMs: STATUS_TIMEOUT_MS,
-			});
-			const output = `${result.stdout}\n${result.stderr}`;
-			if (!authStatusLooksOk(output)) {
+			const output = await this.runPrompt(
+				"Return exactly this JSON object to confirm Claude CLI text generation works: {\"ok\":true}",
+				CONNECTION_JSON_SCHEMA,
+				STATUS_TIMEOUT_MS
+			);
+			const parsed = asRecord(JSON.parse(output));
+			if (parsed?.ok !== true) {
 				return {
 					ok: false,
-					message: "Claude CLI is not logged in. Run `claude login` and try again.",
+					message: "Claude CLI connected but returned an unexpected setup response.",
 				};
 			}
 			return {
@@ -174,6 +177,12 @@ export class ClaudeCliProvider implements AiProvider {
 			};
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
+			if (isAuthMissing(message)) {
+				return {
+					ok: false,
+					message: "Claude CLI is not logged in. Run `claude login` and try again.",
+				};
+			}
 			return { ok: false, message };
 		}
 	}
@@ -243,6 +252,7 @@ export class ClaudeCliProvider implements AiProvider {
 
 	private commandArgs(schema: string): string[] {
 		const args = [
+			"--bare",
 			"-p",
 			"--output-format",
 			"json",
@@ -259,9 +269,10 @@ export class ClaudeCliProvider implements AiProvider {
 		return args;
 	}
 
-	private async complete(
+	private async runPrompt(
 		prompt: string,
 		schema: string,
+		timeoutMs: number,
 		signal?: AbortSignal
 	): Promise<string> {
 		const request: LocalCommandRequest = {
@@ -269,7 +280,8 @@ export class ClaudeCliProvider implements AiProvider {
 			args: this.commandArgs(schema),
 			stdin: prompt,
 			cwd: this.cwd,
-			timeoutMs: this.timeoutMs,
+			env: CLAUDE_CLI_ENV,
+			timeoutMs,
 			signal,
 		};
 		let result: LocalCommandResult;
@@ -285,5 +297,13 @@ export class ClaudeCliProvider implements AiProvider {
 			throw new ProviderError("Claude CLI returned an empty response.");
 		}
 		return output;
+	}
+
+	private async complete(
+		prompt: string,
+		schema: string,
+		signal?: AbortSignal
+	): Promise<string> {
+		return this.runPrompt(prompt, schema, this.timeoutMs, signal);
 	}
 }

@@ -18,6 +18,7 @@ export interface LocalCommandRequest {
 	args?: string[];
 	stdin?: string;
 	cwd?: string;
+	env?: NodeJS.ProcessEnv;
 	timeoutMs?: number;
 	signal?: AbortSignal;
 }
@@ -117,11 +118,13 @@ export class LocalCommandRunner {
 	run(request: LocalCommandRequest): Promise<LocalCommandResult> {
 		const args = request.args ?? [];
 		const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+		const basePath = request.env?.PATH ?? this.env.PATH ?? "";
 		const commandEnv: NodeJS.ProcessEnv = {
 			...this.env,
+			...request.env,
 			PATH: isBareCommand(request.command)
-				? buildLocalCliPath(this.env.PATH ?? "")
-				: this.env.PATH,
+				? buildLocalCliPath(basePath)
+				: basePath,
 		};
 		if (request.signal?.aborted) {
 			return Promise.reject(

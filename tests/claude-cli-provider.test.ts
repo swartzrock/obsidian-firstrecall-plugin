@@ -81,10 +81,17 @@ describe("ClaudeCliProvider", () => {
 		expect(run.mock.calls[0][0]).toMatchObject({
 			command: "claude",
 			cwd: "/tmp/cuecraft-empty",
+			env: expect.objectContaining({
+				CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
+				CLAUDE_CODE_SIMPLE: "1",
+				CLAUDE_CODE_SKIP_PROMPT_HISTORY: "1",
+				DISABLE_AUTOUPDATER: "1",
+			}),
 			timeoutMs: 50,
 		});
 		expect(run.mock.calls[0][0].args).toEqual(
 			expect.arrayContaining([
+				"--bare",
 				"-p",
 				"--output-format",
 				"json",
@@ -166,7 +173,7 @@ describe("ClaudeCliProvider", () => {
 
 	it("reports unauthenticated Claude CLI status", async () => {
 		const { provider } = makeProvider([
-			result(JSON.stringify({ authenticated: false })),
+			new ProviderError("not authenticated"),
 		]);
 
 		const status = await provider.testConnection();
@@ -177,7 +184,7 @@ describe("ClaudeCliProvider", () => {
 
 	it("reports successful Claude CLI status", async () => {
 		const { provider } = makeProvider([
-			result(JSON.stringify({ authenticated: true })),
+			result(JSON.stringify({ type: "result", result: { ok: true } })),
 		], "sonnet");
 
 		const status = await provider.testConnection();
@@ -186,6 +193,49 @@ describe("ClaudeCliProvider", () => {
 			ok: true,
 			message: "Connected to Claude CLI (sonnet).",
 		});
+	});
+
+	it("tests Claude CLI through the same bare non-interactive path used for generation", async () => {
+		const { provider, run } = makeProvider([
+			result(JSON.stringify({ type: "result", result: { ok: true } })),
+		]);
+
+		await provider.testConnection();
+
+		expect(run.mock.calls[0][0]).toMatchObject({
+			command: "claude",
+			cwd: "/tmp/cuecraft-empty",
+			env: expect.objectContaining({
+				CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
+				CLAUDE_CODE_DISABLE_ARTIFACT: "1",
+				CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
+				CLAUDE_CODE_DISABLE_BUNDLED_SKILLS: "1",
+				CLAUDE_CODE_DISABLE_WORKFLOWS: "1",
+				CLAUDE_CODE_SAFE_MODE: "1",
+				CLAUDE_CODE_SIMPLE: "1",
+				CLAUDE_CODE_SKIP_PROMPT_HISTORY: "1",
+				DISABLE_AUTOUPDATER: "1",
+			}),
+			timeoutMs: 15_000,
+		});
+		expect(run.mock.calls[0][0].args).toEqual(
+			expect.arrayContaining([
+				"--bare",
+				"-p",
+				"--output-format",
+				"json",
+				"--no-session-persistence",
+				"--safe-mode",
+				"--permission-mode",
+				"dontAsk",
+				"--tools",
+				"",
+				"--json-schema",
+			])
+		);
+		expect(run.mock.calls[0][0].args).not.toEqual(
+			expect.arrayContaining(["auth", "status"])
+		);
 	});
 
 	it("passes the configured model override and omits it when blank", async () => {
