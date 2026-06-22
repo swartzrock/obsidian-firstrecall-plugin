@@ -1,0 +1,173 @@
+import { EventEmitter } from "node:events";
+import { PassThrough } from "node:stream";
+import { describe, expect, it, vi } from "vitest";
+import {
+	LocalCommandRunner,
+	type LocalProcess,
+	type LocalProcessSpawner,
+} from "../src/providers/local-command-runner";
+import { ProviderError } from "../src/providers/types";
+
+class FakeProcess extends EventEmitter implements LocalProcess {
+	readonly stdout = new PassThrough();
+	readonly stderr = new PassThrough();
+	readonly stdin = new PassThrough();
+	killedWith: NodeJS.Signals | undefined;
+	stdinText = "";
+
+	constructor() {
+		super();
+		this.stdin.on("data", (chunk: Buffer | string) => {
+			this.stdinText += chunk.toString();
+		});
+	}
+
+	kill(signal?: NodeJS.Signals): boolean {
+		this.killedWith = signal;
+		return true;
+	}
+
+	close(code: number | null): void {
+		this.emit("close", code);
+	}
+
+	fail(error: NodeJS.ErrnoException): void {
+		this.emit("error", error);
+	}
+}
+
+function makeRunner(process: FakeProcess): {
+	runner: LocalCommandRunner;
+	calls: Array<Parameters<LocalProcessSpawner>>;
+} {
+	const calls: Array<Parameters<LocalProcessSpawner>> = [];
+	const spawner: LocalProcessSpawner = (command, args, options) => {
+		calls.push([command, args, options]);
+		return process;
+	};
+	return { runner: new LocalCommandRunner(spawner), calls };
+}
+
+describe("LocalCommandRunner", () => {
+	it("returns stdout, stderr, and exit status for a successful process", async () => {
+		const process = new FakeProcess();
+		const { runner } = makeRunner(process);
+		const result = runner.run({ command: "codex", args: ["exec"] });
+
+		process.stdout.write("{\"ok\":true}");
+		process.stderr.write("warning");
+		process.close(0);
+
+		await expect(result).resolves.toEqual({
+			stdout: "{\"ok\":true}",
+			stderr: "warning",
+			exitCode: 0,
+		});
+	});
+
+	it("maps nonzero exits to ProviderError with a stderr excerpt", async () => {
+		const process = new FakeProcess();
+		const { runner } = makeRunner(process);
+		const result = runner.run({ command: "claude", args: ["-p"] });
+
+		process.stderr.write("authentication failed because the session expired");
+		process.close(2);
+
+		await expect(result).rejects.toThrow(
+			/CueCraft: claude exited with code 2: authentication failed/
+		);
+		await expect(result).rejects.toBeInstanceOf(ProviderError);
+	});
+
+	it("kills the process and reports cancellation when aborted", async () => {
+		const process = new FakeProcess();
+		const { runner } = makeRunner(process);
+		const controller = new AbortController();
+		const result = runner.run({
+			command: "codex",
+			args: ["exec"],
+			signal: controller.signal,
+		});
+
+		controller.abort();
+
+		await expect(result).rejects.toThrow(/codex was cancelled/);
+		expect(process.killedWith).toBe("SIGTERM");
+	});
+
+	it("does not spawn when the signal is already aborted", async () => {
+		const process = new FakeProcess();
+		const { runner, calls } = makeRunner(process);
+		const controller = new AbortController();
+		controller.abort();
+
+		await expect(
+			runner.run({ command: "codex", signal: controller.signal })
+		).rejects.toThrow(/codex was cancelled/);
+		expect(calls).toHaveLength(0);
+	});
+
+	it("kills the process and reports timeout when the command hangs", async () => {
+		vi.useFakeTimers();
+		try {
+			const process = new FakeProcess();
+			const { runner } = makeRunner(process);
+			const result = runner.run({
+				command: "claude",
+				args: ["-p"],
+				timeoutMs: 25,
+			});
+			const expectation = expect(result).rejects.toThrow(
+				/claude timed out after 25ms/
+			);
+
+			await vi.advanceTimersByTimeAsync(25);
+
+			await expectation;
+			expect(process.killedWith).toBe("SIGTERM");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
+	it("maps missing commands to setup guidance", async () => {
+		const process = new FakeProcess();
+		const { runner } = makeRunner(process);
+		const result = runner.run({ command: "missing-codex" });
+
+		process.fail(
+			Object.assign(new Error("spawn missing-codex ENOENT"), {
+				code: "ENOENT",
+			})
+		);
+
+		await expect(result).rejects.toThrow(
+			/missing-codex was not found.*command path/i
+		);
+	});
+
+	it("passes metacharacters as argv and stdin data without shell expansion", async () => {
+		const process = new FakeProcess();
+		const { runner, calls } = makeRunner(process);
+		const model = "sonnet; rm -rf /";
+		const prompt = "Explain $(touch should-not-run)";
+		const result = runner.run({
+			command: "claude",
+			args: ["--model", model],
+			stdin: prompt,
+			cwd: "/tmp/cuecraft-empty",
+		});
+
+		process.close(0);
+
+		await expect(result).resolves.toMatchObject({ exitCode: 0 });
+		expect(calls).toEqual([
+			[
+				"claude",
+				["--model", model],
+				{ cwd: "/tmp/cuecraft-empty", shell: false },
+			],
+		]);
+		expect(process.stdinText).toBe(prompt);
+	});
+});
