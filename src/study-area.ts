@@ -101,12 +101,6 @@ export function studyAreaNameForParentPath(parentPath: string): string {
 		: ENTIRE_VAULT_STUDY_AREA_LABEL;
 }
 
-export function studyAreaMaintenanceLabel(
-	mode: StudyAreaMaintenanceMode
-): string {
-	return mode === "maintain-on-save" ? "Auto-updates on save" : "Paused";
-}
-
 export function formatStudyAreaReadinessCounts(
 	counts: StudyAreaReadinessCounts
 ): string {
@@ -175,10 +169,9 @@ export function eligibleStudyAreaPaths(
 export function findMaintainedStudyAreaForPath(
 	areas: readonly StudyArea[],
 	path: string,
-	automationEnabled: boolean,
 	hidden = false
 ): StudyArea | null {
-	if (!automationEnabled || hidden || !isMarkdownPath(path)) return null;
+	if (hidden || !isMarkdownPath(path)) return null;
 	return (
 		areas.find(
 			(area) =>

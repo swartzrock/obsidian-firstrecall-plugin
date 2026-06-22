@@ -81,7 +81,6 @@ import {
 	formatStudyAreaReadinessCounts,
 	isEntireVaultStudyArea,
 	normalizeVaultPath,
-	studyAreaMaintenanceLabel,
 	studyAreaScopeLabel,
 	type StudyArea,
 	type StudyAreaGenerationPlan,
@@ -423,15 +422,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const enabled = this.plugin.settings.studyAreas.filter(
 			(area) => area.maintenanceMode === "maintain-on-save"
 		).length;
-		if (!count) return "No study areas · automation paused";
+		if (!count) return "No study areas";
 		const entireVaultArea = this.plugin.settings.studyAreas.find((area) =>
 			isEntireVaultStudyArea(area)
 		);
 		if (entireVaultArea) {
 			return `${ENTIRE_VAULT_STUDY_AREA_LABEL} · ${
 				entireVaultArea.maintenanceMode === "maintain-on-save"
-					? "updates on save"
-					: "paused"
+					? "update on save on"
+					: "update on save off"
 			}`;
 		}
 		return `${count} area${count === 1 ? "" : "s"} · ${enabled} update on save`;
@@ -859,19 +858,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const manageEl = containerEl.createDiv({
 			cls: "cuecraft-settings-flow",
 		});
-		new Setting(manageEl)
-			.setName("Auto-update saved notes")
-			.setDesc(
-				"When on, study areas with Update on save enabled refresh cues for the note you just saved. It does not regenerate entire folders."
-			)
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.studyAreaAutomationEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.studyAreaAutomationEnabled = value;
-						await this.plugin.saveSettings();
-					})
-			);
 
 		if (!this.plugin.settings.studyAreas.length) {
 			manageEl.createDiv({
@@ -891,9 +877,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		setting.descEl.empty();
 		setting.descEl.createDiv({
 			cls: "cuecraft-study-area-path",
-			text: `${studyAreaScopeLabel(area.parentPath)} · ${studyAreaMaintenanceLabel(
-				area.maintenanceMode
-			)}`,
+			text: studyAreaScopeLabel(area.parentPath),
 		});
 		const countsEl = setting.descEl.createDiv({
 			cls: "cuecraft-study-area-counts",

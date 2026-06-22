@@ -948,7 +948,6 @@ export default class CueCraftPlugin extends Plugin {
 		const area = findMaintainedStudyAreaForPath(
 			this.settings.studyAreas,
 			file.path,
-			this.settings.studyAreaAutomationEnabled,
 			hidden
 		);
 		if (!area) return;

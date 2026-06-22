@@ -15,7 +15,6 @@ import {
 	loadStudyAreas,
 	planStudyAreaGeneration,
 	studyAreaNameForParentPath,
-	studyAreaMaintenanceLabel,
 	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
 	type StudyArea,
@@ -25,7 +24,7 @@ import type { NoteGenerationResult } from "../src/generator";
 const NOTE = "# A\nalpha\n## B\nbeta";
 
 describe("study area defaults", () => {
-	it("starts with no study areas and study-area automation paused", () => {
+	it("starts with no study areas", () => {
 		expect(DEFAULT_STUDY_AREAS).toEqual([]);
 		expect(DEFAULT_STUDY_AREA_AUTOMATION_ENABLED).toBe(false);
 	});
@@ -35,10 +34,6 @@ describe("study area labels", () => {
 	it("uses user-facing automation and count copy", () => {
 		expect(studyAreaScopeLabel("")).toBe(ENTIRE_VAULT_STUDY_AREA_LABEL);
 		expect(studyAreaNameForParentPath("")).toBe(ENTIRE_VAULT_STUDY_AREA_LABEL);
-		expect(studyAreaMaintenanceLabel("maintain-on-save")).toBe(
-			"Auto-updates on save"
-		);
-		expect(studyAreaMaintenanceLabel("paused")).toBe("Paused");
 		expect(
 			formatStudyAreaReadinessCounts({
 				ready: 4,
@@ -162,29 +157,19 @@ describe("study area maintenance matching", () => {
 		expect(
 			findMaintainedStudyAreaForPath(
 				[maintained],
-				"Courses/Biology/Week 1.md",
-				true
+				"Courses/Biology/Week 1.md"
 			)
 		)?.toEqual(maintained);
 		expect(
 			findMaintainedStudyAreaForPath(
 				[maintained],
-				"Courses/Chemistry/Week 1.md",
-				true
+				"Courses/Chemistry/Week 1.md"
 			)
 		).toBeNull();
 		expect(
 			findMaintainedStudyAreaForPath(
 				[area({ maintenanceMode: "paused" })],
-				"Courses/Biology/Week 1.md",
-				true
-			)
-		).toBeNull();
-		expect(
-			findMaintainedStudyAreaForPath(
-				[maintained],
-				"Courses/Biology/Week 1.md",
-				false
+				"Courses/Biology/Week 1.md"
 			)
 		).toBeNull();
 	});
@@ -197,15 +182,13 @@ describe("study area maintenance matching", () => {
 		expect(
 			findMaintainedStudyAreaForPath(
 				[maintained],
-				"Courses/Biology/Drafts/a.md",
-				true
+				"Courses/Biology/Drafts/a.md"
 			)
 		).toBeNull();
 		expect(
 			findMaintainedStudyAreaForPath(
 				[maintained],
 				"Courses/Biology/Public/a.md",
-				true,
 				true
 			)
 		).toBeNull();
