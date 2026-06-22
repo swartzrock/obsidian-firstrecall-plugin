@@ -1485,7 +1485,6 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const parts = [`${summary.completed} done`];
 		if (summary.failed) parts.push(`${summary.failed} failed`);
-		if (summary.skipped) parts.push(`${summary.skipped} not eligible`);
 		return `CueCraft: ${area.name} run complete - ${parts.join(", ")}.`;
 	}
 

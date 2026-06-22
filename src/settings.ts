@@ -927,8 +927,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			text: "Retry failed",
 			attr: { type: "button" },
 		});
+		retryBtn.addClass("cuecraft-study-area-retry");
 		retryBtn.disabled = true;
 		retryBtn.hidden = true;
+		retryBtn.addClass("cuecraft-study-area-hidden");
 		const removeBtn = setting.controlEl.createEl("button", {
 			cls: "clickable-icon cuecraft-study-area-remove",
 			attr: { type: "button", "aria-label": `Remove ${area.name}` },
@@ -984,12 +986,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			backfillBtn.disabled = true;
 			retryBtn.disabled = true;
 			retryBtn.hidden = true;
+			retryBtn.addClass("cuecraft-study-area-hidden");
 			return;
 		}
 		countsEl.setText(formatStudyAreaReadinessCounts(plan.counts));
 		backfillBtn.disabled = plan.items.length === 0;
-		retryBtn.disabled = plan.counts.failed === 0;
-		retryBtn.hidden = plan.counts.failed === 0;
+		const hasFailedWork = plan.counts.failed > 0;
+		retryBtn.disabled = !hasFailedWork;
+		retryBtn.hidden = !hasFailedWork;
+		retryBtn.toggleClass("cuecraft-study-area-hidden", !hasFailedWork);
 	}
 
 	// ── Note format ───────────────────────────────────────────────────────

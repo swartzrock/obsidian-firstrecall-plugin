@@ -47,7 +47,7 @@ describe("study area labels", () => {
 				failed: 0,
 				skipped: 2,
 			})
-		).toBe("4 ready · 1 needs updating · 2 not eligible");
+		).toBe("4 notes ready · 1 note needs updating");
 		expect(
 			formatStudyAreaReadinessCounts({
 				ready: 0,
@@ -56,7 +56,16 @@ describe("study area labels", () => {
 				failed: 0,
 				skipped: 1,
 			})
-		).toBe("3 need cues · 1 not eligible");
+		).toBe("3 notes need cues");
+		expect(
+			formatStudyAreaReadinessCounts({
+				ready: 0,
+				uncued: 0,
+				stale: 0,
+				failed: 0,
+				skipped: 1,
+			})
+		).toBe("No eligible notes");
 		expect(
 			formatStudyAreaReadinessCounts({
 				ready: 0,
