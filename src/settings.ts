@@ -1,5 +1,6 @@
 import {
 	App,
+	Modal,
 	Notice,
 	PluginSettingTab,
 	Setting,
@@ -76,8 +77,11 @@ import type { AnthropicProvider } from "./providers/anthropic-provider";
 import {
 	DEFAULT_STUDY_AREAS,
 	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
+	formatStudyAreaReadinessCounts,
 	normalizeVaultPath,
+	studyAreaMaintenanceLabel,
 	type StudyArea,
+	type StudyAreaGenerationPlan,
 } from "./study-area";
 
 /**
@@ -375,6 +379,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		);
 	}
 
+	openStudyAreas(): void {
+		this.openSubpage("study-areas");
+	}
+
 	private openSubpage(subpage: CueCraftSettingsSubpage): void {
 		this.currentSubpage = subpage;
 		this.display();
@@ -413,7 +421,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			(area) => area.maintenanceMode === "maintain-on-save"
 		).length;
 		if (!count) return "No study areas · automation paused";
-		return `${count} area${count === 1 ? "" : "s"} · ${enabled} maintaining on save`;
+		return `${count} area${count === 1 ? "" : "s"} · ${enabled} update on save`;
 	}
 
 	private providerDisplayName(provider: ProviderId): string {
@@ -799,8 +807,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			cls: "cuecraft-settings-flow",
 		});
 		new Setting(manageEl)
-			.setName("Auto-update cues for saved notes")
-			.setDesc("When on, saving a note in a study area marked Maintain on save queues that note for missing, stale, or failed cue generation. It does not refresh this list or regenerate the whole folder.")
+			.setName("Auto-update saved notes")
+			.setDesc(
+				"When on, study areas with Update on save enabled refresh cues for the note you just saved. It does not regenerate entire folders."
+			)
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.studyAreaAutomationEnabled)
@@ -818,29 +828,112 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return;
 		}
 		for (const area of this.plugin.settings.studyAreas) {
-			const setting = new Setting(manageEl)
-				.setName(area.name)
-				.setDesc(
-					`${area.parentPath} · ${
-						area.maintenanceMode === "maintain-on-save"
-							? "maintain on save"
-							: "paused"
-					}`
-				);
-			setting.controlEl.addClass("cuecraft-status-chips");
-			this.renderStatusChip(
-				setting.controlEl,
-				area.maintenanceMode === "maintain-on-save" ? "Maintaining" : "Paused",
-				area.maintenanceMode === "maintain-on-save"
-					? "is-positive"
-					: "is-muted"
-			);
-			setting.addButton((btn) =>
-				btn
-					.setButtonText("Manage")
-					.onClick(() => this.plugin.openStudyAreaManager(area.id))
-			);
+			this.renderStudyAreaRow(manageEl, area);
 		}
+	}
+
+	private renderStudyAreaRow(containerEl: HTMLElement, area: StudyArea): void {
+		const setting = new Setting(containerEl).setName(area.name);
+		setting.settingEl.addClass("cuecraft-study-area-row");
+		setting.descEl.empty();
+		setting.descEl.createDiv({
+			cls: "cuecraft-study-area-path",
+			text: `${area.parentPath} · ${studyAreaMaintenanceLabel(
+				area.maintenanceMode
+			)}`,
+		});
+		const countsEl = setting.descEl.createDiv({
+			cls: "cuecraft-study-area-counts",
+			text: "Previewing notes...",
+		});
+
+		setting.controlEl.addClass("cuecraft-study-area-controls");
+		setting.controlEl.createSpan({
+			cls: "cuecraft-study-area-toggle-label",
+			text: "Update on save",
+		});
+		setting.addToggle((tg) =>
+			tg
+				.setValue(area.maintenanceMode === "maintain-on-save")
+				.onChange(async (value) => {
+					await this.plugin.updateStudyArea({
+						...area,
+						maintenanceMode: value ? "maintain-on-save" : "paused",
+					});
+					this.display();
+				})
+		);
+
+		const backfillBtn = setting.controlEl.createEl("button", {
+			text: "Backfill",
+			attr: { type: "button" },
+		});
+		backfillBtn.addClass("mod-cta");
+		backfillBtn.disabled = true;
+		const retryBtn = setting.controlEl.createEl("button", {
+			text: "Retry failed",
+			attr: { type: "button" },
+		});
+		retryBtn.disabled = true;
+		const removeBtn = setting.controlEl.createEl("button", {
+			cls: "clickable-icon cuecraft-study-area-remove",
+			attr: { type: "button", "aria-label": `Remove ${area.name}` },
+		});
+		setIcon(removeBtn, "trash-2");
+
+		let latestPlan: StudyAreaGenerationPlan | null = null;
+		void this.plugin.previewStudyArea(area.id).then((plan) => {
+			latestPlan = plan;
+			this.renderStudyAreaPlan(countsEl, backfillBtn, retryBtn, plan);
+		});
+
+		this.plugin.registerDomEvent(backfillBtn, "click", async () => {
+			const plan = latestPlan ?? await this.plugin.previewStudyArea(area.id);
+			const count = plan?.items.length ?? 0;
+			new StudyAreaConfirmModal(this.app, {
+				title: "Run study area backfill?",
+				message: `Generate or update ${count} note${
+					count === 1 ? "" : "s"
+				} in ${area.name}?`,
+				confirmText: "Run backfill",
+				onConfirm: async () => {
+					await this.plugin.runStudyArea(area.id, "backfill");
+					this.display();
+				},
+			}).open();
+		});
+		this.plugin.registerDomEvent(retryBtn, "click", async () => {
+			await this.plugin.runStudyArea(area.id, "retry-failed");
+			this.display();
+		});
+		this.plugin.registerDomEvent(removeBtn, "click", () => {
+			new StudyAreaConfirmModal(this.app, {
+				title: "Remove study area?",
+				message: `Remove study area "${area.name}"? Generated cues stay cached.`,
+				confirmText: "Remove",
+				onConfirm: async () => {
+					await this.plugin.removeStudyArea(area.id);
+					this.display();
+				},
+			}).open();
+		});
+	}
+
+	private renderStudyAreaPlan(
+		countsEl: HTMLElement,
+		backfillBtn: HTMLButtonElement,
+		retryBtn: HTMLButtonElement,
+		plan: StudyAreaGenerationPlan | null
+	): void {
+		if (!plan) {
+			countsEl.setText("Study area no longer exists.");
+			backfillBtn.disabled = true;
+			retryBtn.disabled = true;
+			return;
+		}
+		countsEl.setText(formatStudyAreaReadinessCounts(plan.counts));
+		backfillBtn.disabled = plan.items.length === 0;
+		retryBtn.disabled = plan.counts.failed === 0;
 	}
 
 	// ── Note format ───────────────────────────────────────────────────────
@@ -1826,5 +1919,45 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return;
 		}
 		new Notice(`CueCraft: ${status.message}`);
+	}
+}
+
+class StudyAreaConfirmModal extends Modal {
+	constructor(
+		app: App,
+		private readonly opts: {
+			title: string;
+			message: string;
+			confirmText: string;
+			onConfirm: () => void | Promise<void>;
+		}
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.createEl("h2", { text: this.opts.title });
+		contentEl.createEl("p", { text: this.opts.message });
+		const actionsEl = contentEl.createDiv({ cls: "cuecraft-modal-actions" });
+		const cancelBtn = actionsEl.createEl("button", {
+			text: "Cancel",
+			attr: { type: "button" },
+		});
+		cancelBtn.addEventListener("click", () => this.close());
+		const confirmBtn = actionsEl.createEl("button", {
+			text: this.opts.confirmText,
+			attr: { type: "button" },
+		});
+		confirmBtn.addClass("mod-cta");
+		confirmBtn.addEventListener("click", () => {
+			void this.confirm();
+		});
+	}
+
+	private async confirm(): Promise<void> {
+		await this.opts.onConfirm();
+		this.close();
 	}
 }

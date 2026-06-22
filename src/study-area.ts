@@ -83,6 +83,28 @@ export function isMarkdownPath(path: string): boolean {
 	return normalizeVaultPath(path).toLowerCase().endsWith(".md");
 }
 
+export function studyAreaMaintenanceLabel(
+	mode: StudyAreaMaintenanceMode
+): string {
+	return mode === "maintain-on-save" ? "Auto-updates on save" : "Paused";
+}
+
+export function formatStudyAreaReadinessCounts(
+	counts: StudyAreaReadinessCounts
+): string {
+	const staleLabel =
+		counts.stale === 1
+			? "1 needs updating"
+			: `${counts.stale} need updating`;
+	return [
+		`${counts.ready} ready`,
+		`${counts.uncued} uncued`,
+		staleLabel,
+		`${counts.failed} failed`,
+		`${counts.skipped} skipped`,
+	].join(" · ");
+}
+
 export function isDescendantPath(path: string, parentPath: string): boolean {
 	const normalizedPath = normalizeVaultPath(path);
 	const normalizedParent = normalizeVaultPath(parentPath);

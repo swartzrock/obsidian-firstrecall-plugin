@@ -1224,8 +1224,6 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	margin-top: 16px;
 }
 
-.cuecraft-study-area-copy,
-.cuecraft-study-area-empty,
 .cuecraft-study-area-path,
 .cuecraft-study-area-counts {
 	color: var(--text-muted);
@@ -1233,29 +1231,44 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	line-height: 1.4;
 }
 
-.cuecraft-study-area-list {
-	display: grid;
-	gap: 14px;
-}
-
-.cuecraft-study-area-card {
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-m);
-	background: var(--background-secondary);
-	padding: 14px;
-}
-
-.cuecraft-study-area-card h3 {
-	margin: 0 0 4px;
-}
-
 .cuecraft-study-area-counts {
-	margin-top: 8px;
+	margin-top: 3px;
 }
 
-.cuecraft-study-area-card .setting-item {
-	padding-left: 0;
-	padding-right: 0;
+.cuecraft-study-area-row {
+	align-items: flex-start;
+}
+
+.cuecraft-study-area-row .setting-item-info {
+	min-width: 0;
+}
+
+.cuecraft-study-area-controls {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.cuecraft-study-area-toggle-label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+}
+
+button.cuecraft-study-area-remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+}
+
+.cuecraft-study-area-remove svg {
+	width: 16px;
+	height: 16px;
 }
 
 /* Accent-color swatches (Appearance). The selected one shows a ring + check. */

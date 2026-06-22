@@ -7,10 +7,12 @@ import {
 	classifyStudyAreaNote,
 	eligibleStudyAreaPaths,
 	findMaintainedStudyAreaForPath,
+	formatStudyAreaReadinessCounts,
 	isExcludedPath,
 	isStudyAreaPath,
 	loadStudyAreas,
 	planStudyAreaGeneration,
+	studyAreaMaintenanceLabel,
 	summarizeStudyAreaRun,
 	type StudyArea,
 } from "../src/study-area";
@@ -22,6 +24,24 @@ describe("study area defaults", () => {
 	it("starts with no study areas and study-area automation paused", () => {
 		expect(DEFAULT_STUDY_AREAS).toEqual([]);
 		expect(DEFAULT_STUDY_AREA_AUTOMATION_ENABLED).toBe(false);
+	});
+});
+
+describe("study area labels", () => {
+	it("uses user-facing automation and count copy", () => {
+		expect(studyAreaMaintenanceLabel("maintain-on-save")).toBe(
+			"Auto-updates on save"
+		);
+		expect(studyAreaMaintenanceLabel("paused")).toBe("Paused");
+		expect(
+			formatStudyAreaReadinessCounts({
+				ready: 4,
+				uncued: 0,
+				stale: 1,
+				failed: 0,
+				skipped: 2,
+			})
+		).toBe("4 ready · 0 uncued · 1 needs updating · 0 failed · 2 skipped");
 	});
 });
 
