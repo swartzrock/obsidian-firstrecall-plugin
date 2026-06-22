@@ -238,6 +238,24 @@ describe("study area generation planning", () => {
 		]);
 	});
 
+	it("queues uncued saved notes for maintain-on-save generation", () => {
+		const plan = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Edited.md",
+				cache: null,
+				currentSections: parseSections(NOTE),
+			},
+		], "maintain-note");
+		expect(plan.items).toEqual([
+			{
+				path: "Courses/Biology/Edited.md",
+				action: "generate-note",
+				sectionIds: [],
+				readiness: "uncued",
+			},
+		]);
+	});
+
 	it("queues retry work for failed sections only", () => {
 		const cache = buildCache();
 		const failedCache: NoteCache = {

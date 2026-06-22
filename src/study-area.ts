@@ -258,7 +258,7 @@ function planQueueItem(
 	readiness: StudyAreaReadiness,
 	mode: StudyAreaPlanMode
 ): StudyAreaQueueItem | null {
-	if (readiness === "uncued" && mode === "backfill") {
+	if (readiness === "uncued" && mode !== "retry-failed") {
 		return {
 			path: note.path,
 			action: "generate-note",
