@@ -3,6 +3,7 @@ import {
 	CodexCliProvider,
 	extractCodexCliOutput,
 } from "../src/providers/codex-cli-provider";
+import { defaultLocalCliCwd } from "../src/providers/local-command-runner";
 import type {
 	LocalCommandRequest,
 	LocalCommandResult,
@@ -206,5 +207,19 @@ describe("CodexCliProvider", () => {
 			preset: "conceptual",
 		});
 		expect(withoutModel.run.mock.calls[0][0].args).not.toContain("--model");
+	});
+
+	it("uses a neutral temp cwd when no cwd is configured", async () => {
+		const run = vi.fn<[LocalCommandRequest], Promise<LocalCommandResult>>(
+			async () => result("Logged in as user")
+		);
+		const provider = new CodexCliProvider({
+			command: "codex",
+			runner: { run },
+		});
+
+		await provider.testConnection();
+
+		expect(run.mock.calls[0][0].cwd).toBe(defaultLocalCliCwd());
 	});
 });

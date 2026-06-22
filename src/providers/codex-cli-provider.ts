@@ -13,6 +13,7 @@ import {
 	SummaryInput,
 } from "./types";
 import {
+	defaultLocalCliCwd,
 	LocalCommandRunner,
 	type LocalCommandRequest,
 	type LocalCommandResult,
@@ -116,7 +117,7 @@ export class CodexCliProvider implements AiProvider {
 	constructor(opts: CodexCliProviderOptions) {
 		this.command = opts.command.trim() || "codex";
 		this.model = opts.model?.trim() ?? "";
-		this.cwd = opts.cwd;
+		this.cwd = opts.cwd ?? defaultLocalCliCwd();
 		this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 		this.runner = opts.runner ?? new LocalCommandRunner();
 	}

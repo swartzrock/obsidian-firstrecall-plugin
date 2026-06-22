@@ -3,6 +3,7 @@ import {
 	ClaudeCliProvider,
 	extractClaudeCliOutput,
 } from "../src/providers/claude-cli-provider";
+import { defaultLocalCliCwd } from "../src/providers/local-command-runner";
 import type {
 	LocalCommandRequest,
 	LocalCommandResult,
@@ -93,8 +94,13 @@ describe("ClaudeCliProvider", () => {
 				"-p",
 				"--output-format",
 				"json",
+				"--input-format",
+				"text",
 				"--no-session-persistence",
+				"--no-chrome",
 				"--safe-mode",
+				"--setting-sources",
+				"user",
 				"--permission-mode",
 				"dontAsk",
 				"--tools",
@@ -220,8 +226,13 @@ describe("ClaudeCliProvider", () => {
 				"-p",
 				"--output-format",
 				"json",
+				"--input-format",
+				"text",
 				"--no-session-persistence",
+				"--no-chrome",
 				"--safe-mode",
+				"--setting-sources",
+				"user",
 				"--permission-mode",
 				"dontAsk",
 				"--tools",
@@ -234,6 +245,20 @@ describe("ClaudeCliProvider", () => {
 		);
 		expect(run.mock.calls[0][0].args).not.toContain("--bare");
 		expect(run.mock.calls[0][0].env).not.toHaveProperty("CLAUDE_CODE_SIMPLE");
+	});
+
+	it("uses a neutral temp cwd when no cwd is configured", async () => {
+		const run = vi.fn<[LocalCommandRequest], Promise<LocalCommandResult>>(
+			async () => result(JSON.stringify({ type: "result", result: { ok: true } }))
+		);
+		const provider = new ClaudeCliProvider({
+			command: "claude",
+			runner: { run },
+		});
+
+		await provider.testConnection();
+
+		expect(run.mock.calls[0][0].cwd).toBe(defaultLocalCliCwd());
 	});
 
 	it("passes the configured model override and omits it when blank", async () => {

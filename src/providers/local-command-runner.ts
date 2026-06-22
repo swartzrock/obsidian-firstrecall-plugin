@@ -1,4 +1,5 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { tmpdir } from "node:os";
 import type { Readable, Writable } from "node:stream";
 import { ProviderError } from "./types";
 
@@ -108,6 +109,10 @@ export function buildLocalCliPath(basePath = ""): string {
 		}
 	}
 	return entries.join(separator);
+}
+
+export function defaultLocalCliCwd(): string {
+	return tmpdir();
 }
 
 export class LocalCommandRunner {

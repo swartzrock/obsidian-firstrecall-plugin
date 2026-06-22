@@ -13,6 +13,7 @@ import {
 	SummaryInput,
 } from "./types";
 import {
+	defaultLocalCliCwd,
 	LocalCommandRunner,
 	type LocalCommandRequest,
 	type LocalCommandResult,
@@ -149,7 +150,7 @@ export class ClaudeCliProvider implements AiProvider {
 	constructor(opts: ClaudeCliProviderOptions) {
 		this.command = opts.command.trim() || "claude";
 		this.model = opts.model?.trim() ?? "";
-		this.cwd = opts.cwd;
+		this.cwd = opts.cwd ?? defaultLocalCliCwd();
 		this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 		this.runner = opts.runner ?? new LocalCommandRunner();
 	}
@@ -254,8 +255,13 @@ export class ClaudeCliProvider implements AiProvider {
 			"-p",
 			"--output-format",
 			"json",
+			"--input-format",
+			"text",
 			"--no-session-persistence",
+			"--no-chrome",
 			"--safe-mode",
+			"--setting-sources",
+			"user",
 			"--permission-mode",
 			"dontAsk",
 			"--tools",
