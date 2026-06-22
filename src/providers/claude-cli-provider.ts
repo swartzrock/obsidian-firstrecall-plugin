@@ -27,7 +27,6 @@ const CLAUDE_CLI_ENV: NodeJS.ProcessEnv = {
 	CLAUDE_CODE_DISABLE_BUNDLED_SKILLS: "1",
 	CLAUDE_CODE_DISABLE_WORKFLOWS: "1",
 	CLAUDE_CODE_SAFE_MODE: "1",
-	CLAUDE_CODE_SIMPLE: "1",
 	CLAUDE_CODE_SKIP_PROMPT_HISTORY: "1",
 	DISABLE_AUTOUPDATER: "1",
 };
@@ -252,7 +251,6 @@ export class ClaudeCliProvider implements AiProvider {
 
 	private commandArgs(schema: string): string[] {
 		const args = [
-			"--bare",
 			"-p",
 			"--output-format",
 			"json",

@@ -83,7 +83,6 @@ describe("ClaudeCliProvider", () => {
 			cwd: "/tmp/cuecraft-empty",
 			env: expect.objectContaining({
 				CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
-				CLAUDE_CODE_SIMPLE: "1",
 				CLAUDE_CODE_SKIP_PROMPT_HISTORY: "1",
 				DISABLE_AUTOUPDATER: "1",
 			}),
@@ -91,7 +90,6 @@ describe("ClaudeCliProvider", () => {
 		});
 		expect(run.mock.calls[0][0].args).toEqual(
 			expect.arrayContaining([
-				"--bare",
 				"-p",
 				"--output-format",
 				"json",
@@ -195,7 +193,7 @@ describe("ClaudeCliProvider", () => {
 		});
 	});
 
-	it("tests Claude CLI through the same bare non-interactive path used for generation", async () => {
+	it("tests Claude CLI through the same non-interactive path used for generation", async () => {
 		const { provider, run } = makeProvider([
 			result(JSON.stringify({ type: "result", result: { ok: true } })),
 		]);
@@ -212,7 +210,6 @@ describe("ClaudeCliProvider", () => {
 				CLAUDE_CODE_DISABLE_BUNDLED_SKILLS: "1",
 				CLAUDE_CODE_DISABLE_WORKFLOWS: "1",
 				CLAUDE_CODE_SAFE_MODE: "1",
-				CLAUDE_CODE_SIMPLE: "1",
 				CLAUDE_CODE_SKIP_PROMPT_HISTORY: "1",
 				DISABLE_AUTOUPDATER: "1",
 			}),
@@ -220,7 +217,6 @@ describe("ClaudeCliProvider", () => {
 		});
 		expect(run.mock.calls[0][0].args).toEqual(
 			expect.arrayContaining([
-				"--bare",
 				"-p",
 				"--output-format",
 				"json",
@@ -236,6 +232,8 @@ describe("ClaudeCliProvider", () => {
 		expect(run.mock.calls[0][0].args).not.toEqual(
 			expect.arrayContaining(["auth", "status"])
 		);
+		expect(run.mock.calls[0][0].args).not.toContain("--bare");
+		expect(run.mock.calls[0][0].env).not.toHaveProperty("CLAUDE_CODE_SIMPLE");
 	});
 
 	it("passes the configured model override and omits it when blank", async () => {

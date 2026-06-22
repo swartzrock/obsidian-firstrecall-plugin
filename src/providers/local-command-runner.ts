@@ -73,9 +73,11 @@ function excerpt(value: string): string {
 function errorMessageForExit(
 	command: string,
 	code: number | null,
-	stderr: string
+	stderr: string,
+	stdout = ""
 ): string {
-	const suffix = stderr.trim() ? `: ${excerpt(stderr)}` : ".";
+	const output = stderr.trim() || stdout.trim();
+	const suffix = output ? `: ${excerpt(output)}` : ".";
 	return `CueCraft: ${commandLabel(command)} exited with code ${code ?? "unknown"}${suffix}`;
 }
 
@@ -198,7 +200,9 @@ export class LocalCommandRunner {
 							return;
 						}
 						reject(
-							new ProviderError(errorMessageForExit(request.command, code, stderr))
+							new ProviderError(
+								errorMessageForExit(request.command, code, stderr, stdout)
+							)
 						);
 					},
 					removeAbortListener

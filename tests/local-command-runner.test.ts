@@ -120,6 +120,19 @@ describe("LocalCommandRunner", () => {
 		await expect(result).rejects.toBeInstanceOf(ProviderError);
 	});
 
+	it("uses stdout as the nonzero-exit excerpt when stderr is empty", async () => {
+		const process = new FakeProcess();
+		const { runner } = makeRunner(process);
+		const result = runner.run({ command: "claude", args: ["-p"] });
+
+		process.stdout.write("Login required: run claude auth login");
+		process.close(1);
+
+		await expect(result).rejects.toThrow(
+			/CueCraft: claude exited with code 1: Login required/
+		);
+	});
+
 	it("kills the process and reports cancellation when aborted", async () => {
 		const process = new FakeProcess();
 		const { runner } = makeRunner(process);
