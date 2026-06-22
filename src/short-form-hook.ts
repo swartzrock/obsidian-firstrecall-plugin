@@ -33,8 +33,9 @@ export interface ShortFormHookModel {
 }
 
 export type ShortFormHookCardState = "current" | "upcoming";
+export type ShortFormHookTitleDensity = "standard" | "long" | "dense";
 
-const MAX_HOOK_TITLE_LENGTH = 96;
+const MIN_HOOK_CONTENT_WORDS = 3;
 
 export function buildShortFormHookModel(
 	model: CornellModel
@@ -58,9 +59,7 @@ export function buildShortFormHookTitle(question: string | null): string | null 
 	if (!normalized) return null;
 
 	const withoutTerminalQuestion = normalized.replace(/[?\s]+$/g, "").trim();
-	const title = withoutTerminalQuestion || normalized;
-	if (title.length <= MAX_HOOK_TITLE_LENGTH) return title;
-	return trimToWordBoundary(title, MAX_HOOK_TITLE_LENGTH);
+	return withoutTerminalQuestion || normalized;
 }
 
 export function buildShortFormHookSummary(opts: {
@@ -95,6 +94,16 @@ export function shortFormHookFocusLabel(card: ShortFormHookRailCard): string {
 	return `Focus ${section}`;
 }
 
+export function shortFormHookTitleDensity(
+	title: string
+): ShortFormHookTitleDensity {
+	const normalized = title.replace(/\s+/g, " ").trim();
+	const wordCount = normalized ? normalized.split(" ").length : 0;
+	if (normalized.length > 88 || wordCount > 13) return "dense";
+	if (normalized.length > 66 || wordCount > 10) return "long";
+	return "standard";
+}
+
 export function applyShortFormHookFocusState(
 	root: ParentNode,
 	currentSectionId: string | null
@@ -111,6 +120,8 @@ export function applyShortFormHookFocusState(
 }
 
 function buildShortFormHookCard(row: CornellRow): ShortFormHookRailCard | null {
+	if (!hasMeaningfulHookSource(row)) return null;
+
 	const hookTitle = buildShortFormHookTitle(row.question);
 	if (row.hasCue && row.question && hookTitle) {
 		return {
@@ -134,10 +145,22 @@ function buildShortFormHookCard(row: CornellRow): ShortFormHookRailCard | null {
 	return null;
 }
 
-function trimToWordBoundary(text: string, maxLength: number): string {
-	const target = text.slice(0, maxLength - 3).trimEnd();
-	const lastSpace = target.lastIndexOf(" ");
-	const trimmed =
-		lastSpace > Math.floor(maxLength * 0.6) ? target.slice(0, lastSpace) : target;
-	return `${trimmed}...`;
+function hasMeaningfulHookSource(row: CornellRow): boolean {
+	const text = visibleSectionText(row).trim();
+	if (!text) return false;
+	return text.split(/\s+/).filter(Boolean).length >= MIN_HOOK_CONTENT_WORDS;
+}
+
+function visibleSectionText(row: CornellRow): string {
+	let content = row.content.trim();
+	if (row.level === 0) {
+		content = content.replace(/^---\n[\s\S]*?\n---\s*/u, "").trim();
+	}
+	return content
+		.replace(/```[\s\S]*?```/g, " ")
+		.replace(/`([^`]*)`/g, "$1")
+		.replace(/!\[[^\]]*]\([^)]*\)/g, " ")
+		.replace(/\[([^\]]+)]\([^)]*\)/g, "$1")
+		.replace(/[#>*_~`|[\]()-]+/g, " ")
+		.replace(/\s+/g, " ");
 }

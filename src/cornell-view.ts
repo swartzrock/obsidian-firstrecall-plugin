@@ -16,6 +16,7 @@ import {
 	shortFormHookCardState,
 	shortFormHookFocusLabel,
 	shortFormHookStatusIcon,
+	shortFormHookTitleDensity,
 	type ShortFormHookModel,
 	type ShortFormHookRailCard,
 } from "./short-form-hook";
@@ -409,6 +410,7 @@ export class CornellView extends ItemView {
 		});
 		if (card.kind === "hook") {
 			if (card.confidence) cue.dataset.confidence = card.confidence;
+			cue.dataset.titleDensity = shortFormHookTitleDensity(card.hookTitle);
 			cue.setAttr("title", card.originalQuestion);
 			cue.createEl("div", {
 				cls: "cuecraft-hook-title",
