@@ -176,6 +176,18 @@ describe("study area readiness", () => {
 		}).readiness).toBe("uncued");
 	});
 
+	it("classifies notes with only empty heading sections as skipped", () => {
+		expect(classifyStudyAreaNote(area(), {
+			path: "Courses/Biology/Empty.md",
+			cache: null,
+			currentSections: parseSections("# Parent\n## Child\n"),
+		})).toEqual({
+			path: "Courses/Biology/Empty.md",
+			readiness: "skipped",
+			reason: "empty",
+		});
+	});
+
 	it("classifies cached notes as ready, stale, or failed", () => {
 		const cache = buildCache();
 		const studyArea = area();

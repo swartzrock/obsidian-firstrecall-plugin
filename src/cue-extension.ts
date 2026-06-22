@@ -3,7 +3,7 @@ import type { EditorState, Range } from "@codemirror/state";
 import { Decoration, EditorView, WidgetType } from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
 import type { NoteCache } from "./cache";
-import type { Section } from "./parser";
+import { isCueEligibleSection, type Section } from "./parser";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -44,6 +44,7 @@ export function buildCueLineData(
 	for (const sec of cache.sections) {
 		if (!sec.question && !sec.error) continue;
 		const current = byId.get(sec.id);
+		if (current && !isCueEligibleSection(current)) continue;
 		const line = current ? current.lineNumber : sec.lineNumber;
 		const failed = Boolean(sec.error) || !sec.question;
 		out.push({

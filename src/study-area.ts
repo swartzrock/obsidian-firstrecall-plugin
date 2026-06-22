@@ -3,7 +3,7 @@ import {
 	staleSectionIds,
 	type NoteCache,
 } from "./cache";
-import type { Section } from "./parser";
+import { cueEligibleSections, type Section } from "./parser";
 
 export type StudyAreaMaintenanceMode = "paused" | "maintain-on-save";
 export type StudyAreaReadiness =
@@ -151,6 +151,9 @@ export function classifyStudyAreaNote(
 	if (note.hidden) {
 		return { path: note.path, readiness: "skipped", reason: "hidden" };
 	}
+	if (!cueEligibleSections(note.currentSections).length) {
+		return { path: note.path, readiness: "skipped", reason: "empty" };
+	}
 	if (!note.cache) {
 		return { path: note.path, readiness: "uncued", reason: null };
 	}
@@ -258,13 +261,14 @@ function planQueueItem(
 	readiness: StudyAreaReadiness,
 	mode: StudyAreaPlanMode
 ): StudyAreaQueueItem | null {
+	const eligibleSections = cueEligibleSections(note.currentSections);
 	if (readiness === "uncued" && mode !== "retry-failed") {
 		return {
 			path: note.path,
 			action: "generate-note",
 			sectionIds: [],
 			readiness,
-			sectionCount: note.currentSections.length,
+			sectionCount: eligibleSections.length,
 		};
 	}
 	if (readiness === "stale" && mode !== "retry-failed" && note.cache) {
@@ -278,7 +282,7 @@ function planQueueItem(
 			sectionIds,
 			readiness,
 			sectionCount:
-				action === "generate-note" ? note.currentSections.length : sectionIds.length,
+				action === "generate-note" ? eligibleSections.length : sectionIds.length,
 		};
 	}
 	if (readiness === "failed" && note.cache) {
@@ -299,9 +303,10 @@ function canRefreshStaleSections(
 	cache: NoteCache,
 	currentSections: readonly Section[]
 ): boolean {
-	if (cache.sections.length !== currentSections.length) return false;
+	const eligibleSections = cueEligibleSections(currentSections);
+	if (cache.sections.length !== eligibleSections.length) return false;
 	return cache.sections.every((cached, index) => {
-		const current = currentSections[index];
+		const current = eligibleSections[index];
 		return current && current.id === cached.id;
 	});
 }
@@ -310,7 +315,9 @@ function failedSectionIds(
 	cache: NoteCache,
 	currentSections: readonly Section[]
 ): string[] {
-	const currentIds = new Set(currentSections.map((section) => section.id));
+	const currentIds = new Set(
+		cueEligibleSections(currentSections).map((section) => section.id)
+	);
 	return cache.sections
 		.filter((section) => section.error && currentIds.has(section.id))
 		.map((section) => section.id);

@@ -175,6 +175,36 @@ describe("generateNote", () => {
 		expect(result.sections).toHaveLength(1);
 	});
 
+	it("skips heading-only sections when generating cues", async () => {
+		const provider = mockProvider();
+		const progress: Array<[number, number]> = [];
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: "# Empty parent\n## Prefix Sum\nactual notes",
+			provider,
+			preset: "conceptual",
+			onProgress: (done, total) => progress.push([done, total]),
+		});
+		expect(provider.cueInputs.map((input) => input.heading)).toEqual(["Prefix Sum"]);
+		expect(result.sections.map((section) => section.heading)).toEqual(["Prefix Sum"]);
+		expect(progress).toEqual([[1, 1]]);
+		expect(provider.lastSummaryInput?.sectionQuestions).toEqual(["Q:Prefix Sum"]);
+	});
+
+	it("does not call the provider for notes with no cue-worthy content", async () => {
+		const provider = mockProvider();
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: "# Empty parent\n## Empty child\n",
+			provider,
+			preset: "conceptual",
+		});
+		expect(provider.cueInputs).toEqual([]);
+		expect(provider.summaryCalls).toBe(0);
+		expect(result.sections).toEqual([]);
+		expect(result.summary).toBeNull();
+	});
+
 	it("caps whole-note context injected into each prompt (avoids context-overflow errors)", async () => {
 		const provider = mockProvider();
 		const big = "# H\n" + "x".repeat(50_000);

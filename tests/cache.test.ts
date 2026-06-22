@@ -12,7 +12,7 @@ import {
 	validateCache,
 	type NoteCache,
 } from "../src/cache";
-import { parseSections } from "../src/parser";
+import { cueEligibleSections, parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
 
 const NOTE = "# A\nalpha\n## B\nbeta";
@@ -83,6 +83,37 @@ describe("isStale", () => {
 		expect(
 			isStale(cache, parseSections("# A\nalpha\n## B\nbeta\n## C\ngamma"))
 		).toBe(true);
+	});
+
+	it("is not stale when the cache intentionally omits empty heading sections", () => {
+		const markdown = "# Empty parent\n## Prefix Sum\nactual notes";
+		const sections = cueEligibleSections(parseSections(markdown)).map((s) => ({
+			id: s.id,
+			heading: s.heading,
+			level: s.level,
+			lineNumber: s.lineNumber,
+			contentHash: s.contentHash,
+			keywords: ["prefix"],
+			question: "What does Prefix Sum explain?",
+			confidence: "high" as const,
+			rationale: null,
+			error: null,
+		}));
+		const cache = buildNoteCache({
+			result: {
+				sections,
+				summary: "summary",
+				learningObjective: null,
+				canceled: false,
+			},
+			provider: "ollama",
+			model: "llama3.1:8b",
+			preset: "conceptual",
+			generationMode: "whole-note-context",
+			noteModifiedAt: 1000,
+		});
+		expect(cache.sections.map((section) => section.heading)).toEqual(["Prefix Sum"]);
+		expect(isStale(cache, parseSections(markdown))).toBe(false);
 	});
 });
 

@@ -1,4 +1,4 @@
-import { parseSections } from "./parser";
+import { cueEligibleSections, parseSections } from "./parser";
 import type { AiProvider } from "./providers/types";
 import {
 	DEFAULT_CUE_GENERATION_OPTIONS,
@@ -143,7 +143,7 @@ export async function generateNote(
 	const wholeNoteContext = params.useWholeNoteContext
 		? clampText(markdown, maxContextChars)
 		: undefined;
-	const sections = parseSections(markdown);
+	const sections = cueEligibleSections(parseSections(markdown));
 	const total = sections.length;
 	const results: SectionResult[] = new Array(total);
 	let done = 0;
@@ -167,8 +167,9 @@ export async function generateNote(
 					maxContextChars,
 					signal,
 				});
+				const label = s.heading.trim() || "intro";
 				console.debug(
-					`CueCraft section "${s.heading}" ${result.error ? "failed" : "done"} (${((Date.now() - t0) / 1000).toFixed(1)}s)`
+					`CueCraft section "${label}" ${result.error ? "failed" : "done"} (${((Date.now() - t0) / 1000).toFixed(1)}s)`
 				);
 				results[start + offset] = result;
 				done++;
@@ -196,10 +197,13 @@ export async function generateNote(
 		};
 	}
 
-	if (options.autoSummary) {
+	if (options.autoSummary && completedResults.length) {
 		const questions = completedResults
 			.map((r) => r.question)
 			.filter((q): q is string => Boolean(q));
+		if (!questions.length) {
+			return { sections: completedResults, summary, learningObjective, canceled };
+		}
 		const t0 = Date.now();
 		try {
 			const sum = await provider.generateSummary(

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { confidenceSchema, type ValidationResult } from "./schemas";
-import type { Section } from "./parser";
+import { cueEligibleSections, type Section } from "./parser";
 import type { NoteGenerationResult } from "./generator";
 
 /**
@@ -164,9 +164,10 @@ export function loadCache(raw: unknown): NoteCache | null {
  * i.e. a section was added, removed, reordered, or edited (AC G2.1).
  */
 export function isStale(cache: NoteCache, currentSections: Section[]): boolean {
-	if (cache.sections.length !== currentSections.length) return true;
-	for (let i = 0; i < currentSections.length; i++) {
-		if (cache.sections[i].contentHash !== currentSections[i].contentHash) {
+	const eligibleSections = cueEligibleSections(currentSections);
+	if (cache.sections.length !== eligibleSections.length) return true;
+	for (let i = 0; i < eligibleSections.length; i++) {
+		if (cache.sections[i].contentHash !== eligibleSections[i].contentHash) {
 			return true;
 		}
 	}
@@ -184,7 +185,7 @@ export function staleSectionIds(
 	cache: NoteCache,
 	currentSections: Section[]
 ): string[] {
-	const current = new Map(currentSections.map((s) => [s.id, s]));
+	const current = new Map(cueEligibleSections(currentSections).map((s) => [s.id, s]));
 	const ids: string[] = [];
 	for (const cached of cache.sections) {
 		const live = current.get(cached.id);
