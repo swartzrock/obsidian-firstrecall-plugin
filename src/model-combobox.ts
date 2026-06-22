@@ -88,7 +88,7 @@ export function renderModelCombobox(opts: {
 	const listboxId = `${comboboxId}-list`;
 	const badgesForOption = opts.badgesForOption ?? (() => []);
 	let isOpen = false;
-	let activeIndex = 0;
+	let activeIndex = -1;
 	let committedModelId = opts.value.trim();
 	const suggestionsLabel = opts.suggestionsLabel ?? "model suggestions";
 	const pinnedOptionIds = opts.pinnedOptionIds ?? [];
@@ -192,10 +192,12 @@ export function renderModelCombobox(opts: {
 			return;
 		}
 
-		activeIndex = Math.max(
-			0,
-			Math.min(activeIndex, visibleOptions.length - 1)
-		);
+		if (activeIndex >= visibleOptions.length) {
+			activeIndex = visibleOptions.length - 1;
+		}
+		if (activeIndex < 0) {
+			inputEl.removeAttribute("aria-activedescendant");
+		}
 		for (const [index, option] of visibleOptions.entries()) {
 			const optionId = `${comboboxId}-option-${index}`;
 			const optionEl = listEl.createEl("button", {
@@ -251,18 +253,18 @@ export function renderModelCombobox(opts: {
 			return;
 		}
 		isOpen = true;
-		activeIndex = 0;
+		activeIndex = -1;
 		renderList();
 		inputEl.focus();
 	});
 	inputEl.addEventListener("focus", () => {
 		isOpen = true;
-		activeIndex = 0;
+		activeIndex = -1;
 		renderList();
 	});
 	inputEl.addEventListener("input", () => {
 		isOpen = true;
-		activeIndex = 0;
+		activeIndex = -1;
 		renderList();
 	});
 	inputEl.addEventListener("keydown", (event) => {
@@ -273,7 +275,9 @@ export function renderModelCombobox(opts: {
 			activeIndex =
 				visibleOptions.length === 0
 					? 0
-					: (activeIndex + 1) % visibleOptions.length;
+					: activeIndex < 0
+						? 0
+						: (activeIndex + 1) % visibleOptions.length;
 			renderList();
 			return;
 		}
@@ -283,8 +287,10 @@ export function renderModelCombobox(opts: {
 			activeIndex =
 				visibleOptions.length === 0
 					? 0
-					: (activeIndex - 1 + visibleOptions.length) %
-						visibleOptions.length;
+					: activeIndex < 0
+						? visibleOptions.length - 1
+						: (activeIndex - 1 + visibleOptions.length) %
+							visibleOptions.length;
 			renderList();
 			return;
 		}
