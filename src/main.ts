@@ -73,9 +73,12 @@ import { statusLabel, type CueStatus } from "./status";
 import {
 	findMaintainedStudyAreaForPath,
 	isDescendantPath,
+	isEntireVaultStudyArea,
 	loadStudyAreas,
 	normalizeVaultPath,
 	planStudyAreaGeneration,
+	studyAreaNameForParentPath,
+	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
 	type StudyArea,
 	type StudyAreaGenerationPlan,
@@ -1179,17 +1182,30 @@ export default class CueCraftPlugin extends Plugin {
 
 	async createStudyArea(parentPath: string): Promise<StudyArea | null> {
 		const normalized = normalizeVaultPath(parentPath);
-		if (!normalized) {
-			new Notice("CueCraft: enter a parent folder path first.");
+		if (
+			this.settings.studyAreas.some(
+				(area) => normalizeVaultPath(area.parentPath) === normalized
+			)
+		) {
+			new Notice("CueCraft: that study area already exists.");
 			return null;
 		}
-		if (this.settings.studyAreas.some((area) => area.parentPath === normalized)) {
-			new Notice("CueCraft: that study area already exists.");
+		if (!normalized && this.settings.studyAreas.length) {
+			new Notice(
+				"CueCraft: remove folder study areas before using Entire vault."
+			);
+			return null;
+		}
+		if (
+			normalized &&
+			this.settings.studyAreas.some((area) => isEntireVaultStudyArea(area))
+		) {
+			new Notice("CueCraft: remove Entire vault before adding folder study areas.");
 			return null;
 		}
 		const area: StudyArea = {
 			id: `study-area-${Date.now().toString(36)}`,
-			name: normalized.split("/").slice(-1)[0] ?? normalized,
+			name: studyAreaNameForParentPath(normalized),
 			parentPath: normalized,
 			excludedPaths: [],
 			maintenanceMode: "paused",
@@ -1735,7 +1751,7 @@ class StudyAreaSuggestModal extends FuzzySuggestModal<StudyArea> {
 	}
 
 	getItemText(item: StudyArea): string {
-		return `${item.name} - ${item.parentPath}`;
+		return `${item.name} - ${studyAreaScopeLabel(item.parentPath)}`;
 	}
 
 	onChooseItem(item: StudyArea): void {

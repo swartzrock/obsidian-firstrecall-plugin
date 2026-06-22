@@ -4,15 +4,19 @@ import { parseSections } from "../src/parser";
 import {
 	DEFAULT_STUDY_AREAS,
 	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
+	ENTIRE_VAULT_STUDY_AREA_LABEL,
 	classifyStudyAreaNote,
 	eligibleStudyAreaPaths,
 	findMaintainedStudyAreaForPath,
 	formatStudyAreaReadinessCounts,
+	isEntireVaultStudyArea,
 	isExcludedPath,
 	isStudyAreaPath,
 	loadStudyAreas,
 	planStudyAreaGeneration,
+	studyAreaNameForParentPath,
 	studyAreaMaintenanceLabel,
+	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
 	type StudyArea,
 } from "../src/study-area";
@@ -29,6 +33,8 @@ describe("study area defaults", () => {
 
 describe("study area labels", () => {
 	it("uses user-facing automation and count copy", () => {
+		expect(studyAreaScopeLabel("")).toBe(ENTIRE_VAULT_STUDY_AREA_LABEL);
+		expect(studyAreaNameForParentPath("")).toBe(ENTIRE_VAULT_STUDY_AREA_LABEL);
 		expect(studyAreaMaintenanceLabel("maintain-on-save")).toBe(
 			"Auto-updates on save"
 		);
@@ -95,6 +101,17 @@ describe("study area path matching", () => {
 		expect(isStudyAreaPath(studyArea, "Courses/Biology.md")).toBe(false);
 		expect(isStudyAreaPath(studyArea, "Courses/Biology Lab/Week 1.md")).toBe(false);
 		expect(isStudyAreaPath(studyArea, "Courses/Biology/asset.pdf")).toBe(false);
+	});
+
+	it("can use the entire vault as a study area", () => {
+		const studyArea = area({
+			name: ENTIRE_VAULT_STUDY_AREA_LABEL,
+			parentPath: "",
+		});
+		expect(isEntireVaultStudyArea(studyArea)).toBe(true);
+		expect(isStudyAreaPath(studyArea, "Root note.md")).toBe(true);
+		expect(isStudyAreaPath(studyArea, "Courses/Biology/Week 1.md")).toBe(true);
+		expect(isStudyAreaPath(studyArea, "image.png")).toBe(false);
 	});
 
 	it("uses explicit exclusions for notes and subfolders", () => {
@@ -416,6 +433,28 @@ describe("loadStudyAreas", () => {
 				excludedPaths: ["Courses/Biology/Drafts"],
 				maintenanceMode: "paused",
 				createdAt: "1970-01-01T00:00:00.000Z",
+			},
+		]);
+	});
+
+	it("preserves an entire-vault study area with a blank parent path", () => {
+		expect(loadStudyAreas([
+			{
+				id: "vault",
+				name: "",
+				parentPath: "",
+				excludedPaths: [],
+				maintenanceMode: "maintain-on-save",
+				createdAt: "2026-06-21T00:00:00.000Z",
+			},
+		])).toEqual([
+			{
+				id: "vault",
+				name: ENTIRE_VAULT_STUDY_AREA_LABEL,
+				parentPath: "",
+				excludedPaths: [],
+				maintenanceMode: "maintain-on-save",
+				createdAt: "2026-06-21T00:00:00.000Z",
 			},
 		]);
 	});

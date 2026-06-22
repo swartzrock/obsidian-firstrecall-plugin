@@ -69,6 +69,7 @@ export interface StudyAreaRunSummary {
 
 export const DEFAULT_STUDY_AREA_AUTOMATION_ENABLED = false;
 export const DEFAULT_STUDY_AREAS: StudyArea[] = [];
+export const ENTIRE_VAULT_STUDY_AREA_LABEL = "Entire vault";
 
 const MAINTENANCE_MODES = new Set<StudyAreaMaintenanceMode>([
 	"paused",
@@ -81,6 +82,23 @@ export function normalizeVaultPath(path: string): string {
 
 export function isMarkdownPath(path: string): boolean {
 	return normalizeVaultPath(path).toLowerCase().endsWith(".md");
+}
+
+export function isEntireVaultStudyArea(
+	area: Pick<StudyArea, "parentPath">
+): boolean {
+	return normalizeVaultPath(area.parentPath) === "";
+}
+
+export function studyAreaScopeLabel(parentPath: string): string {
+	return normalizeVaultPath(parentPath) || ENTIRE_VAULT_STUDY_AREA_LABEL;
+}
+
+export function studyAreaNameForParentPath(parentPath: string): string {
+	const normalized = normalizeVaultPath(parentPath);
+	return normalized
+		? normalized.split("/").slice(-1)[0] ?? normalized
+		: ENTIRE_VAULT_STUDY_AREA_LABEL;
 }
 
 export function studyAreaMaintenanceLabel(
@@ -239,15 +257,12 @@ export function loadStudyAreas(raw: unknown): StudyArea[] {
 		if (!item || typeof item !== "object") return [];
 		const candidate = item as Record<string, unknown>;
 		const id = typeof candidate.id === "string" ? candidate.id.trim() : "";
-		const parentPath =
-			typeof candidate.parentPath === "string"
-				? normalizeVaultPath(candidate.parentPath)
-				: "";
-		if (!id || !parentPath) return [];
+		if (!id || typeof candidate.parentPath !== "string") return [];
+		const parentPath = normalizeVaultPath(candidate.parentPath);
 		const name =
 			typeof candidate.name === "string" && candidate.name.trim()
 				? candidate.name.trim()
-				: parentPath.split("/").slice(-1)[0] ?? parentPath;
+				: studyAreaNameForParentPath(parentPath);
 		const rawExcluded = Array.isArray(candidate.excludedPaths)
 			? candidate.excludedPaths
 			: [];

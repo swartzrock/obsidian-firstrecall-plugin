@@ -81,6 +81,7 @@ export function renderModelCombobox(opts: {
 	onCommit: (value: string) => void | Promise<void>;
 	renderToggleIcon?: (containerEl: HTMLElement) => void;
 	badgesForOption?: (option: ModelOption) => string[];
+	pinnedOptionIds?: string[];
 	suggestionsLabel?: string;
 }): void {
 	const comboboxId = `cuecraft-model-combobox-${++nextComboboxId}`;
@@ -90,6 +91,10 @@ export function renderModelCombobox(opts: {
 	let activeIndex = 0;
 	let committedModelId = opts.value.trim();
 	const suggestionsLabel = opts.suggestionsLabel ?? "model suggestions";
+	const pinnedOptionIds = opts.pinnedOptionIds ?? [];
+	const pinnedRank = new Map(
+		pinnedOptionIds.map((id, index) => [id.trim(), index])
+	);
 
 	const rootEl = opts.containerEl.createDiv({
 		cls: "cuecraft-model-combobox",
@@ -124,14 +129,24 @@ export function renderModelCombobox(opts: {
 		attr: { id: listboxId, role: "listbox" },
 	});
 
-	const matches = () =>
-		buildModelComboboxSuggestions({
+	const matches = () => {
+		const suggestions = buildModelComboboxSuggestions({
 			options: opts.options,
 			selectedModelId: committedModelId,
 			query: inputEl.value,
 			source: opts.source,
 			badgesForOption,
 		});
+		if (!pinnedRank.size) return suggestions;
+		return [...suggestions].sort((a, b) => {
+			const aRank = pinnedRank.get(a.id);
+			const bRank = pinnedRank.get(b.id);
+			if (aRank != null && bRank != null) return aRank - bRank;
+			if (aRank != null) return -1;
+			if (bRank != null) return 1;
+			return 0;
+		});
+	};
 
 	const closeList = () => {
 		isOpen = false;
