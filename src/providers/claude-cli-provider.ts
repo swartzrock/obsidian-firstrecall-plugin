@@ -108,6 +108,26 @@ function textFromContent(value: unknown): string {
 		.join("\n");
 }
 
+function looksLikeJson(value: string): boolean {
+	return value.startsWith("{") || value.startsWith("[");
+}
+
+function normalizeClaudeText(value: string): string {
+	const trimmed = value.trim();
+	const quote = trimmed[0];
+	if (
+		trimmed.length < 2 ||
+		(quote !== "'" && quote !== '"') ||
+		trimmed[trimmed.length - 1] !== quote
+	) {
+		return value;
+	}
+	const inner = trimmed.slice(1, -1).trim();
+	if (looksLikeJson(inner)) return inner;
+	const unescaped = inner.replace(/\\"/g, '"');
+	return looksLikeJson(unescaped) ? unescaped : value;
+}
+
 export function extractClaudeCliOutput(stdout: string): string {
 	const trimmed = stdout.trim();
 	if (!trimmed) return "";
@@ -116,18 +136,20 @@ export function extractClaudeCliOutput(stdout: string): string {
 		const record = asRecord(parsed);
 		if (!record) return stdout;
 		const result = record.result;
-		if (typeof result === "string") return result;
+		if (typeof result === "string") return normalizeClaudeText(result);
 		if (result && typeof result === "object") return JSON.stringify(result);
 		for (const key of ["output", "response", "text", "message"]) {
 			const value = record[key];
-			if (typeof value === "string" && value.trim()) return value;
+			if (typeof value === "string" && value.trim()) {
+				return normalizeClaudeText(value);
+			}
 		}
 		const content = textFromContent(record.content);
-		if (content.trim()) return content;
+		if (content.trim()) return normalizeClaudeText(content);
 	} catch {
 		// The CLI may already have printed the model's raw final response.
 	}
-	return stdout;
+	return normalizeClaudeText(stdout);
 }
 
 function isAuthMissing(output: string): boolean {
@@ -145,7 +167,6 @@ export class ClaudeCliProvider implements AiProvider {
 	readonly label = "Claude CLI";
 	readonly requiresNetwork = true;
 	readonly requiresDownload = false;
-	readonly sectionConcurrencyLimit = 1;
 
 	private readonly command: string;
 	private readonly model: string;
@@ -305,7 +326,9 @@ export class ClaudeCliProvider implements AiProvider {
 			if (error instanceof ProviderError) throw error;
 			throw new ProviderError(`Claude CLI request failed: ${message}`);
 		}
-		const output = extractClaudeCliOutput(result.stdout);
+		const stdout = extractClaudeCliOutput(result.stdout);
+		const stderr = extractClaudeCliOutput(result.stderr);
+		const output = stdout.trim() ? stdout : stderr;
 		if (
 			isAuthMissing(result.stdout) ||
 			isAuthMissing(result.stderr) ||

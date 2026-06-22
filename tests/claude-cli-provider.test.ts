@@ -54,6 +54,14 @@ describe("extractClaudeCliOutput", () => {
 			)
 		).toBe("{\"summary\":\"S\"}");
 	});
+
+	it("unwraps single-quoted JSON result strings", () => {
+		expect(
+			extractClaudeCliOutput(
+				JSON.stringify({ type: "result", result: "'{\"ok\":true}'" })
+			)
+		).toBe("{\"ok\":true}");
+	});
 });
 
 describe("ClaudeCliProvider", () => {
@@ -109,6 +117,30 @@ describe("ClaudeCliProvider", () => {
 			])
 		);
 		expect(run.mock.calls[0][0].stdin).toContain("Section heading: X");
+	});
+
+	it("uses stderr JSON when Claude leaves stdout empty", async () => {
+		const { provider } = makeProvider([
+			result(
+				"",
+				JSON.stringify({
+					type: "result",
+					result: {
+						question: "What is X?",
+						keywords: ["a", "b"],
+						confidence: "high",
+					},
+				})
+			),
+		]);
+
+		const cue = await provider.generateCue({
+			heading: "X",
+			content: "body",
+			preset: "conceptual",
+		});
+
+		expect(cue.question).toBe("What is X?");
 	});
 
 	it("repairs malformed cue output once", async () => {
@@ -226,6 +258,19 @@ describe("ClaudeCliProvider", () => {
 		expect(status).toEqual({
 			ok: true,
 			message: "Connected to Claude CLI (sonnet).",
+		});
+	});
+
+	it("accepts single-quoted JSON from the connection probe", async () => {
+		const { provider } = makeProvider([
+			result(JSON.stringify({ type: "result", result: "'{\"ok\":true}'" })),
+		]);
+
+		const status = await provider.testConnection();
+
+		expect(status).toEqual({
+			ok: true,
+			message: "Connected to Claude CLI.",
 		});
 	});
 

@@ -47,23 +47,23 @@ describe("makeProviderFromSettings", () => {
 		).toBe(expectedId);
 	});
 
-	it("creates the Codex CLI provider with a sequential concurrency cap", () => {
+	it("creates the Codex CLI provider without a sequential concurrency cap", () => {
 		const provider = makeProviderFromSettings(
 			settings({ provider: "codex-cli" }),
 			{ fetchImpl, http }
 		);
 		expect(provider).toBeInstanceOf(CodexCliProvider);
 		expect(provider.id).toBe("codex-cli");
-		expect(provider.sectionConcurrencyLimit).toBe(1);
+		expect(provider.sectionConcurrencyLimit).toBeUndefined();
 	});
 
-	it("creates the Claude CLI provider with a sequential concurrency cap", () => {
+	it("creates the Claude CLI provider without a sequential concurrency cap", () => {
 		const provider = makeProviderFromSettings(
 			settings({ provider: "claude-cli" }),
 			{ fetchImpl, http }
 		);
 		expect(provider).toBeInstanceOf(ClaudeCliProvider);
 		expect(provider.id).toBe("claude-cli");
-		expect(provider.sectionConcurrencyLimit).toBe(1);
+		expect(provider.sectionConcurrencyLimit).toBeUndefined();
 	});
 });
