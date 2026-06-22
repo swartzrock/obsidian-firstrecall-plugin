@@ -252,6 +252,7 @@ describe("study area generation planning", () => {
 				action: "generate-note",
 				sectionIds: [],
 				readiness: "uncued",
+				sectionCount: 2,
 			},
 		]);
 	});
