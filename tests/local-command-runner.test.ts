@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import {
+	buildLocalCliPath,
 	LocalCommandRunner,
 	type LocalProcess,
 	type LocalProcessSpawner,
@@ -45,10 +46,35 @@ function makeRunner(process: FakeProcess): {
 		calls.push([command, args, options]);
 		return process;
 	};
-	return { runner: new LocalCommandRunner(spawner), calls };
+	return { runner: new LocalCommandRunner(spawner, { PATH: "/usr/bin" }), calls };
 }
 
 describe("LocalCommandRunner", () => {
+	it("adds common macOS CLI locations for bare commands", async () => {
+		const process = new FakeProcess();
+		const { runner, calls } = makeRunner(process);
+		const result = runner.run({ command: "claude" });
+
+		process.close(0);
+
+		await expect(result).resolves.toMatchObject({ exitCode: 0 });
+		expect(calls[0][2].env?.PATH).toBe(
+			buildLocalCliPath("/usr/bin")
+		);
+		expect(calls[0][2].env?.PATH).toContain("/opt/homebrew/bin");
+	});
+
+	it("leaves absolute command paths on the configured environment PATH", async () => {
+		const process = new FakeProcess();
+		const { runner, calls } = makeRunner(process);
+		const result = runner.run({ command: "/opt/homebrew/bin/claude" });
+
+		process.close(0);
+
+		await expect(result).resolves.toMatchObject({ exitCode: 0 });
+		expect(calls[0][2].env?.PATH).toBe("/usr/bin");
+	});
+
 	it("returns stdout, stderr, and exit status for a successful process", async () => {
 		const process = new FakeProcess();
 		const { runner } = makeRunner(process);
@@ -132,7 +158,13 @@ describe("LocalCommandRunner", () => {
 
 	it("maps missing commands to setup guidance", async () => {
 		const process = new FakeProcess();
-		const { runner } = makeRunner(process);
+		const warn = vi.fn();
+		const calls: Array<Parameters<LocalProcessSpawner>> = [];
+		const spawner: LocalProcessSpawner = (command, args, options) => {
+			calls.push([command, args, options]);
+			return process;
+		};
+		const runner = new LocalCommandRunner(spawner, { PATH: "/usr/bin" }, { warn });
 		const result = runner.run({ command: "missing-codex" });
 
 		process.fail(
@@ -143,6 +175,14 @@ describe("LocalCommandRunner", () => {
 
 		await expect(result).rejects.toThrow(
 			/missing-codex was not found.*command path/i
+		);
+		expect(warn).toHaveBeenCalledWith(
+			"CueCraft local CLI failed to start",
+			expect.objectContaining({
+				command: "missing-codex",
+				code: "ENOENT",
+				PATH: calls[0][2].env?.PATH,
+			})
 		);
 	});
 
@@ -165,7 +205,11 @@ describe("LocalCommandRunner", () => {
 			[
 				"claude",
 				["--model", model],
-				{ cwd: "/tmp/cuecraft-empty", shell: false },
+				{
+					cwd: "/tmp/cuecraft-empty",
+					env: { PATH: buildLocalCliPath("/usr/bin") },
+					shell: false,
+				},
 			],
 		]);
 		expect(process.stdinText).toBe(prompt);

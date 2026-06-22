@@ -104,6 +104,19 @@
 	padding-right: 0;
 }
 
+.cuecraft-settings-flow .cuecraft-cli-text-setting .setting-item-info {
+	flex: 1 1 320px;
+}
+
+.cuecraft-settings-flow .cuecraft-cli-text-setting .setting-item-control {
+	flex: 1 1 520px;
+}
+
+.cuecraft-settings-flow .cuecraft-cli-text-input {
+	width: 520px;
+	max-width: 100%;
+}
+
 .cuecraft-settings-flow-heading {
 	margin: 12px 0 6px;
 }

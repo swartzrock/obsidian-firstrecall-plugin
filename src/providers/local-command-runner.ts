@@ -4,6 +4,14 @@ import { ProviderError } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 60_000;
 const STDERR_EXCERPT_CHARS = 400;
+const COMMON_CLI_PATHS = [
+	"/opt/homebrew/bin",
+	"/usr/local/bin",
+	"/usr/bin",
+	"/bin",
+	"/usr/sbin",
+	"/sbin",
+];
 
 export interface LocalCommandRequest {
 	command: string;
@@ -32,16 +40,19 @@ export interface LocalProcess {
 export type LocalProcessSpawner = (
 	command: string,
 	args: string[],
-	options: { cwd?: string; shell: false }
+	options: { cwd?: string; shell: false; env?: NodeJS.ProcessEnv }
 ) => LocalProcess;
+
+type LocalCommandLogger = Pick<Console, "warn">;
 
 function defaultSpawner(
 	command: string,
 	args: string[],
-	options: { cwd?: string; shell: false }
+	options: { cwd?: string; shell: false; env?: NodeJS.ProcessEnv }
 ): LocalProcess {
 	return spawn(command, args, {
 		cwd: options.cwd,
+		env: options.env,
 		shell: options.shell,
 		stdio: ["pipe", "pipe", "pipe"],
 	}) as ChildProcessWithoutNullStreams;
@@ -76,12 +87,42 @@ function errorMessageForSpawn(command: string, error: NodeJS.ErrnoException): st
 		: `CueCraft: ${commandLabel(command)} failed to start.`;
 }
 
+function isBareCommand(command: string): boolean {
+	return !command.includes("/") && !command.includes("\\");
+}
+
+export function buildLocalCliPath(basePath = ""): string {
+	const separator = process.platform === "win32" ? ";" : ":";
+	const entries = basePath
+		.split(separator)
+		.map((entry) => entry.trim())
+		.filter(Boolean);
+	const seen = new Set(entries);
+	for (const entry of COMMON_CLI_PATHS) {
+		if (!seen.has(entry)) {
+			seen.add(entry);
+			entries.push(entry);
+		}
+	}
+	return entries.join(separator);
+}
+
 export class LocalCommandRunner {
-	constructor(private readonly spawnProcess: LocalProcessSpawner = defaultSpawner) {}
+	constructor(
+		private readonly spawnProcess: LocalProcessSpawner = defaultSpawner,
+		private readonly env: NodeJS.ProcessEnv = process.env,
+		private readonly logger: LocalCommandLogger = console
+	) {}
 
 	run(request: LocalCommandRequest): Promise<LocalCommandResult> {
 		const args = request.args ?? [];
 		const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+		const commandEnv: NodeJS.ProcessEnv = {
+			...this.env,
+			PATH: isBareCommand(request.command)
+				? buildLocalCliPath(this.env.PATH ?? "")
+				: this.env.PATH,
+		};
 		if (request.signal?.aborted) {
 			return Promise.reject(
 				new ProviderError(`CueCraft: ${commandLabel(request.command)} was cancelled.`)
@@ -91,6 +132,7 @@ export class LocalCommandRunner {
 		return new Promise((resolve, reject) => {
 			const child = this.spawnProcess(request.command, args, {
 				cwd: request.cwd,
+				env: commandEnv,
 				shell: false,
 			});
 			let stdout = "";
@@ -134,7 +176,14 @@ export class LocalCommandRunner {
 			});
 			child.once("error", (error) => {
 				settle(
-					() => reject(new ProviderError(errorMessageForSpawn(request.command, error))),
+					() => {
+						this.logger.warn("CueCraft local CLI failed to start", {
+							command: request.command,
+							code: error.code,
+							PATH: commandEnv.PATH ?? "",
+						});
+						reject(new ProviderError(errorMessageForSpawn(request.command, error)));
+					},
 					removeAbortListener
 				);
 			});
