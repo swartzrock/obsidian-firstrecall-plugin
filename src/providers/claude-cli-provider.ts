@@ -31,6 +31,8 @@ const CLAUDE_CLI_ENV: NodeJS.ProcessEnv = {
 	CLAUDE_CODE_SKIP_PROMPT_HISTORY: "1",
 	DISABLE_AUTOUPDATER: "1",
 };
+const CLAUDE_CLI_AUTH_MESSAGE =
+	"Claude CLI is not authenticated. Run `claude auth login` in your terminal, then try again.";
 
 const PRESET_GUIDANCE: Record<string, string> = {
 	conceptual: "Favor a single conceptual question that tests understanding, not trivia.",
@@ -129,8 +131,12 @@ export function extractClaudeCliOutput(stdout: string): string {
 }
 
 function isAuthMissing(output: string): boolean {
-	return /not\s+(logged|authenticated)|unauthenticated|login required|no active account/i.test(
-		output
+	const normalized = output.toLowerCase();
+	return (
+		/not\s+(logged|authenticated)|unauthenticated|login required|no active account|failed to authenticate|invalid authentication credentials/i.test(
+			output
+		) ||
+		(normalized.includes("401") && normalized.includes("authentic"))
 	);
 }
 
@@ -180,7 +186,7 @@ export class ClaudeCliProvider implements AiProvider {
 			if (isAuthMissing(message)) {
 				return {
 					ok: false,
-					message: "Claude CLI is not logged in. Run `claude login` and try again.",
+					message: CLAUDE_CLI_AUTH_MESSAGE,
 				};
 			}
 			return { ok: false, message };
@@ -292,11 +298,21 @@ export class ClaudeCliProvider implements AiProvider {
 		try {
 			result = await this.runner.run(request);
 		} catch (error) {
-			if (error instanceof ProviderError) throw error;
 			const message = error instanceof Error ? error.message : String(error);
+			if (isAuthMissing(message)) {
+				throw new ProviderError(CLAUDE_CLI_AUTH_MESSAGE);
+			}
+			if (error instanceof ProviderError) throw error;
 			throw new ProviderError(`Claude CLI request failed: ${message}`);
 		}
 		const output = extractClaudeCliOutput(result.stdout);
+		if (
+			isAuthMissing(result.stdout) ||
+			isAuthMissing(result.stderr) ||
+			isAuthMissing(output)
+		) {
+			throw new ProviderError(CLAUDE_CLI_AUTH_MESSAGE);
+		}
 		if (!output.trim()) {
 			throw new ProviderError("Claude CLI returned an empty response.");
 		}

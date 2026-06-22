@@ -183,7 +183,37 @@ describe("ClaudeCliProvider", () => {
 		const status = await provider.testConnection();
 
 		expect(status.ok).toBe(false);
-		expect(status.message).toMatch(/claude login/i);
+		expect(status.message).toMatch(/claude auth login/i);
+	});
+
+	it("reports Claude CLI 401 auth failures as setup guidance", async () => {
+		const { provider } = makeProvider([
+			new ProviderError(
+				'CueCraft: claude exited with code 1: {"type":"result","is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 Invalid authentication credentials"}'
+			),
+		]);
+
+		const status = await provider.testConnection();
+
+		expect(status).toEqual({
+			ok: false,
+			message:
+				"Claude CLI is not authenticated. Run `claude auth login` in your terminal, then try again.",
+		});
+	});
+
+	it("maps Claude CLI generation auth failures to setup guidance", async () => {
+		const { provider } = makeProvider([
+			new ProviderError(
+				'CueCraft: claude exited with code 1: {"type":"result","is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 Invalid authentication credentials"}'
+			),
+		]);
+
+		await expect(
+			provider.generateCue({ heading: "H", content: "c", preset: "conceptual" })
+		).rejects.toThrow(
+			"Claude CLI is not authenticated. Run `claude auth login` in your terminal, then try again."
+		);
 	});
 
 	it("reports successful Claude CLI status", async () => {
