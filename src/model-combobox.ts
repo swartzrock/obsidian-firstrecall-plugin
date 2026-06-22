@@ -118,7 +118,6 @@ export function renderModelCombobox(opts: {
 		attr: {
 			type: "button",
 			"aria-label": `Show ${suggestionsLabel}`,
-			title: `Show ${suggestionsLabel}`,
 			tabindex: "-1",
 		},
 	});
@@ -153,7 +152,6 @@ export function renderModelCombobox(opts: {
 		inputEl.setAttr("aria-expanded", "false");
 		inputEl.removeAttribute("aria-activedescendant");
 		toggleEl.setAttr("aria-label", `Show ${suggestionsLabel}`);
-		toggleEl.setAttr("title", `Show ${suggestionsLabel}`);
 		rootEl.removeClass("cuecraft-model-combobox-open");
 		listEl.addClass("cuecraft-model-combobox-list-hidden");
 	};
@@ -185,7 +183,6 @@ export function renderModelCombobox(opts: {
 		listEl.removeClass("cuecraft-model-combobox-list-hidden");
 		inputEl.setAttr("aria-expanded", "true");
 		toggleEl.setAttr("aria-label", `Hide ${suggestionsLabel}`);
-		toggleEl.setAttr("title", `Hide ${suggestionsLabel}`);
 		if (visibleOptions.length === 0) {
 			listEl.createDiv({
 				cls: "cuecraft-model-combobox-empty",
