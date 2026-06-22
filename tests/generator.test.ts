@@ -164,7 +164,7 @@ describe("generateNote", () => {
 		expect(summarySpy).not.toHaveBeenCalled();
 	});
 
-	it("handles a note with no headings as a single section", async () => {
+	it("does not generate a title cue for notes with no headings", async () => {
 		const provider = mockProvider();
 		const result = await generateNote({
 			noteTitle: "T",
@@ -172,7 +172,9 @@ describe("generateNote", () => {
 			provider,
 			preset: "conceptual",
 		});
-		expect(result.sections).toHaveLength(1);
+		expect(provider.cueInputs).toEqual([]);
+		expect(provider.summaryCalls).toBe(0);
+		expect(result.sections).toEqual([]);
 	});
 
 	it("skips heading-only sections when generating cues", async () => {

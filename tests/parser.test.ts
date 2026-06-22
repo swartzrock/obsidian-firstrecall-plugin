@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { parseSections, lightHash } from "../src/parser";
+import {
+	cueEligibleSections,
+	isCueEligibleSection,
+	parseSections,
+	lightHash,
+} from "../src/parser";
 
 describe("parseSections", () => {
 	it("creates one section per heading (B1.1)", () => {
@@ -55,6 +60,21 @@ describe("parseSections", () => {
 	it("strips closing hashes in ATX headings", () => {
 		const s = parseSections("## Heading ##\nx");
 		expect(s[0].heading).toBe("Heading");
+	});
+
+	it("marks only headed sections with body text as cue eligible", () => {
+		const sections = parseSections(
+			"intro under title\n\n# Empty parent\n## Prefix Sum\nactual notes"
+		);
+		expect(sections.map((section) => section.heading)).toEqual([
+			"",
+			"Empty parent",
+			"Prefix Sum",
+		]);
+		expect(sections.map(isCueEligibleSection)).toEqual([false, false, true]);
+		expect(cueEligibleSections(sections).map((section) => section.heading)).toEqual([
+			"Prefix Sum",
+		]);
 	});
 });
 

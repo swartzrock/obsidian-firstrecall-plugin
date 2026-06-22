@@ -71,6 +71,7 @@ import {
 } from "./cornell";
 import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
+import { statusLabel, type CueStatus } from "./status";
 import {
 	findMaintainedStudyAreaForPath,
 	isDescendantPath,
@@ -84,9 +85,6 @@ import {
 	type StudyAreaQueueItem,
 	type StudyAreaRunSummary,
 } from "./study-area";
-
-/** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
-type CueStatus = "setup" | "ready" | "generating" | "stale" | "study" | "hidden";
 
 interface PluginData {
 	settings: CueCraftSettings;
@@ -378,7 +376,7 @@ export default class CueCraftPlugin extends Plugin {
 		const label =
 			status === "generating" && progress
 				? `CueCraft: generating ${progress.done}/${progress.total}${unit}`
-				: `CueCraft: ${status}`;
+				: `CueCraft: ${statusLabel(status)}`;
 		this.statusBarEl.setText(label);
 		this.statusBarEl.dataset.status = status;
 		this.statusBarEl.style.cursor =

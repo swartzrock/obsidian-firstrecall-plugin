@@ -145,11 +145,13 @@ export function parseSections(markdown: string): Section[] {
 	return sections;
 }
 
-export function isCueEligibleSection(section: Pick<Section, "content">): boolean {
-	return section.content.trim().length > 0;
+export function isCueEligibleSection(
+	section: Pick<Section, "heading" | "content">
+): boolean {
+	return section.heading.trim().length > 0 && section.content.trim().length > 0;
 }
 
-export function cueEligibleSections<T extends Pick<Section, "content">>(
+export function cueEligibleSections<T extends Pick<Section, "heading" | "content">>(
 	sections: readonly T[]
 ): T[] {
 	return sections.filter(isCueEligibleSection);
