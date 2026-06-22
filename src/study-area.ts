@@ -46,6 +46,7 @@ export interface StudyAreaQueueItem {
 	action: StudyAreaQueueAction;
 	sectionIds: string[];
 	readiness: StudyAreaReadiness;
+	sectionCount: number;
 }
 
 export type StudyAreaReadinessCounts = Record<StudyAreaReadiness, number>;
@@ -246,6 +247,7 @@ function planQueueItem(
 			action: "generate-note",
 			sectionIds: [],
 			readiness,
+			sectionCount: note.currentSections.length,
 		};
 	}
 	if (readiness === "stale" && mode !== "retry-failed" && note.cache) {
@@ -253,7 +255,14 @@ function planQueueItem(
 		const action = canRefreshStaleSections(note.cache, note.currentSections)
 			? "refresh-stale-sections"
 			: "generate-note";
-		return { path: note.path, action, sectionIds, readiness };
+		return {
+			path: note.path,
+			action,
+			sectionIds,
+			readiness,
+			sectionCount:
+				action === "generate-note" ? note.currentSections.length : sectionIds.length,
+		};
 	}
 	if (readiness === "failed" && note.cache) {
 		const sectionIds = failedSectionIds(note.cache, note.currentSections);
@@ -263,6 +272,7 @@ function planQueueItem(
 			action: "retry-failed-sections",
 			sectionIds,
 			readiness,
+			sectionCount: sectionIds.length,
 		};
 	}
 	return null;

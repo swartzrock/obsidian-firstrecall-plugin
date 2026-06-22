@@ -359,11 +359,16 @@ export default class CueCraftPlugin extends Plugin {
 		return this.isConfigured();
 	}
 
-	private setStatus(status: CueStatus, progress?: { done: number; total: number }): void {
+	private setStatus(
+		status: CueStatus,
+		progress?: { done: number; total: number; unit?: string }
+	): void {
 		if (!this.statusBarEl) return;
+		const unit =
+			progress?.unit ? ` ${progress.unit}${progress.total === 1 ? "" : "s"}` : "";
 		const label =
 			status === "generating" && progress
-				? `CueCraft: generating ${progress.done}/${progress.total}`
+				? `CueCraft: generating ${progress.done}/${progress.total}${unit}`
 				: `CueCraft: ${status}`;
 		this.statusBarEl.setText(label);
 		this.statusBarEl.dataset.status = status;
@@ -1166,7 +1171,25 @@ export default class CueCraftPlugin extends Plugin {
 		const provider = this.makeProvider();
 		const completed: string[] = [];
 		const failed: string[] = [];
-		this.setStatus("generating", { done: 0, total: plan.items.length });
+		const totalSections = plan.items.reduce(
+			(total, item) => total + item.sectionCount,
+			0
+		);
+		let completedSections = 0;
+		const advanceSections = (count: number): void => {
+			if (count <= 0) return;
+			completedSections = Math.min(totalSections, completedSections + count);
+			this.setStatus("generating", {
+				done: completedSections,
+				total: totalSections,
+				unit: "section",
+			});
+		};
+		this.setStatus("generating", {
+			done: 0,
+			total: totalSections,
+			unit: "section",
+		});
 		let summary: StudyAreaRunSummary | null = null;
 
 		try {
@@ -1175,20 +1198,25 @@ export default class CueCraftPlugin extends Plugin {
 				const file = this.app.vault.getAbstractFileByPath(item.path);
 				if (!(file instanceof TFile)) {
 					failed.push(item.path);
+					advanceSections(item.sectionCount);
 					continue;
 				}
+				let itemSectionsDone = 0;
 				const result = await this.runStudyAreaQueueItem(
 					file,
 					item,
 					provider,
-					controller
+					controller,
+					(count) => {
+						itemSectionsDone += count;
+						advanceSections(count);
+					}
 				);
 				if (result === "completed") completed.push(item.path);
 				if (result === "failed") failed.push(item.path);
-				this.setStatus("generating", {
-					done: completed.length + failed.length,
-					total: plan.items.length,
-				});
+				if (result !== "canceled" && itemSectionsDone < item.sectionCount) {
+					advanceSections(item.sectionCount - itemSectionsDone);
+				}
 			}
 		} catch (e) {
 			console.error("CueCraft study area run failed", e);
@@ -1236,10 +1264,12 @@ export default class CueCraftPlugin extends Plugin {
 		file: TFile,
 		item: StudyAreaQueueItem,
 		provider: AiProvider,
-		controller: AbortController
+		controller: AbortController,
+		onProgress?: (completedSections: number) => void
 	): Promise<"completed" | "failed" | "canceled"> {
 		const markdown = await this.app.vault.cachedRead(file);
 		if (item.action === "generate-note") {
+			let previousDone = 0;
 			const result = await generateNote({
 				noteTitle: file.basename,
 				markdown,
@@ -1249,6 +1279,10 @@ export default class CueCraftPlugin extends Plugin {
 				sectionConcurrency: this.settings.sectionConcurrency,
 				useWholeNoteContext: true,
 				signal: controller.signal,
+				onProgress: (done) => {
+					onProgress?.(done - previousDone);
+					previousDone = done;
+				},
 			});
 			if (result.sections.length) {
 				await this.cacheStore.set(
@@ -1276,7 +1310,8 @@ export default class CueCraftPlugin extends Plugin {
 			markdown,
 			item.sectionIds,
 			provider,
-			controller
+			controller,
+			onProgress
 		);
 		if (status !== "canceled") this.refreshGeneratedSurfaces(file);
 		return status;
@@ -1287,7 +1322,8 @@ export default class CueCraftPlugin extends Plugin {
 		markdown: string,
 		sectionIds: readonly string[],
 		provider: AiProvider,
-		controller: AbortController
+		controller: AbortController,
+		onProgress?: (completedSections: number) => void
 	): Promise<"completed" | "failed" | "canceled"> {
 		const cache = this.cacheStore.get(file.path);
 		if (!cache) return "failed";
@@ -1319,6 +1355,7 @@ export default class CueCraftPlugin extends Plugin {
 				working = replaceSection(working, toCachedSection(result));
 				if (result.error) failed++;
 				else completed++;
+				onProgress?.(1);
 			}
 			await this.cacheStore.set(file.path, working);
 		}
