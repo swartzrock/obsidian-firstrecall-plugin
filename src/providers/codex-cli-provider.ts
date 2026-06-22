@@ -7,6 +7,7 @@ import {
 } from "../cue-generation";
 import {
 	AiProvider,
+	type CueBatchResult,
 	CueInput,
 	ProviderError,
 	ProviderStatus,
@@ -18,6 +19,10 @@ import {
 	type LocalCommandRequest,
 	type LocalCommandResult,
 } from "./local-command-runner";
+import {
+	buildCueBatchPrompt,
+	parseCueBatch,
+} from "./local-cli-cue-batch";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const STATUS_TIMEOUT_MS = 15_000;
@@ -180,6 +185,28 @@ export class CodexCliProvider implements AiProvider {
 			throw new ProviderError(`Model output could not be validated: ${result.error}`);
 		}
 		return result.value;
+	}
+
+	async generateCues(
+		inputs: CueInput[],
+		signal?: AbortSignal
+	): Promise<CueBatchResult[]> {
+		if (inputs.length === 0) return [];
+		const basePrompt = buildCueBatchPrompt(inputs, PRESET_GUIDANCE);
+		const raw = await this.complete(basePrompt, signal);
+		let result = parseCueBatch(raw, inputs.length);
+		if (typeof result === "string") {
+			const repairPrompt =
+				basePrompt +
+				`\nYour previous reply could not be validated (${result}).\n` +
+				`Previous reply:\n${raw}\n` +
+				`Reply again with ONLY the corrected JSON object.`;
+			result = parseCueBatch(await this.complete(repairPrompt, signal), inputs.length);
+		}
+		if (typeof result === "string") {
+			throw new ProviderError(`Model output could not be validated: ${result}`);
+		}
+		return result.results;
 	}
 
 	async generateSummary(input: SummaryInput, signal?: AbortSignal): Promise<SummaryOutput> {

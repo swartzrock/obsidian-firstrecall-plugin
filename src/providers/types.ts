@@ -32,6 +32,11 @@ export interface CueInput {
 	options?: CueGenerationOptions;
 }
 
+export interface CueBatchResult {
+	cue?: CueOutput;
+	error?: string;
+}
+
 export interface SummaryInput {
 	noteTitle: string;
 	fullText: string;
@@ -51,6 +56,10 @@ export interface AiProvider {
 	testConnection(): Promise<ProviderStatus>;
 	listModels?(): Promise<unknown[]>;
 	generateCue(input: CueInput, signal?: AbortSignal): Promise<CueOutput>;
+	generateCues?(
+		inputs: CueInput[],
+		signal?: AbortSignal
+	): Promise<CueBatchResult[]>;
 	generateSummary(input: SummaryInput, signal?: AbortSignal): Promise<SummaryOutput>;
 }
 

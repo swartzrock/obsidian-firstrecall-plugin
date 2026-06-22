@@ -132,6 +132,76 @@ describe("ClaudeCliProvider", () => {
 		expect(run.mock.calls[0][0].stdin).toContain("Section heading: X");
 	});
 
+	it("returns validated cues from a batched Claude structured output", async () => {
+		const { provider, run } = makeProvider([
+			result(
+				JSON.stringify({
+					type: "result",
+					structured_output: {
+						cues: [
+							{
+								question: "What is A?",
+								keywords: ["a", "b"],
+								confidence: "high",
+							},
+							{
+								question: "What is B?",
+								keywords: ["c", "d"],
+								confidence: "medium",
+							},
+						],
+					},
+				})
+			),
+		]);
+
+		const cues = await provider.generateCues?.([
+			{ heading: "A", content: "alpha", preset: "conceptual" },
+			{ heading: "B", content: "beta", preset: "conceptual" },
+		]);
+
+		expect(cues?.map((item) => item.cue?.question)).toEqual([
+			"What is A?",
+			"What is B?",
+		]);
+		expect(run).toHaveBeenCalledTimes(1);
+		expect(run.mock.calls[0][0].stdin).toContain("Return ONLY a JSON object");
+		expect(run.mock.calls[0][0].stdin).toContain("Section 1");
+		expect(run.mock.calls[0][0].stdin).toContain("Section 2");
+	});
+
+	it("keeps invalid batched Claude cue items isolated", async () => {
+		const { provider } = makeProvider([
+			result(
+				JSON.stringify({
+					type: "result",
+					structured_output: {
+						cues: [
+							{
+								question: "What is A?",
+								keywords: ["a", "b"],
+								confidence: "high",
+							},
+							{
+								question: "",
+								keywords: ["c", "d"],
+								confidence: "medium",
+							},
+						],
+					},
+				})
+			),
+		]);
+
+		const cues = await provider.generateCues?.([
+			{ heading: "A", content: "alpha", preset: "conceptual" },
+			{ heading: "B", content: "beta", preset: "conceptual" },
+		]);
+
+		expect(cues?.[0].cue?.question).toBe("What is A?");
+		expect(cues?.[1].error).toMatch(/question/);
+	});
+
 	it("uses stderr JSON when Claude leaves stdout empty", async () => {
 		const { provider } = makeProvider([
 			result(

@@ -60,6 +60,10 @@ export const summaryOutputSchema = z.object({
 
 export type CueOutput = z.infer<typeof cueOutputSchema>;
 export type SummaryOutput = z.infer<typeof summaryOutputSchema>;
+export interface CueBatchValidationItem {
+	value: CueOutput | null;
+	error: string | null;
+}
 
 export type ValidationResult<T> =
 	| { ok: true; value: T }
@@ -110,6 +114,40 @@ export function validateCue(raw: string): ValidationResult<CueOutput> {
 		return { ok: false, error: formatZodError(parsed.error) };
 	}
 	return { ok: true, value: parsed.data };
+}
+
+export function validateCueBatch(
+	raw: string,
+	expectedCount: number
+): ValidationResult<CueBatchValidationItem[]> {
+	const json = extractJson(raw);
+	if (json === null) {
+		return { ok: false, error: "response was not valid JSON" };
+	}
+	const record = json && typeof json === "object" ? (json as Record<string, unknown>) : null;
+	const cues = Array.isArray(json)
+		? json
+		: Array.isArray(record?.cues)
+			? record.cues
+			: null;
+	if (!cues) {
+		return { ok: false, error: "response did not include a cues array" };
+	}
+	const items: CueBatchValidationItem[] = [];
+	for (let i = 0; i < expectedCount; i++) {
+		const value = cues[i];
+		if (value === undefined) {
+			items.push({ value: null, error: `missing cue for section ${i + 1}` });
+			continue;
+		}
+		const parsed = cueOutputSchema.safeParse(value);
+		if (parsed.success) {
+			items.push({ value: parsed.data, error: null });
+		} else {
+			items.push({ value: null, error: formatZodError(parsed.error) });
+		}
+	}
+	return { ok: true, value: items };
 }
 
 export function validateSummary(raw: string): ValidationResult<SummaryOutput> {

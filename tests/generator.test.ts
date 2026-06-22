@@ -11,6 +11,7 @@ import {
 } from "../src/generator";
 import type {
 	AiProvider,
+	CueBatchResult,
 	CueInput,
 	ProviderStatus,
 	SummaryInput,
@@ -19,6 +20,8 @@ import type { CueOutput, SummaryOutput } from "../src/schemas";
 
 interface MockOptions {
 	failOnHeading?: string;
+	batch?: boolean;
+	batchErrorOnHeading?: string;
 	onCue?: () => void;
 	delayMs?: number;
 	sectionConcurrencyLimit?: number;
@@ -28,8 +31,14 @@ function mockProvider(opts: MockOptions = {}): AiProvider & {
 	summaryCalls: number;
 	lastSummaryInput?: SummaryInput;
 	cueInputs: CueInput[];
+	batchInputs: CueInput[][];
 } {
-	const provider = {
+	const provider: AiProvider & {
+		summaryCalls: number;
+		lastSummaryInput?: SummaryInput;
+		cueInputs: CueInput[];
+		batchInputs: CueInput[][];
+	} = {
 		id: "mock",
 		label: "Mock",
 		requiresNetwork: false,
@@ -38,6 +47,7 @@ function mockProvider(opts: MockOptions = {}): AiProvider & {
 		summaryCalls: 0,
 		lastSummaryInput: undefined as SummaryInput | undefined,
 		cueInputs: [] as CueInput[],
+		batchInputs: [] as CueInput[][],
 		async testConnection(): Promise<ProviderStatus> {
 			return { ok: true, message: "ok" };
 		},
@@ -63,6 +73,29 @@ function mockProvider(opts: MockOptions = {}): AiProvider & {
 			return { summary: "the summary" };
 		},
 	};
+	if (opts.batch) {
+		provider.generateCues = async (
+			inputs: CueInput[]
+		): Promise<CueBatchResult[]> => {
+			provider.batchInputs.push(inputs);
+			return inputs.map((input) => {
+				if (
+					opts.batchErrorOnHeading &&
+					input.heading === opts.batchErrorOnHeading
+				) {
+					return { error: "batch boom" };
+				}
+				return {
+					cue: {
+						question: `Q:${input.heading}`,
+						keywords: ["k1", "k2"],
+						confidence: "high",
+						rationale: input.heading === "Terms" ? "clear section" : undefined,
+					},
+				};
+			});
+		};
+	}
 	return provider;
 }
 
@@ -151,6 +184,55 @@ describe("generateNote", () => {
 		});
 		expect(result.sections).toHaveLength(6);
 		expect(maxActive).toBe(1);
+	});
+
+	it("uses the parallel request setting as the batch size for batched providers", async () => {
+		const provider = mockProvider({ batch: true });
+
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: SIX_SECTION_NOTE,
+			provider,
+			preset: "conceptual",
+			sectionConcurrency: 3,
+		});
+
+		expect(provider.cueInputs).toHaveLength(0);
+		expect(provider.batchInputs.map((batch) => batch.map((i) => i.heading))).toEqual([
+			["A", "B", "C"],
+			["D", "E", "F"],
+		]);
+		expect(result.sections.map((s) => s.question)).toEqual([
+			"Q:A",
+			"Q:B",
+			"Q:C",
+			"Q:D",
+			"Q:E",
+			"Q:F",
+		]);
+	});
+
+	it("isolates item-level errors from a batched provider", async () => {
+		const provider = mockProvider({ batch: true, batchErrorOnHeading: "B" });
+
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: NOTE,
+			provider,
+			preset: "conceptual",
+			sectionConcurrency: 3,
+		});
+
+		expect(result.sections.map((s) => s.error)).toEqual([
+			null,
+			"batch boom",
+			null,
+		]);
+		expect(result.sections.map((s) => s.question)).toEqual([
+			"Q:A",
+			null,
+			"Q:C",
+		]);
 	});
 
 	it("isolates a failing section without aborting the rest (H1.3)", async () => {
