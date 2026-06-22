@@ -55,6 +55,19 @@ describe("extractClaudeCliOutput", () => {
 		).toBe("{\"summary\":\"S\"}");
 	});
 
+	it("uses validated structured_output when Claude result text is empty", () => {
+		expect(
+			extractClaudeCliOutput(
+				JSON.stringify({
+					type: "result",
+					subtype: "success",
+					result: "",
+					structured_output: { ok: true },
+				})
+			)
+		).toBe("{\"ok\":true}");
+	});
+
 	it("unwraps single-quoted JSON result strings", () => {
 		expect(
 			extractClaudeCliOutput(
@@ -258,6 +271,26 @@ describe("ClaudeCliProvider", () => {
 		expect(status).toEqual({
 			ok: true,
 			message: "Connected to Claude CLI (sonnet).",
+		});
+	});
+
+	it("reports successful Claude CLI status from structured_output", async () => {
+		const { provider } = makeProvider([
+			result(
+				JSON.stringify({
+					type: "result",
+					subtype: "success",
+					result: "",
+					structured_output: { ok: true },
+				})
+			),
+		]);
+
+		const status = await provider.testConnection();
+
+		expect(status).toEqual({
+			ok: true,
+			message: "Connected to Claude CLI.",
 		});
 	});
 

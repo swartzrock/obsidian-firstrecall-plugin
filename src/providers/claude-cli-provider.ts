@@ -128,6 +128,12 @@ function normalizeClaudeText(value: string): string {
 	return looksLikeJson(unescaped) ? unescaped : value;
 }
 
+function textFromStructuredValue(value: unknown): string {
+	if (typeof value === "string" && value.trim()) return normalizeClaudeText(value);
+	if (value && typeof value === "object") return JSON.stringify(value);
+	return "";
+}
+
 export function extractClaudeCliOutput(stdout: string): string {
 	const trimmed = stdout.trim();
 	if (!trimmed) return "";
@@ -135,9 +141,13 @@ export function extractClaudeCliOutput(stdout: string): string {
 		const parsed = JSON.parse(trimmed);
 		const record = asRecord(parsed);
 		if (!record) return stdout;
+		for (const key of ["structured_output", "structuredOutput"]) {
+			const value = textFromStructuredValue(record[key]);
+			if (value.trim()) return value;
+		}
 		const result = record.result;
-		if (typeof result === "string") return normalizeClaudeText(result);
-		if (result && typeof result === "object") return JSON.stringify(result);
+		const resultText = textFromStructuredValue(result);
+		if (resultText.trim()) return resultText;
 		for (const key of ["output", "response", "text", "message"]) {
 			const value = record[key];
 			if (typeof value === "string" && value.trim()) {
