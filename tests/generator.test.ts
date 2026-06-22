@@ -5,6 +5,7 @@ import {
 	clampText,
 	DEFAULT_MAX_CONTEXT_CHARS,
 	DEFAULT_SECTION_CONCURRENCY,
+	resolveEffectiveSectionConcurrency,
 	resolveGenerationOptions,
 	resolveSectionConcurrency,
 } from "../src/generator";
@@ -20,6 +21,7 @@ interface MockOptions {
 	failOnHeading?: string;
 	onCue?: () => void;
 	delayMs?: number;
+	sectionConcurrencyLimit?: number;
 }
 
 function mockProvider(opts: MockOptions = {}): AiProvider & {
@@ -32,6 +34,7 @@ function mockProvider(opts: MockOptions = {}): AiProvider & {
 		label: "Mock",
 		requiresNetwork: false,
 		requiresDownload: false,
+		sectionConcurrencyLimit: opts.sectionConcurrencyLimit,
 		summaryCalls: 0,
 		lastSummaryInput: undefined as SummaryInput | undefined,
 		cueInputs: [] as CueInput[],
@@ -123,6 +126,31 @@ describe("generateNote", () => {
 			"F",
 		]);
 		expect(maxActive).toBe(5);
+	});
+
+	it("honors a provider section concurrency cap below the slider value", async () => {
+		let active = 0;
+		let maxActive = 0;
+		const provider = mockProvider({
+			sectionConcurrencyLimit: 1,
+			delayMs: 5,
+			onCue: () => {
+				active++;
+				maxActive = Math.max(maxActive, active);
+				setTimeout(() => {
+					active--;
+				}, 5);
+			},
+		});
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: SIX_SECTION_NOTE,
+			provider,
+			preset: "conceptual",
+			sectionConcurrency: 5,
+		});
+		expect(result.sections).toHaveLength(6);
+		expect(maxActive).toBe(1);
 	});
 
 	it("isolates a failing section without aborting the rest (H1.3)", async () => {
@@ -352,6 +380,16 @@ describe("resolveSectionConcurrency", () => {
 	it("accepts positive finite numbers and floors decimals", () => {
 		expect(resolveSectionConcurrency(3)).toBe(3);
 		expect(resolveSectionConcurrency(2.8)).toBe(2);
+	});
+
+	it("caps effective concurrency when the provider asks for a lower limit", () => {
+		const provider = mockProvider({ sectionConcurrencyLimit: 1 });
+		expect(resolveEffectiveSectionConcurrency(5, provider)).toBe(1);
+		expect(resolveEffectiveSectionConcurrency(1, provider)).toBe(1);
+	});
+
+	it("preserves requested concurrency when the provider has no lower limit", () => {
+		expect(resolveEffectiveSectionConcurrency(4, mockProvider())).toBe(4);
 	});
 });
 
