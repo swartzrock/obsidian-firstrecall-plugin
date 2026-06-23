@@ -1262,7 +1262,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-study-area-path,
-.cuecraft-study-area-counts {
+.cuecraft-study-area-counts,
+.cuecraft-study-area-help {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	line-height: 1.4;
@@ -1270,6 +1271,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-study-area-counts {
 	margin-top: 3px;
+}
+
+.cuecraft-study-area-help {
+	margin-top: 8px;
+	max-width: 520px;
 }
 
 .cuecraft-study-area-create-row .cuecraft-model-combobox-input {

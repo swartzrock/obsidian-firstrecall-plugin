@@ -250,7 +250,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderSubpageHeader(
 					containerEl,
 					"Study areas",
-					""
+					"Choose which notes CueCraft keeps ready for study. Update on save refreshes cues for the saved note only; Generate Cues fills missing or outdated cues across a study area."
 				);
 				this.renderStudyAreasSection(containerEl, false);
 				break;
@@ -872,7 +872,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		const countsEl = setting.descEl.createDiv({
 			cls: "cuecraft-study-area-counts",
-			text: "Previewing notes...",
+			text: "Checking notes...",
+		});
+		setting.descEl.createDiv({
+			cls: "cuecraft-study-area-help",
+			text:
+				area.maintenanceMode === "maintain-on-save"
+					? "Update on save is on: saving a note here refreshes cues for that note only."
+					: "Update on save is off: click Generate Cues when this area has notes that need cues.",
 		});
 
 		setting.controlEl.addClass("cuecraft-study-area-controls");
@@ -949,6 +956,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (!plan) {
 			countsEl.setText("Study area no longer exists.");
 			backfillBtn.disabled = true;
+			backfillBtn.textContent = "Generate Cues";
 			retryBtn.disabled = true;
 			retryBtn.hidden = true;
 			retryBtn.addClass("cuecraft-study-area-hidden");
@@ -960,7 +968,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		countsEl.setText(formatStudyAreaReadinessCounts(plan.counts, {
 			cueSectionCount,
 		}));
-		backfillBtn.disabled = plan.items.length === 0;
+		const hasGenerationWork = plan.items.length > 0;
+		backfillBtn.disabled = !hasGenerationWork;
+		backfillBtn.textContent = hasGenerationWork ? "Generate Cues" : "Up to date";
 		const hasFailedWork = plan.counts.failed > 0;
 		retryBtn.disabled = !hasFailedWork;
 		retryBtn.hidden = !hasFailedWork;
