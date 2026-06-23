@@ -240,8 +240,6 @@ export class CodexCliProvider implements AiProvider {
 		const args = [
 			"exec",
 			"--skip-git-repo-check",
-			"--ask-for-approval",
-			"never",
 			"--sandbox",
 			"read-only",
 			"--json",

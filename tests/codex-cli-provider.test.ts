@@ -87,12 +87,11 @@ describe("CodexCliProvider", () => {
 		expect(run.mock.calls[0][0].args).toEqual([
 			"exec",
 			"--skip-git-repo-check",
-			"--ask-for-approval",
-			"never",
 			"--sandbox",
 			"read-only",
 			"--json",
 		]);
+		expect(run.mock.calls[0][0].args).not.toContain("--ask-for-approval");
 		expect(run.mock.calls[0][0].stdin).toContain("Section heading: X");
 	});
 
