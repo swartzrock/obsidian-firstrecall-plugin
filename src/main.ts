@@ -212,11 +212,6 @@ export default class CueCraftPlugin extends Plugin {
 		settings.studyAreas = loadStudyAreas(
 			(settings as { studyAreas?: unknown }).studyAreas
 		);
-		settings.studyAreaAutomationEnabled =
-			typeof (settings as { studyAreaAutomationEnabled?: unknown })
-				.studyAreaAutomationEnabled === "boolean"
-				? settings.studyAreaAutomationEnabled
-				: DEFAULT_SETTINGS.studyAreaAutomationEnabled;
 		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
 		}

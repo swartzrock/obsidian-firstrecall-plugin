@@ -3,7 +3,6 @@ import { buildNoteCache, type NoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import {
 	DEFAULT_STUDY_AREAS,
-	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
 	ENTIRE_VAULT_STUDY_AREA_LABEL,
 	classifyStudyAreaNote,
 	eligibleStudyAreaPaths,
@@ -26,7 +25,6 @@ const NOTE = "# A\nalpha\n## B\nbeta";
 describe("study area defaults", () => {
 	it("starts with no study areas", () => {
 		expect(DEFAULT_STUDY_AREAS).toEqual([]);
-		expect(DEFAULT_STUDY_AREA_AUTOMATION_ENABLED).toBe(false);
 	});
 });
 
@@ -37,12 +35,12 @@ describe("study area labels", () => {
 		expect(
 			formatStudyAreaReadinessCounts({
 				ready: 4,
-				uncued: 0,
+				uncued: 2,
 				stale: 1,
 				failed: 0,
 				skipped: 2,
 			})
-		).toBe("4 notes ready · 1 note needs updating");
+		).toBe("4 notes ready · 3 notes need cues");
 		expect(
 			formatStudyAreaReadinessCounts({
 				ready: 0,

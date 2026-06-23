@@ -67,7 +67,6 @@ export interface StudyAreaRunSummary {
 	canceled: boolean;
 }
 
-export const DEFAULT_STUDY_AREA_AUTOMATION_ENABLED = false;
 export const DEFAULT_STUDY_AREAS: StudyArea[] = [];
 export const ENTIRE_VAULT_STUDY_AREA_LABEL = "Entire vault";
 
@@ -108,18 +107,12 @@ export function formatStudyAreaReadinessCounts(
 		`${count} note${count === 1 ? "" : "s"}`;
 	const parts: string[] = [];
 	if (counts.ready) parts.push(`${noteLabel(counts.ready)} ready`);
-	if (counts.uncued) {
+	const notesNeedingCues = counts.uncued + counts.stale;
+	if (notesNeedingCues) {
 		parts.push(
-			counts.uncued === 1
+			notesNeedingCues === 1
 				? "1 note needs cues"
-				: `${counts.uncued} notes need cues`
-		);
-	}
-	if (counts.stale) {
-		parts.push(
-			counts.stale === 1
-				? "1 note needs updating"
-				: `${counts.stale} notes need updating`
+				: `${notesNeedingCues} notes need cues`
 		);
 	}
 	if (counts.failed) parts.push(`${noteLabel(counts.failed)} failed`);
