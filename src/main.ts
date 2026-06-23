@@ -5,9 +5,11 @@ import {
 	Modal,
 	Notice,
 	Plugin,
+	Setting,
 	TFile,
 	requestUrl,
 	setIcon,
+	type App,
 	type MarkdownFileInfo,
 	type MarkdownPostProcessorContext,
 } from "obsidian";
@@ -72,6 +74,7 @@ import type { CueGenerationOptions } from "./cue-generation";
 import {
 	isDescendantPath,
 	loadStudyAreas,
+	normalizeVaultPath,
 	planStudyAreaGeneration,
 	summarizeStudyAreaRun,
 	type StudyArea,
@@ -479,6 +482,11 @@ export default class CueCraftPlugin extends Plugin {
 			id: "retry-study-area-failures",
 			name: "Retry Study Area Failures...",
 			callback: () => this.pickStudyAreaAndRun("retry-failed"),
+		});
+		this.addCommand({
+			id: "manage-study-areas",
+			name: "Manage Study Areas",
+			callback: () => this.openStudyAreaManager(),
 		});
 		this.addCommand({
 			id: "toggle-study-mode",
@@ -1133,6 +1141,47 @@ export default class CueCraftPlugin extends Plugin {
 		return this.buildStudyAreaPlan(area, mode);
 	}
 
+	openStudyAreaManager(areaId?: string): void {
+		new StudyAreaManagementModal(this.app, this, areaId).open();
+	}
+
+	async createStudyArea(parentPath: string): Promise<StudyArea | null> {
+		const normalized = normalizeVaultPath(parentPath);
+		if (!normalized) {
+			new Notice("CueCraft: enter a parent folder path first.");
+			return null;
+		}
+		if (this.settings.studyAreas.some((area) => area.parentPath === normalized)) {
+			new Notice("CueCraft: that study area already exists.");
+			return null;
+		}
+		const area: StudyArea = {
+			id: `study-area-${Date.now().toString(36)}`,
+			name: normalized.split("/").slice(-1)[0] ?? normalized,
+			parentPath: normalized,
+			excludedPaths: [],
+			maintenanceMode: "paused",
+			createdAt: new Date().toISOString(),
+		};
+		this.settings.studyAreas = [...this.settings.studyAreas, area];
+		await this.saveSettings();
+		return area;
+	}
+
+	async updateStudyArea(updated: StudyArea): Promise<void> {
+		this.settings.studyAreas = this.settings.studyAreas.map((area) =>
+			area.id === updated.id ? updated : area
+		);
+		await this.saveSettings();
+	}
+
+	async removeStudyArea(areaId: string): Promise<void> {
+		this.settings.studyAreas = this.settings.studyAreas.filter(
+			(area) => area.id !== areaId
+		);
+		await this.saveSettings();
+	}
+
 	async runStudyArea(
 		areaId: string,
 		mode: StudyAreaPlanMode = "backfill"
@@ -1644,5 +1693,222 @@ class StudyAreaSuggestModal extends FuzzySuggestModal<StudyArea> {
 
 	onChooseItem(item: StudyArea): void {
 		this.onChoose(item);
+	}
+}
+
+class StudyAreaManagementModal extends Modal {
+	private selectedAreaId?: string;
+
+	constructor(
+		app: InstanceType<typeof Plugin>["app"],
+		private readonly plugin: CueCraftPlugin,
+		selectedAreaId?: string
+	) {
+		super(app);
+		this.selectedAreaId = selectedAreaId;
+	}
+
+	onOpen(): void {
+		this.render();
+	}
+
+	private render(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.addClass("cuecraft-study-area-modal");
+		contentEl.createEl("h2", { text: "Study Areas" });
+		contentEl.createEl("p", {
+			cls: "cuecraft-study-area-copy",
+			text: "Preview broad generation before any provider calls, then run or retry work for managed folders.",
+		});
+		if (!this.plugin.settings.studyAreas.length) {
+			contentEl.createEl("p", {
+				cls: "cuecraft-study-area-empty",
+				text: "No study areas yet. Add one from CueCraft settings.",
+			});
+			return;
+		}
+		const listEl = contentEl.createDiv({ cls: "cuecraft-study-area-list" });
+		for (const area of this.sortedAreas()) {
+			this.renderArea(listEl, area);
+		}
+	}
+
+	private sortedAreas(): StudyArea[] {
+		const areas = this.plugin.settings.studyAreas.slice();
+		if (!this.selectedAreaId) return areas;
+		return areas.sort((a, b) =>
+			a.id === this.selectedAreaId ? -1 : b.id === this.selectedAreaId ? 1 : 0
+		);
+	}
+
+	private renderArea(containerEl: HTMLElement, area: StudyArea): void {
+		const cardEl = containerEl.createDiv({ cls: "cuecraft-study-area-card" });
+		cardEl.createEl("h3", { text: area.name });
+		cardEl.createDiv({
+			cls: "cuecraft-study-area-path",
+			text: area.parentPath,
+		});
+		const countsEl = cardEl.createDiv({
+			cls: "cuecraft-study-area-counts",
+			text: "Previewing notes...",
+		});
+		void this.plugin.previewStudyArea(area.id).then((plan) => {
+			if (!plan) {
+				countsEl.setText("Study area no longer exists.");
+				return;
+			}
+			countsEl.setText(
+				`${plan.counts.ready} ready · ${plan.counts.uncued} uncued · ${plan.counts.stale} stale · ${plan.counts.failed} failed · ${plan.counts.skipped} skipped`
+			);
+		});
+
+		new Setting(cardEl)
+			.setName("Maintenance")
+			.setDesc("Keep background maintenance paused, or refresh edited notes on save.")
+			.addDropdown((dd) =>
+				dd
+					.addOption("paused", "Paused")
+					.addOption("maintain-on-save", "Maintain on save")
+					.setValue(area.maintenanceMode)
+					.onChange(async (value) => {
+						await this.plugin.updateStudyArea({
+							...area,
+							maintenanceMode:
+								value === "maintain-on-save" ? "maintain-on-save" : "paused",
+						});
+						this.render();
+					})
+			);
+
+		const exclusionSetting = new Setting(cardEl)
+			.setName("Exclude path")
+			.setDesc("Add a note or subfolder under this study area to skip.");
+		let exclusionPath = "";
+		exclusionSetting
+			.addText((text) =>
+				text
+					.setPlaceholder(`${area.parentPath}/Drafts`)
+					.onChange((value) => {
+						exclusionPath = value;
+					})
+			)
+			.addButton((btn) =>
+				btn
+					.setButtonText("Add")
+					.onClick(async () => {
+						const normalized = normalizeVaultPath(exclusionPath);
+						if (!normalized) return;
+						await this.plugin.updateStudyArea({
+							...area,
+							excludedPaths: Array.from(
+								new Set([...area.excludedPaths, normalized])
+							),
+						});
+						this.render();
+					})
+			);
+
+		for (const excludedPath of area.excludedPaths) {
+			new Setting(cardEl)
+				.setName(excludedPath)
+				.setDesc("Excluded from this study area.")
+				.addButton((btn) =>
+					btn
+						.setButtonText("Remove")
+						.onClick(async () => {
+							await this.plugin.updateStudyArea({
+								...area,
+								excludedPaths: area.excludedPaths.filter(
+									(path) => path !== excludedPath
+								),
+							});
+							this.render();
+						})
+				);
+		}
+
+		const actionsEl = cardEl.createDiv({ cls: "cuecraft-modal-actions" });
+		const backfillBtn = actionsEl.createEl("button", {
+			text: "Run backfill",
+			attr: { type: "button" },
+		});
+		backfillBtn.addClass("mod-cta");
+		this.plugin.registerDomEvent(backfillBtn, "click", async () => {
+			const plan = await this.plugin.previewStudyArea(area.id);
+			const count = plan?.items.length ?? 0;
+			new StudyAreaConfirmModal(this.app, {
+				title: "Run study area backfill?",
+				message: `Generate or refresh ${count} note(s) in ${area.name}?`,
+				confirmText: "Run backfill",
+				onConfirm: () => {
+					void this.plugin.runStudyArea(area.id, "backfill");
+					this.close();
+				},
+			}).open();
+		});
+		const retryBtn = actionsEl.createEl("button", {
+			text: "Retry failed",
+			attr: { type: "button" },
+		});
+		this.plugin.registerDomEvent(retryBtn, "click", () => {
+			void this.plugin.runStudyArea(area.id, "retry-failed");
+			this.close();
+		});
+		const removeBtn = actionsEl.createEl("button", {
+			text: "Remove",
+			attr: { type: "button" },
+		});
+		this.plugin.registerDomEvent(removeBtn, "click", async () => {
+			new StudyAreaConfirmModal(this.app, {
+				title: "Remove study area?",
+				message: `Remove study area "${area.name}"? Generated cues stay cached.`,
+				confirmText: "Remove",
+				onConfirm: async () => {
+					await this.plugin.removeStudyArea(area.id);
+					this.render();
+				},
+			}).open();
+		});
+	}
+}
+
+class StudyAreaConfirmModal extends Modal {
+	constructor(
+		app: App,
+		private readonly opts: {
+			title: string;
+			message: string;
+			confirmText: string;
+			onConfirm: () => void | Promise<void>;
+		}
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.createEl("h2", { text: this.opts.title });
+		contentEl.createEl("p", { text: this.opts.message });
+		const actionsEl = contentEl.createDiv({ cls: "cuecraft-modal-actions" });
+		const cancelBtn = actionsEl.createEl("button", {
+			text: "Cancel",
+			attr: { type: "button" },
+		});
+		cancelBtn.addEventListener("click", () => this.close());
+		const confirmBtn = actionsEl.createEl("button", {
+			text: this.opts.confirmText,
+			attr: { type: "button" },
+		});
+		confirmBtn.addClass("mod-cta");
+		confirmBtn.addEventListener("click", () => {
+			void this.confirm();
+		});
+	}
+
+	private async confirm(): Promise<void> {
+		await this.opts.onConfirm();
+		this.close();
 	}
 }

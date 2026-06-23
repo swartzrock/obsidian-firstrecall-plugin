@@ -81,6 +81,7 @@ export function renderModelCombobox(opts: {
 	onCommit: (value: string) => void | Promise<void>;
 	renderToggleIcon?: (containerEl: HTMLElement) => void;
 	badgesForOption?: (option: ModelOption) => string[];
+	suggestionsLabel?: string;
 }): void {
 	const comboboxId = `cuecraft-model-combobox-${++nextComboboxId}`;
 	const listboxId = `${comboboxId}-list`;
@@ -88,6 +89,7 @@ export function renderModelCombobox(opts: {
 	let isOpen = false;
 	let activeIndex = 0;
 	let committedModelId = opts.value.trim();
+	const suggestionsLabel = opts.suggestionsLabel ?? "model suggestions";
 
 	const rootEl = opts.containerEl.createDiv({
 		cls: "cuecraft-model-combobox",
@@ -110,8 +112,8 @@ export function renderModelCombobox(opts: {
 		cls: "cuecraft-model-combobox-toggle",
 		attr: {
 			type: "button",
-			"aria-label": "Show model suggestions",
-			title: "Show model suggestions",
+			"aria-label": `Show ${suggestionsLabel}`,
+			title: `Show ${suggestionsLabel}`,
 			tabindex: "-1",
 		},
 	});
@@ -135,14 +137,18 @@ export function renderModelCombobox(opts: {
 		isOpen = false;
 		inputEl.setAttr("aria-expanded", "false");
 		inputEl.removeAttribute("aria-activedescendant");
-		toggleEl.setAttr("aria-label", "Show model suggestions");
-		toggleEl.setAttr("title", "Show model suggestions");
+		toggleEl.setAttr("aria-label", `Show ${suggestionsLabel}`);
+		toggleEl.setAttr("title", `Show ${suggestionsLabel}`);
 		rootEl.removeClass("cuecraft-model-combobox-open");
 		listEl.addClass("cuecraft-model-combobox-list-hidden");
 	};
 
 	const commitValue = (value: string) => {
 		const nextValue = value.trim();
+		if (nextValue === committedModelId) {
+			inputEl.value = nextValue;
+			return;
+		}
 		committedModelId = nextValue;
 		inputEl.value = nextValue;
 		void opts.onCommit(nextValue);
@@ -163,8 +169,8 @@ export function renderModelCombobox(opts: {
 		rootEl.addClass("cuecraft-model-combobox-open");
 		listEl.removeClass("cuecraft-model-combobox-list-hidden");
 		inputEl.setAttr("aria-expanded", "true");
-		toggleEl.setAttr("aria-label", "Hide model suggestions");
-		toggleEl.setAttr("title", "Hide model suggestions");
+		toggleEl.setAttr("aria-label", `Hide ${suggestionsLabel}`);
+		toggleEl.setAttr("title", `Hide ${suggestionsLabel}`);
 		if (visibleOptions.length === 0) {
 			listEl.createDiv({
 				cls: "cuecraft-model-combobox-empty",
@@ -186,7 +192,6 @@ export function renderModelCombobox(opts: {
 					id: optionId,
 					type: "button",
 					role: "option",
-					title: option.id,
 					"aria-selected": index === activeIndex ? "true" : "false",
 				},
 			});

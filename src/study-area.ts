@@ -68,6 +68,7 @@ export interface StudyAreaRunSummary {
 }
 
 export const DEFAULT_STUDY_AREA_AUTOMATION_ENABLED = false;
+export const DEFAULT_STUDY_AREAS: StudyArea[] = [];
 
 const MAINTENANCE_MODES = new Set<StudyAreaMaintenanceMode>([
 	"paused",

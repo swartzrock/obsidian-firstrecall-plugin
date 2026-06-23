@@ -3,6 +3,7 @@ import {
 	Notice,
 	PluginSettingTab,
 	Setting,
+	TFolder,
 	requestUrl,
 	setIcon,
 } from "obsidian";
@@ -79,7 +80,9 @@ import {
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
 import {
+	DEFAULT_STUDY_AREAS,
 	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
+	normalizeVaultPath,
 	type StudyArea,
 } from "./study-area";
 import { formatCueCraftNotice } from "./notice";
@@ -94,6 +97,9 @@ import type { ProviderId } from "./provider-id";
 export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
 type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
+type CueCraftSettingsSubpage =
+	| SettingsSubpage
+	| "study-areas";
 
 export interface CueCraftSettings {
 	provider: ProviderId;
@@ -203,7 +209,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
 	autoGenerateOnSave: false,
 	studyAreaAutomationEnabled: DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
-	studyAreas: [],
+	studyAreas: DEFAULT_STUDY_AREAS,
 	sectionConcurrency: 5,
 	cueDensity: DEFAULT_CUE_DENSITY,
 	questionStyle: DEFAULT_QUESTION_STYLE,
@@ -223,7 +229,7 @@ function isLocalCliProvider(provider: ProviderId): boolean {
 
 export class CueCraftSettingTab extends PluginSettingTab {
 	private plugin: CueCraftPlugin;
-	private currentSubpage: SettingsSubpage = "home";
+	private currentSubpage: CueCraftSettingsSubpage = "home";
 
 	constructor(app: App, plugin: CueCraftPlugin) {
 		super(app, plugin);
@@ -258,6 +264,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					"Cornell view styling, layout, cue accents, and visual density."
 				);
 				this.renderAppearanceSection(containerEl, false);
+				break;
+			case "study-areas":
+				this.renderSubpageHeader(
+					containerEl,
+					"Study areas",
+					""
+				);
+				this.renderStudyAreasSection(containerEl, false);
 				break;
 			default:
 				containerEl.createEl("p", {
@@ -297,6 +311,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			summary: this.appearanceSummary(),
 			onOpen: () => this.openSubpage("appearance"),
 		});
+		this.renderSettingsNavCard(navEl, {
+			title: "Study areas",
+			description: "Make parent folders study-ready with previewed backfill and opt-in maintenance.",
+			summary: this.studyAreasSummary(),
+			onOpen: () => this.openSubpage("study-areas"),
+		});
 
 		this.renderNoteFormatSection(containerEl, true);
 		this.renderStudySection(containerEl, true);
@@ -324,10 +344,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			text: title,
 		});
 		titleSetting.descEl.empty();
-		titleSetting.descEl.createDiv({
-			cls: "cuecraft-settings-subpage-desc",
-			text: description,
-		});
+		if (description) {
+			titleSetting.descEl.createDiv({
+				cls: "cuecraft-settings-subpage-desc",
+				text: description,
+			});
+		}
 	}
 
 	private renderSettingsNavCard(
@@ -375,7 +397,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		);
 	}
 
-	private openSubpage(subpage: SettingsSubpage): void {
+	private openSubpage(subpage: CueCraftSettingsSubpage): void {
 		this.currentSubpage = subpage;
 		this.display();
 	}
@@ -408,6 +430,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				(item) => item.id === this.plugin.settings.cornellStyle
 			)?.label ?? "Custom";
 		return `${mode} · ${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
+	}
+
+	private studyAreasSummary(): string {
+		const count = this.plugin.settings.studyAreas.length;
+		const enabled = this.plugin.settings.studyAreas.filter(
+			(area) => area.maintenanceMode === "maintain-on-save"
+		).length;
+		if (!count) return "No study areas · automation paused";
+		return `${count} area${count === 1 ? "" : "s"} · ${enabled} maintaining on save`;
 	}
 
 	private providerDisplayName(provider: ProviderId): string {
@@ -756,6 +787,119 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+	}
+
+	// ── Study areas ───────────────────────────────────────────────────────
+	private studyAreaFolderPaths(): string[] {
+		return this.app.vault
+			.getAllLoadedFiles()
+			.filter((file): file is TFolder => file instanceof TFolder)
+			.map((folder) => normalizeVaultPath(folder.path))
+			.filter(Boolean)
+			.sort((a, b) => a.localeCompare(b));
+	}
+
+	private renderStudyAreasSection(
+		containerEl: HTMLElement,
+		showHeading: boolean
+	): void {
+		if (showHeading) {
+			new Setting(containerEl).setName("Study areas").setHeading();
+		}
+		new Setting(containerEl).setName("Create Study Area").setHeading();
+		const createEl = containerEl.createDiv({
+			cls: "cuecraft-settings-flow",
+		});
+		const folderPaths = this.studyAreaFolderPaths();
+		const assignedFolderPaths = new Set(
+			this.plugin.settings.studyAreas.map((area) =>
+				normalizeVaultPath(area.parentPath)
+			)
+		);
+		const availableFolderPaths = folderPaths.filter(
+			(path) => !assignedFolderPaths.has(path)
+		);
+		const parentFolderSetting = new Setting(createEl)
+			.setName("Parent folder")
+			.setDesc("Type to filter existing vault folders; hidden and excluded notes stay skipped.");
+		renderModelCombobox({
+			containerEl: parentFolderSetting.controlEl,
+			value: "",
+			options: normalizeModelIds(availableFolderPaths, "string"),
+			source: "string",
+			placeholder: availableFolderPaths.length
+				? "Choose a folder..."
+				: "No unassigned folders",
+			emptyMessage: availableFolderPaths.length
+				? "No matching folders. Choose an existing vault folder."
+				: "No unassigned folders found.",
+			onCommit: async (value) => {
+				const normalized = normalizeVaultPath(value);
+				if (!normalized) return;
+				if (assignedFolderPaths.has(normalized)) {
+					new Notice("CueCraft: that study area already exists.");
+					this.display();
+					return;
+				}
+				if (!folderPaths.includes(normalized)) {
+					new Notice(`CueCraft: "${normalized}" is not an existing folder.`);
+					this.display();
+					return;
+				}
+				const area = await this.plugin.createStudyArea(normalized);
+				if (area) this.display();
+			},
+			renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
+			suggestionsLabel: "folder suggestions",
+		});
+
+		new Setting(containerEl).setName("Manage Study Areas").setHeading();
+		const manageEl = containerEl.createDiv({
+			cls: "cuecraft-settings-flow",
+		});
+		new Setting(manageEl)
+			.setName("Auto-update cues for saved notes")
+			.setDesc("When on, saving a note in a study area marked Maintain on save queues that note for stale or failed cue regeneration. It does not refresh this list or regenerate the whole folder.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.studyAreaAutomationEnabled)
+					.onChange(async (value) => {
+						this.plugin.settings.studyAreaAutomationEnabled = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		if (!this.plugin.settings.studyAreas.length) {
+			manageEl.createDiv({
+				cls: "cuecraft-settings-flow-desc",
+				text: "No study areas yet.",
+			});
+			return;
+		}
+		for (const area of this.plugin.settings.studyAreas) {
+			const setting = new Setting(manageEl)
+				.setName(area.name)
+				.setDesc(
+					`${area.parentPath} · ${
+						area.maintenanceMode === "maintain-on-save"
+							? "maintain on save"
+							: "paused"
+					}`
+				);
+			setting.controlEl.addClass("cuecraft-status-chips");
+			this.renderStatusChip(
+				setting.controlEl,
+				area.maintenanceMode === "maintain-on-save" ? "Maintaining" : "Paused",
+				area.maintenanceMode === "maintain-on-save"
+					? "is-positive"
+					: "is-muted"
+			);
+			setting.addButton((btn) =>
+				btn
+					.setButtonText("Manage")
+					.onClick(() => this.plugin.openStudyAreaManager(area.id))
+			);
+		}
 	}
 
 	// ── Note format ───────────────────────────────────────────────────────
