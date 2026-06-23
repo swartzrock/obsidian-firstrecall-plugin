@@ -23,6 +23,7 @@ interface MockOptions {
 	batch?: boolean;
 	batchErrorOnHeading?: string;
 	onCue?: () => void;
+	onBatch?: () => void;
 	delayMs?: number;
 	sectionConcurrencyLimit?: number;
 }
@@ -78,6 +79,7 @@ function mockProvider(opts: MockOptions = {}): AiProvider & {
 			inputs: CueInput[]
 		): Promise<CueBatchResult[]> => {
 			provider.batchInputs.push(inputs);
+			opts.onBatch?.();
 			return inputs.map((input) => {
 				if (
 					opts.batchErrorOnHeading &&
@@ -116,6 +118,7 @@ describe("generateNote", () => {
 
 		expect(result.sections).toHaveLength(3);
 		expect(progress).toEqual([
+			[0, 3],
 			[1, 3],
 			[2, 3],
 			[3, 3],
@@ -210,6 +213,29 @@ describe("generateNote", () => {
 			"Q:E",
 			"Q:F",
 		]);
+	});
+
+	it("reports the section total before a batched provider starts work", async () => {
+		const progress: Array<[number, number]> = [];
+		let sawInitialProgress = false;
+		const provider = mockProvider({
+			batch: true,
+			onBatch: () => {
+				sawInitialProgress =
+					progress.length === 1 && progress[0][0] === 0 && progress[0][1] === 3;
+			},
+		});
+
+		await generateNote({
+			noteTitle: "T",
+			markdown: NOTE,
+			provider,
+			preset: "conceptual",
+			sectionConcurrency: 3,
+			onProgress: (done, total) => progress.push([done, total]),
+		});
+
+		expect(sawInitialProgress).toBe(true);
 	});
 
 	it("isolates item-level errors from a batched provider", async () => {

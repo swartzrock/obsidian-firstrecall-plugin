@@ -241,6 +241,7 @@ export async function generateNote(
 	const results: SectionResult[] = new Array(total);
 	let done = 0;
 	let canceled = false;
+	onProgress?.(done, total);
 
 	for (let start = 0; start < sections.length; start += sectionConcurrency) {
 		if (signal?.aborted) {
