@@ -538,7 +538,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
 			"5. Tune speed",
-			"Adjust how aggressively CueCraft generates section cues in parallel."
+			isLocalCliProvider(this.plugin.settings.provider)
+				? "Adjust how many sections CueCraft batches into each local CLI request."
+				: "Adjust how aggressively CueCraft generates section cues in parallel."
 		);
 
 		const concurrencyDesc = (): string =>

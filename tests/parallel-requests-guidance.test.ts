@@ -25,19 +25,22 @@ describe("parallelRequestsGuidance", () => {
 		);
 	});
 
-	it("caps local CLI provider guidance to one effective request", () => {
-		const settings = baseSettings({
-			provider: "codex-cli",
-			sectionConcurrency: 5,
-		});
-		expect(effectiveParallelRequestCount(settings)).toBe(1);
-		expect(parallelRequestsGuidance(settings)).toBe(
-			"Local CLI providers run one section request at a time to avoid multiple agent processes and interactive prompts."
-		);
-		expect(formatParallelRequestsDescription(settings)).toBe(
-			"Run up to 1 section request at once. Local CLI providers run one section request at a time to avoid multiple agent processes and interactive prompts."
-		);
-	});
+	it.each(["codex-cli", "claude-cli"])(
+		"describes %s providers as batched local CLI requests",
+		(provider) => {
+			const settings = baseSettings({
+				provider,
+				sectionConcurrency: 5,
+			});
+			expect(effectiveParallelRequestCount(settings)).toBe(5);
+			expect(parallelRequestsGuidance(settings)).toBe(
+				"Local CLI providers run one CLI process at a time to avoid multiple agent processes and interactive prompts."
+			);
+			expect(formatParallelRequestsDescription(settings)).toBe(
+				"Batch up to 5 sections in one local CLI request. Local CLI providers run one CLI process at a time to avoid multiple agent processes and interactive prompts."
+			);
+		}
+	);
 
 	it("formats the slider description with the current concurrency", () => {
 		expect(
