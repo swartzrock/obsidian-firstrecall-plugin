@@ -911,8 +911,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				})
 		);
 
+		const upToDateEl = setting.controlEl.createSpan({
+			cls: "cuecraft-study-area-status",
+			text: "Up to date",
+		});
+		upToDateEl.hidden = true;
 		const backfillBtn = setting.controlEl.createEl("button", {
-			text: "Generate Cues",
+			text: "Generate missing cues",
 			attr: { type: "button" },
 		});
 		backfillBtn.addClass("mod-cta");
@@ -932,10 +937,18 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		setIcon(removeBtn, "trash-2");
 
 		void this.plugin.previewStudyArea(area.id).then((plan) => {
-			this.renderStudyAreaPlan(countsEl, backfillBtn, retryBtn, plan);
+			this.renderStudyAreaPlan(
+				countsEl,
+				upToDateEl,
+				backfillBtn,
+				retryBtn,
+				plan
+			);
 		});
 
 		this.plugin.registerDomEvent(backfillBtn, "click", async () => {
+			upToDateEl.hidden = true;
+			backfillBtn.hidden = false;
 			backfillBtn.disabled = true;
 			backfillBtn.textContent = "Generating...";
 			countsEl.setText("Generating cues...");
@@ -961,14 +974,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private renderStudyAreaPlan(
 		countsEl: HTMLElement,
+		upToDateEl: HTMLElement,
 		backfillBtn: HTMLButtonElement,
 		retryBtn: HTMLButtonElement,
 		plan: StudyAreaGenerationPlan | null
 	): void {
 		if (!plan) {
 			countsEl.setText("Study area no longer exists.");
+			upToDateEl.hidden = true;
+			backfillBtn.hidden = false;
 			backfillBtn.disabled = true;
-			backfillBtn.textContent = "Generate Cues";
+			backfillBtn.textContent = "Generate missing cues";
 			retryBtn.disabled = true;
 			retryBtn.hidden = true;
 			retryBtn.addClass("cuecraft-study-area-hidden");
@@ -981,8 +997,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			cueSectionCount,
 		}));
 		const hasGenerationWork = plan.items.length > 0;
+		upToDateEl.hidden = hasGenerationWork;
+		backfillBtn.hidden = !hasGenerationWork;
 		backfillBtn.disabled = !hasGenerationWork;
-		backfillBtn.textContent = hasGenerationWork ? "Generate Cues" : "Up to date";
+		backfillBtn.textContent = "Generate missing cues";
 		const hasFailedWork = plan.counts.failed > 0;
 		retryBtn.disabled = !hasFailedWork;
 		retryBtn.hidden = !hasFailedWork;

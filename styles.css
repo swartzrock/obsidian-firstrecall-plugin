@@ -1310,6 +1310,12 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	white-space: nowrap;
 }
 
+.cuecraft-study-area-status {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+}
+
 .cuecraft-study-area-controls button.cuecraft-study-area-retry.cuecraft-study-area-hidden {
 	display: none;
 }
