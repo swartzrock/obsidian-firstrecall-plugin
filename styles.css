@@ -30,6 +30,7 @@
 .cuecraft-settings-nav > .setting-item {
 	margin: 0;
 	padding: 16px;
+	border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .cuecraft-settings-nav > .setting-item:first-child {
