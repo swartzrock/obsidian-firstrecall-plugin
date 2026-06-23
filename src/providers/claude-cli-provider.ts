@@ -11,15 +11,34 @@ import {
 	ProviderError,
 	ProviderStatus,
 	SummaryInput,
+	type CueBatchResult,
 } from "./types";
 import {
+	defaultLocalCliCwd,
 	LocalCommandRunner,
 	type LocalCommandRequest,
 	type LocalCommandResult,
 } from "./local-command-runner";
+import {
+	buildCueBatchPrompt,
+	cueBatchJsonSchema,
+	parseCueBatch,
+} from "./local-cli-cue-batch";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const STATUS_TIMEOUT_MS = 15_000;
+const CLAUDE_CLI_ENV: NodeJS.ProcessEnv = {
+	CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
+	CLAUDE_CODE_DISABLE_ARTIFACT: "1",
+	CLAUDE_CODE_DISABLE_AUTO_MEMORY: "1",
+	CLAUDE_CODE_DISABLE_BUNDLED_SKILLS: "1",
+	CLAUDE_CODE_DISABLE_WORKFLOWS: "1",
+	CLAUDE_CODE_SAFE_MODE: "1",
+	CLAUDE_CODE_SKIP_PROMPT_HISTORY: "1",
+	DISABLE_AUTOUPDATER: "1",
+};
+const CLAUDE_CLI_AUTH_MESSAGE =
+	"Claude CLI is not authenticated. Run `claude auth login` in your terminal, then try again.";
 
 const PRESET_GUIDANCE: Record<string, string> = {
 	conceptual: "Favor a single conceptual question that tests understanding, not trivia.",
@@ -56,6 +75,15 @@ const SUMMARY_JSON_SCHEMA = JSON.stringify({
 	additionalProperties: false,
 });
 
+const CONNECTION_JSON_SCHEMA = JSON.stringify({
+	type: "object",
+	properties: {
+		ok: { type: "boolean" },
+	},
+	required: ["ok"],
+	additionalProperties: false,
+});
+
 type CommandRunner = Pick<LocalCommandRunner, "run">;
 
 export interface ClaudeCliProviderOptions {
@@ -86,6 +114,32 @@ function textFromContent(value: unknown): string {
 		.join("\n");
 }
 
+function looksLikeJson(value: string): boolean {
+	return value.startsWith("{") || value.startsWith("[");
+}
+
+function normalizeClaudeText(value: string): string {
+	const trimmed = value.trim();
+	const quote = trimmed[0];
+	if (
+		trimmed.length < 2 ||
+		(quote !== "'" && quote !== '"') ||
+		trimmed[trimmed.length - 1] !== quote
+	) {
+		return value;
+	}
+	const inner = trimmed.slice(1, -1).trim();
+	if (looksLikeJson(inner)) return inner;
+	const unescaped = inner.replace(/\\"/g, '"');
+	return looksLikeJson(unescaped) ? unescaped : value;
+}
+
+function textFromStructuredValue(value: unknown): string {
+	if (typeof value === "string" && value.trim()) return normalizeClaudeText(value);
+	if (value && typeof value === "object") return JSON.stringify(value);
+	return "";
+}
+
 export function extractClaudeCliOutput(stdout: string): string {
 	const trimmed = stdout.trim();
 	if (!trimmed) return "";
@@ -93,41 +147,35 @@ export function extractClaudeCliOutput(stdout: string): string {
 		const parsed = JSON.parse(trimmed);
 		const record = asRecord(parsed);
 		if (!record) return stdout;
+		for (const key of ["structured_output", "structuredOutput"]) {
+			const value = textFromStructuredValue(record[key]);
+			if (value.trim()) return value;
+		}
 		const result = record.result;
-		if (typeof result === "string") return result;
-		if (result && typeof result === "object") return JSON.stringify(result);
+		const resultText = textFromStructuredValue(result);
+		if (resultText.trim()) return resultText;
 		for (const key of ["output", "response", "text", "message"]) {
 			const value = record[key];
-			if (typeof value === "string" && value.trim()) return value;
+			if (typeof value === "string" && value.trim()) {
+				return normalizeClaudeText(value);
+			}
 		}
 		const content = textFromContent(record.content);
-		if (content.trim()) return content;
+		if (content.trim()) return normalizeClaudeText(content);
 	} catch {
 		// The CLI may already have printed the model's raw final response.
 	}
-	return stdout;
+	return normalizeClaudeText(stdout);
 }
 
 function isAuthMissing(output: string): boolean {
-	return /not\s+(logged|authenticated)|unauthenticated|login required|no active account/i.test(
-		output
+	const normalized = output.toLowerCase();
+	return (
+		/not\s+(logged|authenticated)|unauthenticated|login required|no active account|failed to authenticate|invalid authentication credentials/i.test(
+			output
+		) ||
+		(normalized.includes("401") && normalized.includes("authentic"))
 	);
-}
-
-function authStatusLooksOk(stdout: string): boolean {
-	try {
-		const parsed = JSON.parse(stdout);
-		const record = asRecord(parsed);
-		if (!record) return false;
-		if (record.authenticated === false || record.loggedIn === false) return false;
-		if (record.authenticated === true || record.loggedIn === true) return true;
-		const status = typeof record.status === "string" ? record.status : "";
-		if (/not|unauth|logged.?out/i.test(status)) return false;
-		if (/auth|login|valid|active/i.test(status)) return true;
-		return true;
-	} catch {
-		return !isAuthMissing(stdout);
-	}
 }
 
 export class ClaudeCliProvider implements AiProvider {
@@ -135,7 +183,6 @@ export class ClaudeCliProvider implements AiProvider {
 	readonly label = "Claude CLI";
 	readonly requiresNetwork = true;
 	readonly requiresDownload = false;
-	readonly sectionConcurrencyLimit = 1;
 
 	private readonly command: string;
 	private readonly model: string;
@@ -146,24 +193,23 @@ export class ClaudeCliProvider implements AiProvider {
 	constructor(opts: ClaudeCliProviderOptions) {
 		this.command = opts.command.trim() || "claude";
 		this.model = opts.model?.trim() ?? "";
-		this.cwd = opts.cwd;
+		this.cwd = opts.cwd ?? defaultLocalCliCwd();
 		this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 		this.runner = opts.runner ?? new LocalCommandRunner();
 	}
 
 	async testConnection(): Promise<ProviderStatus> {
 		try {
-			const result = await this.runner.run({
-				command: this.command,
-				args: ["auth", "status", "--json"],
-				cwd: this.cwd,
-				timeoutMs: STATUS_TIMEOUT_MS,
-			});
-			const output = `${result.stdout}\n${result.stderr}`;
-			if (!authStatusLooksOk(output)) {
+			const output = await this.runPrompt(
+				"Return exactly this JSON object to confirm Claude CLI text generation works: {\"ok\":true}",
+				CONNECTION_JSON_SCHEMA,
+				STATUS_TIMEOUT_MS
+			);
+			const parsed = asRecord(JSON.parse(output));
+			if (parsed?.ok !== true) {
 				return {
 					ok: false,
-					message: "Claude CLI is not logged in. Run `claude login` and try again.",
+					message: "Claude CLI connected but returned an unexpected setup response.",
 				};
 			}
 			return {
@@ -174,6 +220,12 @@ export class ClaudeCliProvider implements AiProvider {
 			};
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
+			if (isAuthMissing(message)) {
+				return {
+					ok: false,
+					message: CLAUDE_CLI_AUTH_MESSAGE,
+				};
+			}
 			return { ok: false, message };
 		}
 	}
@@ -212,6 +264,32 @@ export class ClaudeCliProvider implements AiProvider {
 		return result.value;
 	}
 
+	async generateCues(
+		inputs: CueInput[],
+		signal?: AbortSignal
+	): Promise<CueBatchResult[]> {
+		if (inputs.length === 0) return [];
+		const schema = cueBatchJsonSchema(inputs.length);
+		const basePrompt = buildCueBatchPrompt(inputs, PRESET_GUIDANCE);
+		const raw = await this.complete(basePrompt, schema, signal);
+		let result = parseCueBatch(raw, inputs.length);
+		if (typeof result === "string") {
+			const repairPrompt =
+				basePrompt +
+				`\nYour previous reply could not be validated (${result}).\n` +
+				`Previous reply:\n${raw}\n` +
+				`Reply again with ONLY the corrected JSON object.`;
+			result = parseCueBatch(
+				await this.complete(repairPrompt, schema, signal),
+				inputs.length
+			);
+		}
+		if (typeof result === "string") {
+			throw new ProviderError(`Model output could not be validated: ${result}`);
+		}
+		return result.results;
+	}
+
 	async generateSummary(input: SummaryInput, signal?: AbortSignal): Promise<SummaryOutput> {
 		const questions = input.sectionQuestions.length
 			? `\nSection questions to reflect:\n- ${input.sectionQuestions.join("\n- ")}\n`
@@ -246,8 +324,13 @@ export class ClaudeCliProvider implements AiProvider {
 			"-p",
 			"--output-format",
 			"json",
+			"--input-format",
+			"text",
 			"--no-session-persistence",
+			"--no-chrome",
 			"--safe-mode",
+			"--setting-sources",
+			"user",
 			"--permission-mode",
 			"dontAsk",
 			"--tools",
@@ -259,9 +342,10 @@ export class ClaudeCliProvider implements AiProvider {
 		return args;
 	}
 
-	private async complete(
+	private async runPrompt(
 		prompt: string,
 		schema: string,
+		timeoutMs: number,
 		signal?: AbortSignal
 	): Promise<string> {
 		const request: LocalCommandRequest = {
@@ -269,21 +353,42 @@ export class ClaudeCliProvider implements AiProvider {
 			args: this.commandArgs(schema),
 			stdin: prompt,
 			cwd: this.cwd,
-			timeoutMs: this.timeoutMs,
+			env: CLAUDE_CLI_ENV,
+			timeoutMs,
 			signal,
 		};
 		let result: LocalCommandResult;
 		try {
 			result = await this.runner.run(request);
 		} catch (error) {
-			if (error instanceof ProviderError) throw error;
 			const message = error instanceof Error ? error.message : String(error);
+			if (isAuthMissing(message)) {
+				throw new ProviderError(CLAUDE_CLI_AUTH_MESSAGE);
+			}
+			if (error instanceof ProviderError) throw error;
 			throw new ProviderError(`Claude CLI request failed: ${message}`);
 		}
-		const output = extractClaudeCliOutput(result.stdout);
+		const stdout = extractClaudeCliOutput(result.stdout);
+		const stderr = extractClaudeCliOutput(result.stderr);
+		const output = stdout.trim() ? stdout : stderr;
+		if (
+			isAuthMissing(result.stdout) ||
+			isAuthMissing(result.stderr) ||
+			isAuthMissing(output)
+		) {
+			throw new ProviderError(CLAUDE_CLI_AUTH_MESSAGE);
+		}
 		if (!output.trim()) {
 			throw new ProviderError("Claude CLI returned an empty response.");
 		}
 		return output;
+	}
+
+	private async complete(
+		prompt: string,
+		schema: string,
+		signal?: AbortSignal
+	): Promise<string> {
+		return this.runPrompt(prompt, schema, this.timeoutMs, signal);
 	}
 }

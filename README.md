@@ -21,7 +21,7 @@ cue layer, Study Mode, and caching are being built out against the v1.0 spec.
 
 ## v1.0 at a glance
 
-- **Providers:** Ollama (local, free), direct cloud providers — Anthropic (Claude), OpenAI (ChatGPT), Google (Gemini), and xAI (Grok) — or OpenRouter for one-key access to many hosted models. Choose one in Settings; cloud providers and OpenRouter need an API key (stored locally in the vault's plugin data).
+- **Providers:** Ollama (local, free), direct cloud providers — Anthropic (Claude), OpenAI (ChatGPT), Google (Gemini), and xAI (Grok) — OpenRouter for one-key access to many hosted models, or local Codex / Claude CLI commands. Choose one in Settings; cloud providers and OpenRouter need an API key (stored locally in the vault's plugin data), while CLI providers use your existing local CLI login.
 - **Editor-mode** cue questions + keywords per section, and a whole-note summary.
 - **Cornell view** — a dedicated pane laying the note out as Title → left cue column | main notes → Summary, rendered from the cache (command: *Open Cornell View*).
 - **Study Mode** (in the Cornell view) blurs the left keyword hints until you reveal each cue.
@@ -44,6 +44,19 @@ bun run typecheck
 
 CI (GitHub Actions) runs `bun install`, `bun run build`, and `bun run test` on every pull
 request — see [`.github/workflows/ci.yml`](./.github/workflows/ci.yml).
+
+## Local CLI providers
+
+CueCraft can call installed desktop CLI tools instead of storing another API key:
+
+- **Codex CLI** — select `Codex CLI`, keep the command as `codex` or enter an absolute path, then run **Test connection**. Leave the model override blank to use your Codex CLI default, or enter a model supported by your installed CLI.
+- **Claude CLI** — select `Claude CLI`, keep the command as `claude` or enter an absolute path, then run **Test connection**. Leave the model override blank to use your Claude CLI default, or enter an alias/model such as `sonnet`.
+
+CueCraft does not install the CLIs, log in for you, or manage CLI tokens. Run the relevant login/setup command in your terminal first (`codex login` or `claude login`), then use CueCraft's connection check.
+
+Local CLI providers are desktop-only local process integrations, not local models. Note text is still sent through the selected CLI's own account/service path. To avoid interactive prompts and file access during cue generation, CueCraft runs the CLIs non-interactively, disables/denies tools where the CLI supports it, and limits CLI-backed section generation to one request at a time.
+
+Not included in this first CLI provider slice: interactive coding-agent sessions, TTY handoff, long-lived session resume, SDK bundling, mobile support, or CLI-managed install/login flows.
 
 
 ## License

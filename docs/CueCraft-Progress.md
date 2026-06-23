@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Exact selected-model verification — cloud providers now run the provider generation probe when a model is selected, so successful setup means the current key can use the current model; if no model is selected, Test connection keeps the lighter provider-access/model-list check. Exact-model verification applies to all cloud providers because they share the same AI SDK generation probe path, and changing a cloud model now marks setup verification stale until re-tested. Model compatibility badges and warnings — OpenRouter model metadata now detects structured-output support from `supported_parameters`, surfaces restrained `Structured output`, `Large context`, and `Low cost` badges in the combobox, sorts objective compatibility signals upward without hiding unsupported options, and shows a non-blocking warning when the selected OpenRouter model lacks or does not expose structured-output metadata. Searchable model combobox — fetched model selection now uses a reusable provider-aware combobox for Ollama, OpenRouter, OpenAI, Gemini, and xAI; it filters client-side by model ID, label, provider, and caller-supplied badges; supports mouse, arrow-key, `Enter`, `Escape`, and blur behavior; preserves custom/stale saved IDs as selectable values; and keeps typed custom IDs as the escape hatch. Anthropic keeps its specialized account-model picker for now because it has separate provider display-name metadata and custom selection state that would make this slice broader than the shared fetched-list path. Model metadata layer — normalized `ModelOption` shape (`id`, `label`, `provider`, `contextLength`, `pricing`, `supportedParameters`, `source`) with helpers to normalize plain string IDs and OpenRouter API model objects into the same display-ready type; stable `sortModelOptions` puts the current model first, then sorts human-readably; OpenRouter model fetching now retains rich metadata while persisted model values remain strings; OpenRouter model fetch UX — OpenRouter wired into the fetched-model selector with provider/model format descriptions, model refresh/fetch, custom model preservation, and provider-switch resilience; `resolveModelRefreshDescription` extracted as a standalone testable helper; OpenRouter provider plumbing — first-class OpenRouter support via the OpenAI-compatible AI SDK path with attribution headers, `generateText`-based structured output for broad model compatibility, model listing against the OpenRouter models endpoint, credential UI, and full provider switch integration; per-section and summary generation timing in debug logs; Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, configurable Reading-mode display options, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 319 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Local CLI providers — Codex CLI and Claude CLI now run as desktop-only process providers using the user's existing CLI login, optional model overrides, setup-status snapshots, non-interactive generation, and a one-at-a-time provider concurrency cap. Exact selected-model verification — cloud providers now run the provider generation probe when a model is selected, so successful setup means the current key can use the current model; if no model is selected, Test connection keeps the lighter provider-access/model-list check. Exact-model verification applies to all cloud providers because they share the same AI SDK generation probe path, and changing a cloud model now marks setup verification stale until re-tested. Model compatibility badges and warnings — OpenRouter model metadata now detects structured-output support from `supported_parameters`, surfaces restrained `Structured output`, `Large context`, and `Low cost` badges in the combobox, sorts objective compatibility signals upward without hiding unsupported options, and shows a non-blocking warning when the selected OpenRouter model lacks or does not expose structured-output metadata. Searchable model combobox — fetched model selection now uses a reusable provider-aware combobox for Ollama, OpenRouter, OpenAI, Gemini, and xAI; it filters client-side by model ID, label, provider, and caller-supplied badges; supports mouse, arrow-key, `Enter`, `Escape`, and blur behavior; preserves custom/stale saved IDs as selectable values; and keeps typed custom IDs as the escape hatch. Anthropic keeps its specialized account-model picker for now because it has separate provider display-name metadata and custom selection state that would make this slice broader than the shared fetched-list path. Model metadata layer — normalized `ModelOption` shape (`id`, `label`, `provider`, `contextLength`, `pricing`, `supportedParameters`, `source`) with helpers to normalize plain string IDs and OpenRouter API model objects into the same display-ready type; stable `sortModelOptions` puts the current model first, then sorts human-readably; OpenRouter model fetching now retains rich metadata while persisted model values remain strings; OpenRouter model fetch UX — OpenRouter wired into the fetched-model selector with provider/model format descriptions, model refresh/fetch, custom model preservation, and provider-switch resilience; `resolveModelRefreshDescription` extracted as a standalone testable helper; OpenRouter provider plumbing — first-class OpenRouter support via the OpenAI-compatible AI SDK path with attribution headers, `generateText`-based structured output for broad model compatibility, model listing against the OpenRouter models endpoint, credential UI, and full provider switch integration; per-section and summary generation timing in debug logs; Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, configurable Reading-mode display options, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 389 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -13,8 +13,8 @@ _Last updated: 2026-06 (Exact selected-model verification — cloud providers no
 **The full core loop is shipped and proven end-to-end** (note → parse → generate → cache →
 display → study), the two biggest risks are retired (theme-safe CM6 cue rendering; a provider
 producing reliable validated structured cues), and provider breadth now covers a local model,
-four direct frontier providers, and OpenRouter. What remains is mostly **breadth and UX polish**,
-not core risk.
+four direct frontier providers, OpenRouter, and local Codex / Claude CLI process providers. What
+remains is mostly **breadth and UX polish**, not core risk.
 
 Rough completion against the full V1.0 → V2 vision: **~72%**, with 100% of the MVP core loop,
 all of V1.1 done, V1.2 (presets + typography/layout + in-view controls) effectively
@@ -236,6 +236,15 @@ Each item links to the PR that delivered it.
   action (Cornell view banner + per-cue button; editor marker) instead of a silent blank; restart
   fallback prefers notes with *usable* cues (#25).
 
+### V1.3 — Hard providers
+- **Local Codex / Claude CLI providers.** CueCraft can now call installed `codex` and `claude`
+  commands as desktop-only local process providers. They use the user's existing CLI login instead
+  of storing another API key, keep model override optional so CLI defaults work, run non-interactive
+  cue/summary generation through the same schema validation and one-repair flow as other providers,
+  record setup status against command + model settings, and cap CLI-backed section generation to one
+  request at a time. Settings copy and README docs call out that "local CLI" does not mean local
+  model: note text may still travel through the selected CLI's account/service path.
+
 ---
 
 ## Remaining work (prioritized)
@@ -249,8 +258,8 @@ Each item links to the PR that delivered it.
 - _Optional follow-up:_ review history in plugin data (e.g. last-reviewed timestamps + a stale queue).
 
 ### P4 — V1.3 Hard providers
-8. **Claude Code** (CLI bridge, opt-in, desktop-only) and **Local VM / Transformers.js**
-   (explicit download consent). Most brittle / highest support burden — intentionally last.
+8. **Local VM / Transformers.js** provider (explicit download consent). Most brittle / highest
+   support burden — intentionally last.
 
 ### P5 — V2 Knowledge-base workflows
 9. **Batch-generate** cues across a folder.
@@ -260,8 +269,9 @@ Each item links to the PR that delivered it.
 
 ### Cross-cutting / nice-to-haves
 - **Live end-to-end provider testing.** The cloud/router providers are built + unit-tested against
-  mocks but not yet verified against the real APIs (needs keys). Anthropic key was requested for
-  org-wide save but not yet provided.
+  mocks but not yet verified against the real APIs (needs keys). CLI providers are also covered by
+  mocked process tests, but should still be smoke-tested against real installed/authenticated CLIs.
+  Anthropic key was requested for org-wide save but not yet provided.
 - **Ollama hardening (optional).** Small local models occasionally emit non-JSON. The provider
   already sends `format: "json"`; could add one auto-retry on non-JSON and/or send Ollama a JSON
   *schema* (structured outputs). Use a capable model (e.g. `llama3.1:8b`) meanwhile.
@@ -269,6 +279,17 @@ Each item links to the PR that delivered it.
 ---
 
 ## Manual Obsidian Test Instructions
+
+For the local CLI provider slice:
+
+1. Reload CueCraft in Obsidian so the latest code is active.
+2. In a terminal, confirm `codex login status` succeeds, or run `codex login` first.
+3. Open CueCraft settings, go to AI model, select `Codex CLI`, and keep the command as `codex` or enter the absolute command path.
+4. Leave the model override blank, click `Test connection`, and confirm setup status shows command saved, CLI default, and connection verified.
+5. Set a Codex model override your installed CLI supports, confirm setup status becomes stale, then click `Test connection` again.
+6. Generate cues for a short note and confirm generation completes sequentially even if the Parallel requests slider is higher than 1.
+7. Repeat the same flow with `Claude CLI` after confirming `claude auth status --json` succeeds, or after logging in with the Claude CLI.
+8. Temporarily set either command to a missing path and confirm `Test connection` reports command-path guidance without changing Markdown content.
 
 For the OpenRouter and searchable model-picker final QA slice:
 
@@ -359,12 +380,13 @@ For the provider model-list discovery slice:
 ```sh
 bun install
 bun run build      # tsc -noEmit + esbuild -> main.js
-bun run test       # vitest (319 tests)
+bun run test       # vitest (389 tests)
 ```
 
 
-Key source layout: `src/providers/` (provider interface + Ollama + `AiSdkProvider` base and the
-five AI-SDK vendors incl. OpenRouter), `src/generator.ts` (generation + per-section/stale regen),
+Key source layout: `src/providers/` (provider interface + Ollama + `AiSdkProvider` base, the
+five AI-SDK vendors incl. OpenRouter, local CLI runner, and Codex/Claude CLI providers),
+`src/generator.ts` (generation + per-section/stale regen),
 `src/cache.ts` (per-note cache + stale detection), `src/cue-extension.ts` (editor decorations),
 `src/cornell*.ts` (Cornell view + model), `src/settings.ts` (provider settings),
 `src/model-options.ts` (normalized model metadata + helpers),

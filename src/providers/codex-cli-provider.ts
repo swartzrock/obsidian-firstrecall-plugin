@@ -7,16 +7,22 @@ import {
 } from "../cue-generation";
 import {
 	AiProvider,
+	type CueBatchResult,
 	CueInput,
 	ProviderError,
 	ProviderStatus,
 	SummaryInput,
 } from "./types";
 import {
+	defaultLocalCliCwd,
 	LocalCommandRunner,
 	type LocalCommandRequest,
 	type LocalCommandResult,
 } from "./local-command-runner";
+import {
+	buildCueBatchPrompt,
+	parseCueBatch,
+} from "./local-cli-cue-batch";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const STATUS_TIMEOUT_MS = 15_000;
@@ -105,7 +111,6 @@ export class CodexCliProvider implements AiProvider {
 	readonly label = "Codex CLI";
 	readonly requiresNetwork = true;
 	readonly requiresDownload = false;
-	readonly sectionConcurrencyLimit = 1;
 
 	private readonly command: string;
 	private readonly model: string;
@@ -116,7 +121,7 @@ export class CodexCliProvider implements AiProvider {
 	constructor(opts: CodexCliProviderOptions) {
 		this.command = opts.command.trim() || "codex";
 		this.model = opts.model?.trim() ?? "";
-		this.cwd = opts.cwd;
+		this.cwd = opts.cwd ?? defaultLocalCliCwd();
 		this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 		this.runner = opts.runner ?? new LocalCommandRunner();
 	}
@@ -182,6 +187,28 @@ export class CodexCliProvider implements AiProvider {
 		return result.value;
 	}
 
+	async generateCues(
+		inputs: CueInput[],
+		signal?: AbortSignal
+	): Promise<CueBatchResult[]> {
+		if (inputs.length === 0) return [];
+		const basePrompt = buildCueBatchPrompt(inputs, PRESET_GUIDANCE);
+		const raw = await this.complete(basePrompt, signal);
+		let result = parseCueBatch(raw, inputs.length);
+		if (typeof result === "string") {
+			const repairPrompt =
+				basePrompt +
+				`\nYour previous reply could not be validated (${result}).\n` +
+				`Previous reply:\n${raw}\n` +
+				`Reply again with ONLY the corrected JSON object.`;
+			result = parseCueBatch(await this.complete(repairPrompt, signal), inputs.length);
+		}
+		if (typeof result === "string") {
+			throw new ProviderError(`Model output could not be validated: ${result}`);
+		}
+		return result.results;
+	}
+
 	async generateSummary(input: SummaryInput, signal?: AbortSignal): Promise<SummaryOutput> {
 		const questions = input.sectionQuestions.length
 			? `\nSection questions to reflect:\n- ${input.sectionQuestions.join("\n- ")}\n`
@@ -213,8 +240,6 @@ export class CodexCliProvider implements AiProvider {
 		const args = [
 			"exec",
 			"--skip-git-repo-check",
-			"--ask-for-approval",
-			"never",
 			"--sandbox",
 			"read-only",
 			"--json",

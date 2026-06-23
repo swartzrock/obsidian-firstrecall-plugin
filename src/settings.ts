@@ -82,6 +82,8 @@ import {
 	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
 	type StudyArea,
 } from "./study-area";
+import { formatCueCraftNotice } from "./notice";
+import type { ProviderId } from "./provider-id";
 
 /**
  * CueCraft supports a local provider (Ollama), local CLI providers, and several
@@ -91,15 +93,6 @@ import {
  */
 export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
-export type ProviderId =
-	| "ollama"
-	| "anthropic"
-	| "openai"
-	| "google"
-	| "xai"
-	| "openrouter"
-	| "codex-cli"
-	| "claude-cli";
 type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
 
 export interface CueCraftSettings {
@@ -545,7 +538,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
 			"5. Tune speed",
-			"Adjust how aggressively CueCraft generates section cues in parallel."
+			isLocalCliProvider(this.plugin.settings.provider)
+				? "Adjust how many sections CueCraft batches into each local CLI request."
+				: "Adjust how aggressively CueCraft generates section cues in parallel."
 		);
 
 		const concurrencyDesc = (): string =>
@@ -1053,20 +1048,22 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			setCommand: (value: string) => void;
 		}
 	): void {
-		new Setting(containerEl)
+		const setting = new Setting(containerEl)
 			.setName(`${opts.providerName} command`)
 			.setDesc(
 				`Command name or absolute path for your local ${opts.providerName}. CueCraft uses your existing CLI login and does not store an API key for this provider.`
 			)
-			.addText((text) =>
+			.addText((text) => {
+				text.inputEl.addClass("cuecraft-cli-text-input");
 				text
 					.setPlaceholder(opts.commandPlaceholder)
 					.setValue(opts.getCommand())
 					.onChange(async (value) => {
 						opts.setCommand(value.trim());
 						await this.plugin.saveSettings();
-					})
-			);
+					});
+			});
+		setting.settingEl.addClass("cuecraft-cli-text-setting");
 	}
 
 	private renderCliModelSettings(
@@ -1078,20 +1075,22 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			setModel: (value: string) => void;
 		}
 	): void {
-		new Setting(containerEl)
+		const setting = new Setting(containerEl)
 			.setName(`${opts.providerName} model override`)
 			.setDesc(
 				`Optional. Leave blank to use your ${opts.providerName} default model.`
 			)
-			.addText((text) =>
+			.addText((text) => {
+				text.inputEl.addClass("cuecraft-cli-text-input");
 				text
 					.setPlaceholder(opts.modelPlaceholder)
 					.setValue(opts.getModel())
 					.onChange(async (value) => {
 						opts.setModel(value.trim());
 						await this.plugin.saveSettings();
-					})
-			);
+					});
+			});
+		setting.settingEl.addClass("cuecraft-cli-text-setting");
 	}
 
 	private renderAnthropicCredentialSettings(containerEl: HTMLElement): void {
@@ -1769,7 +1768,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			await this.plugin.saveSettings();
 			this.display();
 		}
-		new Notice(`CueCraft: ${status.message}`);
+		new Notice(formatCueCraftNotice(status.message));
 	}
 
 	private async testCloudProvider(): Promise<void> {
@@ -1835,7 +1834,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				return;
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				new Notice(`CueCraft: ${message}`);
+				new Notice(formatCueCraftNotice(message));
 				return;
 			}
 		}
@@ -1857,7 +1856,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return;
 		}
 		if (status.ok) {
-			new Notice(`CueCraft: ${status.message}`);
+			new Notice(formatCueCraftNotice(status.message));
 			return;
 		}
 		if (
@@ -1874,6 +1873,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 			return;
 		}
-		new Notice(`CueCraft: ${status.message}`);
+		new Notice(formatCueCraftNotice(status.message));
 	}
 }

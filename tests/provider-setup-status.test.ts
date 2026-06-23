@@ -212,4 +212,33 @@ describe("deriveProviderSetupStatus", () => {
 			testedAt: "2026-06-11T00:00:00.000Z",
 		});
 	});
+
+	it("does not crash when a saved CLI provider is missing new CLI fields", () => {
+		const settings = baseSettings({
+			provider: "claude-cli",
+		}) as Partial<ProviderSetupStatusSettings>;
+		delete settings.claudeCliCommand;
+		delete settings.claudeCliModel;
+
+		expect(
+			deriveProviderSetupStatus(settings as ProviderSetupStatusSettings)
+		).toEqual({
+			keySaved: false,
+			modelSelected: true,
+			connection: "untested",
+		});
+	});
+
+	it("does not crash when a saved provider id is unknown", () => {
+		const settings = {
+			...baseSettings(),
+			provider: "claude",
+		} as unknown as ProviderSetupStatusSettings;
+
+		expect(deriveProviderSetupStatus(settings)).toEqual({
+			keySaved: false,
+			modelSelected: false,
+			connection: "untested",
+		});
+	});
 });

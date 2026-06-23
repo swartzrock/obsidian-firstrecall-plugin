@@ -3,6 +3,7 @@ import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
 import {
 	LocalCommandRunner,
+	type LoginShellPathLoader,
 	type LocalProcess,
 	type LocalProcessSpawner,
 } from "../src/providers/local-command-runner";
@@ -36,7 +37,13 @@ class FakeProcess extends EventEmitter implements LocalProcess {
 	}
 }
 
-function makeRunner(process: FakeProcess): {
+function makeRunner(
+	process: FakeProcess,
+	opts: {
+		env?: NodeJS.ProcessEnv;
+		loginShellPath?: string;
+	} = {}
+): {
 	runner: LocalCommandRunner;
 	calls: Array<Parameters<LocalProcessSpawner>>;
 } {
@@ -45,10 +52,74 @@ function makeRunner(process: FakeProcess): {
 		calls.push([command, args, options]);
 		return process;
 	};
-	return { runner: new LocalCommandRunner(spawner), calls };
+	const loadLoginShellPath: LoginShellPathLoader = () => opts.loginShellPath ?? "";
+	return {
+		runner: new LocalCommandRunner(
+			spawner,
+			opts.env ?? { PATH: "/usr/bin" },
+			console,
+			loadLoginShellPath
+		),
+		calls,
+	};
 }
 
 describe("LocalCommandRunner", () => {
+	it("uses the login shell PATH for bare commands", async () => {
+		const process = new FakeProcess();
+		const { runner, calls } = makeRunner(process, {
+			loginShellPath: "/Users/jason/.local/bin:/usr/bin",
+		});
+		const result = runner.run({ command: "codex" });
+
+		process.close(0);
+
+		await expect(result).resolves.toMatchObject({ exitCode: 0 });
+		expect(calls[0][2].env?.PATH).toBe("/Users/jason/.local/bin:/usr/bin");
+		expect(calls[0][2].env?.PATH).not.toContain("/opt/homebrew/bin");
+	});
+
+	it("merges request-specific environment values", async () => {
+		const process = new FakeProcess();
+		const { runner, calls } = makeRunner(process, {
+			loginShellPath: "/Users/jason/bin:/usr/bin",
+		});
+		const result = runner.run({
+			command: "claude",
+			env: { CLAUDE_CODE_SIMPLE: "1" },
+		});
+
+		process.close(0);
+
+		await expect(result).resolves.toMatchObject({ exitCode: 0 });
+		expect(calls[0][2].env).toMatchObject({
+			CLAUDE_CODE_SIMPLE: "1",
+			PATH: "/Users/jason/bin:/usr/bin",
+		});
+	});
+
+	it("falls back to the app environment PATH when the login shell PATH is unavailable", async () => {
+		const process = new FakeProcess();
+		const { runner, calls } = makeRunner(process);
+		const result = runner.run({ command: "codex" });
+
+		process.close(0);
+
+		await expect(result).resolves.toMatchObject({ exitCode: 0 });
+		expect(calls[0][2].env?.PATH).toBe("/usr/bin");
+	});
+
+	it("leaves absolute command paths on the configured environment PATH", async () => {
+		const process = new FakeProcess();
+		const { runner, calls } = makeRunner(process);
+		const result = runner.run({ command: "/Users/jason/.local/bin/claude" });
+
+		process.close(0);
+
+		await expect(result).resolves.toMatchObject({ exitCode: 0 });
+		expect(calls[0][2].env?.PATH).toBe("/usr/bin");
+	});
+
 	it("returns stdout, stderr, and exit status for a successful process", async () => {
 		const process = new FakeProcess();
 		const { runner } = makeRunner(process);
@@ -79,6 +150,19 @@ describe("LocalCommandRunner", () => {
 		await expect(result).rejects.toBeInstanceOf(ProviderError);
 	});
 
+	it("uses stdout as the nonzero-exit excerpt when stderr is empty", async () => {
+		const process = new FakeProcess();
+		const { runner } = makeRunner(process);
+		const result = runner.run({ command: "claude", args: ["-p"] });
+
+		process.stdout.write("Login required: run claude auth login");
+		process.close(1);
+
+		await expect(result).rejects.toThrow(
+			/CueCraft: claude exited with code 1: Login required/
+		);
+	});
+
 	it("kills the process and reports cancellation when aborted", async () => {
 		const process = new FakeProcess();
 		const { runner } = makeRunner(process);
@@ -107,6 +191,34 @@ describe("LocalCommandRunner", () => {
 		expect(calls).toHaveLength(0);
 	});
 
+	it("does not spawn when aborted while loading the login shell PATH", async () => {
+		const process = new FakeProcess();
+		const calls: Array<Parameters<LocalProcessSpawner>> = [];
+		const spawner: LocalProcessSpawner = (command, args, options) => {
+			calls.push([command, args, options]);
+			return process;
+		};
+		let resolvePath: (path: string) => void = () => {};
+		const loadLoginShellPath: LoginShellPathLoader = () =>
+			new Promise((resolve) => {
+				resolvePath = resolve;
+			});
+		const runner = new LocalCommandRunner(
+			spawner,
+			{ PATH: "/usr/bin" },
+			console,
+			loadLoginShellPath
+		);
+		const controller = new AbortController();
+		const result = runner.run({ command: "codex", signal: controller.signal });
+
+		controller.abort();
+		resolvePath("/Users/jason/bin:/usr/bin");
+
+		await expect(result).rejects.toThrow(/codex was cancelled/);
+		expect(calls).toHaveLength(0);
+	});
+
 	it("kills the process and reports timeout when the command hangs", async () => {
 		vi.useFakeTimers();
 		try {
@@ -132,7 +244,18 @@ describe("LocalCommandRunner", () => {
 
 	it("maps missing commands to setup guidance", async () => {
 		const process = new FakeProcess();
-		const { runner } = makeRunner(process);
+		const warn = vi.fn();
+		const calls: Array<Parameters<LocalProcessSpawner>> = [];
+		const spawner: LocalProcessSpawner = (command, args, options) => {
+			calls.push([command, args, options]);
+			return process;
+		};
+		const runner = new LocalCommandRunner(
+			spawner,
+			{ PATH: "/usr/bin" },
+			{ warn },
+			() => ""
+		);
 		const result = runner.run({ command: "missing-codex" });
 
 		process.fail(
@@ -143,6 +266,14 @@ describe("LocalCommandRunner", () => {
 
 		await expect(result).rejects.toThrow(
 			/missing-codex was not found.*command path/i
+		);
+		expect(warn).toHaveBeenCalledWith(
+			"CueCraft local CLI failed to start",
+			expect.objectContaining({
+				command: "missing-codex",
+				code: "ENOENT",
+				PATH: calls[0][2].env?.PATH,
+			})
 		);
 	});
 
@@ -165,7 +296,11 @@ describe("LocalCommandRunner", () => {
 			[
 				"claude",
 				["--model", model],
-				{ cwd: "/tmp/cuecraft-empty", shell: false },
+				{
+					cwd: "/tmp/cuecraft-empty",
+					env: { PATH: "/usr/bin" },
+					shell: false,
+				},
 			],
 		]);
 		expect(process.stdinText).toBe(prompt);

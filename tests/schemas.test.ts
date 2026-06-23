@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { extractJson, validateCue, validateSummary } from "../src/schemas";
+import {
+	extractJson,
+	validateCue,
+	validateCueBatch,
+	validateSummary,
+} from "../src/schemas";
 
 describe("extractJson", () => {
 	it("parses raw JSON", () => {
@@ -96,6 +101,43 @@ describe("validateCue", () => {
 		const r = validateCue("not json");
 		expect(r.ok).toBe(false);
 		if (!r.ok) expect(r.error).toMatch(/not valid JSON/);
+	});
+});
+
+describe("validateCueBatch", () => {
+	it("accepts a cue array wrapped in a cues object", () => {
+		const r = validateCueBatch(
+			JSON.stringify({
+				cues: [
+					{ question: "Q1?", keywords: ["a", "b"], confidence: "high" },
+					{ question: "Q2?", keywords: ["c", "d"], confidence: "medium" },
+				],
+			}),
+			2
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) {
+			expect(r.value.map((item) => item.value?.question)).toEqual(["Q1?", "Q2?"]);
+			expect(r.value.every((item) => item.error === null)).toBe(true);
+		}
+	});
+
+	it("keeps item-level errors isolated", () => {
+		const r = validateCueBatch(
+			JSON.stringify({
+				cues: [
+					{ question: "Q1?", keywords: ["a", "b"], confidence: "high" },
+					{ question: "", keywords: ["c", "d"], confidence: "medium" },
+				],
+			}),
+			3
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) {
+			expect(r.value[0].value?.question).toBe("Q1?");
+			expect(r.value[1].error).toMatch(/question/);
+			expect(r.value[2].error).toMatch(/missing cue/i);
+		}
 	});
 });
 

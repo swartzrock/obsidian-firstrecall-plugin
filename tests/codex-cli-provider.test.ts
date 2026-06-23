@@ -3,6 +3,7 @@ import {
 	CodexCliProvider,
 	extractCodexCliOutput,
 } from "../src/providers/codex-cli-provider";
+import { defaultLocalCliCwd } from "../src/providers/local-command-runner";
 import type {
 	LocalCommandRequest,
 	LocalCommandResult,
@@ -86,13 +87,78 @@ describe("CodexCliProvider", () => {
 		expect(run.mock.calls[0][0].args).toEqual([
 			"exec",
 			"--skip-git-repo-check",
-			"--ask-for-approval",
-			"never",
 			"--sandbox",
 			"read-only",
 			"--json",
 		]);
+		expect(run.mock.calls[0][0].args).not.toContain("--ask-for-approval");
 		expect(run.mock.calls[0][0].stdin).toContain("Section heading: X");
+	});
+
+	it("returns validated cues from a batched Codex output", async () => {
+		const { provider, run } = makeProvider([
+			result(
+				eventOutput(
+					JSON.stringify({
+						cues: [
+							{
+								question: "What is A?",
+								keywords: ["a", "b"],
+								confidence: "high",
+							},
+							{
+								question: "What is B?",
+								keywords: ["c", "d"],
+								confidence: "medium",
+							},
+						],
+					})
+				)
+			),
+		]);
+
+		const cues = await provider.generateCues?.([
+			{ heading: "A", content: "alpha", preset: "conceptual" },
+			{ heading: "B", content: "beta", preset: "conceptual" },
+		]);
+
+		expect(cues?.map((item) => item.cue?.question)).toEqual([
+			"What is A?",
+			"What is B?",
+		]);
+		expect(run).toHaveBeenCalledTimes(1);
+		expect(run.mock.calls[0][0].stdin).toContain("Return ONLY a JSON object");
+		expect(run.mock.calls[0][0].stdin).toContain("Section 1");
+		expect(run.mock.calls[0][0].stdin).toContain("Section 2");
+	});
+
+	it("keeps invalid batched Codex cue items isolated", async () => {
+		const { provider } = makeProvider([
+			result(
+				JSON.stringify({
+					cues: [
+						{
+							question: "What is A?",
+							keywords: ["a", "b"],
+							confidence: "high",
+						},
+						{
+							question: "",
+							keywords: ["c", "d"],
+							confidence: "medium",
+						},
+					],
+				})
+			),
+		]);
+
+		const cues = await provider.generateCues?.([
+			{ heading: "A", content: "alpha", preset: "conceptual" },
+			{ heading: "B", content: "beta", preset: "conceptual" },
+		]);
+
+		expect(cues?.[0].cue?.question).toBe("What is A?");
+		expect(cues?.[1].error).toMatch(/question/);
 	});
 
 	it("repairs malformed cue output once", async () => {
@@ -206,5 +272,19 @@ describe("CodexCliProvider", () => {
 			preset: "conceptual",
 		});
 		expect(withoutModel.run.mock.calls[0][0].args).not.toContain("--model");
+	});
+
+	it("uses a neutral temp cwd when no cwd is configured", async () => {
+		const run = vi.fn<[LocalCommandRequest], Promise<LocalCommandResult>>(
+			async () => result("Logged in as user")
+		);
+		const provider = new CodexCliProvider({
+			command: "codex",
+			runner: { run },
+		});
+
+		await provider.testConnection();
+
+		expect(run.mock.calls[0][0].cwd).toBe(defaultLocalCliCwd());
 	});
 });
