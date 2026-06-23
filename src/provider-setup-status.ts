@@ -58,11 +58,11 @@ export interface DerivedProviderSetupStatus {
 	testedAt?: string;
 }
 
-function trimValue(value: string): string {
-	return value.trim();
+function trimValue(value: unknown): string {
+	return typeof value === "string" ? value.trim() : "";
 }
 
-function isCliProvider(provider: ProviderSetupStatusId): boolean {
+function isCliProvider(provider: unknown): boolean {
 	return provider === "codex-cli" || provider === "claude-cli";
 }
 
@@ -84,6 +84,8 @@ function currentCredentialValue(settings: ProviderSetupStatusSettings): string {
 			return trimValue(settings.codexCliCommand);
 		case "claude-cli":
 			return trimValue(settings.claudeCliCommand);
+		default:
+			return "";
 	}
 }
 
@@ -105,6 +107,8 @@ function currentModelValue(settings: ProviderSetupStatusSettings): string {
 			return trimValue(settings.codexCliModel);
 		case "claude-cli":
 			return trimValue(settings.claudeCliModel);
+		default:
+			return "";
 	}
 }
 

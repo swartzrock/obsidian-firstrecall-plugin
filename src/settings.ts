@@ -83,6 +83,7 @@ import {
 	type StudyArea,
 } from "./study-area";
 import { formatCueCraftNotice } from "./notice";
+import type { ProviderId } from "./provider-id";
 
 /**
  * CueCraft supports a local provider (Ollama), local CLI providers, and several
@@ -92,15 +93,6 @@ import { formatCueCraftNotice } from "./notice";
  */
 export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
-export type ProviderId =
-	| "ollama"
-	| "anthropic"
-	| "openai"
-	| "google"
-	| "xai"
-	| "openrouter"
-	| "codex-cli"
-	| "claude-cli";
 type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
 
 export interface CueCraftSettings {

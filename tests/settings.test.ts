@@ -10,6 +10,7 @@ import {
 	normalizeAnthropicModelSelection,
 	refreshAnthropicModelOptions,
 } from "../src/anthropic-models";
+import { normalizeProviderId } from "../src/provider-id";
 import {
 	DEFAULT_CORNELL_DISPLAY_MODE,
 	cornellDisplayModeOption,
@@ -48,6 +49,13 @@ describe("settings defaults", () => {
 		for (const bad of ["", "hooks", "study", null, undefined, 1, {}]) {
 			expect(isCornellDisplayMode(bad)).toBe(false);
 		}
+	});
+
+	it("normalizes legacy CLI provider ids", () => {
+		expect(normalizeProviderId("claude")).toBe("claude-cli");
+		expect(normalizeProviderId("codex")).toBe("codex-cli");
+		expect(normalizeProviderId("claude-cli")).toBe("claude-cli");
+		expect(normalizeProviderId("nope")).toBe("ollama");
 	});
 });
 

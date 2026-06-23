@@ -17,6 +17,7 @@ import {
 	CueCraftSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
+import { normalizeProviderId } from "./provider-id";
 import {
 	normalizeAnthropicModelSelection,
 } from "./anthropic-models";
@@ -188,6 +189,22 @@ export default class CueCraftPlugin extends Plugin {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
 		const rawSettings = loaded?.settings ?? loaded ?? {};
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
+		settings.provider = normalizeProviderId(
+			(settings as { provider?: unknown }).provider
+		);
+		for (const key of [
+			"codexCliCommand",
+			"codexCliModel",
+			"claudeCliCommand",
+			"claudeCliModel",
+		] as const) {
+			if (
+				typeof (settings as unknown as Record<string, unknown>)[key] !==
+				"string"
+			) {
+				settings[key] = DEFAULT_SETTINGS[key];
+			}
+		}
 		settings.studyAreas = loadStudyAreas(
 			(settings as { studyAreas?: unknown }).studyAreas
 		);
