@@ -859,7 +859,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		new Setting(manageEl)
 			.setName("Auto-update cues for saved notes")
-			.setDesc("When on, saving a note in a study area marked Maintain on save queues that note for stale or failed cue regeneration. It does not refresh this list or regenerate the whole folder.")
+			.setDesc("When on, saving a note in a study area marked Maintain on save queues that note for missing, stale, or failed cue generation. It does not refresh this list or regenerate the whole folder.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.studyAreaAutomationEnabled)

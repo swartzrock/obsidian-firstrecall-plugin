@@ -6,6 +6,7 @@ import {
 	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
 	classifyStudyAreaNote,
 	eligibleStudyAreaPaths,
+	findMaintainedStudyAreaForPath,
 	isExcludedPath,
 	isStudyAreaPath,
 	loadStudyAreas,
@@ -91,6 +92,62 @@ describe("study area path matching", () => {
 	});
 });
 
+describe("study area maintenance matching", () => {
+	it("matches edited notes inside enabled study areas only", () => {
+		const maintained = area({ maintenanceMode: "maintain-on-save" });
+		expect(
+			findMaintainedStudyAreaForPath(
+				[maintained],
+				"Courses/Biology/Week 1.md",
+				true
+			)
+		)?.toEqual(maintained);
+		expect(
+			findMaintainedStudyAreaForPath(
+				[maintained],
+				"Courses/Chemistry/Week 1.md",
+				true
+			)
+		).toBeNull();
+		expect(
+			findMaintainedStudyAreaForPath(
+				[area({ maintenanceMode: "paused" })],
+				"Courses/Biology/Week 1.md",
+				true
+			)
+		).toBeNull();
+		expect(
+			findMaintainedStudyAreaForPath(
+				[maintained],
+				"Courses/Biology/Week 1.md",
+				false
+			)
+		).toBeNull();
+	});
+
+	it("skips hidden and excluded notes", () => {
+		const maintained = area({
+			maintenanceMode: "maintain-on-save",
+			excludedPaths: ["Courses/Biology/Drafts"],
+		});
+		expect(
+			findMaintainedStudyAreaForPath(
+				[maintained],
+				"Courses/Biology/Drafts/a.md",
+				true
+			)
+		).toBeNull();
+		expect(
+			findMaintainedStudyAreaForPath(
+				[maintained],
+				"Courses/Biology/Public/a.md",
+				true,
+				true
+			)
+		).toBeNull();
+	});
+});
+
 describe("study area readiness", () => {
 	it("classifies hidden and excluded notes as skipped", () => {
 		const studyArea = area({ excludedPaths: ["Courses/Biology/private.md"] });
@@ -173,6 +230,25 @@ describe("study area generation planning", () => {
 		expect(plan.items).toEqual([
 			{
 				path: "Courses/Biology/Uncued.md",
+				action: "generate-note",
+				sectionIds: [],
+				readiness: "uncued",
+				sectionCount: 2,
+			},
+		]);
+	});
+
+	it("queues uncued saved notes for maintain-on-save generation", () => {
+		const plan = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Edited.md",
+				cache: null,
+				currentSections: parseSections(NOTE),
+			},
+		], "maintain-note");
+		expect(plan.items).toEqual([
+			{
+				path: "Courses/Biology/Edited.md",
 				action: "generate-note",
 				sectionIds: [],
 				readiness: "uncued",
