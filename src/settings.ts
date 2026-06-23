@@ -233,7 +233,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			case "cue-generation":
 				this.renderSubpageHeader(
 					containerEl,
-					"Cue generation",
+					"Cue Generation",
 					"Question style, density, summaries, and auto-generation behavior."
 				);
 				this.renderCueGenerationSection(containerEl, false);
@@ -249,8 +249,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			case "study-areas":
 				this.renderSubpageHeader(
 					containerEl,
-					"Study areas",
-					"Choose which notes CueCraft keeps ready for study. Update on save refreshes cues for the saved note only; Generate Cues fills missing or outdated cues across a study area."
+					"Study Areas",
+					"Generate cues for your entire vault or specific folders. CueCraft keeps cues up-to-date for notes in these areas."
 				);
 				this.renderStudyAreasSection(containerEl, false);
 				break;
@@ -275,10 +275,16 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		const navEl = containerEl.createDiv({ cls: "cuecraft-settings-nav" });
 		this.renderSettingsNavCard(navEl, {
-			title: "AI model",
-			description: "Provider setup, connection checks, model selection, and parallel request tuning.",
+			title: "AI Provider & Settings",
+			description: "Provider & model selection, connection check, and parallel request tuning.",
 			summary: this.aiModelSummary(),
 			onOpen: () => this.openSubpage("ai-model"),
+		});
+		this.renderSettingsNavCard(navEl, {
+			title: "Study Areas",
+			description: "Generate cues for your entire vault or specific folders.",
+			summary: this.studyAreasSummary(),
+			onOpen: () => this.openSubpage("study-areas"),
 		});
 		this.renderSettingsNavCard(navEl, {
 			title: "Cue generation",
@@ -291,12 +297,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			description: "Adjust Cornell view styling, sizing, accents, and compact display options.",
 			summary: this.appearanceSummary(),
 			onOpen: () => this.openSubpage("appearance"),
-		});
-		this.renderSettingsNavCard(navEl, {
-			title: "Study areas",
-			description: "Generate cues for study areas and keep saved notes updated.",
-			summary: this.studyAreasSummary(),
-			onOpen: () => this.openSubpage("study-areas"),
 		});
 
 		this.renderNoteFormatSection(containerEl, true);
@@ -424,11 +424,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			isEntireVaultStudyArea(area)
 		);
 		if (entireVaultArea) {
-			return `${ENTIRE_VAULT_STUDY_AREA_LABEL} · ${
-				entireVaultArea.maintenanceMode === "maintain-on-save"
-					? "update on save on"
-					: "update on save off"
-			}`;
+			return `${ENTIRE_VAULT_STUDY_AREA_LABEL} · ${entireVaultArea.maintenanceMode === "maintain-on-save"
+				? "update on save on"
+				: "update on save off"
+				}`;
 		}
 		return `${count} area${count === 1 ? "" : "s"} · ${enabled} update on save`;
 	}
@@ -780,9 +779,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const availableScopes = hasEntireVaultArea
 			? []
 			: [
-					...(!hasStudyAreas ? [ENTIRE_VAULT_STUDY_AREA_LABEL] : []),
-					...availableFolderPaths,
-				];
+				...(!hasStudyAreas ? [ENTIRE_VAULT_STUDY_AREA_LABEL] : []),
+				...availableFolderPaths,
+			];
 
 		if (hasStudyAreas) {
 			new Setting(containerEl).setName("Manage Study Areas").setHeading();
@@ -1295,29 +1294,29 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const modelSetting = new Setting(containerEl).setName("Claude model");
 		if (modelHint) modelSetting.setDesc(modelHint);
 		modelSetting.addDropdown((dd) => {
-				dd.addOption(ANTHROPIC_CUSTOM_MODEL_ID, "Custom model ID...");
-				for (const model of modelOptions) {
-					dd.addOption(model.id, model.label);
-				}
-				dd
-					.setValue(
-						isCustomSelection
-							? ANTHROPIC_CUSTOM_MODEL_ID
-							: s.anthropicModel
-					)
-					.onChange(async (value) => {
-						if (value === ANTHROPIC_CUSTOM_MODEL_ID) {
-							s.anthropicModelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
-							await this.plugin.saveSettings();
-							this.display();
-							return;
-						}
-						s.anthropicModelSelection = value;
-						s.anthropicModel = value;
+			dd.addOption(ANTHROPIC_CUSTOM_MODEL_ID, "Custom model ID...");
+			for (const model of modelOptions) {
+				dd.addOption(model.id, model.label);
+			}
+			dd
+				.setValue(
+					isCustomSelection
+						? ANTHROPIC_CUSTOM_MODEL_ID
+						: s.anthropicModel
+				)
+				.onChange(async (value) => {
+					if (value === ANTHROPIC_CUSTOM_MODEL_ID) {
+						s.anthropicModelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
 						await this.plugin.saveSettings();
 						this.display();
-					});
-			});
+						return;
+					}
+					s.anthropicModelSelection = value;
+					s.anthropicModel = value;
+					await this.plugin.saveSettings();
+					this.display();
+				});
+		});
 
 		if (isCustomSelection) {
 			new Setting(containerEl)
@@ -1622,9 +1621,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			opts.modelOptions && opts.modelOptions.length > 0
 				? opts.modelOptions
 				: normalizeModelIds(
-						sortFetchedModelIds(opts.availableModels),
-						opts.modelOptionSource
-					);
+					sortFetchedModelIds(opts.availableModels),
+					opts.modelOptionSource
+				);
 		const selectedOption = buildModelComboboxOptions({
 			options: modelOptions,
 			currentModelId: currentModel,
