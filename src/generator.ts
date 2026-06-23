@@ -81,6 +81,18 @@ export function resolveSectionConcurrency(value: unknown): number {
 		: DEFAULT_SECTION_CONCURRENCY;
 }
 
+export function resolveEffectiveSectionConcurrency(
+	value: unknown,
+	provider: AiProvider
+): number {
+	const requested = resolveSectionConcurrency(value);
+	const limit = provider.sectionConcurrencyLimit;
+	if (typeof limit !== "number" || !Number.isFinite(limit) || limit <= 0) {
+		return requested;
+	}
+	return Math.min(requested, Math.floor(limit));
+}
+
 /**
  * Generate a cue for a single section. The caller supplies the parsed section
  * and an optional whole-note context. On provider failure the error is captured
@@ -139,7 +151,10 @@ export async function generateNote(
 	const { provider, markdown, preset, noteTitle, signal, onProgress } = params;
 	const options = resolveGenerationOptions(params.options);
 	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
-	const sectionConcurrency = resolveSectionConcurrency(params.sectionConcurrency);
+	const sectionConcurrency = resolveEffectiveSectionConcurrency(
+		params.sectionConcurrency,
+		provider
+	);
 	const wholeNoteContext = params.useWholeNoteContext
 		? clampText(markdown, maxContextChars)
 		: undefined;

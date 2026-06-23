@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+	effectiveParallelRequestCount,
 	formatParallelRequestsDescription,
 	parallelRequestsGuidance,
 	type ParallelRequestsGuidanceSettings,
@@ -21,6 +22,20 @@ describe("parallelRequestsGuidance", () => {
 		);
 		expect(parallelRequestsGuidance(baseSettings({ sectionConcurrency: 2 }))).toBe(
 			"Usually safe for faster parallel generation. Lower this value if generation fails with rate-limit errors."
+		);
+	});
+
+	it("caps local CLI provider guidance to one effective request", () => {
+		const settings = baseSettings({
+			provider: "codex-cli",
+			sectionConcurrency: 5,
+		});
+		expect(effectiveParallelRequestCount(settings)).toBe(1);
+		expect(parallelRequestsGuidance(settings)).toBe(
+			"Local CLI providers run one section request at a time to avoid multiple agent processes and interactive prompts."
+		);
+		expect(formatParallelRequestsDescription(settings)).toBe(
+			"Run up to 1 section request at once. Local CLI providers run one section request at a time to avoid multiple agent processes and interactive prompts."
 		);
 	});
 

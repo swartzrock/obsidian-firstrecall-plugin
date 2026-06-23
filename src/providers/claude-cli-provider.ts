@@ -135,6 +135,7 @@ export class ClaudeCliProvider implements AiProvider {
 	readonly label = "Claude CLI";
 	readonly requiresNetwork = true;
 	readonly requiresDownload = false;
+	readonly sectionConcurrencyLimit = 1;
 
 	private readonly command: string;
 	private readonly model: string;
