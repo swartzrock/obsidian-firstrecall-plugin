@@ -1,5 +1,6 @@
 import {
 	isStale,
+	staleSectionIds,
 	type NoteCache,
 } from "./cache";
 import type { Section } from "./parser";
@@ -32,6 +33,37 @@ export interface StudyAreaReadinessResult {
 	path: string;
 	readiness: StudyAreaReadiness;
 	reason: string | null;
+}
+
+export type StudyAreaPlanMode = "backfill" | "retry-failed" | "maintain-note";
+export type StudyAreaQueueAction =
+	| "generate-note"
+	| "refresh-stale-sections"
+	| "retry-failed-sections";
+
+export interface StudyAreaQueueItem {
+	path: string;
+	action: StudyAreaQueueAction;
+	sectionIds: string[];
+	readiness: StudyAreaReadiness;
+}
+
+export type StudyAreaReadinessCounts = Record<StudyAreaReadiness, number>;
+
+export interface StudyAreaGenerationPlan {
+	mode: StudyAreaPlanMode;
+	readiness: StudyAreaReadinessResult[];
+	counts: StudyAreaReadinessCounts;
+	items: StudyAreaQueueItem[];
+}
+
+export interface StudyAreaRunSummary {
+	total: number;
+	completed: number;
+	failed: number;
+	skipped: number;
+	remaining: number;
+	canceled: boolean;
 }
 
 export const DEFAULT_STUDY_AREA_AUTOMATION_ENABLED = false;
@@ -113,6 +145,51 @@ export function classifyStudyAreaNote(
 	return { path: note.path, readiness: "ready", reason: null };
 }
 
+export function planStudyAreaGeneration(
+	area: Pick<StudyArea, "parentPath" | "excludedPaths">,
+	notes: readonly StudyAreaNoteSnapshot[],
+	mode: StudyAreaPlanMode = "backfill"
+): StudyAreaGenerationPlan {
+	const readiness = notes.map((note) => classifyStudyAreaNote(area, note));
+	const byPath = new Map(notes.map((note) => [note.path, note]));
+	const counts = emptyReadinessCounts();
+	const items: StudyAreaQueueItem[] = [];
+
+	for (const result of readiness) {
+		counts[result.readiness]++;
+		const note = byPath.get(result.path);
+		if (!note) continue;
+		const item = planQueueItem(note, result.readiness, mode);
+		if (item) items.push(item);
+	}
+
+	return { mode, readiness, counts, items };
+}
+
+export function summarizeStudyAreaRun(
+	plan: Pick<StudyAreaGenerationPlan, "items" | "counts">,
+	progress: {
+		completedPaths?: readonly string[];
+		failedPaths?: readonly string[];
+		canceled?: boolean;
+	}
+): StudyAreaRunSummary {
+	const completed = new Set(progress.completedPaths ?? []);
+	const failed = new Set(progress.failedPaths ?? []);
+	const queued = new Set(plan.items.map((item) => item.path));
+	const remaining = [...queued].filter(
+		(path) => !completed.has(path) && !failed.has(path)
+	).length;
+	return {
+		total: plan.items.length,
+		completed: completed.size,
+		failed: failed.size,
+		skipped: plan.counts.skipped,
+		remaining,
+		canceled: progress.canceled ?? false,
+	};
+}
+
 export function loadStudyAreas(raw: unknown): StudyArea[] {
 	if (!Array.isArray(raw)) return [];
 	return raw.flatMap((item): StudyArea[] => {
@@ -146,4 +223,68 @@ export function loadStudyAreas(raw: unknown): StudyArea[] {
 				: new Date(0).toISOString();
 		return [{ id, name, parentPath, excludedPaths, maintenanceMode, createdAt }];
 	});
+}
+
+function emptyReadinessCounts(): StudyAreaReadinessCounts {
+	return {
+		ready: 0,
+		uncued: 0,
+		stale: 0,
+		failed: 0,
+		skipped: 0,
+	};
+}
+
+function planQueueItem(
+	note: StudyAreaNoteSnapshot,
+	readiness: StudyAreaReadiness,
+	mode: StudyAreaPlanMode
+): StudyAreaQueueItem | null {
+	if (readiness === "uncued" && mode === "backfill") {
+		return {
+			path: note.path,
+			action: "generate-note",
+			sectionIds: [],
+			readiness,
+		};
+	}
+	if (readiness === "stale" && mode !== "retry-failed" && note.cache) {
+		const sectionIds = staleSectionIds(note.cache, note.currentSections);
+		const action = canRefreshStaleSections(note.cache, note.currentSections)
+			? "refresh-stale-sections"
+			: "generate-note";
+		return { path: note.path, action, sectionIds, readiness };
+	}
+	if (readiness === "failed" && note.cache) {
+		const sectionIds = failedSectionIds(note.cache, note.currentSections);
+		if (!sectionIds.length) return null;
+		return {
+			path: note.path,
+			action: "retry-failed-sections",
+			sectionIds,
+			readiness,
+		};
+	}
+	return null;
+}
+
+function canRefreshStaleSections(
+	cache: NoteCache,
+	currentSections: readonly Section[]
+): boolean {
+	if (cache.sections.length !== currentSections.length) return false;
+	return cache.sections.every((cached, index) => {
+		const current = currentSections[index];
+		return current && current.id === cached.id;
+	});
+}
+
+function failedSectionIds(
+	cache: NoteCache,
+	currentSections: readonly Section[]
+): string[] {
+	const currentIds = new Set(currentSections.map((section) => section.id));
+	return cache.sections
+		.filter((section) => section.error && currentIds.has(section.id))
+		.map((section) => section.id);
 }

@@ -7,6 +7,8 @@ import {
 	isExcludedPath,
 	isStudyAreaPath,
 	loadStudyAreas,
+	planStudyAreaGeneration,
+	summarizeStudyAreaRun,
 	type StudyArea,
 } from "../src/study-area";
 import type { NoteGenerationResult } from "../src/generator";
@@ -129,6 +131,143 @@ describe("study area readiness", () => {
 			},
 			currentSections: parseSections(NOTE),
 		}).readiness).toBe("failed");
+	});
+});
+
+describe("study area generation planning", () => {
+	it("previews readiness counts and queues uncued notes without generation", () => {
+		const plan = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Ready.md",
+				cache: buildCache(),
+				currentSections: parseSections(NOTE),
+			},
+			{
+				path: "Courses/Biology/Uncued.md",
+				cache: null,
+				currentSections: parseSections(NOTE),
+			},
+			{
+				path: "Courses/Biology/Hidden.md",
+				cache: null,
+				currentSections: parseSections(NOTE),
+				hidden: true,
+			},
+		]);
+		expect(plan.counts).toEqual({
+			ready: 1,
+			uncued: 1,
+			stale: 0,
+			failed: 0,
+			skipped: 1,
+		});
+		expect(plan.items).toEqual([
+			{
+				path: "Courses/Biology/Uncued.md",
+				action: "generate-note",
+				sectionIds: [],
+				readiness: "uncued",
+			},
+		]);
+	});
+
+	it("queues retry work for failed sections only", () => {
+		const cache = buildCache();
+		const failedCache: NoteCache = {
+			...cache,
+			sections: [
+				cache.sections[0],
+				{ ...cache.sections[1], question: null, error: "provider failed" },
+			],
+		};
+		const plan = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Failed.md",
+				cache: failedCache,
+				currentSections: parseSections(NOTE),
+			},
+			{
+				path: "Courses/Biology/Ready.md",
+				cache,
+				currentSections: parseSections(NOTE),
+			},
+		], "retry-failed");
+		expect(plan.items).toEqual([
+			{
+				path: "Courses/Biology/Failed.md",
+				action: "retry-failed-sections",
+				sectionIds: [cache.sections[1].id],
+				readiness: "failed",
+			},
+		]);
+	});
+
+	it("plans edited-section refresh and structural full generation separately", () => {
+		const cache = buildCache();
+		const editedOnly = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Edited.md",
+				cache,
+				currentSections: parseSections("# A\nalpha edited\n## B\nbeta"),
+			},
+		]);
+		expect(editedOnly.items).toEqual([
+			{
+				path: "Courses/Biology/Edited.md",
+				action: "refresh-stale-sections",
+				sectionIds: [cache.sections[0].id],
+				readiness: "stale",
+			},
+		]);
+
+		const structural = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Structural.md",
+				cache,
+				currentSections: parseSections("# A\nalpha\n## B\nbeta\n## C\ngamma"),
+			},
+		]);
+		expect(structural.items).toEqual([
+			{
+				path: "Courses/Biology/Structural.md",
+				action: "generate-note",
+				sectionIds: [],
+				readiness: "stale",
+			},
+		]);
+	});
+
+	it("summarizes completed, failed, skipped, and remaining work", () => {
+		const plan = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/One.md",
+				cache: null,
+				currentSections: parseSections(NOTE),
+			},
+			{
+				path: "Courses/Biology/Two.md",
+				cache: null,
+				currentSections: parseSections(NOTE),
+			},
+			{
+				path: "Courses/Biology/Hidden.md",
+				cache: null,
+				currentSections: parseSections(NOTE),
+				hidden: true,
+			},
+		]);
+		expect(summarizeStudyAreaRun(plan, {
+			completedPaths: ["Courses/Biology/One.md"],
+			failedPaths: [],
+			canceled: true,
+		})).toEqual({
+			total: 2,
+			completed: 1,
+			failed: 0,
+			skipped: 1,
+			remaining: 1,
+			canceled: true,
+		});
 	});
 });
 
