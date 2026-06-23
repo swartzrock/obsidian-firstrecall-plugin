@@ -1272,6 +1272,15 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	margin-top: 3px;
 }
 
+.cuecraft-study-area-create-row .cuecraft-model-combobox-input {
+	border-color: color-mix(
+		in srgb,
+		var(--text-muted) 24%,
+		var(--background-primary)
+	);
+	box-shadow: none;
+}
+
 .cuecraft-study-area-row {
 	align-items: flex-start;
 }

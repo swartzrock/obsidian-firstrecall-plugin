@@ -787,69 +787,68 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					...(!hasStudyAreas ? [ENTIRE_VAULT_STUDY_AREA_LABEL] : []),
 					...availableFolderPaths,
 				];
-		const parentFolderSetting = new Setting(createEl)
-			.setName("Scope")
+		const parentFolderSetting = new Setting(createEl);
+		parentFolderSetting.settingEl.addClass("cuecraft-study-area-create-row");
+		parentFolderSetting
+			.setName(
+				hasEntireVaultArea
+					? "Entire vault is already a study area"
+					: "Choose notes to include"
+			)
 			.setDesc(
 				hasEntireVaultArea
-					? "Entire vault is already managed. Remove it to choose a specific folder."
+					? "Remove the existing study area below before adding a specific folder."
 					: hasStudyAreas
-					? "Type to filter existing vault folders. Remove folder study areas to choose Entire vault."
-					: "Choose Entire vault or a parent folder; hidden notes are not eligible."
+						? "Type to filter existing vault folders. Remove folder study areas to choose Entire vault."
+						: "Select Entire vault or an existing folder; hidden notes are not eligible."
 			);
-		renderModelCombobox({
-			containerEl: parentFolderSetting.controlEl,
-			value: "",
-			options: normalizeModelIds(availableScopes, "string"),
-			source: "string",
-			placeholder: availableScopes.length
-				? "Choose a scope..."
-				: hasEntireVaultArea
-					? "Entire vault already managed"
+		if (hasEntireVaultArea) {
+			parentFolderSetting.controlEl.empty();
+		} else {
+			renderModelCombobox({
+				containerEl: parentFolderSetting.controlEl,
+				value: "",
+				options: normalizeModelIds(availableScopes, "string"),
+				source: "string",
+				placeholder: availableScopes.length
+					? "Choose a scope..."
 					: "No unassigned folders",
-			emptyMessage: availableScopes.length
-				? "No matching scopes. Choose Entire vault or an existing vault folder."
-				: hasEntireVaultArea
-					? "Entire vault is already managed."
+				emptyMessage: availableScopes.length
+					? "No matching scopes. Choose Entire vault or an existing vault folder."
 					: "No unassigned folders found.",
-			onCommit: async (value) => {
-				const isEntireVaultSelection =
-					value.trim().toLowerCase() ===
-					ENTIRE_VAULT_STUDY_AREA_LABEL.toLowerCase();
-				const normalized = isEntireVaultSelection
-					? ""
-					: normalizeVaultPath(value);
-				if (!normalized && !isEntireVaultSelection) return;
-				if (isEntireVaultSelection && hasStudyAreas) {
-					new Notice(
-						"CueCraft: remove folder study areas before using Entire vault."
-					);
-					this.display();
-					return;
-				}
-				if (!isEntireVaultSelection && hasEntireVaultArea) {
-					new Notice(
-						"CueCraft: remove Entire vault before adding folder study areas."
-					);
-					this.display();
-					return;
-				}
-				if (assignedFolderPaths.has(normalized)) {
-					new Notice("CueCraft: that study area already exists.");
-					this.display();
-					return;
-				}
-				if (!isEntireVaultSelection && !folderPaths.includes(normalized)) {
-					new Notice(`CueCraft: "${normalized}" is not an existing folder.`);
-					this.display();
-					return;
-				}
-				const area = await this.plugin.createStudyArea(normalized);
-				if (area) this.display();
-			},
-			renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
-			pinnedOptionIds: [ENTIRE_VAULT_STUDY_AREA_LABEL],
-			suggestionsLabel: "scope suggestions",
-		});
+				onCommit: async (value) => {
+					const isEntireVaultSelection =
+						value.trim().toLowerCase() ===
+						ENTIRE_VAULT_STUDY_AREA_LABEL.toLowerCase();
+					const normalized = isEntireVaultSelection
+						? ""
+						: normalizeVaultPath(value);
+					if (!normalized && !isEntireVaultSelection) return;
+					if (isEntireVaultSelection && hasStudyAreas) {
+						new Notice(
+							"CueCraft: remove folder study areas before using Entire vault."
+						);
+						this.display();
+						return;
+					}
+					if (assignedFolderPaths.has(normalized)) {
+						new Notice("CueCraft: that study area already exists.");
+						this.display();
+						return;
+					}
+					if (!isEntireVaultSelection && !folderPaths.includes(normalized)) {
+						new Notice(`CueCraft: "${normalized}" is not an existing folder.`);
+						this.display();
+						return;
+					}
+					const area = await this.plugin.createStudyArea(normalized);
+					if (area) this.display();
+				},
+				renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
+				pinnedOptionIds: [ENTIRE_VAULT_STUDY_AREA_LABEL],
+				suggestionsLabel: "scope suggestions",
+			});
+		}
 
 		new Setting(containerEl).setName("Manage Study Areas").setHeading();
 		const manageEl = containerEl.createDiv({
