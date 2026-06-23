@@ -960,7 +960,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			retryBtn.addClass("cuecraft-study-area-hidden");
 			return;
 		}
-		countsEl.setText(formatStudyAreaReadinessCounts(plan.counts));
+		const cueSectionCount = plan.items
+			.filter((item) => item.readiness === "uncued" || item.readiness === "stale")
+			.reduce((total, item) => total + item.sectionCount, 0);
+		countsEl.setText(formatStudyAreaReadinessCounts(plan.counts, {
+			cueSectionCount,
+		}));
 		backfillBtn.disabled = plan.items.length === 0;
 		const hasFailedWork = plan.counts.failed > 0;
 		retryBtn.disabled = !hasFailedWork;

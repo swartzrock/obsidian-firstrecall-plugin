@@ -101,18 +101,25 @@ export function studyAreaNameForParentPath(parentPath: string): string {
 }
 
 export function formatStudyAreaReadinessCounts(
-	counts: StudyAreaReadinessCounts
+	counts: StudyAreaReadinessCounts,
+	opts: { cueSectionCount?: number } = {}
 ): string {
 	const noteLabel = (count: number): string =>
 		`${count} note${count === 1 ? "" : "s"}`;
+	const sectionLabel = (count: number): string =>
+		`${count} section${count === 1 ? "" : "s"}`;
 	const parts: string[] = [];
 	if (counts.ready) parts.push(`${noteLabel(counts.ready)} ready`);
 	const notesNeedingCues = counts.uncued + counts.stale;
 	if (notesNeedingCues) {
+		const sectionCount =
+			opts.cueSectionCount && opts.cueSectionCount > 0
+				? ` (${sectionLabel(opts.cueSectionCount)})`
+				: "";
 		parts.push(
-			notesNeedingCues === 1
-				? "1 note needs cues"
-				: `${notesNeedingCues} notes need cues`
+			`${noteLabel(notesNeedingCues)}${sectionCount} ${
+				notesNeedingCues === 1 ? "needs" : "need"
+			} cues`
 		);
 	}
 	if (counts.failed) parts.push(`${noteLabel(counts.failed)} failed`);

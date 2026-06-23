@@ -33,14 +33,19 @@ describe("study area labels", () => {
 		expect(studyAreaScopeLabel("")).toBe(ENTIRE_VAULT_STUDY_AREA_LABEL);
 		expect(studyAreaNameForParentPath("")).toBe(ENTIRE_VAULT_STUDY_AREA_LABEL);
 		expect(
-			formatStudyAreaReadinessCounts({
-				ready: 4,
-				uncued: 2,
-				stale: 1,
-				failed: 0,
-				skipped: 2,
-			})
-		).toBe("4 notes ready · 3 notes need cues");
+			formatStudyAreaReadinessCounts(
+				{
+					ready: 4,
+					uncued: 2,
+					stale: 1,
+					failed: 0,
+					skipped: 2,
+				},
+				{
+					cueSectionCount: 25,
+				}
+			)
+		).toBe("4 notes ready · 3 notes (25 sections) need cues");
 		expect(
 			formatStudyAreaReadinessCounts({
 				ready: 0,
