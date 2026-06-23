@@ -886,6 +886,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			cls: "cuecraft-study-area-counts",
 			text: "Checking notes...",
 		});
+		const upToDateEl = setting.descEl.createDiv({
+			cls: "cuecraft-study-area-status",
+			text: "Up to date",
+		});
+		upToDateEl.hidden = true;
 		setting.descEl.createDiv({
 			cls: "cuecraft-study-area-help",
 			text:
@@ -911,11 +916,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				})
 		);
 
-		const upToDateEl = setting.controlEl.createSpan({
-			cls: "cuecraft-study-area-status",
-			text: "Up to date",
-		});
-		upToDateEl.hidden = true;
 		const backfillBtn = setting.controlEl.createEl("button", {
 			text: "Generate missing cues",
 			attr: { type: "button" },
@@ -948,7 +948,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		this.plugin.registerDomEvent(backfillBtn, "click", async () => {
 			upToDateEl.hidden = true;
-			backfillBtn.hidden = false;
 			backfillBtn.disabled = true;
 			backfillBtn.textContent = "Generating...";
 			countsEl.setText("Generating cues...");
@@ -982,7 +981,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (!plan) {
 			countsEl.setText("Study area no longer exists.");
 			upToDateEl.hidden = true;
-			backfillBtn.hidden = false;
 			backfillBtn.disabled = true;
 			backfillBtn.textContent = "Generate missing cues";
 			retryBtn.disabled = true;
@@ -996,12 +994,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		countsEl.setText(formatStudyAreaReadinessCounts(plan.counts, {
 			cueSectionCount,
 		}));
-		const hasGenerationWork = plan.items.length > 0;
-		upToDateEl.hidden = hasGenerationWork;
-		backfillBtn.hidden = !hasGenerationWork;
-		backfillBtn.disabled = !hasGenerationWork;
-		backfillBtn.textContent = "Generate missing cues";
+		const hasMissingCueWork = plan.items.some(
+			(item) => item.readiness === "uncued" || item.readiness === "stale"
+		);
 		const hasFailedWork = plan.counts.failed > 0;
+		upToDateEl.hidden =
+			hasMissingCueWork || hasFailedWork || plan.counts.ready === 0;
+		backfillBtn.disabled = !hasMissingCueWork;
+		backfillBtn.textContent = "Generate missing cues";
 		retryBtn.disabled = !hasFailedWork;
 		retryBtn.hidden = !hasFailedWork;
 		retryBtn.toggleClass("cuecraft-study-area-hidden", !hasFailedWork);

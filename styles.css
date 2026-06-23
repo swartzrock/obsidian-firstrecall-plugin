@@ -1264,6 +1264,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-study-area-path,
 .cuecraft-study-area-counts,
+.cuecraft-study-area-status,
 .cuecraft-study-area-help {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
@@ -1271,6 +1272,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-study-area-counts {
+	margin-top: 3px;
+}
+
+.cuecraft-study-area-status {
 	margin-top: 3px;
 }
 
@@ -1310,14 +1315,13 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	white-space: nowrap;
 }
 
-.cuecraft-study-area-status {
-	color: var(--text-muted);
-	font-size: var(--font-ui-smaller);
-	white-space: nowrap;
-}
-
 .cuecraft-study-area-controls button.cuecraft-study-area-retry.cuecraft-study-area-hidden {
 	display: none;
+}
+
+.cuecraft-study-area-controls button.mod-cta:disabled {
+	cursor: default;
+	opacity: var(--opacity-disabled, 0.45);
 }
 
 button.cuecraft-study-area-remove {
