@@ -69,7 +69,17 @@ import {
 } from "./cornell";
 import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
-import { loadStudyAreas } from "./study-area";
+import {
+	isDescendantPath,
+	loadStudyAreas,
+	planStudyAreaGeneration,
+	summarizeStudyAreaRun,
+	type StudyArea,
+	type StudyAreaGenerationPlan,
+	type StudyAreaPlanMode,
+	type StudyAreaQueueItem,
+	type StudyAreaRunSummary,
+} from "./study-area";
 
 /** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
 type CueStatus = "setup" | "ready" | "generating" | "stale" | "study" | "hidden";
@@ -376,11 +386,16 @@ export default class CueCraftPlugin extends Plugin {
 		return this.isConfigured();
 	}
 
-	private setStatus(status: CueStatus, progress?: { done: number; total: number }): void {
+	private setStatus(
+		status: CueStatus,
+		progress?: { done: number; total: number; unit?: string }
+	): void {
 		if (!this.statusBarEl) return;
+		const unit =
+			progress?.unit ? ` ${progress.unit}${progress.total === 1 ? "" : "s"}` : "";
 		const label =
 			status === "generating" && progress
-				? `CueCraft: generating ${progress.done}/${progress.total}`
+				? `CueCraft: generating ${progress.done}/${progress.total}${unit}`
 				: `CueCraft: ${status}`;
 		this.statusBarEl.setText(label);
 		this.statusBarEl.dataset.status = status;
@@ -454,6 +469,16 @@ export default class CueCraftPlugin extends Plugin {
 			id: "regenerate-stale-sections",
 			name: "Regenerate Stale Sections",
 			callback: () => void this.regenerateStaleSections(),
+		});
+		this.addCommand({
+			id: "run-study-area-backfill",
+			name: "Run Study Area Backfill...",
+			callback: () => this.pickStudyAreaAndRun("backfill"),
+		});
+		this.addCommand({
+			id: "retry-study-area-failures",
+			name: "Retry Study Area Failures...",
+			callback: () => this.pickStudyAreaAndRun("retry-failed"),
 		});
 		this.addCommand({
 			id: "toggle-study-mode",
@@ -1082,6 +1107,273 @@ export default class CueCraftPlugin extends Plugin {
 		await this.generateCuesForFile(this.app.workspace.getActiveFile());
 	}
 
+	private pickStudyAreaAndRun(mode: StudyAreaPlanMode): void {
+		const areas = this.settings.studyAreas;
+		if (!areas.length) {
+			new Notice("CueCraft: create a study area in Settings first.");
+			this.openSettings();
+			return;
+		}
+		const run = (area: StudyArea): void => {
+			void this.runStudyArea(area.id, mode);
+		};
+		if (areas.length === 1) {
+			run(areas[0]);
+			return;
+		}
+		new StudyAreaSuggestModal(this.app, areas, run).open();
+	}
+
+	async previewStudyArea(
+		areaId: string,
+		mode: StudyAreaPlanMode = "backfill"
+	): Promise<StudyAreaGenerationPlan | null> {
+		const area = this.findStudyArea(areaId);
+		if (!area) return null;
+		return this.buildStudyAreaPlan(area, mode);
+	}
+
+	async runStudyArea(
+		areaId: string,
+		mode: StudyAreaPlanMode = "backfill"
+	): Promise<StudyAreaRunSummary | null> {
+		if (this.currentRun) {
+			this.currentRun.abort();
+			new Notice("CueCraft: cancelling generation...");
+			return null;
+		}
+		if (!this.isConfigured()) {
+			new Notice("CueCraft: set up your AI provider in Settings first.");
+			return null;
+		}
+		const area = this.findStudyArea(areaId);
+		if (!area) {
+			new Notice("CueCraft: study area no longer exists.");
+			return null;
+		}
+		const plan = await this.buildStudyAreaPlan(area, mode);
+		if (!plan.items.length) {
+			new Notice(
+				mode === "retry-failed"
+					? "CueCraft: no failed study-area work to retry."
+					: "CueCraft: this study area is already ready."
+			);
+			return summarizeStudyAreaRun(plan, {});
+		}
+
+		const controller = new AbortController();
+		this.currentRun = controller;
+		const provider = this.makeProvider();
+		const completed: string[] = [];
+		const failed: string[] = [];
+		const totalSections = plan.items.reduce(
+			(total, item) => total + item.sectionCount,
+			0
+		);
+		let completedSections = 0;
+		const advanceSections = (count: number): void => {
+			if (count <= 0) return;
+			completedSections = Math.min(totalSections, completedSections + count);
+			this.setStatus("generating", {
+				done: completedSections,
+				total: totalSections,
+				unit: "section",
+			});
+		};
+		this.setStatus("generating", {
+			done: 0,
+			total: totalSections,
+			unit: "section",
+		});
+		let summary: StudyAreaRunSummary | null = null;
+
+		try {
+			for (const item of plan.items) {
+				if (controller.signal.aborted) break;
+				const file = this.app.vault.getAbstractFileByPath(item.path);
+				if (!(file instanceof TFile)) {
+					failed.push(item.path);
+					advanceSections(item.sectionCount);
+					continue;
+				}
+				let itemSectionsDone = 0;
+				const result = await this.runStudyAreaQueueItem(
+					file,
+					item,
+					provider,
+					controller,
+					(count) => {
+						itemSectionsDone += count;
+						advanceSections(count);
+					}
+				);
+				if (result === "completed") completed.push(item.path);
+				if (result === "failed") failed.push(item.path);
+				if (result !== "canceled" && itemSectionsDone < item.sectionCount) {
+					advanceSections(item.sectionCount - itemSectionsDone);
+				}
+			}
+		} catch (e) {
+			console.error("CueCraft study area run failed", e);
+			new Notice("CueCraft: study area run failed. See console.");
+		} finally {
+			summary = summarizeStudyAreaRun(plan, {
+				completedPaths: completed,
+				failedPaths: failed,
+				canceled: controller.signal.aborted,
+			});
+			this.currentRun = null;
+			await this.updateStatusForFile(this.app.workspace.getActiveFile());
+			this.refreshCornellViews();
+			new Notice(this.studyAreaSummaryNotice(area, summary));
+		}
+		return summary;
+	}
+
+	private findStudyArea(areaId: string): StudyArea | null {
+		return this.settings.studyAreas.find((area) => area.id === areaId) ?? null;
+	}
+
+	private async buildStudyAreaPlan(
+		area: StudyArea,
+		mode: StudyAreaPlanMode
+	): Promise<StudyAreaGenerationPlan> {
+		const files = this.app.vault
+			.getMarkdownFiles()
+			.filter((file) => isDescendantPath(file.path, area.parentPath));
+		const snapshots = await Promise.all(
+			files.map(async (file) => {
+				const markdown = await this.app.vault.cachedRead(file);
+				return {
+					path: file.path,
+					cache: this.cacheStore.get(file.path),
+					currentSections: parseSections(markdown),
+					hidden: this.visibility.isHidden(file.path),
+				};
+			})
+		);
+		return planStudyAreaGeneration(area, snapshots, mode);
+	}
+
+	private async runStudyAreaQueueItem(
+		file: TFile,
+		item: StudyAreaQueueItem,
+		provider: AiProvider,
+		controller: AbortController,
+		onProgress?: (completedSections: number) => void
+	): Promise<"completed" | "failed" | "canceled"> {
+		const markdown = await this.app.vault.cachedRead(file);
+		if (item.action === "generate-note") {
+			let previousDone = 0;
+			const result = await generateNote({
+				noteTitle: file.basename,
+				markdown,
+				provider,
+				preset: this.settings.cuePreset,
+				options: this.generationOptions(),
+				sectionConcurrency: this.settings.sectionConcurrency,
+				useWholeNoteContext: true,
+				signal: controller.signal,
+				onProgress: (done) => {
+					onProgress?.(done - previousDone);
+					previousDone = done;
+				},
+			});
+			if (result.sections.length) {
+				await this.cacheStore.set(
+					file.path,
+					buildNoteCache({
+						result,
+						provider: provider.id,
+						model: this.selectedModelName(),
+						preset: this.settings.cuePreset,
+						generationMode: "whole-note-context",
+						noteModifiedAt: file.stat.mtime,
+					})
+				);
+				await this.visibility.show(file.path);
+				this.refreshGeneratedSurfaces(file);
+			}
+			if (result.canceled || controller.signal.aborted) return "canceled";
+			return result.sections.some((section) => section.error)
+				? "failed"
+				: "completed";
+		}
+
+		const status = await this.regenerateQueuedSections(
+			file,
+			markdown,
+			item.sectionIds,
+			provider,
+			controller,
+			onProgress
+		);
+		if (status !== "canceled") this.refreshGeneratedSurfaces(file);
+		return status;
+	}
+
+	private async regenerateQueuedSections(
+		file: TFile,
+		markdown: string,
+		sectionIds: readonly string[],
+		provider: AiProvider,
+		controller: AbortController,
+		onProgress?: (completedSections: number) => void
+	): Promise<"completed" | "failed" | "canceled"> {
+		const cache = this.cacheStore.get(file.path);
+		if (!cache) return "failed";
+		const sections = parseSections(markdown);
+		const byId = new Map(sections.map((section) => [section.id, section]));
+		let working = cache;
+		let failed = 0;
+		let completed = 0;
+		const concurrency = this.settings.sectionConcurrency;
+		for (let start = 0; start < sectionIds.length; start += concurrency) {
+			if (controller.signal.aborted) break;
+			const batch = sectionIds
+				.slice(start, start + concurrency)
+				.map((id) => byId.get(id))
+				.filter((section): section is Section => Boolean(section));
+			const results = await Promise.all(
+				batch.map((section) =>
+					generateSectionCue({
+						section,
+						provider,
+						preset: this.settings.cuePreset,
+						options: this.generationOptions(),
+						noteContext: markdown,
+						signal: controller.signal,
+					})
+				)
+			);
+			for (const result of results) {
+				working = replaceSection(working, toCachedSection(result));
+				if (result.error) failed++;
+				else completed++;
+				onProgress?.(1);
+			}
+			await this.cacheStore.set(file.path, working);
+		}
+		await this.visibility.show(file.path);
+		if (controller.signal.aborted) return "canceled";
+		return failed || completed < sectionIds.length ? "failed" : "completed";
+	}
+
+	private refreshGeneratedSurfaces(file: TFile): void {
+		this.renderCues(file);
+		this.refreshActiveReadingView(file);
+	}
+
+	private studyAreaSummaryNotice(
+		area: StudyArea,
+		summary: StudyAreaRunSummary
+	): string {
+		if (summary.canceled) {
+			return `CueCraft: cancelled ${area.name} - kept ${summary.completed}, ${summary.remaining} remaining.`;
+		}
+		return `CueCraft: ${area.name} run complete - ${summary.completed} done, ${summary.failed} failed, ${summary.skipped} skipped.`;
+	}
+
 	private async generateCuesForFile(
 		file: TFile | null,
 		opts: { automatic?: boolean } = {}
@@ -1328,6 +1620,29 @@ class SectionSuggestModal extends FuzzySuggestModal<Section> {
 	}
 
 	onChooseItem(item: Section): void {
+		this.onChoose(item);
+	}
+}
+
+class StudyAreaSuggestModal extends FuzzySuggestModal<StudyArea> {
+	constructor(
+		app: InstanceType<typeof Plugin>["app"],
+		private readonly areas: StudyArea[],
+		private readonly onChoose: (area: StudyArea) => void
+	) {
+		super(app);
+		this.setPlaceholder("Pick a study area...");
+	}
+
+	getItems(): StudyArea[] {
+		return this.areas;
+	}
+
+	getItemText(item: StudyArea): string {
+		return `${item.name} - ${item.parentPath}`;
+	}
+
+	onChooseItem(item: StudyArea): void {
 		this.onChoose(item);
 	}
 }

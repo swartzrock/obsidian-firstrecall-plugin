@@ -167,6 +167,7 @@ describe("study area generation planning", () => {
 				action: "generate-note",
 				sectionIds: [],
 				readiness: "uncued",
+				sectionCount: 2,
 			},
 		]);
 	});
@@ -198,6 +199,7 @@ describe("study area generation planning", () => {
 				action: "retry-failed-sections",
 				sectionIds: [cache.sections[1].id],
 				readiness: "failed",
+				sectionCount: 1,
 			},
 		]);
 	});
@@ -217,6 +219,7 @@ describe("study area generation planning", () => {
 				action: "refresh-stale-sections",
 				sectionIds: [cache.sections[0].id],
 				readiness: "stale",
+				sectionCount: 1,
 			},
 		]);
 
@@ -233,6 +236,7 @@ describe("study area generation planning", () => {
 				action: "generate-note",
 				sectionIds: [],
 				readiness: "stale",
+				sectionCount: 3,
 			},
 		]);
 	});
