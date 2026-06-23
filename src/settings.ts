@@ -764,10 +764,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (showHeading) {
 			new Setting(containerEl).setName("Study areas").setHeading();
 		}
-		new Setting(containerEl).setName("Create Study Area").setHeading();
-		const createEl = containerEl.createDiv({
-			cls: "cuecraft-settings-flow",
-		});
 		const folderPaths = this.studyAreaFolderPaths();
 		const assignedFolderPaths = new Set(
 			this.plugin.settings.studyAreas.map((area) =>
@@ -787,6 +783,21 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					...(!hasStudyAreas ? [ENTIRE_VAULT_STUDY_AREA_LABEL] : []),
 					...availableFolderPaths,
 				];
+
+		if (hasStudyAreas) {
+			new Setting(containerEl).setName("Manage Study Areas").setHeading();
+			const manageEl = containerEl.createDiv({
+				cls: "cuecraft-settings-flow",
+			});
+			for (const area of this.plugin.settings.studyAreas) {
+				this.renderStudyAreaRow(manageEl, area);
+			}
+		}
+
+		new Setting(containerEl).setName("Create Study Area").setHeading();
+		const createEl = containerEl.createDiv({
+			cls: "cuecraft-settings-flow",
+		});
 		const parentFolderSetting = new Setting(createEl);
 		parentFolderSetting.settingEl.addClass("cuecraft-study-area-create-row");
 		parentFolderSetting
@@ -797,9 +808,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			)
 			.setDesc(
 				hasEntireVaultArea
-					? "Remove the existing study area below before adding a specific folder."
+					? "Remove the existing study area above before adding a specific folder."
 					: hasStudyAreas
-						? "Type to filter existing vault folders. Remove folder study areas to choose Entire vault."
+						? "Type to filter existing vault folders. Remove folder study areas above to choose Entire vault."
 						: "Select Entire vault or an existing folder; hidden notes are not eligible."
 			);
 		if (hasEntireVaultArea) {
@@ -848,22 +859,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				pinnedOptionIds: [ENTIRE_VAULT_STUDY_AREA_LABEL],
 				suggestionsLabel: "scope suggestions",
 			});
-		}
-
-		new Setting(containerEl).setName("Manage Study Areas").setHeading();
-		const manageEl = containerEl.createDiv({
-			cls: "cuecraft-settings-flow",
-		});
-
-		if (!this.plugin.settings.studyAreas.length) {
-			manageEl.createDiv({
-				cls: "cuecraft-settings-flow-desc",
-				text: "No study areas yet.",
-			});
-			return;
-		}
-		for (const area of this.plugin.settings.studyAreas) {
-			this.renderStudyAreaRow(manageEl, area);
 		}
 	}
 
