@@ -918,26 +918,16 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		setIcon(removeBtn, "trash-2");
 
-		let latestPlan: StudyAreaGenerationPlan | null = null;
 		void this.plugin.previewStudyArea(area.id).then((plan) => {
-			latestPlan = plan;
 			this.renderStudyAreaPlan(countsEl, backfillBtn, retryBtn, plan);
 		});
 
 		this.plugin.registerDomEvent(backfillBtn, "click", async () => {
-			const plan = latestPlan ?? await this.plugin.previewStudyArea(area.id);
-			const count = plan?.items.length ?? 0;
-			new StudyAreaConfirmModal(this.app, {
-				title: "Generate study area cues?",
-				message: `Generate missing or outdated cues for ${count} note${
-					count === 1 ? "" : "s"
-				} in ${area.name}?`,
-				confirmText: "Generate Cues",
-				onConfirm: async () => {
-					await this.plugin.runStudyArea(area.id, "backfill");
-					this.display();
-				},
-			}).open();
+			backfillBtn.disabled = true;
+			backfillBtn.textContent = "Generating...";
+			countsEl.setText("Generating cues...");
+			await this.plugin.runStudyArea(area.id, "backfill");
+			this.display();
 		});
 		this.plugin.registerDomEvent(retryBtn, "click", async () => {
 			await this.plugin.runStudyArea(area.id, "retry-failed");
