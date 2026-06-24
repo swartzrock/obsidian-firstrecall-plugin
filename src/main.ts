@@ -5,11 +5,9 @@ import {
 	Modal,
 	Notice,
 	Plugin,
-	Setting,
 	TFile,
 	requestUrl,
 	setIcon,
-	type App,
 	type MarkdownFileInfo,
 	type MarkdownPostProcessorContext,
 } from "obsidian";
@@ -71,12 +69,16 @@ import {
 } from "./cornell";
 import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
+import { statusLabel, type CueStatus } from "./status";
 import {
 	findMaintainedStudyAreaForPath,
 	isDescendantPath,
+	isEntireVaultStudyArea,
 	loadStudyAreas,
 	normalizeVaultPath,
 	planStudyAreaGeneration,
+	studyAreaNameForParentPath,
+	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
 	type StudyArea,
 	type StudyAreaGenerationPlan,
@@ -84,9 +86,6 @@ import {
 	type StudyAreaQueueItem,
 	type StudyAreaRunSummary,
 } from "./study-area";
-
-/** Status-bar states from the v1.0 scope. `generating` carries N/M progress. */
-type CueStatus = "setup" | "ready" | "generating" | "stale" | "study" | "hidden";
 
 interface PluginData {
 	settings: CueCraftSettings;
@@ -109,6 +108,7 @@ export default class CueCraftPlugin extends Plugin {
 	private studyAreaMaintenanceTimers = new Map<string, number>();
 	private cueSettingsChanged = false;
 	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {}, hidden: {} };
+	private settingTab!: CueCraftSettingTab;
 	private cacheStore!: CacheStore;
 	private visibility!: VisibilityStore;
 
@@ -124,7 +124,8 @@ export default class CueCraftPlugin extends Plugin {
 			await this.saveData(this.data);
 		});
 
-		this.addSettingTab(new CueCraftSettingTab(this.app, this));
+		this.settingTab = new CueCraftSettingTab(this.app, this);
+		this.addSettingTab(this.settingTab);
 
 		this.registerView(
 			VIEW_TYPE_CORNELL,
@@ -227,11 +228,6 @@ export default class CueCraftPlugin extends Plugin {
 		settings.studyAreas = loadStudyAreas(
 			(settings as { studyAreas?: unknown }).studyAreas
 		);
-		settings.studyAreaAutomationEnabled =
-			typeof (settings as { studyAreaAutomationEnabled?: unknown })
-				.studyAreaAutomationEnabled === "boolean"
-				? settings.studyAreaAutomationEnabled
-				: DEFAULT_SETTINGS.studyAreaAutomationEnabled;
 		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
 		}
@@ -405,7 +401,7 @@ export default class CueCraftPlugin extends Plugin {
 		const label =
 			status === "generating" && progress
 				? `CueCraft: generating ${progress.done}/${progress.total}${unit}`
-				: `CueCraft: ${status}`;
+				: `CueCraft: ${statusLabel(status)}`;
 		this.statusBarEl.setText(label);
 		this.statusBarEl.dataset.status = status;
 		this.statusBarEl.style.cursor =
@@ -413,7 +409,10 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/** Open Settings on the CueCraft tab. */
-	private openSettings(): void {
+	private openSettings(subpage?: "study-areas"): void {
+		if (subpage === "study-areas") {
+			this.settingTab.openStudyAreas();
+		}
 		// @ts-expect-error - setting is available on the desktop app.
 		this.app.setting?.open?.();
 		// @ts-expect-error - openTabById is available on the desktop app.
@@ -481,7 +480,7 @@ export default class CueCraftPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "run-study-area-backfill",
-			name: "Run Study Area Backfill...",
+			name: "Generate Study Area Cues...",
 			callback: () => this.pickStudyAreaAndRun("backfill"),
 		});
 		this.addCommand({
@@ -939,7 +938,6 @@ export default class CueCraftPlugin extends Plugin {
 		const area = findMaintainedStudyAreaForPath(
 			this.settings.studyAreas,
 			file.path,
-			this.settings.studyAreaAutomationEnabled,
 			hidden
 		);
 		if (!area) return;
@@ -1167,26 +1165,39 @@ export default class CueCraftPlugin extends Plugin {
 		return this.buildStudyAreaPlan(area, mode);
 	}
 
-	openStudyAreaManager(areaId?: string): void {
-		new StudyAreaManagementModal(this.app, this, areaId).open();
+	openStudyAreaManager(_areaId?: string): void {
+		this.openSettings("study-areas");
 	}
 
 	async createStudyArea(parentPath: string): Promise<StudyArea | null> {
 		const normalized = normalizeVaultPath(parentPath);
-		if (!normalized) {
-			new Notice("CueCraft: enter a parent folder path first.");
+		if (
+			this.settings.studyAreas.some(
+				(area) => normalizeVaultPath(area.parentPath) === normalized
+			)
+		) {
+			new Notice("CueCraft: that study area already exists.");
 			return null;
 		}
-		if (this.settings.studyAreas.some((area) => area.parentPath === normalized)) {
-			new Notice("CueCraft: that study area already exists.");
+		if (!normalized && this.settings.studyAreas.length) {
+			new Notice(
+				"CueCraft: remove folder study areas before using Entire vault."
+			);
+			return null;
+		}
+		if (
+			normalized &&
+			this.settings.studyAreas.some((area) => isEntireVaultStudyArea(area))
+		) {
+			new Notice("CueCraft: remove Entire vault before adding folder study areas.");
 			return null;
 		}
 		const area: StudyArea = {
 			id: `study-area-${Date.now().toString(36)}`,
-			name: normalized.split("/").slice(-1)[0] ?? normalized,
+			name: studyAreaNameForParentPath(normalized),
 			parentPath: normalized,
 			excludedPaths: [],
-			maintenanceMode: "paused",
+			maintenanceMode: "maintain-on-save",
 			createdAt: new Date().toISOString(),
 		};
 		this.settings.studyAreas = [...this.settings.studyAreas, area];
@@ -1461,7 +1472,9 @@ export default class CueCraftPlugin extends Plugin {
 		if (summary.canceled) {
 			return `CueCraft: cancelled ${area.name} - kept ${summary.completed}, ${summary.remaining} remaining.`;
 		}
-		return `CueCraft: ${area.name} run complete - ${summary.completed} done, ${summary.failed} failed, ${summary.skipped} skipped.`;
+		const parts = [`${summary.completed} done`];
+		if (summary.failed) parts.push(`${summary.failed} failed`);
+		return `CueCraft: ${area.name} run complete - ${parts.join(", ")}.`;
 	}
 
 	private async generateCuesForFile(
@@ -1729,227 +1742,10 @@ class StudyAreaSuggestModal extends FuzzySuggestModal<StudyArea> {
 	}
 
 	getItemText(item: StudyArea): string {
-		return `${item.name} - ${item.parentPath}`;
+		return `${item.name} - ${studyAreaScopeLabel(item.parentPath)}`;
 	}
 
 	onChooseItem(item: StudyArea): void {
 		this.onChoose(item);
-	}
-}
-
-class StudyAreaManagementModal extends Modal {
-	private selectedAreaId?: string;
-
-	constructor(
-		app: InstanceType<typeof Plugin>["app"],
-		private readonly plugin: CueCraftPlugin,
-		selectedAreaId?: string
-	) {
-		super(app);
-		this.selectedAreaId = selectedAreaId;
-	}
-
-	onOpen(): void {
-		this.render();
-	}
-
-	private render(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.addClass("cuecraft-study-area-modal");
-		contentEl.createEl("h2", { text: "Study Areas" });
-		contentEl.createEl("p", {
-			cls: "cuecraft-study-area-copy",
-			text: "Preview broad generation before any provider calls, then run or retry work for managed folders.",
-		});
-		if (!this.plugin.settings.studyAreas.length) {
-			contentEl.createEl("p", {
-				cls: "cuecraft-study-area-empty",
-				text: "No study areas yet. Add one from CueCraft settings.",
-			});
-			return;
-		}
-		const listEl = contentEl.createDiv({ cls: "cuecraft-study-area-list" });
-		for (const area of this.sortedAreas()) {
-			this.renderArea(listEl, area);
-		}
-	}
-
-	private sortedAreas(): StudyArea[] {
-		const areas = this.plugin.settings.studyAreas.slice();
-		if (!this.selectedAreaId) return areas;
-		return areas.sort((a, b) =>
-			a.id === this.selectedAreaId ? -1 : b.id === this.selectedAreaId ? 1 : 0
-		);
-	}
-
-	private renderArea(containerEl: HTMLElement, area: StudyArea): void {
-		const cardEl = containerEl.createDiv({ cls: "cuecraft-study-area-card" });
-		cardEl.createEl("h3", { text: area.name });
-		cardEl.createDiv({
-			cls: "cuecraft-study-area-path",
-			text: area.parentPath,
-		});
-		const countsEl = cardEl.createDiv({
-			cls: "cuecraft-study-area-counts",
-			text: "Previewing notes...",
-		});
-		void this.plugin.previewStudyArea(area.id).then((plan) => {
-			if (!plan) {
-				countsEl.setText("Study area no longer exists.");
-				return;
-			}
-			countsEl.setText(
-				`${plan.counts.ready} ready · ${plan.counts.uncued} uncued · ${plan.counts.stale} stale · ${plan.counts.failed} failed · ${plan.counts.skipped} skipped`
-			);
-		});
-
-		new Setting(cardEl)
-			.setName("Maintenance")
-			.setDesc("Keep background maintenance paused, or refresh edited notes on save.")
-			.addDropdown((dd) =>
-				dd
-					.addOption("paused", "Paused")
-					.addOption("maintain-on-save", "Maintain on save")
-					.setValue(area.maintenanceMode)
-					.onChange(async (value) => {
-						await this.plugin.updateStudyArea({
-							...area,
-							maintenanceMode:
-								value === "maintain-on-save" ? "maintain-on-save" : "paused",
-						});
-						this.render();
-					})
-			);
-
-		const exclusionSetting = new Setting(cardEl)
-			.setName("Exclude path")
-			.setDesc("Add a note or subfolder under this study area to skip.");
-		let exclusionPath = "";
-		exclusionSetting
-			.addText((text) =>
-				text
-					.setPlaceholder(`${area.parentPath}/Drafts`)
-					.onChange((value) => {
-						exclusionPath = value;
-					})
-			)
-			.addButton((btn) =>
-				btn
-					.setButtonText("Add")
-					.onClick(async () => {
-						const normalized = normalizeVaultPath(exclusionPath);
-						if (!normalized) return;
-						await this.plugin.updateStudyArea({
-							...area,
-							excludedPaths: Array.from(
-								new Set([...area.excludedPaths, normalized])
-							),
-						});
-						this.render();
-					})
-			);
-
-		for (const excludedPath of area.excludedPaths) {
-			new Setting(cardEl)
-				.setName(excludedPath)
-				.setDesc("Excluded from this study area.")
-				.addButton((btn) =>
-					btn
-						.setButtonText("Remove")
-						.onClick(async () => {
-							await this.plugin.updateStudyArea({
-								...area,
-								excludedPaths: area.excludedPaths.filter(
-									(path) => path !== excludedPath
-								),
-							});
-							this.render();
-						})
-				);
-		}
-
-		const actionsEl = cardEl.createDiv({ cls: "cuecraft-modal-actions" });
-		const backfillBtn = actionsEl.createEl("button", {
-			text: "Run backfill",
-			attr: { type: "button" },
-		});
-		backfillBtn.addClass("mod-cta");
-		this.plugin.registerDomEvent(backfillBtn, "click", async () => {
-			const plan = await this.plugin.previewStudyArea(area.id);
-			const count = plan?.items.length ?? 0;
-			new StudyAreaConfirmModal(this.app, {
-				title: "Run study area backfill?",
-				message: `Generate or refresh ${count} note(s) in ${area.name}?`,
-				confirmText: "Run backfill",
-				onConfirm: () => {
-					void this.plugin.runStudyArea(area.id, "backfill");
-					this.close();
-				},
-			}).open();
-		});
-		const retryBtn = actionsEl.createEl("button", {
-			text: "Retry failed",
-			attr: { type: "button" },
-		});
-		this.plugin.registerDomEvent(retryBtn, "click", () => {
-			void this.plugin.runStudyArea(area.id, "retry-failed");
-			this.close();
-		});
-		const removeBtn = actionsEl.createEl("button", {
-			text: "Remove",
-			attr: { type: "button" },
-		});
-		this.plugin.registerDomEvent(removeBtn, "click", async () => {
-			new StudyAreaConfirmModal(this.app, {
-				title: "Remove study area?",
-				message: `Remove study area "${area.name}"? Generated cues stay cached.`,
-				confirmText: "Remove",
-				onConfirm: async () => {
-					await this.plugin.removeStudyArea(area.id);
-					this.render();
-				},
-			}).open();
-		});
-	}
-}
-
-class StudyAreaConfirmModal extends Modal {
-	constructor(
-		app: App,
-		private readonly opts: {
-			title: string;
-			message: string;
-			confirmText: string;
-			onConfirm: () => void | Promise<void>;
-		}
-	) {
-		super(app);
-	}
-
-	onOpen(): void {
-		const { contentEl } = this;
-		contentEl.empty();
-		contentEl.createEl("h2", { text: this.opts.title });
-		contentEl.createEl("p", { text: this.opts.message });
-		const actionsEl = contentEl.createDiv({ cls: "cuecraft-modal-actions" });
-		const cancelBtn = actionsEl.createEl("button", {
-			text: "Cancel",
-			attr: { type: "button" },
-		});
-		cancelBtn.addEventListener("click", () => this.close());
-		const confirmBtn = actionsEl.createEl("button", {
-			text: this.opts.confirmText,
-			attr: { type: "button" },
-		});
-		confirmBtn.addClass("mod-cta");
-		confirmBtn.addEventListener("click", () => {
-			void this.confirm();
-		});
-	}
-
-	private async confirm(): Promise<void> {
-		await this.opts.onConfirm();
-		this.close();
 	}
 }

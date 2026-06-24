@@ -3,7 +3,7 @@ import {
 	staleSectionIds,
 	type NoteCache,
 } from "./cache";
-import type { Section } from "./parser";
+import { cueEligibleSections, type Section } from "./parser";
 
 export type StudyAreaMaintenanceMode = "paused" | "maintain-on-save";
 export type StudyAreaReadiness =
@@ -67,8 +67,8 @@ export interface StudyAreaRunSummary {
 	canceled: boolean;
 }
 
-export const DEFAULT_STUDY_AREA_AUTOMATION_ENABLED = false;
 export const DEFAULT_STUDY_AREAS: StudyArea[] = [];
+export const ENTIRE_VAULT_STUDY_AREA_LABEL = "Entire vault";
 
 const MAINTENANCE_MODES = new Set<StudyAreaMaintenanceMode>([
 	"paused",
@@ -81,6 +81,53 @@ export function normalizeVaultPath(path: string): string {
 
 export function isMarkdownPath(path: string): boolean {
 	return normalizeVaultPath(path).toLowerCase().endsWith(".md");
+}
+
+export function isEntireVaultStudyArea(
+	area: Pick<StudyArea, "parentPath">
+): boolean {
+	return normalizeVaultPath(area.parentPath) === "";
+}
+
+export function studyAreaScopeLabel(parentPath: string): string {
+	return normalizeVaultPath(parentPath) || ENTIRE_VAULT_STUDY_AREA_LABEL;
+}
+
+export function studyAreaNameForParentPath(parentPath: string): string {
+	const normalized = normalizeVaultPath(parentPath);
+	return normalized
+		? normalized.split("/").slice(-1)[0] ?? normalized
+		: ENTIRE_VAULT_STUDY_AREA_LABEL;
+}
+
+export function formatStudyAreaReadinessCounts(
+	counts: StudyAreaReadinessCounts,
+	opts: { cueSectionCount?: number } = {}
+): string {
+	const noteLabel = (count: number): string =>
+		`${count} note${count === 1 ? "" : "s"}`;
+	const sectionLabel = (count: number): string =>
+		`${count} section${count === 1 ? "" : "s"}`;
+	const parts: string[] = [];
+	if (counts.ready) parts.push(`${noteLabel(counts.ready)} ready`);
+	const notesNeedingCues = counts.uncued + counts.stale;
+	if (notesNeedingCues) {
+		const sectionCount =
+			opts.cueSectionCount && opts.cueSectionCount > 0
+				? ` (${sectionLabel(opts.cueSectionCount)})`
+				: "";
+		parts.push(
+			`${noteLabel(notesNeedingCues)}${sectionCount} ${
+				notesNeedingCues === 1 ? "needs" : "need"
+			} cues`
+		);
+	}
+	if (counts.failed) parts.push(`${noteLabel(counts.failed)} failed`);
+	return parts.length
+		? parts.join(" · ")
+		: counts.skipped
+			? "No eligible notes"
+			: "No notes found";
 }
 
 export function isDescendantPath(path: string, parentPath: string): boolean {
@@ -122,10 +169,9 @@ export function eligibleStudyAreaPaths(
 export function findMaintainedStudyAreaForPath(
 	areas: readonly StudyArea[],
 	path: string,
-	automationEnabled: boolean,
 	hidden = false
 ): StudyArea | null {
-	if (!automationEnabled || hidden || !isMarkdownPath(path)) return null;
+	if (hidden || !isMarkdownPath(path)) return null;
 	return (
 		areas.find(
 			(area) =>
@@ -150,6 +196,9 @@ export function classifyStudyAreaNote(
 	}
 	if (note.hidden) {
 		return { path: note.path, readiness: "skipped", reason: "hidden" };
+	}
+	if (!cueEligibleSections(note.currentSections).length) {
+		return { path: note.path, readiness: "skipped", reason: "empty" };
 	}
 	if (!note.cache) {
 		return { path: note.path, readiness: "uncued", reason: null };
@@ -214,15 +263,12 @@ export function loadStudyAreas(raw: unknown): StudyArea[] {
 		if (!item || typeof item !== "object") return [];
 		const candidate = item as Record<string, unknown>;
 		const id = typeof candidate.id === "string" ? candidate.id.trim() : "";
-		const parentPath =
-			typeof candidate.parentPath === "string"
-				? normalizeVaultPath(candidate.parentPath)
-				: "";
-		if (!id || !parentPath) return [];
+		if (!id || typeof candidate.parentPath !== "string") return [];
+		const parentPath = normalizeVaultPath(candidate.parentPath);
 		const name =
 			typeof candidate.name === "string" && candidate.name.trim()
 				? candidate.name.trim()
-				: parentPath.split("/").slice(-1)[0] ?? parentPath;
+				: studyAreaNameForParentPath(parentPath);
 		const rawExcluded = Array.isArray(candidate.excludedPaths)
 			? candidate.excludedPaths
 			: [];
@@ -258,13 +304,14 @@ function planQueueItem(
 	readiness: StudyAreaReadiness,
 	mode: StudyAreaPlanMode
 ): StudyAreaQueueItem | null {
+	const eligibleSections = cueEligibleSections(note.currentSections);
 	if (readiness === "uncued" && mode !== "retry-failed") {
 		return {
 			path: note.path,
 			action: "generate-note",
 			sectionIds: [],
 			readiness,
-			sectionCount: note.currentSections.length,
+			sectionCount: eligibleSections.length,
 		};
 	}
 	if (readiness === "stale" && mode !== "retry-failed" && note.cache) {
@@ -278,7 +325,7 @@ function planQueueItem(
 			sectionIds,
 			readiness,
 			sectionCount:
-				action === "generate-note" ? note.currentSections.length : sectionIds.length,
+				action === "generate-note" ? eligibleSections.length : sectionIds.length,
 		};
 	}
 	if (readiness === "failed" && note.cache) {
@@ -299,9 +346,10 @@ function canRefreshStaleSections(
 	cache: NoteCache,
 	currentSections: readonly Section[]
 ): boolean {
-	if (cache.sections.length !== currentSections.length) return false;
+	const eligibleSections = cueEligibleSections(currentSections);
+	if (cache.sections.length !== eligibleSections.length) return false;
 	return cache.sections.every((cached, index) => {
-		const current = currentSections[index];
+		const current = eligibleSections[index];
 		return current && current.id === cached.id;
 	});
 }
@@ -310,7 +358,9 @@ function failedSectionIds(
 	cache: NoteCache,
 	currentSections: readonly Section[]
 ): string[] {
-	const currentIds = new Set(currentSections.map((section) => section.id));
+	const currentIds = new Set(
+		cueEligibleSections(currentSections).map((section) => section.id)
+	);
 	return cache.sections
 		.filter((section) => section.error && currentIds.has(section.id))
 		.map((section) => section.id);

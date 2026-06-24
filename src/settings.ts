@@ -1,5 +1,6 @@
 import {
 	App,
+	Modal,
 	Notice,
 	PluginSettingTab,
 	Setting,
@@ -81,9 +82,13 @@ import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { AnthropicProvider } from "./providers/anthropic-provider";
 import {
 	DEFAULT_STUDY_AREAS,
-	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
+	ENTIRE_VAULT_STUDY_AREA_LABEL,
+	formatStudyAreaReadinessCounts,
+	isEntireVaultStudyArea,
 	normalizeVaultPath,
+	studyAreaScopeLabel,
 	type StudyArea,
+	type StudyAreaGenerationPlan,
 } from "./study-area";
 import { formatCueCraftNotice } from "./notice";
 import type { ProviderId } from "./provider-id";
@@ -147,7 +152,6 @@ export interface CueCraftSettings {
 	cueColumnWidth: CueColumnWidth;
 	cueFontSize: CueFontSize;
 	autoGenerateOnSave: boolean;
-	studyAreaAutomationEnabled: boolean;
 	studyAreas: StudyArea[];
 	sectionConcurrency: number;
 	cueDensity: CueDensity;
@@ -208,7 +212,6 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
 	autoGenerateOnSave: false,
-	studyAreaAutomationEnabled: DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
 	studyAreas: DEFAULT_STUDY_AREAS,
 	sectionConcurrency: 5,
 	cueDensity: DEFAULT_CUE_DENSITY,
@@ -252,7 +255,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			case "cue-generation":
 				this.renderSubpageHeader(
 					containerEl,
-					"Cue generation",
+					"Cue Generation",
 					"Question style, density, summaries, and auto-generation behavior."
 				);
 				this.renderCueGenerationSection(containerEl, false);
@@ -268,8 +271,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			case "study-areas":
 				this.renderSubpageHeader(
 					containerEl,
-					"Study areas",
-					""
+					"Study Areas",
+					"Generate cues for your vault or specific folders. CueCraft keeps cues up-to-date for notes in these areas."
 				);
 				this.renderStudyAreasSection(containerEl, false);
 				break;
@@ -294,10 +297,16 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		const navEl = containerEl.createDiv({ cls: "cuecraft-settings-nav" });
 		this.renderSettingsNavCard(navEl, {
-			title: "AI model",
-			description: "Provider setup, connection checks, model selection, and parallel request tuning.",
+			title: "AI Provider & Settings",
+			description: "Provider & model selection, connection check, and parallel request tuning.",
 			summary: this.aiModelSummary(),
 			onOpen: () => this.openSubpage("ai-model"),
+		});
+		this.renderSettingsNavCard(navEl, {
+			title: "Study Areas",
+			description: "Generate cues for your vault or specific folders.",
+			summary: this.studyAreasSummary(),
+			onOpen: () => this.openSubpage("study-areas"),
 		});
 		this.renderSettingsNavCard(navEl, {
 			title: "Cue generation",
@@ -310,12 +319,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			description: "Adjust Cornell view styling, sizing, accents, and compact display options.",
 			summary: this.appearanceSummary(),
 			onOpen: () => this.openSubpage("appearance"),
-		});
-		this.renderSettingsNavCard(navEl, {
-			title: "Study areas",
-			description: "Make parent folders study-ready with previewed backfill and opt-in maintenance.",
-			summary: this.studyAreasSummary(),
-			onOpen: () => this.openSubpage("study-areas"),
 		});
 
 		this.renderNoteFormatSection(containerEl, true);
@@ -397,6 +400,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		);
 	}
 
+	openStudyAreas(): void {
+		this.openSubpage("study-areas");
+	}
+
 	private openSubpage(subpage: CueCraftSettingsSubpage): void {
 		this.currentSubpage = subpage;
 		this.display();
@@ -437,8 +444,23 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const enabled = this.plugin.settings.studyAreas.filter(
 			(area) => area.maintenanceMode === "maintain-on-save"
 		).length;
-		if (!count) return "No study areas · automation paused";
-		return `${count} area${count === 1 ? "" : "s"} · ${enabled} maintaining on save`;
+		if (!count) return "No study areas";
+		const entireVaultArea = this.plugin.settings.studyAreas.find((area) =>
+			isEntireVaultStudyArea(area)
+		);
+		if (entireVaultArea) {
+			return `${this.vaultStudyAreaLabel()} · ${entireVaultArea.maintenanceMode === "maintain-on-save"
+				? "updates on save"
+				: "manual updates"
+				}`;
+		}
+		return `${count} area${count === 1 ? "" : "s"} · ${enabled} update on save`;
+	}
+
+	private vaultStudyAreaLabel(): string {
+		const vaultName = this.app.vault.getName().trim();
+		if (!vaultName) return ENTIRE_VAULT_STUDY_AREA_LABEL;
+		return /\bvault$/i.test(vaultName) ? vaultName : `${vaultName} Vault`;
 	}
 
 	private providerDisplayName(provider: ProviderId): string {
@@ -806,10 +828,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (showHeading) {
 			new Setting(containerEl).setName("Study areas").setHeading();
 		}
-		new Setting(containerEl).setName("Create Study Area").setHeading();
-		const createEl = containerEl.createDiv({
-			cls: "cuecraft-settings-flow",
-		});
 		const folderPaths = this.studyAreaFolderPaths();
 		const assignedFolderPaths = new Set(
 			this.plugin.settings.studyAreas.map((area) =>
@@ -819,87 +837,233 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const availableFolderPaths = folderPaths.filter(
 			(path) => !assignedFolderPaths.has(path)
 		);
-		const parentFolderSetting = new Setting(createEl)
-			.setName("Parent folder")
-			.setDesc("Type to filter existing vault folders; hidden and excluded notes stay skipped.");
-		renderModelCombobox({
-			containerEl: parentFolderSetting.controlEl,
-			value: "",
-			options: normalizeModelIds(availableFolderPaths, "string"),
-			source: "string",
-			placeholder: availableFolderPaths.length
-				? "Choose a folder..."
-				: "No unassigned folders",
-			emptyMessage: availableFolderPaths.length
-				? "No matching folders. Choose an existing vault folder."
-				: "No unassigned folders found.",
-			onCommit: async (value) => {
-				const normalized = normalizeVaultPath(value);
-				if (!normalized) return;
-				if (assignedFolderPaths.has(normalized)) {
-					new Notice("CueCraft: that study area already exists.");
-					this.display();
-					return;
-				}
-				if (!folderPaths.includes(normalized)) {
-					new Notice(`CueCraft: "${normalized}" is not an existing folder.`);
-					this.display();
-					return;
-				}
-				const area = await this.plugin.createStudyArea(normalized);
-				if (area) this.display();
-			},
-			renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
-			suggestionsLabel: "folder suggestions",
-		});
+		const hasStudyAreas = this.plugin.settings.studyAreas.length > 0;
+		const hasEntireVaultArea = this.plugin.settings.studyAreas.some((area) =>
+			isEntireVaultStudyArea(area)
+		);
+		const vaultScopeLabel = this.vaultStudyAreaLabel();
+		const availableScopes = hasEntireVaultArea
+			? []
+			: [
+					...(!hasStudyAreas ? [vaultScopeLabel] : []),
+					...availableFolderPaths,
+				];
 
-		new Setting(containerEl).setName("Manage Study Areas").setHeading();
-		const manageEl = containerEl.createDiv({
+		if (hasStudyAreas) {
+			new Setting(containerEl).setName("Manage Study Areas").setHeading();
+			const manageEl = containerEl.createDiv({
+				cls: "cuecraft-settings-flow",
+			});
+			for (const area of this.plugin.settings.studyAreas) {
+				this.renderStudyAreaRow(manageEl, area);
+			}
+		}
+
+		new Setting(containerEl).setName("Create Study Area").setHeading();
+		const createEl = containerEl.createDiv({
 			cls: "cuecraft-settings-flow",
 		});
-		new Setting(manageEl)
-			.setName("Auto-update cues for saved notes")
-			.setDesc("When on, saving a note in a study area marked Maintain on save queues that note for missing, stale, or failed cue generation. It does not refresh this list or regenerate the whole folder.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.studyAreaAutomationEnabled)
-					.onChange(async (value) => {
-						this.plugin.settings.studyAreaAutomationEnabled = value;
-						await this.plugin.saveSettings();
-					})
+		const parentFolderSetting = new Setting(createEl);
+		parentFolderSetting.settingEl.addClass("cuecraft-study-area-create-row");
+		parentFolderSetting
+			.setName(
+				hasEntireVaultArea
+					? `${vaultScopeLabel} is already a study area`
+					: "Choose notes to include"
+			)
+			.setDesc(
+				hasEntireVaultArea
+					? "Remove the existing study area above before adding a specific folder."
+					: hasStudyAreas
+						? `Type to filter existing vault folders. Remove folder study areas above to choose ${vaultScopeLabel}.`
+						: `Select ${vaultScopeLabel} or an existing folder; hidden notes are not eligible.`
 			);
-
-		if (!this.plugin.settings.studyAreas.length) {
-			manageEl.createDiv({
-				cls: "cuecraft-settings-flow-desc",
-				text: "No study areas yet.",
+		if (hasEntireVaultArea) {
+			parentFolderSetting.controlEl.empty();
+		} else {
+			renderModelCombobox({
+				containerEl: parentFolderSetting.controlEl,
+				value: "",
+				options: normalizeModelIds(availableScopes, "string"),
+				source: "string",
+				placeholder: availableScopes.length
+					? "Choose a scope..."
+					: "No unassigned folders",
+				emptyMessage: availableScopes.length
+					? `No matching scopes. Choose ${vaultScopeLabel} or an existing vault folder.`
+					: "No unassigned folders found.",
+				onCommit: async (value) => {
+					const selectedScope = value.trim();
+					const isEntireVaultSelection =
+						selectedScope.toLowerCase() ===
+							ENTIRE_VAULT_STUDY_AREA_LABEL.toLowerCase() ||
+						selectedScope.toLowerCase() === vaultScopeLabel.toLowerCase();
+					const normalized = isEntireVaultSelection
+						? ""
+						: normalizeVaultPath(selectedScope);
+					if (!normalized && !isEntireVaultSelection) return;
+					if (isEntireVaultSelection && hasStudyAreas) {
+						new Notice(
+							`CueCraft: remove folder study areas before using ${vaultScopeLabel}.`
+						);
+						this.display();
+						return;
+					}
+					if (assignedFolderPaths.has(normalized)) {
+						new Notice("CueCraft: that study area already exists.");
+						this.display();
+						return;
+					}
+					if (!isEntireVaultSelection && !folderPaths.includes(normalized)) {
+						new Notice(`CueCraft: "${normalized}" is not an existing folder.`);
+						this.display();
+						return;
+					}
+					const area = await this.plugin.createStudyArea(normalized);
+					if (area) this.display();
+				},
+				renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
+				pinnedOptionIds: [vaultScopeLabel],
+				suggestionsLabel: "scope suggestions",
 			});
+		}
+	}
+
+	private renderStudyAreaRow(containerEl: HTMLElement, area: StudyArea): void {
+		const setting = new Setting(containerEl).setName(
+			isEntireVaultStudyArea(area) ? this.vaultStudyAreaLabel() : area.name
+		);
+		setting.settingEl.addClass("cuecraft-study-area-row");
+		setting.descEl.empty();
+		if (!isEntireVaultStudyArea(area)) {
+			setting.descEl.createDiv({
+				cls: "cuecraft-study-area-path",
+				text: studyAreaScopeLabel(area.parentPath),
+			});
+		}
+		const countsEl = setting.descEl.createDiv({
+			cls: "cuecraft-study-area-counts",
+			text: "Checking notes...",
+		});
+		const upToDateEl = setting.descEl.createDiv({
+			cls: "cuecraft-study-area-status",
+			text: "Up to date",
+		});
+		upToDateEl.hidden = true;
+		setting.descEl.createDiv({
+			cls: "cuecraft-study-area-help",
+			text:
+				area.maintenanceMode === "maintain-on-save"
+					? "Cues update automatically when notes in this area are saved."
+					: "Saved notes in this area will not update automatically.",
+		});
+
+		setting.controlEl.addClass("cuecraft-study-area-controls");
+		setting.controlEl.createSpan({
+			cls: "cuecraft-study-area-toggle-label",
+			text: "Update on save",
+		});
+		setting.addToggle((tg) =>
+			tg
+				.setValue(area.maintenanceMode === "maintain-on-save")
+				.onChange(async (value) => {
+					await this.plugin.updateStudyArea({
+						...area,
+						maintenanceMode: value ? "maintain-on-save" : "paused",
+					});
+					this.display();
+				})
+		);
+
+		const backfillBtn = setting.controlEl.createEl("button", {
+			text: "Generate missing cues",
+			attr: { type: "button" },
+		});
+		backfillBtn.addClass("mod-cta");
+		backfillBtn.disabled = true;
+		const retryBtn = setting.controlEl.createEl("button", {
+			text: "Retry failed",
+			attr: { type: "button" },
+		});
+		retryBtn.addClass("cuecraft-study-area-retry");
+		retryBtn.disabled = true;
+		retryBtn.hidden = true;
+		retryBtn.addClass("cuecraft-study-area-hidden");
+		const removeBtn = setting.controlEl.createEl("button", {
+			cls: "clickable-icon cuecraft-study-area-remove",
+			attr: { type: "button", "aria-label": `Remove ${area.name}` },
+		});
+		setIcon(removeBtn, "trash-2");
+
+		void this.plugin.previewStudyArea(area.id).then((plan) => {
+			this.renderStudyAreaPlan(
+				countsEl,
+				upToDateEl,
+				backfillBtn,
+				retryBtn,
+				plan
+			);
+		});
+
+		this.plugin.registerDomEvent(backfillBtn, "click", async () => {
+			upToDateEl.hidden = true;
+			backfillBtn.disabled = true;
+			backfillBtn.textContent = "Generating...";
+			countsEl.setText("Generating cues...");
+			await this.plugin.runStudyArea(area.id, "backfill");
+			this.display();
+		});
+		this.plugin.registerDomEvent(retryBtn, "click", async () => {
+			await this.plugin.runStudyArea(area.id, "retry-failed");
+			this.display();
+		});
+		this.plugin.registerDomEvent(removeBtn, "click", () => {
+			new StudyAreaConfirmModal(this.app, {
+				title: "Remove study area?",
+				message: `Remove study area "${area.name}"? Generated cues stay cached.`,
+				confirmText: "Remove",
+				onConfirm: async () => {
+					await this.plugin.removeStudyArea(area.id);
+					this.display();
+				},
+			}).open();
+		});
+	}
+
+	private renderStudyAreaPlan(
+		countsEl: HTMLElement,
+		upToDateEl: HTMLElement,
+		backfillBtn: HTMLButtonElement,
+		retryBtn: HTMLButtonElement,
+		plan: StudyAreaGenerationPlan | null
+	): void {
+		if (!plan) {
+			countsEl.setText("Study area no longer exists.");
+			upToDateEl.hidden = true;
+			backfillBtn.disabled = true;
+			backfillBtn.textContent = "Generate missing cues";
+			retryBtn.disabled = true;
+			retryBtn.hidden = true;
+			retryBtn.addClass("cuecraft-study-area-hidden");
 			return;
 		}
-		for (const area of this.plugin.settings.studyAreas) {
-			const setting = new Setting(manageEl)
-				.setName(area.name)
-				.setDesc(
-					`${area.parentPath} · ${
-						area.maintenanceMode === "maintain-on-save"
-							? "maintain on save"
-							: "paused"
-					}`
-				);
-			setting.controlEl.addClass("cuecraft-status-chips");
-			this.renderStatusChip(
-				setting.controlEl,
-				area.maintenanceMode === "maintain-on-save" ? "Maintaining" : "Paused",
-				area.maintenanceMode === "maintain-on-save"
-					? "is-positive"
-					: "is-muted"
-			);
-			setting.addButton((btn) =>
-				btn
-					.setButtonText("Manage")
-					.onClick(() => this.plugin.openStudyAreaManager(area.id))
-			);
-		}
+		const cueSectionCount = plan.items
+			.filter((item) => item.readiness === "uncued" || item.readiness === "stale")
+			.reduce((total, item) => total + item.sectionCount, 0);
+		countsEl.setText(formatStudyAreaReadinessCounts(plan.counts, {
+			cueSectionCount,
+		}));
+		const hasMissingCueWork = plan.items.some(
+			(item) => item.readiness === "uncued" || item.readiness === "stale"
+		);
+		const hasFailedWork = plan.counts.failed > 0;
+		upToDateEl.hidden =
+			hasMissingCueWork || hasFailedWork || plan.counts.ready === 0;
+		backfillBtn.disabled = !hasMissingCueWork;
+		backfillBtn.textContent = "Generate missing cues";
+		retryBtn.disabled = !hasFailedWork;
+		retryBtn.hidden = !hasFailedWork;
+		retryBtn.toggleClass("cuecraft-study-area-hidden", !hasFailedWork);
 	}
 
 	// ── Note format ───────────────────────────────────────────────────────
@@ -1295,29 +1459,29 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const modelSetting = new Setting(containerEl).setName("Claude model");
 		if (modelHint) modelSetting.setDesc(modelHint);
 		modelSetting.addDropdown((dd) => {
-				dd.addOption(ANTHROPIC_CUSTOM_MODEL_ID, "Custom model ID...");
-				for (const model of modelOptions) {
-					dd.addOption(model.id, model.label);
-				}
-				dd
-					.setValue(
-						isCustomSelection
-							? ANTHROPIC_CUSTOM_MODEL_ID
-							: s.anthropicModel
-					)
-					.onChange(async (value) => {
-						if (value === ANTHROPIC_CUSTOM_MODEL_ID) {
-							s.anthropicModelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
-							await this.plugin.saveSettings();
-							this.display();
-							return;
-						}
-						s.anthropicModelSelection = value;
-						s.anthropicModel = value;
+			dd.addOption(ANTHROPIC_CUSTOM_MODEL_ID, "Custom model ID...");
+			for (const model of modelOptions) {
+				dd.addOption(model.id, model.label);
+			}
+			dd
+				.setValue(
+					isCustomSelection
+						? ANTHROPIC_CUSTOM_MODEL_ID
+						: s.anthropicModel
+				)
+				.onChange(async (value) => {
+					if (value === ANTHROPIC_CUSTOM_MODEL_ID) {
+						s.anthropicModelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
 						await this.plugin.saveSettings();
 						this.display();
-					});
-			});
+						return;
+					}
+					s.anthropicModelSelection = value;
+					s.anthropicModel = value;
+					await this.plugin.saveSettings();
+					this.display();
+				});
+		});
 
 		if (isCustomSelection) {
 			new Setting(containerEl)
@@ -1654,9 +1818,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			opts.modelOptions && opts.modelOptions.length > 0
 				? opts.modelOptions
 				: normalizeModelIds(
-						sortFetchedModelIds(opts.availableModels),
-						opts.modelOptionSource
-					);
+					sortFetchedModelIds(opts.availableModels),
+					opts.modelOptionSource
+				);
 		const selectedOption = buildModelComboboxOptions({
 			options: modelOptions,
 			currentModelId: currentModel,
@@ -2018,5 +2182,45 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return;
 		}
 		new Notice(formatCueCraftNotice(status.message));
+	}
+}
+
+class StudyAreaConfirmModal extends Modal {
+	constructor(
+		app: App,
+		private readonly opts: {
+			title: string;
+			message: string;
+			confirmText: string;
+			onConfirm: () => void | Promise<void>;
+		}
+	) {
+		super(app);
+	}
+
+	onOpen(): void {
+		const { contentEl } = this;
+		contentEl.empty();
+		contentEl.createEl("h2", { text: this.opts.title });
+		contentEl.createEl("p", { text: this.opts.message });
+		const actionsEl = contentEl.createDiv({ cls: "cuecraft-modal-actions" });
+		const cancelBtn = actionsEl.createEl("button", {
+			text: "Cancel",
+			attr: { type: "button" },
+		});
+		cancelBtn.addEventListener("click", () => this.close());
+		const confirmBtn = actionsEl.createEl("button", {
+			text: this.opts.confirmText,
+			attr: { type: "button" },
+		});
+		confirmBtn.addClass("mod-cta");
+		confirmBtn.addEventListener("click", () => {
+			void this.confirm();
+		});
+	}
+
+	private async confirm(): Promise<void> {
+		await this.opts.onConfirm();
+		this.close();
 	}
 }

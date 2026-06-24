@@ -3,14 +3,18 @@ import { buildNoteCache, type NoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import {
 	DEFAULT_STUDY_AREAS,
-	DEFAULT_STUDY_AREA_AUTOMATION_ENABLED,
+	ENTIRE_VAULT_STUDY_AREA_LABEL,
 	classifyStudyAreaNote,
 	eligibleStudyAreaPaths,
 	findMaintainedStudyAreaForPath,
+	formatStudyAreaReadinessCounts,
+	isEntireVaultStudyArea,
 	isExcludedPath,
 	isStudyAreaPath,
 	loadStudyAreas,
 	planStudyAreaGeneration,
+	studyAreaNameForParentPath,
+	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
 	type StudyArea,
 } from "../src/study-area";
@@ -19,9 +23,56 @@ import type { NoteGenerationResult } from "../src/generator";
 const NOTE = "# A\nalpha\n## B\nbeta";
 
 describe("study area defaults", () => {
-	it("starts with no study areas and study-area automation paused", () => {
+	it("starts with no study areas", () => {
 		expect(DEFAULT_STUDY_AREAS).toEqual([]);
-		expect(DEFAULT_STUDY_AREA_AUTOMATION_ENABLED).toBe(false);
+	});
+});
+
+describe("study area labels", () => {
+	it("uses user-facing automation and count copy", () => {
+		expect(studyAreaScopeLabel("")).toBe(ENTIRE_VAULT_STUDY_AREA_LABEL);
+		expect(studyAreaNameForParentPath("")).toBe(ENTIRE_VAULT_STUDY_AREA_LABEL);
+		expect(
+			formatStudyAreaReadinessCounts(
+				{
+					ready: 4,
+					uncued: 2,
+					stale: 1,
+					failed: 0,
+					skipped: 2,
+				},
+				{
+					cueSectionCount: 25,
+				}
+			)
+		).toBe("4 notes ready · 3 notes (25 sections) need cues");
+		expect(
+			formatStudyAreaReadinessCounts({
+				ready: 0,
+				uncued: 3,
+				stale: 0,
+				failed: 0,
+				skipped: 1,
+			})
+		).toBe("3 notes need cues");
+		expect(
+			formatStudyAreaReadinessCounts({
+				ready: 0,
+				uncued: 0,
+				stale: 0,
+				failed: 0,
+				skipped: 1,
+			})
+		).toBe("No eligible notes");
+		expect(
+			formatStudyAreaReadinessCounts({
+				ready: 0,
+				uncued: 0,
+				stale: 0,
+				failed: 0,
+				skipped: 0,
+			})
+		).toBe("No notes found");
 	});
 });
 
@@ -77,6 +128,17 @@ describe("study area path matching", () => {
 		expect(isStudyAreaPath(studyArea, "Courses/Biology/asset.pdf")).toBe(false);
 	});
 
+	it("can use the entire vault as a study area", () => {
+		const studyArea = area({
+			name: ENTIRE_VAULT_STUDY_AREA_LABEL,
+			parentPath: "",
+		});
+		expect(isEntireVaultStudyArea(studyArea)).toBe(true);
+		expect(isStudyAreaPath(studyArea, "Root note.md")).toBe(true);
+		expect(isStudyAreaPath(studyArea, "Courses/Biology/Week 1.md")).toBe(true);
+		expect(isStudyAreaPath(studyArea, "image.png")).toBe(false);
+	});
+
 	it("uses explicit exclusions for notes and subfolders", () => {
 		const studyArea = area({
 			excludedPaths: ["Courses/Biology/private.md", "Courses/Biology/Drafts"],
@@ -98,29 +160,19 @@ describe("study area maintenance matching", () => {
 		expect(
 			findMaintainedStudyAreaForPath(
 				[maintained],
-				"Courses/Biology/Week 1.md",
-				true
+				"Courses/Biology/Week 1.md"
 			)
 		)?.toEqual(maintained);
 		expect(
 			findMaintainedStudyAreaForPath(
 				[maintained],
-				"Courses/Chemistry/Week 1.md",
-				true
+				"Courses/Chemistry/Week 1.md"
 			)
 		).toBeNull();
 		expect(
 			findMaintainedStudyAreaForPath(
 				[area({ maintenanceMode: "paused" })],
-				"Courses/Biology/Week 1.md",
-				true
-			)
-		).toBeNull();
-		expect(
-			findMaintainedStudyAreaForPath(
-				[maintained],
-				"Courses/Biology/Week 1.md",
-				false
+				"Courses/Biology/Week 1.md"
 			)
 		).toBeNull();
 	});
@@ -133,15 +185,13 @@ describe("study area maintenance matching", () => {
 		expect(
 			findMaintainedStudyAreaForPath(
 				[maintained],
-				"Courses/Biology/Drafts/a.md",
-				true
+				"Courses/Biology/Drafts/a.md"
 			)
 		).toBeNull();
 		expect(
 			findMaintainedStudyAreaForPath(
 				[maintained],
 				"Courses/Biology/Public/a.md",
-				true,
 				true
 			)
 		).toBeNull();
@@ -174,6 +224,18 @@ describe("study area readiness", () => {
 			cache: null,
 			currentSections: parseSections(NOTE),
 		}).readiness).toBe("uncued");
+	});
+
+	it("classifies notes with only empty heading sections as skipped", () => {
+		expect(classifyStudyAreaNote(area(), {
+			path: "Courses/Biology/Empty.md",
+			cache: null,
+			currentSections: parseSections("# Parent\n## Child\n"),
+		})).toEqual({
+			path: "Courses/Biology/Empty.md",
+			readiness: "skipped",
+			reason: "empty",
+		});
 	});
 
 	it("classifies cached notes as ready, stale, or failed", () => {
@@ -384,6 +446,28 @@ describe("loadStudyAreas", () => {
 				excludedPaths: ["Courses/Biology/Drafts"],
 				maintenanceMode: "paused",
 				createdAt: "1970-01-01T00:00:00.000Z",
+			},
+		]);
+	});
+
+	it("preserves an entire-vault study area with a blank parent path", () => {
+		expect(loadStudyAreas([
+			{
+				id: "vault",
+				name: "",
+				parentPath: "",
+				excludedPaths: [],
+				maintenanceMode: "maintain-on-save",
+				createdAt: "2026-06-21T00:00:00.000Z",
+			},
+		])).toEqual([
+			{
+				id: "vault",
+				name: ENTIRE_VAULT_STUDY_AREA_LABEL,
+				parentPath: "",
+				excludedPaths: [],
+				maintenanceMode: "maintain-on-save",
+				createdAt: "2026-06-21T00:00:00.000Z",
 			},
 		]);
 	});

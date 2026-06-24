@@ -81,15 +81,20 @@ export function renderModelCombobox(opts: {
 	onCommit: (value: string) => void | Promise<void>;
 	renderToggleIcon?: (containerEl: HTMLElement) => void;
 	badgesForOption?: (option: ModelOption) => string[];
+	pinnedOptionIds?: string[];
 	suggestionsLabel?: string;
 }): void {
 	const comboboxId = `cuecraft-model-combobox-${++nextComboboxId}`;
 	const listboxId = `${comboboxId}-list`;
 	const badgesForOption = opts.badgesForOption ?? (() => []);
 	let isOpen = false;
-	let activeIndex = 0;
+	let activeIndex = -1;
 	let committedModelId = opts.value.trim();
 	const suggestionsLabel = opts.suggestionsLabel ?? "model suggestions";
+	const pinnedOptionIds = opts.pinnedOptionIds ?? [];
+	const pinnedRank = new Map(
+		pinnedOptionIds.map((id, index) => [id.trim(), index])
+	);
 
 	const rootEl = opts.containerEl.createDiv({
 		cls: "cuecraft-model-combobox",
@@ -113,7 +118,6 @@ export function renderModelCombobox(opts: {
 		attr: {
 			type: "button",
 			"aria-label": `Show ${suggestionsLabel}`,
-			title: `Show ${suggestionsLabel}`,
 			tabindex: "-1",
 		},
 	});
@@ -124,21 +128,30 @@ export function renderModelCombobox(opts: {
 		attr: { id: listboxId, role: "listbox" },
 	});
 
-	const matches = () =>
-		buildModelComboboxSuggestions({
+	const matches = () => {
+		const suggestions = buildModelComboboxSuggestions({
 			options: opts.options,
 			selectedModelId: committedModelId,
 			query: inputEl.value,
 			source: opts.source,
 			badgesForOption,
 		});
+		if (!pinnedRank.size) return suggestions;
+		return [...suggestions].sort((a, b) => {
+			const aRank = pinnedRank.get(a.id);
+			const bRank = pinnedRank.get(b.id);
+			if (aRank != null && bRank != null) return aRank - bRank;
+			if (aRank != null) return -1;
+			if (bRank != null) return 1;
+			return 0;
+		});
+	};
 
 	const closeList = () => {
 		isOpen = false;
 		inputEl.setAttr("aria-expanded", "false");
 		inputEl.removeAttribute("aria-activedescendant");
 		toggleEl.setAttr("aria-label", `Show ${suggestionsLabel}`);
-		toggleEl.setAttr("title", `Show ${suggestionsLabel}`);
 		rootEl.removeClass("cuecraft-model-combobox-open");
 		listEl.addClass("cuecraft-model-combobox-list-hidden");
 	};
@@ -170,7 +183,6 @@ export function renderModelCombobox(opts: {
 		listEl.removeClass("cuecraft-model-combobox-list-hidden");
 		inputEl.setAttr("aria-expanded", "true");
 		toggleEl.setAttr("aria-label", `Hide ${suggestionsLabel}`);
-		toggleEl.setAttr("title", `Hide ${suggestionsLabel}`);
 		if (visibleOptions.length === 0) {
 			listEl.createDiv({
 				cls: "cuecraft-model-combobox-empty",
@@ -180,10 +192,12 @@ export function renderModelCombobox(opts: {
 			return;
 		}
 
-		activeIndex = Math.max(
-			0,
-			Math.min(activeIndex, visibleOptions.length - 1)
-		);
+		if (activeIndex >= visibleOptions.length) {
+			activeIndex = visibleOptions.length - 1;
+		}
+		if (activeIndex < 0) {
+			inputEl.removeAttribute("aria-activedescendant");
+		}
 		for (const [index, option] of visibleOptions.entries()) {
 			const optionId = `${comboboxId}-option-${index}`;
 			const optionEl = listEl.createEl("button", {
@@ -239,18 +253,18 @@ export function renderModelCombobox(opts: {
 			return;
 		}
 		isOpen = true;
-		activeIndex = 0;
+		activeIndex = -1;
 		renderList();
 		inputEl.focus();
 	});
 	inputEl.addEventListener("focus", () => {
 		isOpen = true;
-		activeIndex = 0;
+		activeIndex = -1;
 		renderList();
 	});
 	inputEl.addEventListener("input", () => {
 		isOpen = true;
-		activeIndex = 0;
+		activeIndex = -1;
 		renderList();
 	});
 	inputEl.addEventListener("keydown", (event) => {
@@ -261,7 +275,9 @@ export function renderModelCombobox(opts: {
 			activeIndex =
 				visibleOptions.length === 0
 					? 0
-					: (activeIndex + 1) % visibleOptions.length;
+					: activeIndex < 0
+						? 0
+						: (activeIndex + 1) % visibleOptions.length;
 			renderList();
 			return;
 		}
@@ -271,8 +287,10 @@ export function renderModelCombobox(opts: {
 			activeIndex =
 				visibleOptions.length === 0
 					? 0
-					: (activeIndex - 1 + visibleOptions.length) %
-						visibleOptions.length;
+					: activeIndex < 0
+						? visibleOptions.length - 1
+						: (activeIndex - 1 + visibleOptions.length) %
+							visibleOptions.length;
 			renderList();
 			return;
 		}

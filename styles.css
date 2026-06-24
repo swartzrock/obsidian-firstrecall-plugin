@@ -30,6 +30,7 @@
 .cuecraft-settings-nav > .setting-item {
 	margin: 0;
 	padding: 16px;
+	border-bottom: 1px solid var(--background-modifier-border);
 }
 
 .cuecraft-settings-nav > .setting-item:first-child {
@@ -102,6 +103,9 @@
 .cuecraft-settings-flow>.setting-item {
 	padding-left: 0;
 	padding-right: 0;
+	background: transparent;
+	border-radius: 0;
+	box-shadow: none;
 }
 
 .cuecraft-settings-flow .cuecraft-cli-text-setting .setting-item-info {
@@ -142,13 +146,46 @@
 .cuecraft-model-combobox {
 	position: relative;
 	width: min(340px, 100%);
+	box-sizing: border-box;
+	--cuecraft-combobox-border: color-mix(
+		in srgb,
+		var(--background-modifier-border) 64%,
+		var(--background-primary)
+	);
+	--cuecraft-combobox-border-focus: color-mix(
+		in srgb,
+		var(--text-muted) 34%,
+		var(--background-primary)
+	);
 }
 
 .cuecraft-model-combobox-input {
 	width: 100%;
 	min-width: 220px;
+	height: 34px;
+	box-sizing: border-box;
 	padding-inline-end: 34px;
+	border: 1px solid var(--cuecraft-combobox-border);
+	border-radius: var(--radius-m);
+	background: var(--background-primary);
+	box-shadow: var(--input-shadow, none);
 	text-overflow: ellipsis;
+	transition:
+		border-color 120ms ease,
+		box-shadow 120ms ease,
+		background-color 120ms ease;
+}
+
+.cuecraft-model-combobox-input:hover {
+	border-color: var(--cuecraft-combobox-border-focus);
+}
+
+.cuecraft-model-combobox-input:focus,
+.cuecraft-model-combobox-input:focus-visible {
+	border-color: var(--cuecraft-combobox-border-focus);
+	box-shadow: 0 0 0 2px
+		color-mix(in srgb, var(--text-muted) 16%, transparent);
+	outline: none;
 }
 
 .cuecraft-model-combobox-toggle {
@@ -187,14 +224,14 @@
 	z-index: var(--layer-popover);
 	inset-inline-start: 0;
 	top: calc(100% + 4px);
-	width: min(520px, calc(100vw - 48px));
-	min-width: 100%;
-	max-height: 240px;
+	width: 100%;
+	box-sizing: border-box;
+	max-height: min(240px, calc(100vh - 220px));
 	overflow: auto;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
+	border: 1px solid var(--cuecraft-combobox-border);
+	border-radius: var(--radius-m);
 	background: var(--background-primary);
-	box-shadow: var(--shadow-s);
+	box-shadow: var(--shadow-s), 0 8px 24px rgba(0, 0, 0, 0.1);
 	padding: 4px;
 }
 
@@ -202,7 +239,7 @@
 	display: none;
 }
 
-.cuecraft-model-combobox-option {
+.cuecraft-model-combobox-list button.cuecraft-model-combobox-option {
 	appearance: none;
 	display: flex;
 	flex-direction: column;
@@ -220,13 +257,14 @@
 	box-shadow: none;
 	color: var(--text-normal);
 	text-align: left;
-	padding: 6px 8px;
+	padding: 7px 8px;
 	cursor: pointer;
 }
 
-.cuecraft-model-combobox-option:hover,
-.cuecraft-model-combobox-option[aria-selected="true"] {
+.cuecraft-model-combobox-list button.cuecraft-model-combobox-option:hover,
+.cuecraft-model-combobox-list button.cuecraft-model-combobox-option[aria-selected="true"] {
 	background: var(--background-modifier-hover);
+	border: 0;
 	box-shadow: none;
 	color: var(--text-normal);
 }
@@ -235,7 +273,7 @@
 	width: 100%;
 	overflow: hidden;
 	font-size: var(--font-ui-small);
-	font-weight: var(--font-medium);
+	font-weight: var(--font-normal, 400);
 	line-height: 1.3;
 	text-overflow: ellipsis;
 	white-space: nowrap;
@@ -1290,38 +1328,80 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	margin-top: 16px;
 }
 
-.cuecraft-study-area-copy,
-.cuecraft-study-area-empty,
 .cuecraft-study-area-path,
-.cuecraft-study-area-counts {
+.cuecraft-study-area-counts,
+.cuecraft-study-area-status,
+.cuecraft-study-area-help {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	line-height: 1.4;
 }
 
-.cuecraft-study-area-list {
-	display: grid;
-	gap: 14px;
-}
-
-.cuecraft-study-area-card {
-	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-m);
-	background: var(--background-secondary);
-	padding: 14px;
-}
-
-.cuecraft-study-area-card h3 {
-	margin: 0 0 4px;
-}
-
 .cuecraft-study-area-counts {
-	margin-top: 8px;
+	margin-top: 3px;
 }
 
-.cuecraft-study-area-card .setting-item {
-	padding-left: 0;
-	padding-right: 0;
+.cuecraft-study-area-status {
+	margin-top: 3px;
+}
+
+.cuecraft-study-area-help {
+	margin-top: 8px;
+	max-width: 520px;
+}
+
+.cuecraft-study-area-create-row .cuecraft-model-combobox-input {
+	border-color: color-mix(
+		in srgb,
+		var(--text-muted) 24%,
+		var(--background-primary)
+	);
+	box-shadow: none;
+}
+
+.cuecraft-study-area-row {
+	align-items: flex-start;
+}
+
+.cuecraft-study-area-row .setting-item-info {
+	min-width: 0;
+}
+
+.cuecraft-study-area-controls {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.cuecraft-study-area-toggle-label {
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	white-space: nowrap;
+}
+
+.cuecraft-study-area-controls button.cuecraft-study-area-retry.cuecraft-study-area-hidden {
+	display: none;
+}
+
+.cuecraft-study-area-controls button.mod-cta:disabled {
+	cursor: default;
+	opacity: var(--opacity-disabled, 0.45);
+}
+
+button.cuecraft-study-area-remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 32px;
+	height: 32px;
+	padding: 0;
+}
+
+.cuecraft-study-area-remove svg {
+	width: 16px;
+	height: 16px;
 }
 
 /* Accent-color swatches (Appearance). The selected one shows a ring + check. */

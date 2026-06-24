@@ -23,8 +23,7 @@ export function normalizeProviderId(value: unknown): ProviderId {
 			return "codex-cli";
 		case "claude":
 			return "claude-cli";
-		default:
-			return "ollama";
+	default:
+		return "ollama";
 	}
 }
-

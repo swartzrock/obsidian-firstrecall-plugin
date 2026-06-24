@@ -83,6 +83,38 @@ describe("buildCueLineData", () => {
 		expect(cues.some((c) => c.heading === "B")).toBe(false);
 	});
 
+	it("skips cached cues whose current section has no body text", () => {
+		const markdown = "# Empty parent\n## Prefix Sum\nactual notes";
+		const sections = parseSections(markdown);
+		const result: NoteGenerationResult = {
+			sections: sections.map((s) => ({
+				id: s.id,
+				heading: s.heading,
+				level: s.level,
+				lineNumber: s.lineNumber,
+				contentHash: s.contentHash,
+				keywords: ["k"],
+				question: `Q:${s.heading}`,
+				confidence: "high" as const,
+				rationale: null,
+				error: null,
+			})),
+			summary: null,
+			learningObjective: null,
+			canceled: false,
+		};
+		const cache = buildNoteCache({
+			result,
+			provider: "ollama",
+			model: "m",
+			preset: "conceptual",
+			generationMode: "whole-note-context",
+			noteModifiedAt: 1,
+		});
+		const cues = buildCueLineData(cache, sections);
+		expect(cues.map((cue) => cue.heading)).toEqual(["Prefix Sum"]);
+	});
+
 	it("re-resolves cue lines after content shifts the heading down", () => {
 		const cache = cacheFrom();
 		// Prepend lines so headings move; ids stay stable (hash of body).

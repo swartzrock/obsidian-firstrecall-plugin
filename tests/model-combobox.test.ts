@@ -227,6 +227,44 @@ describe("modelOptionSearchText", () => {
 });
 
 describe("renderModelCombobox", () => {
+	it("does not preselect the first option when the menu opens", () => {
+		const dom = setupComboboxDom();
+		const container = dom.window.document.getElementById("root");
+		if (!container) throw new Error("Missing test root");
+
+		renderModelCombobox({
+			containerEl: container,
+			value: "",
+			options: [
+				normalizeStringId("Entire vault", "string"),
+				normalizeStringId("ClaudeNotes", "string"),
+			],
+			source: "string",
+			placeholder: "Choose a scope...",
+			emptyMessage: "No matching scopes.",
+			onCommit: () => {},
+		});
+
+		const input = container.querySelector<HTMLInputElement>("input");
+		if (!input) throw new Error("Missing combobox input");
+		input.dispatchEvent(new dom.window.Event("focus"));
+
+		const selectedStates = () =>
+			[...container.querySelectorAll<HTMLButtonElement>("[role='option']")].map(
+				(option) => option.getAttribute("aria-selected")
+			);
+		expect(selectedStates()).toEqual(["false", "false"]);
+
+		input.dispatchEvent(
+			new dom.window.KeyboardEvent("keydown", {
+				key: "ArrowDown",
+				bubbles: true,
+				cancelable: true,
+			})
+		);
+		expect(selectedStates()).toEqual(["true", "false"]);
+	});
+
 	it("commits a selected option once when blur follows mouse selection", async () => {
 		const dom = setupComboboxDom();
 		const container = dom.window.document.getElementById("root");

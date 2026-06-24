@@ -4,7 +4,7 @@ A living snapshot of what's shipped and what's next, so work can be picked back 
 See [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md) for the full vision/roadmap and
 [`CueCraft-v1-User-Stories.md`](./CueCraft-v1-User-Stories.md) for acceptance criteria.
 
-_Last updated: 2026-06 (Local CLI providers — Codex CLI and Claude CLI now run as desktop-only process providers using the user's existing CLI login, optional model overrides, setup-status snapshots, non-interactive generation, and a one-at-a-time provider concurrency cap. Exact selected-model verification — cloud providers now run the provider generation probe when a model is selected, so successful setup means the current key can use the current model; if no model is selected, Test connection keeps the lighter provider-access/model-list check. Exact-model verification applies to all cloud providers because they share the same AI SDK generation probe path, and changing a cloud model now marks setup verification stale until re-tested. Model compatibility badges and warnings — OpenRouter model metadata now detects structured-output support from `supported_parameters`, surfaces restrained `Structured output`, `Large context`, and `Low cost` badges in the combobox, sorts objective compatibility signals upward without hiding unsupported options, and shows a non-blocking warning when the selected OpenRouter model lacks or does not expose structured-output metadata. Searchable model combobox — fetched model selection now uses a reusable provider-aware combobox for Ollama, OpenRouter, OpenAI, Gemini, and xAI; it filters client-side by model ID, label, provider, and caller-supplied badges; supports mouse, arrow-key, `Enter`, `Escape`, and blur behavior; preserves custom/stale saved IDs as selectable values; and keeps typed custom IDs as the escape hatch. Anthropic keeps its specialized account-model picker for now because it has separate provider display-name metadata and custom selection state that would make this slice broader than the shared fetched-list path. Model metadata layer — normalized `ModelOption` shape (`id`, `label`, `provider`, `contextLength`, `pricing`, `supportedParameters`, `source`) with helpers to normalize plain string IDs and OpenRouter API model objects into the same display-ready type; stable `sortModelOptions` puts the current model first, then sorts human-readably; OpenRouter model fetching now retains rich metadata while persisted model values remain strings; OpenRouter model fetch UX — OpenRouter wired into the fetched-model selector with provider/model format descriptions, model refresh/fetch, custom model preservation, and provider-switch resilience; `resolveModelRefreshDescription` extracted as a standalone testable helper; OpenRouter provider plumbing — first-class OpenRouter support via the OpenAI-compatible AI SDK path with attribution headers, `generateText`-based structured output for broad model compatibility, model listing against the OpenRouter models endpoint, credential UI, and full provider switch integration; per-section and summary generation timing in debug logs; Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, configurable Reading-mode display options, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 389 unit tests passing; `bun run build` + `bun run test` green._
+_Last updated: 2026-06 (Study Area Autopilot shipped: vault/folder study areas, previewed generation, retry/cancel controls, opt-in maintain-on-save, and refined settings UI. Local CLI providers — Codex CLI and Claude CLI now run as desktop-only process providers using the user's existing CLI login, optional model overrides, setup-status snapshots, non-interactive generation, and a one-at-a-time provider concurrency cap. Exact selected-model verification — cloud providers now run the provider generation probe when a model is selected, so successful setup means the current key can use the current model; if no model is selected, Test connection keeps the lighter provider-access/model-list check. Exact-model verification applies to all cloud providers because they share the same AI SDK generation probe path, and changing a cloud model now marks setup verification stale until re-tested. Model compatibility badges and warnings — OpenRouter model metadata now detects structured-output support from `supported_parameters`, surfaces restrained `Structured output`, `Large context`, and `Low cost` badges in the combobox, sorts objective compatibility signals upward without hiding unsupported options, and shows a non-blocking warning when the selected OpenRouter model lacks or does not expose structured-output metadata. Searchable model combobox — fetched model selection now uses a reusable provider-aware combobox for Ollama, OpenRouter, OpenAI, Gemini, and xAI; it filters client-side by model ID, label, provider, and caller-supplied badges; supports mouse, arrow-key, `Enter`, `Escape`, and blur behavior; preserves custom/stale saved IDs as selectable values; and keeps typed custom IDs as the escape hatch. Anthropic keeps its specialized account-model picker for now because it has separate provider display-name metadata and custom selection state that would make this slice broader than the shared fetched-list path. Model metadata layer — normalized `ModelOption` shape (`id`, `label`, `provider`, `contextLength`, `pricing`, `supportedParameters`, `source`) with helpers to normalize plain string IDs and OpenRouter API model objects into the same display-ready type; stable `sortModelOptions` puts the current model first, then sorts human-readably; OpenRouter model fetching now retains rich metadata while persisted model values remain strings; OpenRouter model fetch UX — OpenRouter wired into the fetched-model selector with provider/model format descriptions, model refresh/fetch, custom model preservation, and provider-switch resilience; `resolveModelRefreshDescription` extracted as a standalone testable helper; OpenRouter provider plumbing — first-class OpenRouter support via the OpenAI-compatible AI SDK path with attribution headers, `generateText`-based structured output for broad model compatibility, model listing against the OpenRouter models endpoint, credential UI, and full provider switch integration; per-section and summary generation timing in debug logs; Anthropic account-model fetching, provider model-list discovery across OpenAI/Gemini/xAI/Ollama, exact-model connection-test copy, a cleaner AI setup flow, per-provider setup status, a new settings home with dedicated AI model / cue generation / appearance subpages, configurable Reading-mode display options, a softer Cornell Classic visual treatment, a narrower one-sentence `Study takeaway` summary presentation, and calmer Cornell cue supports now ship with custom-model fallback, preserved saved IDs, provider-safe concurrency tuning copy, and OpenAI-compatible strict structured-output schemas). 439 unit tests passing; `bun run build` + `bun run test` green._
 
 ---
 
@@ -224,6 +224,43 @@ Each item links to the PR that delivered it.
   model-list check so users can validate a key first. This applies to all cloud providers, not only
   OpenRouter, because the exact-model probe follows the shared AI SDK provider path.
 
+### Study Area Autopilot — managed folder generation (shipped)
+- **Parent-folder study areas.** CueCraft settings now include a Study areas subpage where a user
+  can create a managed study area from a parent folder path. Descendant Markdown notes are included;
+  sibling folders and non-Markdown files are ignored. Explicit excluded notes or subfolders, plus
+  existing per-note hidden state, are treated as skipped instead of generated.
+- **Previewed initial backfill.** The management modal previews ready, uncued, stale, failed, and
+  skipped counts before any provider call. The first broad backfill requires confirmation, then runs
+  uncued notes through full-note generation, refreshes safely editable stale sections, and falls
+  back to full-note generation for structural stale cases such as added or removed sections.
+- **Pause, cancel, retry, and summaries.** Each study area starts paused. Users can switch an area to
+  maintain on save, exclude paths, retry failed work, or remove the area while preserving generated
+  caches. Study-area runs share CueCraft's single active generation guard; cancelling a broad run
+  preserves caches already written and reports completed, failed, skipped, and remaining work.
+- **Opt-in maintenance.** Global study-area automation is off by default, and each study area's
+  maintenance mode is paused by default. When both are enabled, saving an edited note inside that
+  area schedules only that note for stale-section or failed-section refresh. Notes outside the area,
+  paused areas, hidden notes, and excluded paths do not schedule study-area generation. The existing
+  global `Auto-generate on save` toggle remains separate and continues to work independently.
+- **Non-destructive scope boundary.** Study Area Autopilot writes only CueCraft cache data and
+  visibility/settings metadata. It never modifies source Markdown, and it deliberately defers
+  cross-note synthesis, spaced-review scheduling, tag/query based rules, and full-vault automation.
+
+#### Study Area Autopilot QA checklist
+- Provider setup: verify the selected provider/key/model before running a broad backfill.
+- Small-folder backfill: create a study area for a folder with one uncued note, one stale note, one
+  failed-cache note, one hidden note, and one explicitly excluded note.
+- Confirmation: confirm the setup preview shows eligible/readiness counts before generation starts.
+- Cancel mid-run: start a backfill, invoke generation again to cancel, and confirm completed note
+  caches remain while remaining work is reported.
+- Retry failures: retry failed work and confirm successful notes are not regenerated.
+- Maintain on save: enable global study-area automation and an area's maintain-on-save mode, edit a
+  note inside the folder, and confirm only that note is scheduled.
+- Skip behavior: edit notes outside the area, in paused areas, hidden notes, and excluded paths; no
+  study-area maintenance should run.
+- Study surfaces: open ready notes in editor, Reading mode, and Cornell view to confirm cached cues
+  render without modifying Markdown.
+
 ### Beyond the original v1.0 slice
 - **Cornell view** — dedicated pane: Title → left cue column | main notes → Summary, from cache;
   **Study Mode** blur/reveal lives on the note-side answer text (#16).
@@ -262,9 +299,8 @@ Each item links to the PR that delivered it.
    support burden — intentionally last.
 
 ### P5 — V2 Knowledge-base workflows
-9. **Batch-generate** cues across a folder.
-10. **Cross-note synthesis** — recurring concepts across a set of notes.
-11. **Study queue** — stale / unreviewed / weak; integrate with existing spaced-repetition plugins
+9. **Cross-note synthesis** — recurring concepts across a set of notes.
+10. **Study queue** — stale / unreviewed / weak; integrate with existing spaced-repetition plugins
     rather than building a scheduler.
 
 ### Cross-cutting / nice-to-haves

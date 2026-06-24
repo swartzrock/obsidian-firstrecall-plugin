@@ -1,5 +1,5 @@
 import type { NoteCache } from "./cache";
-import type { Section } from "./parser";
+import { cueEligibleSections, type Section } from "./parser";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -61,7 +61,7 @@ export function buildCornellModel(
 	const cueById = new Map<string, NoteCache["sections"][number]>();
 	for (const sec of cache.sections) cueById.set(sec.id, sec);
 
-	const rows: CornellRow[] = currentSections.map((section) => {
+	const rows: CornellRow[] = cueEligibleSections(currentSections).map((section) => {
 		const cue = cueById.get(section.id);
 		const hasCue = Boolean(cue && !cue.error && cue.question);
 		return {
