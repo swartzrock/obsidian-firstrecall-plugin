@@ -197,6 +197,7 @@ describe("renderCueElement", () => {
 				el.classList.contains("cuecraft-editor-hook-anchored-card-rail")
 			).toBe(true);
 			expect(el.dataset.display).toBe("anchored-card-rail");
+			expect(el.dataset.state).toBe("current");
 			expect(el.dataset.confidence).toBe("medium");
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
@@ -204,6 +205,33 @@ describe("renderCueElement", () => {
 			expect(
 				el.querySelector(".cuecraft-editor-hook-keywords")?.textContent
 			).toBe("agents");
+		});
+	});
+
+	it("renders collapsed tab hook DOM", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 3,
+					heading: "Who It Is For",
+					question: "Who is this workflow designed for?",
+					keywords: [],
+					confidence: "low",
+					error: null,
+				},
+				"collapsed-tabs",
+				1
+			);
+			expect(el.classList.contains("cuecraft-editor-hook-collapsed-tabs")).toBe(
+				true
+			);
+			expect(el.dataset.display).toBe("collapsed-tabs");
+			expect(el.dataset.state).toBe("upcoming");
+			expect(el.dataset.confidence).toBe("low");
+			expect(
+				el.querySelector(".cuecraft-editor-hook-title")?.textContent
+			).toBe("Who is this workflow designed for");
+			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
 		});
 	});
 

@@ -29,8 +29,15 @@ describe("buildEditorHookCard", () => {
 			confidence: "high",
 			error: null,
 			titleDensity: "long",
+			state: "current",
 			tone: "warm",
 		});
+	});
+
+	it("marks later cards as upcoming", () => {
+		const card = buildEditorHookCard(cue(), "collapsed-tabs", 1);
+		expect(card.state).toBe("upcoming");
+		expect(card.tone).toBe("cool");
 	});
 
 	it("marks long hook titles with density metadata", () => {

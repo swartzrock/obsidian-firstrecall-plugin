@@ -68,9 +68,11 @@ describe("settings defaults", () => {
 		expect(EDITOR_CUE_DISPLAY_OPTIONS.map((option) => option.id)).toEqual([
 			"inline-cues",
 			"anchored-card-rail",
+			"collapsed-tabs",
 		]);
 		expect(isEditorCueDisplay("inline-cues")).toBe(true);
 		expect(isEditorCueDisplay("anchored-card-rail")).toBe(true);
+		expect(isEditorCueDisplay("collapsed-tabs")).toBe(true);
 		for (const bad of ["", "hook", "cornell", null, undefined, 1, {}]) {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}

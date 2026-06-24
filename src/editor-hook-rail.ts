@@ -6,6 +6,7 @@ import type { CueLineData, Confidence } from "./cue-extension";
 import type { EditorCueDisplay } from "./editor-cue-display";
 
 export type EditorHookCardKind = "hook" | "failed";
+export type EditorHookCardState = "current" | "upcoming";
 export type EditorHookTone = "warm" | "cool";
 
 export interface EditorHookCard {
@@ -19,6 +20,7 @@ export interface EditorHookCard {
 	confidence: Confidence | null;
 	error: string | null;
 	titleDensity: "standard" | "long" | "dense";
+	state: EditorHookCardState;
 	tone: EditorHookTone;
 }
 
@@ -42,6 +44,7 @@ export function buildEditorHookCard(
 		confidence: cue.confidence,
 		error: cue.error,
 		titleDensity: shortFormHookTitleDensity(hookTitle),
+		state: index === 0 ? "current" : "upcoming",
 		tone: index % 2 === 0 ? "warm" : "cool",
 	};
 }
