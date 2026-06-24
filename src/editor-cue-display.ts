@@ -1,4 +1,4 @@
-export type EditorCueDisplay = "inline-cues";
+export type EditorCueDisplay = "inline-cues" | "anchored-card-rail";
 
 export interface EditorCueDisplayOption {
 	id: EditorCueDisplay;
@@ -14,12 +14,17 @@ export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
 		label: "Inline cues",
 		description: "Show cached cues beneath their headings in the editor.",
 	},
+	{
+		id: "anchored-card-rail",
+		label: "Anchored card rail",
+		description: "Show colorful hook cards beside their editor sections.",
+	},
 ];
 
 export function isEditorCueDisplay(
 	value: unknown
 ): value is EditorCueDisplay {
-	return value === "inline-cues";
+	return EDITOR_CUE_DISPLAY_OPTIONS.some((option) => option.id === value);
 }
 
 export function editorCueDisplayOption(

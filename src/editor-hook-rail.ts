@@ -1,0 +1,47 @@
+import {
+	buildShortFormHookTitle,
+	shortFormHookTitleDensity,
+} from "./short-form-hook";
+import type { CueLineData, Confidence } from "./cue-extension";
+import type { EditorCueDisplay } from "./editor-cue-display";
+
+export type EditorHookCardKind = "hook" | "failed";
+export type EditorHookTone = "warm" | "cool";
+
+export interface EditorHookCard {
+	kind: EditorHookCardKind;
+	display: EditorCueDisplay;
+	line: number;
+	heading: string;
+	hookTitle: string;
+	originalQuestion: string;
+	keywords: string[];
+	confidence: Confidence | null;
+	error: string | null;
+	titleDensity: "standard" | "long" | "dense";
+	tone: EditorHookTone;
+}
+
+export function buildEditorHookCard(
+	cue: CueLineData,
+	display: EditorCueDisplay,
+	index = 0
+): EditorHookCard {
+	const failed = Boolean(cue.error);
+	const hookTitle = failed
+		? "Cue unavailable"
+		: buildShortFormHookTitle(cue.question) ?? cue.heading;
+	return {
+		kind: failed ? "failed" : "hook",
+		display,
+		line: cue.line,
+		heading: cue.heading,
+		hookTitle,
+		originalQuestion: cue.question,
+		keywords: cue.keywords,
+		confidence: cue.confidence,
+		error: cue.error,
+		titleDensity: shortFormHookTitleDensity(hookTitle),
+		tone: index % 2 === 0 ? "warm" : "cool",
+	};
+}

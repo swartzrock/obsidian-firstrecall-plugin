@@ -3,6 +3,8 @@ import type { EditorState, Range } from "@codemirror/state";
 import { Decoration, EditorView, WidgetType } from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
 import type { NoteCache } from "./cache";
+import { buildEditorHookCard, type EditorHookCard } from "./editor-hook-rail";
+import type { EditorCueDisplay } from "./editor-cue-display";
 import { isCueEligibleSection, type Section } from "./parser";
 
 export type Confidence = "high" | "medium" | "low";
@@ -21,6 +23,11 @@ export interface CueLineData {
 
 export interface CueLineDataOptions {
 	showKeywords?: boolean;
+}
+
+export interface CueEditorRenderState {
+	cues: CueLineData[];
+	display: EditorCueDisplay;
 }
 
 /**
@@ -62,12 +69,18 @@ export function buildCueLineData(
 }
 
 class CueWidget extends WidgetType {
-	constructor(private readonly cue: CueLineData) {
+	constructor(
+		private readonly cue: CueLineData,
+		private readonly display: EditorCueDisplay,
+		private readonly index: number
+	) {
 		super();
 	}
 
 	eq(other: CueWidget): boolean {
 		return (
+			other.display === this.display &&
+			other.index === this.index &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
@@ -76,35 +89,7 @@ class CueWidget extends WidgetType {
 	}
 
 	toDOM(): HTMLElement {
-		const root = document.createElement("div");
-		root.className = "cuecraft-cue";
-
-		if (this.cue.error) {
-			root.classList.add("cuecraft-cue-error");
-			root.title = this.cue.error;
-			const q = document.createElement("div");
-			q.className = "cuecraft-cue-question";
-			q.textContent = "\u26a0 Generation failed \u2014 regenerate";
-			root.appendChild(q);
-			return root;
-		}
-
-		if (this.cue.confidence) {
-			root.dataset.confidence = this.cue.confidence;
-		}
-
-		const q = document.createElement("div");
-		q.className = "cuecraft-cue-question";
-		q.textContent = this.cue.question;
-		root.appendChild(q);
-
-		if (this.cue.keywords.length) {
-			const kw = document.createElement("div");
-			kw.className = "cuecraft-cue-keywords";
-			kw.textContent = this.cue.keywords.join(" · ");
-			root.appendChild(kw);
-		}
-		return root;
+		return renderCueElement(this.cue, this.display, this.index);
 	}
 
 	ignoreEvent(): boolean {
@@ -112,19 +97,102 @@ class CueWidget extends WidgetType {
 	}
 }
 
-/** Replace all cues currently rendered in the editor. */
-export const setCuesEffect = StateEffect.define<CueLineData[]>();
+export function renderCueElement(
+	cue: CueLineData,
+	display: EditorCueDisplay,
+	index = 0
+): HTMLElement {
+	if (display !== "inline-cues") {
+		return renderEditorHookElement(buildEditorHookCard(cue, display, index));
+	}
+	return renderInlineCueElement(cue);
+}
 
-function buildDecorations(state: EditorState, cues: CueLineData[]): DecorationSet {
+function renderInlineCueElement(cue: CueLineData): HTMLElement {
+	const root = document.createElement("div");
+	root.className = "cuecraft-cue";
+
+	if (cue.error) {
+		root.classList.add("cuecraft-cue-error");
+		root.title = cue.error;
+		const q = document.createElement("div");
+		q.className = "cuecraft-cue-question";
+		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
+		root.appendChild(q);
+		return root;
+	}
+
+	if (cue.confidence) {
+		root.dataset.confidence = cue.confidence;
+	}
+
+	const q = document.createElement("div");
+	q.className = "cuecraft-cue-question";
+	q.textContent = cue.question;
+	root.appendChild(q);
+
+	if (cue.keywords.length) {
+		const kw = document.createElement("div");
+		kw.className = "cuecraft-cue-keywords";
+		kw.textContent = cue.keywords.join(" · ");
+		root.appendChild(kw);
+	}
+	return root;
+}
+
+function renderEditorHookElement(card: EditorHookCard): HTMLElement {
+	const root = document.createElement("div");
+	root.className = `cuecraft-editor-hook cuecraft-editor-hook-${card.display}`;
+	root.dataset.display = card.display;
+	root.dataset.titleDensity = card.titleDensity;
+	root.dataset.tone = card.tone;
+	if (card.confidence) root.dataset.confidence = card.confidence;
+	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
+
+	const eyebrow = document.createElement("div");
+	eyebrow.className = "cuecraft-editor-hook-heading";
+	eyebrow.textContent = card.heading;
+	root.appendChild(eyebrow);
+
+	const title = document.createElement("div");
+	title.className = "cuecraft-editor-hook-title";
+	title.textContent = card.hookTitle;
+	root.appendChild(title);
+
+	if (card.error) {
+		root.title = card.error;
+		const error = document.createElement("div");
+		error.className = "cuecraft-editor-hook-status";
+		error.textContent = "Generation failed - regenerate";
+		root.appendChild(error);
+		return root;
+	}
+
+	if (card.keywords.length) {
+		const keywords = document.createElement("div");
+		keywords.className = "cuecraft-editor-hook-keywords";
+		keywords.textContent = card.keywords.join(" · ");
+		root.appendChild(keywords);
+	}
+	return root;
+}
+
+/** Replace all cues currently rendered in the editor. */
+export const setCuesEffect = StateEffect.define<CueEditorRenderState>();
+
+function buildDecorations(
+	state: EditorState,
+	payload: CueEditorRenderState
+): DecorationSet {
 	const ranges: Range<Decoration>[] = [];
 	const doc = state.doc;
-	for (const cue of cues) {
+	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const headingLine = doc.line(cue.line);
 		// Block widget rendered on its own line just after the heading.
 		ranges.push(
 			Decoration.widget({
-				widget: new CueWidget(cue),
+				widget: new CueWidget(cue, payload.display, index),
 				block: true,
 				side: 1,
 			}).range(headingLine.to)

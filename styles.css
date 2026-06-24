@@ -776,6 +776,111 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-left-color: var(--color-red);
 }
 
+.cuecraft-editor-hook {
+	box-sizing: border-box;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	line-height: 1.25;
+	user-select: text;
+}
+
+.cuecraft-editor-hook-anchored-card-rail {
+	position: relative;
+	max-width: min(22rem, 100%);
+	margin: 0.45em 0 0.75em;
+	padding: 0.85em 0.95em;
+	overflow: hidden;
+	border: 2px solid color-mix(in srgb, var(--text-normal) 68%, transparent);
+	border-radius: var(--radius-m);
+	background:
+		radial-gradient(
+			circle at 92% 84%,
+			color-mix(in srgb, var(--color-yellow) 28%, transparent) 0 18%,
+			transparent 19%
+		),
+		linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--color-orange) 72%, var(--background-primary)),
+			color-mix(in srgb, var(--color-yellow) 54%, var(--background-primary))
+		);
+	box-shadow: 0 3px 8px rgba(0, 0, 0, 0.14);
+}
+
+.cuecraft-editor-hook-anchored-card-rail[data-tone="cool"] {
+	background:
+		radial-gradient(
+			circle at 92% 84%,
+			color-mix(in srgb, var(--color-cyan) 24%, transparent) 0 18%,
+			transparent 19%
+		),
+		linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--color-cyan) 58%, var(--background-primary)),
+			color-mix(in srgb, var(--color-blue) 34%, var(--background-primary))
+		);
+}
+
+.cuecraft-editor-hook-heading {
+	margin-bottom: 0.35em;
+	overflow: hidden;
+	color: color-mix(in srgb, var(--text-normal) 76%, transparent);
+	font-size: var(--font-smallest);
+	font-weight: var(--font-semibold);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cuecraft-editor-hook-title {
+	position: relative;
+	z-index: 1;
+	font-weight: 800;
+}
+
+.cuecraft-editor-hook[data-title-density="long"] .cuecraft-editor-hook-title {
+	font-size: var(--font-ui-smaller);
+}
+
+.cuecraft-editor-hook[data-title-density="dense"] .cuecraft-editor-hook-title {
+	font-size: var(--font-smallest);
+	line-height: 1.15;
+}
+
+.cuecraft-editor-hook-keywords,
+.cuecraft-editor-hook-status {
+	position: relative;
+	z-index: 1;
+	margin-top: 0.55em;
+	color: color-mix(in srgb, var(--text-normal) 68%, transparent);
+	font-size: var(--font-smallest);
+	font-weight: var(--font-medium);
+}
+
+.cuecraft-editor-hook-failed {
+	border-color: color-mix(in srgb, var(--color-red) 72%, var(--text-normal));
+	background:
+		linear-gradient(
+			135deg,
+			color-mix(in srgb, var(--color-red) 32%, var(--background-primary)),
+			color-mix(in srgb, var(--background-secondary) 86%, var(--color-red))
+		);
+}
+
+@media (min-width: 980px) {
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-anchored-card-rail {
+		float: left;
+		clear: left;
+		width: min(18rem, 30vw);
+		margin-inline-start: calc(-1 * min(19rem, 32vw));
+		margin-inline-end: 1rem;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cuecraft-editor-hook {
+		transition: none;
+	}
+}
+
 .cuecraft-summary {
 	border-top: 1px solid var(--background-modifier-border);
 	margin-top: 1em;
