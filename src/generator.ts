@@ -1,5 +1,5 @@
 import { cueEligibleSections, parseSections } from "./parser";
-import type { AiProvider } from "./providers/types";
+import type { AiProvider, CueBatchResult } from "./providers/types";
 import {
 	DEFAULT_CUE_GENERATION_OPTIONS,
 	type CueGenerationOptions,
@@ -36,6 +36,16 @@ export interface GenerateSectionParams {
 		content: string;
 		contentHash: string;
 	};
+	provider: AiProvider;
+	preset: string;
+	options?: Partial<CueGenerationOptions>;
+	noteContext?: string;
+	maxContextChars?: number;
+	signal?: AbortSignal;
+}
+
+export interface GenerateSectionBatchParams {
+	sections: GenerateSectionParams["section"][];
 	provider: AiProvider;
 	preset: string;
 	options?: Partial<CueGenerationOptions>;
@@ -81,18 +91,22 @@ export function resolveSectionConcurrency(value: unknown): number {
 		: DEFAULT_SECTION_CONCURRENCY;
 }
 
-/**
- * Generate a cue for a single section. The caller supplies the parsed section
- * and an optional whole-note context. On provider failure the error is captured
- * in the result rather than thrown, matching generateNote's isolation semantics.
- */
-export async function generateSectionCue(
-	params: GenerateSectionParams
-): Promise<SectionResult> {
-	const { section, provider, preset, signal } = params;
-	const options = resolveGenerationOptions(params.options);
-	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
-	const result: SectionResult = {
+export function resolveEffectiveSectionConcurrency(
+	value: unknown,
+	provider: AiProvider
+): number {
+	const requested = resolveSectionConcurrency(value);
+	const limit = provider.sectionConcurrencyLimit;
+	if (typeof limit !== "number" || !Number.isFinite(limit) || limit <= 0) {
+		return requested;
+	}
+	return Math.min(requested, Math.floor(limit));
+}
+
+function emptySectionResult(
+	section: GenerateSectionParams["section"]
+): SectionResult {
+	return {
 		id: section.id,
 		heading: section.heading,
 		level: section.level,
@@ -104,6 +118,39 @@ export async function generateSectionCue(
 		rationale: null,
 		error: null,
 	};
+}
+
+function applyCueResult(result: SectionResult, item: CueBatchResult | undefined): void {
+	if (!item) {
+		result.error = "Provider returned no cue for this section.";
+		return;
+	}
+	if (item.error) {
+		result.error = item.error;
+		return;
+	}
+	if (!item.cue) {
+		result.error = "Provider returned no cue for this section.";
+		return;
+	}
+	result.keywords = item.cue.keywords;
+	result.question = item.cue.question;
+	result.confidence = item.cue.confidence;
+	result.rationale = item.cue.rationale ?? null;
+}
+
+/**
+ * Generate a cue for a single section. The caller supplies the parsed section
+ * and an optional whole-note context. On provider failure the error is captured
+ * in the result rather than thrown, matching generateNote's isolation semantics.
+ */
+export async function generateSectionCue(
+	params: GenerateSectionParams
+): Promise<SectionResult> {
+	const { section, provider, preset, signal } = params;
+	const options = resolveGenerationOptions(params.options);
+	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
+	const result = emptySectionResult(section);
 	try {
 		const cue = await provider.generateCue(
 			{
@@ -117,14 +164,57 @@ export async function generateSectionCue(
 			},
 			signal
 		);
-		result.keywords = cue.keywords;
-		result.question = cue.question;
-		result.confidence = cue.confidence;
-		result.rationale = cue.rationale ?? null;
+		applyCueResult(result, { cue });
 	} catch (e) {
 		result.error = e instanceof Error ? e.message : String(e);
 	}
 	return result;
+}
+
+export async function generateSectionCueBatch(
+	params: GenerateSectionBatchParams
+): Promise<SectionResult[]> {
+	const { sections, provider, preset, signal } = params;
+	const generateCues = provider.generateCues?.bind(provider);
+	if (!generateCues) {
+		return Promise.all(
+			sections.map((section) =>
+				generateSectionCue({
+					section,
+					provider,
+					preset,
+					options: params.options,
+					noteContext: params.noteContext,
+					maxContextChars: params.maxContextChars,
+					signal,
+				})
+			)
+		);
+	}
+	const options = resolveGenerationOptions(params.options);
+	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
+	const results = sections.map(emptySectionResult);
+	try {
+		const batch = await generateCues(
+			sections.map((section) => ({
+				heading: section.heading,
+				content: clampText(section.content, maxCtx),
+				noteContext: params.noteContext
+					? clampText(params.noteContext, maxCtx)
+					: undefined,
+				preset,
+				options,
+			})),
+			signal
+		);
+		results.forEach((result, index) => applyCueResult(result, batch[index]));
+	} catch (e) {
+		const message = e instanceof Error ? e.message : String(e);
+		results.forEach((result) => {
+			result.error = message;
+		});
+	}
+	return results;
 }
 
 /**
@@ -139,7 +229,10 @@ export async function generateNote(
 	const { provider, markdown, preset, noteTitle, signal, onProgress } = params;
 	const options = resolveGenerationOptions(params.options);
 	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
-	const sectionConcurrency = resolveSectionConcurrency(params.sectionConcurrency);
+	const sectionConcurrency = resolveEffectiveSectionConcurrency(
+		params.sectionConcurrency,
+		provider
+	);
 	const wholeNoteContext = params.useWholeNoteContext
 		? clampText(markdown, maxContextChars)
 		: undefined;
@@ -148,6 +241,7 @@ export async function generateNote(
 	const results: SectionResult[] = new Array(total);
 	let done = 0;
 	let canceled = false;
+	onProgress?.(done, total);
 
 	for (let start = 0; start < sections.length; start += sectionConcurrency) {
 		if (signal?.aborted) {
@@ -155,27 +249,49 @@ export async function generateNote(
 			break;
 		}
 		const batch = sections.slice(start, start + sectionConcurrency);
-		await Promise.all(
-			batch.map(async (s, offset) => {
-				const t0 = Date.now();
-				const result = await generateSectionCue({
-					section: s,
-					provider,
-					preset,
-					options,
-					noteContext: wholeNoteContext,
-					maxContextChars,
-					signal,
-				});
-				const label = s.heading.trim() || "intro";
+		if (provider.generateCues) {
+			const t0 = Date.now();
+			const batchResults = await generateSectionCueBatch({
+				sections: batch,
+				provider,
+				preset,
+				options,
+				noteContext: wholeNoteContext,
+				maxContextChars,
+				signal,
+			});
+			batchResults.forEach((result, offset) => {
+				const label = result.heading.trim() || "intro";
 				console.debug(
 					`CueCraft section "${label}" ${result.error ? "failed" : "done"} (${((Date.now() - t0) / 1000).toFixed(1)}s)`
 				);
 				results[start + offset] = result;
 				done++;
 				onProgress?.(done, total);
-			})
-		);
+			});
+		} else {
+			await Promise.all(
+				batch.map(async (s, offset) => {
+					const t0 = Date.now();
+					const result = await generateSectionCue({
+						section: s,
+						provider,
+						preset,
+						options,
+						noteContext: wholeNoteContext,
+						maxContextChars,
+						signal,
+					});
+					const label = s.heading.trim() || "intro";
+					console.debug(
+						`CueCraft section "${label}" ${result.error ? "failed" : "done"} (${((Date.now() - t0) / 1000).toFixed(1)}s)`
+					);
+					results[start + offset] = result;
+					done++;
+					onProgress?.(done, total);
+				})
+			);
+		}
 		if (signal?.aborted) {
 			canceled = true;
 			break;

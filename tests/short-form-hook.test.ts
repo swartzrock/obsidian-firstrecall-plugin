@@ -9,22 +9,25 @@ import {
 	shortFormHookCardState,
 	shortFormHookFocusLabel,
 	shortFormHookStatusIcon,
+	shortFormHookTitleDensity,
 	type ShortFormHookRailCard,
 } from "../src/short-form-hook";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
 
-const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
+const NOTE =
+	"# A\nalpha section explains context\n## B\nbeta section explains context\n## C\ngamma section explains context";
 
 function cacheFrom(
 	overrides: (
 		s: ReturnType<typeof parseSections>[number],
 		i: number
 	) => Partial<NoteGenerationResult["sections"][number]> = () => ({}),
-	top: Partial<Pick<NoteGenerationResult, "summary" | "learningObjective">> = {}
+	top: Partial<Pick<NoteGenerationResult, "summary" | "learningObjective">> = {},
+	markdown = NOTE
 ) {
-	const sections = parseSections(NOTE).map((s, i) => ({
+	const sections = parseSections(markdown).map((s, i) => ({
 		id: s.id,
 		heading: s.heading,
 		level: s.level,
@@ -64,12 +67,28 @@ describe("buildShortFormHookTitle", () => {
 		expect(buildShortFormHookTitle(null)).toBeNull();
 	});
 
-	it("keeps long titles compact without mutating the source question", () => {
-		const title = buildShortFormHookTitle(
-			"How does a retrieval cue help learners reconstruct the original answer intent when the section is dense with details?"
+	it("keeps long titles intact without adding ellipses", () => {
+		const question =
+			"How does a retrieval cue help learners reconstruct the original answer intent when the section is dense with details, caveats, examples, and implementation notes?";
+		expect(buildShortFormHookTitle(question)).toBe(
+			"How does a retrieval cue help learners reconstruct the original answer intent when the section is dense with details, caveats, examples, and implementation notes"
 		);
-		expect(title?.length).toBeLessThanOrEqual(96);
-		expect(title).toMatch(/\.\.\.$/);
+	});
+});
+
+describe("shortFormHookTitleDensity", () => {
+	it("classifies hook titles by display density", () => {
+		expect(shortFormHookTitleDensity("Short hook")).toBe("standard");
+		expect(
+			shortFormHookTitleDensity(
+				"How does CueCraft keep notes readable while adding useful study cues"
+			)
+		).toBe("long");
+		expect(
+			shortFormHookTitleDensity(
+				"How does CueCraft turn an ordinary Obsidian note into a controlled active-recall study surface without changing Markdown"
+			)
+		).toBe("dense");
 	});
 });
 
@@ -102,6 +121,39 @@ describe("buildShortFormHookModel", () => {
 			buildCornellModel(cache, parseSections(NOTE))
 		);
 		expect(hook.cards.map((card) => card.heading)).toEqual(["A", "C"]);
+	});
+
+	it("skips frontmatter-only intro and heading-only sections", () => {
+		const markdown = [
+			"---",
+			"title: Hook test",
+			"tags:",
+			"  - cuecraft",
+			"---",
+			"# Empty heading",
+			"## Useful section",
+			"This section has enough visible note content.",
+		].join("\n");
+		const hook = buildShortFormHookModel(
+			buildCornellModel(
+				cacheFrom(() => ({}), {}, markdown),
+				parseSections(markdown)
+			)
+		);
+		expect(hook.cards.map((card) => card.heading)).toEqual([
+			"Useful section",
+		]);
+	});
+
+	it("skips sections with too little visible content for a useful hook", () => {
+		const markdown = "# Too thin\nOne\n## Useful\nEnough visible words here.";
+		const hook = buildShortFormHookModel(
+			buildCornellModel(
+				cacheFrom(() => ({}), {}, markdown),
+				parseSections(markdown)
+			)
+		);
+		expect(hook.cards.map((card) => card.heading)).toEqual(["Useful"]);
 	});
 
 	it("keeps failed cues visible as compact unavailable cards", () => {

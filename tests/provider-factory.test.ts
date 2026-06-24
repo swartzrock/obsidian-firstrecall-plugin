@@ -1,0 +1,69 @@
+import { describe, expect, it } from "vitest";
+import type { CueCraftSettings } from "../src/settings";
+import { ClaudeCliProvider } from "../src/providers/claude-cli-provider";
+import { CodexCliProvider } from "../src/providers/codex-cli-provider";
+import { makeProviderFromSettings } from "../src/providers/provider-factory";
+import type { HttpClient } from "../src/providers/types";
+
+function settings(
+	overrides: Partial<CueCraftSettings> = {}
+): CueCraftSettings {
+	return {
+		provider: "ollama",
+		ollamaHost: "http://localhost:11434",
+		ollamaModel: "llama3.1:8b",
+		anthropicApiKey: "sk-ant-test",
+		anthropicModel: "claude-sonnet-4-6",
+		openaiApiKey: "sk-openai-test",
+		openaiModel: "gpt-4o-mini",
+		googleApiKey: "AIza-test",
+		googleModel: "gemini-1.5-flash",
+		xaiApiKey: "xai-test",
+		xaiModel: "grok-2-latest",
+		openrouterApiKey: "sk-or-test",
+		openrouterModel: "anthropic/claude-sonnet-4",
+		codexCliCommand: "codex",
+		codexCliModel: "gpt-5",
+		claudeCliCommand: "claude",
+		claudeCliModel: "sonnet",
+		...overrides,
+	} as CueCraftSettings;
+}
+
+const http: HttpClient = async () => ({ status: 200, text: "{}", json: {} });
+const fetchImpl = (async () => new Response("{}")) as typeof fetch;
+
+describe("makeProviderFromSettings", () => {
+	it.each([
+		["ollama", "ollama"],
+		["anthropic", "anthropic"],
+		["openai", "openai"],
+		["google", "google"],
+		["xai", "xai"],
+		["openrouter", "openrouter"],
+	] as const)("creates the existing %s provider", (provider, expectedId) => {
+		expect(
+			makeProviderFromSettings(settings({ provider }), { fetchImpl, http }).id
+		).toBe(expectedId);
+	});
+
+	it("creates the Codex CLI provider without a sequential concurrency cap", () => {
+		const provider = makeProviderFromSettings(
+			settings({ provider: "codex-cli" }),
+			{ fetchImpl, http }
+		);
+		expect(provider).toBeInstanceOf(CodexCliProvider);
+		expect(provider.id).toBe("codex-cli");
+		expect(provider.sectionConcurrencyLimit).toBeUndefined();
+	});
+
+	it("creates the Claude CLI provider without a sequential concurrency cap", () => {
+		const provider = makeProviderFromSettings(
+			settings({ provider: "claude-cli" }),
+			{ fetchImpl, http }
+		);
+		expect(provider).toBeInstanceOf(ClaudeCliProvider);
+		expect(provider.id).toBe("claude-cli");
+		expect(provider.sectionConcurrencyLimit).toBeUndefined();
+	});
+});

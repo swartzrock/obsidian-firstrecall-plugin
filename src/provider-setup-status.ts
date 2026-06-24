@@ -6,7 +6,11 @@ export type ProviderSetupStatusId =
 	| "openai"
 	| "google"
 	| "xai"
-	| "openrouter";
+	| "openrouter"
+	| "codex-cli"
+	| "claude-cli";
+
+export const CLI_DEFAULT_MODEL_SENTINEL = "__cuecraft_cli_default__";
 
 export interface ProviderConnectionSnapshot {
 	credentialFingerprint: string;
@@ -21,6 +25,8 @@ export interface ProviderConnectionStatusMap {
 	google?: ProviderConnectionSnapshot;
 	xai?: ProviderConnectionSnapshot;
 	openrouter?: ProviderConnectionSnapshot;
+	"codex-cli"?: ProviderConnectionSnapshot;
+	"claude-cli"?: ProviderConnectionSnapshot;
 }
 
 export interface ProviderSetupStatusSettings {
@@ -38,6 +44,10 @@ export interface ProviderSetupStatusSettings {
 	xaiModel: string;
 	openrouterApiKey: string;
 	openrouterModel: string;
+	codexCliCommand: string;
+	codexCliModel: string;
+	claudeCliCommand: string;
+	claudeCliModel: string;
 	providerConnectionStatus?: ProviderConnectionStatusMap;
 }
 
@@ -48,8 +58,12 @@ export interface DerivedProviderSetupStatus {
 	testedAt?: string;
 }
 
-function trimValue(value: string): string {
-	return value.trim();
+function trimValue(value: unknown): string {
+	return typeof value === "string" ? value.trim() : "";
+}
+
+function isCliProvider(provider: unknown): boolean {
+	return provider === "codex-cli" || provider === "claude-cli";
 }
 
 function currentCredentialValue(settings: ProviderSetupStatusSettings): string {
@@ -66,6 +80,12 @@ function currentCredentialValue(settings: ProviderSetupStatusSettings): string {
 			return trimValue(settings.xaiApiKey);
 		case "openrouter":
 			return trimValue(settings.openrouterApiKey);
+		case "codex-cli":
+			return trimValue(settings.codexCliCommand);
+		case "claude-cli":
+			return trimValue(settings.claudeCliCommand);
+		default:
+			return "";
 	}
 }
 
@@ -83,13 +103,22 @@ function currentModelValue(settings: ProviderSetupStatusSettings): string {
 			return trimValue(settings.xaiModel);
 		case "openrouter":
 			return trimValue(settings.openrouterModel);
+		case "codex-cli":
+			return trimValue(settings.codexCliModel);
+		case "claude-cli":
+			return trimValue(settings.claudeCliModel);
+		default:
+			return "";
 	}
 }
 
 function currentConnectionVerificationModelValue(
 	settings: ProviderSetupStatusSettings
 ): string {
-	return currentModelValue(settings);
+	const model = currentModelValue(settings);
+	return isCliProvider(settings.provider) && !model
+		? CLI_DEFAULT_MODEL_SENTINEL
+		: model;
 }
 
 function djb2Hash(value: string): string {
@@ -125,7 +154,8 @@ export function deriveProviderSetupStatus(
 	settings: ProviderSetupStatusSettings
 ): DerivedProviderSetupStatus {
 	const keySaved = currentCredentialValue(settings).length > 0;
-	const modelSelected = currentModelValue(settings).length > 0;
+	const modelSelected =
+		isCliProvider(settings.provider) || currentModelValue(settings).length > 0;
 	const snapshot = settings.providerConnectionStatus?.[settings.provider];
 	if (!snapshot) {
 		return { keySaved, modelSelected, connection: "untested" };

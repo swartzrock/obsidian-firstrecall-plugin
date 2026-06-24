@@ -17,18 +17,14 @@ import {
 	CueCraftSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
+import { normalizeProviderId } from "./provider-id";
 import {
 	normalizeAnthropicModelSelection,
 } from "./anthropic-models";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
-import { OllamaProvider } from "./providers/ollama-provider";
-import { AnthropicProvider } from "./providers/anthropic-provider";
-import { OpenAIProvider } from "./providers/openai-provider";
-import { GoogleProvider } from "./providers/google-provider";
-import { XaiProvider } from "./providers/xai-provider";
-import { OpenRouterProvider } from "./providers/openrouter-provider";
 import type { AiProvider, HttpClient } from "./providers/types";
+import { makeProviderFromSettings } from "./providers/provider-factory";
 import { parseSections, type Section } from "./parser";
 import {
 	CacheStore,
@@ -52,6 +48,10 @@ import {
 	isReadingModeDisplay,
 	readingModeDisplayState,
 } from "./reading-cues";
+import {
+	DEFAULT_CORNELL_DISPLAY_MODE,
+	isCornellDisplayMode,
+} from "./cornell-display";
 import {
 	selectExportableCues,
 	cuesToMarkdown,
@@ -209,11 +209,34 @@ export default class CueCraftPlugin extends Plugin {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
 		const rawSettings = loaded?.settings ?? loaded ?? {};
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
+		settings.provider = normalizeProviderId(
+			(settings as { provider?: unknown }).provider
+		);
+		for (const key of [
+			"codexCliCommand",
+			"codexCliModel",
+			"claudeCliCommand",
+			"claudeCliModel",
+		] as const) {
+			if (
+				typeof (settings as unknown as Record<string, unknown>)[key] !==
+				"string"
+			) {
+				settings[key] = DEFAULT_SETTINGS[key];
+			}
+		}
 		settings.studyAreas = loadStudyAreas(
 			(settings as { studyAreas?: unknown }).studyAreas
 		);
 		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
+		}
+		if (
+			!isCornellDisplayMode(
+				(settings as { cornellDisplayMode?: unknown }).cornellDisplayMode
+			)
+		) {
+			settings.cornellDisplayMode = DEFAULT_CORNELL_DISPLAY_MODE;
 		}
 		const legacyAvailableModelIds = (settings as unknown as {
 			anthropicAvailableModelIds?: string[];
@@ -354,6 +377,10 @@ export default class CueCraftPlugin extends Plugin {
 				return Boolean(s.xaiApiKey && s.xaiModel);
 			case "openrouter":
 				return Boolean(s.openrouterApiKey && s.openrouterModel);
+			case "codex-cli":
+				return Boolean(s.codexCliCommand);
+			case "claude-cli":
+				return Boolean(s.claudeCliCommand);
 			default:
 				return Boolean(s.ollamaHost && s.ollamaModel);
 		}
@@ -852,46 +879,10 @@ export default class CueCraftPlugin extends Plugin {
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
 	makeProvider(): AiProvider {
-		const s = this.settings;
-		const fetchImpl = this.makeFetch();
-		switch (s.provider) {
-			case "anthropic":
-				return new AnthropicProvider({
-					apiKey: s.anthropicApiKey,
-					model: s.anthropicModel,
-					fetchImpl,
-				});
-			case "openai":
-				return new OpenAIProvider({
-					apiKey: s.openaiApiKey,
-					model: s.openaiModel,
-					fetchImpl,
-				});
-			case "google":
-				return new GoogleProvider({
-					apiKey: s.googleApiKey,
-					model: s.googleModel,
-					fetchImpl,
-				});
-			case "xai":
-				return new XaiProvider({
-					apiKey: s.xaiApiKey,
-					model: s.xaiModel,
-					fetchImpl,
-				});
-			case "openrouter":
-				return new OpenRouterProvider({
-					apiKey: s.openrouterApiKey,
-					model: s.openrouterModel,
-					fetchImpl,
-				});
-			default:
-				return new OllamaProvider({
-					host: s.ollamaHost,
-					model: s.ollamaModel,
-					http: this.makeHttpClient(),
-				});
-		}
+		return makeProviderFromSettings(this.settings, {
+			fetchImpl: this.makeFetch(),
+			http: this.makeHttpClient(),
+		});
 	}
 
 	private generationOptions(): CueGenerationOptions {
@@ -917,6 +908,10 @@ export default class CueCraftPlugin extends Plugin {
 				return s.xaiModel;
 			case "openrouter":
 				return s.openrouterModel;
+			case "codex-cli":
+				return s.codexCliModel || "CLI default";
+			case "claude-cli":
+				return s.claudeCliModel || "CLI default";
 			default:
 				return s.ollamaModel;
 		}

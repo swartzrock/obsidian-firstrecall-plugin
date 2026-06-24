@@ -37,6 +37,12 @@ import {
 	type CueAccent,
 } from "./cornell-accent";
 import {
+	CORNELL_DISPLAY_MODES,
+	DEFAULT_CORNELL_DISPLAY_MODE,
+	cornellDisplayModeOption,
+	type CornellDisplayMode,
+} from "./cornell-display";
+import {
 	DEFAULT_READING_MODE_DISPLAY,
 	READING_MODE_DISPLAY_OPTIONS,
 	type ReadingModeDisplay,
@@ -84,15 +90,17 @@ import {
 	type StudyArea,
 	type StudyAreaGenerationPlan,
 } from "./study-area";
+import { formatCueCraftNotice } from "./notice";
+import type { ProviderId } from "./provider-id";
 
 /**
- * CueCraft supports a local provider (Ollama) and several cloud providers via
- * the Vercel AI SDK (Anthropic, OpenAI, Google, xAI). Each cloud provider keeps
- * its own API key + model id; only the selected provider's fields are surfaced.
+ * CueCraft supports a local provider (Ollama), local CLI providers, and several
+ * cloud providers via the Vercel AI SDK (Anthropic, OpenAI, Google, xAI). Each
+ * cloud provider keeps its own API key + model id; only the selected provider's
+ * fields are surfaced.
  */
 export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
-export type ProviderId = "ollama" | "anthropic" | "openai" | "google" | "xai" | "openrouter";
 type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
 type CueCraftSettingsSubpage =
 	| SettingsSubpage
@@ -129,12 +137,17 @@ export interface CueCraftSettings {
 	openrouterModelOptions: ModelOption[];
 	openrouterHasFetchedModels: boolean;
 	openrouterModelRefreshMessage: string;
+	codexCliCommand: string;
+	codexCliModel: string;
+	claudeCliCommand: string;
+	claudeCliModel: string;
 	ollamaAvailableModels: string[];
 	ollamaHasFetchedModels: boolean;
 	ollamaModelRefreshMessage: string;
 	providerConnectionStatus: ProviderConnectionStatusMap;
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
+	cornellDisplayMode: CornellDisplayMode;
 	cornellStyle: CornellStyle;
 	cueColumnWidth: CueColumnWidth;
 	cueFontSize: CueFontSize;
@@ -184,12 +197,17 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	openrouterModelOptions: [],
 	openrouterHasFetchedModels: false,
 	openrouterModelRefreshMessage: "",
+	codexCliCommand: "codex",
+	codexCliModel: "",
+	claudeCliCommand: "claude",
+	claudeCliModel: "",
 	ollamaAvailableModels: [],
 	ollamaHasFetchedModels: false,
 	ollamaModelRefreshMessage: "",
 	providerConnectionStatus: {},
 	cuePreset: "conceptual",
 	studyHideMode: "blur",
+	cornellDisplayMode: DEFAULT_CORNELL_DISPLAY_MODE,
 	cornellStyle: DEFAULT_CORNELL_STYLE,
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
@@ -207,6 +225,10 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	showCueBorder: true,
 	compactChips: false,
 };
+
+function isLocalCliProvider(provider: ProviderId): boolean {
+	return provider === "codex-cli" || provider === "claude-cli";
+}
 
 export class CueCraftSettingTab extends PluginSettingTab {
 	private plugin: CueCraftPlugin;
@@ -407,11 +429,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private appearanceSummary(): string {
+		const mode = cornellDisplayModeOption(
+			this.plugin.settings.cornellDisplayMode
+		).label;
 		const style =
 			CORNELL_STYLES.find(
 				(item) => item.id === this.plugin.settings.cornellStyle
 			)?.label ?? "Custom";
-		return `${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
+		return `${mode} · ${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
 	}
 
 	private studyAreasSummary(): string {
@@ -452,6 +477,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				return "xAI";
 			case "openrouter":
 				return "OpenRouter";
+			case "codex-cli":
+				return "Codex CLI";
+			case "claude-cli":
+				return "Claude CLI";
 		}
 	}
 
@@ -477,6 +506,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				return settings.xaiModel.trim();
 			case "openrouter":
 				return settings.openrouterModel.trim();
+			case "codex-cli":
+				return settings.codexCliModel.trim() || "CLI default";
+			case "claude-cli":
+				return settings.claudeCliModel.trim() || "CLI default";
 			case "ollama":
 				return settings.ollamaModel.trim();
 		}
@@ -502,7 +535,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		new Setting(setupFlowEl)
 			.setName("AI provider")
-			.setDesc("Where cues are generated. Ollama runs locally; the rest call a cloud API.")
+			.setDesc("Where cues are generated. Ollama runs locally; API providers use saved keys; CLI providers use your local command login.")
 			.addDropdown((dd) =>
 				dd
 					.addOption("ollama", "Ollama (local)")
@@ -511,6 +544,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.addOption("google", "Google (Gemini)")
 					.addOption("xai", "xAI (Grok)")
 					.addOption("openrouter", "OpenRouter")
+					.addOption("codex-cli", "Codex CLI")
+					.addOption("claude-cli", "Claude CLI")
 					.setValue(this.plugin.settings.provider)
 					.onChange(async (value) => {
 						this.plugin.settings.provider = value as ProviderId;
@@ -522,7 +557,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
 			"2. Add credentials",
-			"Enter the provider key or host details so CueCraft can reach this provider."
+			"Enter the API key, host, or local CLI command so CueCraft can reach this provider."
 		);
 
 		this.renderProviderCredentialSettings(setupFlowEl);
@@ -545,7 +580,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
 			"4. Choose a model",
-			"Select the model CueCraft should use after the provider is connected."
+			isLocalCliProvider(this.plugin.settings.provider)
+				? "Optionally override the model. Leave it blank to use your CLI default."
+				: "Select the model CueCraft should use after the provider is connected."
 		);
 
 		this.renderProviderModelSettings(setupFlowEl);
@@ -554,7 +591,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
 			"5. Tune speed",
-			"Adjust how aggressively CueCraft generates section cues in parallel."
+			isLocalCliProvider(this.plugin.settings.provider)
+				? "Adjust how many sections CueCraft batches into each local CLI request."
+				: "Adjust how aggressively CueCraft generates section cues in parallel."
 		);
 
 		const concurrencyDesc = (): string =>
@@ -578,26 +617,46 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private renderProviderSetupStatus(containerEl: HTMLElement): void {
 		const status = deriveProviderSetupStatus(this.plugin.settings);
+		const isCli = isLocalCliProvider(this.plugin.settings.provider);
+		const cliModelLabel = this.selectedModelLabel() === "CLI default"
+			? "CLI default"
+			: "Model override";
 		const statusSetting = new Setting(containerEl)
 			.setName("Setup status")
 			.setDesc(
 				status.connection === "verified" && status.testedAt
-					? status.modelSelected
+					? isCli
+						? `Last verified the current CLI command and model setting ${new Date(status.testedAt).toLocaleString()}.`
+						: status.modelSelected
 						? `Last verified the current key and selected model ${new Date(status.testedAt).toLocaleString()}.`
 						: `Last verified provider access ${new Date(status.testedAt).toLocaleString()}. Choose a model and test again to verify generation with that model.`
 					: status.connection === "stale"
-						? "The saved connection check no longer matches the current key or selected model."
-						: "Save the key or host, choose a model, then run Test connection. Without a selected model, CueCraft checks provider access only."
+						? isCli
+							? "The saved connection check no longer matches the current CLI command or model setting."
+							: "The saved connection check no longer matches the current key or selected model."
+						: isCli
+							? "Save the CLI command, then run Test connection. Leave the model blank to use your CLI default."
+							: "Save the key or host, choose a model, then run Test connection. Without a selected model, CueCraft checks provider access only."
 			);
 		statusSetting.controlEl.addClass("cuecraft-status-chips");
 		this.renderStatusChip(
 			statusSetting.controlEl,
-			status.keySaved ? "Key saved" : "Key missing",
+			isCli
+				? status.keySaved
+					? "Command saved"
+					: "Command missing"
+				: status.keySaved
+					? "Key saved"
+					: "Key missing",
 			status.keySaved ? "is-positive" : "is-muted"
 		);
 		this.renderStatusChip(
 			statusSetting.controlEl,
-			status.modelSelected ? "Model selected" : "Model missing",
+			isCli
+				? cliModelLabel
+				: status.modelSelected
+					? "Model selected"
+					: "Model missing",
 			status.modelSelected ? "is-positive" : "is-muted"
 		);
 		this.renderStatusChip(
@@ -1073,6 +1132,27 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Setting(containerEl).setName("Appearance").setHeading();
 		}
 
+		const displaySetting = new Setting(containerEl)
+			.setName("Cornell display mode")
+			.addDropdown((dd) => {
+				for (const option of CORNELL_DISPLAY_MODES) {
+					dd.addOption(option.id, option.label);
+				}
+				dd.setValue(this.plugin.settings.cornellDisplayMode).onChange(
+					async (value) => {
+						this.plugin.settings.cornellDisplayMode =
+							value as CornellDisplayMode;
+						await this.plugin.saveSettings();
+						this.plugin.refreshCornellViews();
+						displaySetting.setDesc(displayDesc());
+					}
+				);
+			});
+		const displayDesc = (): string =>
+			cornellDisplayModeOption(this.plugin.settings.cornellDisplayMode)
+				.description;
+		displaySetting.setDesc(displayDesc());
+
 		const styleSetting = new Setting(containerEl)
 			.setName("Cornell view style")
 			.addDropdown((dd) => {
@@ -1265,6 +1345,60 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.setDisabled(!s.ollamaHost.trim())
 					.onClick(() => void this.refreshOllamaModels())
 			);
+	}
+
+	private renderCliCredentialSettings(
+		containerEl: HTMLElement,
+		opts: {
+			providerName: string;
+			commandPlaceholder: string;
+			getCommand: () => string;
+			setCommand: (value: string) => void;
+		}
+	): void {
+		const setting = new Setting(containerEl)
+			.setName(`${opts.providerName} command`)
+			.setDesc(
+				`Command name or absolute path for your local ${opts.providerName}. CueCraft uses your existing CLI login and does not store an API key for this provider.`
+			)
+			.addText((text) => {
+				text.inputEl.addClass("cuecraft-cli-text-input");
+				text
+					.setPlaceholder(opts.commandPlaceholder)
+					.setValue(opts.getCommand())
+					.onChange(async (value) => {
+						opts.setCommand(value.trim());
+						await this.plugin.saveSettings();
+					});
+			});
+		setting.settingEl.addClass("cuecraft-cli-text-setting");
+	}
+
+	private renderCliModelSettings(
+		containerEl: HTMLElement,
+		opts: {
+			providerName: string;
+			modelPlaceholder: string;
+			getModel: () => string;
+			setModel: (value: string) => void;
+		}
+	): void {
+		const setting = new Setting(containerEl)
+			.setName(`${opts.providerName} model override`)
+			.setDesc(
+				`Optional. Leave blank to use your ${opts.providerName} default model.`
+			)
+			.addText((text) => {
+				text.inputEl.addClass("cuecraft-cli-text-input");
+				text
+					.setPlaceholder(opts.modelPlaceholder)
+					.setValue(opts.getModel())
+					.onChange(async (value) => {
+						opts.setModel(value.trim());
+						await this.plugin.saveSettings();
+					});
+			});
+		setting.settingEl.addClass("cuecraft-cli-text-setting");
 	}
 
 	private renderAnthropicCredentialSettings(containerEl: HTMLElement): void {
@@ -1502,6 +1636,22 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					},
 				});
 				return;
+			case "codex-cli":
+				this.renderCliCredentialSettings(containerEl, {
+					providerName: "Codex CLI",
+					commandPlaceholder: "codex",
+					getCommand: () => s.codexCliCommand,
+					setCommand: (value) => (s.codexCliCommand = value),
+				});
+				return;
+			case "claude-cli":
+				this.renderCliCredentialSettings(containerEl, {
+					providerName: "Claude CLI",
+					commandPlaceholder: "claude",
+					getCommand: () => s.claudeCliCommand,
+					setCommand: (value) => (s.claudeCliCommand = value),
+				});
+				return;
 		}
 	}
 
@@ -1586,6 +1736,22 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					setHasFetchedModels: (value) => (s.openrouterHasFetchedModels = value),
 					setRefreshMessage: (value) => (s.openrouterModelRefreshMessage = value),
 					setModelOptions: (options) => (s.openrouterModelOptions = options),
+				});
+				return;
+			case "codex-cli":
+				this.renderCliModelSettings(containerEl, {
+					providerName: "Codex CLI",
+					modelPlaceholder: "CLI default",
+					getModel: () => s.codexCliModel,
+					setModel: (value) => (s.codexCliModel = value),
+				});
+				return;
+			case "claude-cli":
+				this.renderCliModelSettings(containerEl, {
+					providerName: "Claude CLI",
+					modelPlaceholder: "sonnet",
+					getModel: () => s.claudeCliModel,
+					setModel: (value) => (s.claudeCliModel = value),
 				});
 				return;
 		}
@@ -1859,6 +2025,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	/** Verify the selected provider is reachable and reports a readable result. */
 	private async testConnection(): Promise<void> {
+		if (isLocalCliProvider(this.plugin.settings.provider)) {
+			await this.testLocalCliProvider();
+			return;
+		}
 		if (this.plugin.settings.provider !== "ollama") {
 			await this.testCloudProvider();
 			return;
@@ -1885,6 +2055,28 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			console.error("CueCraft test connection failed", err);
 			new Notice("CueCraft: Ollama server unreachable. Check the host and that Ollama is running.");
 		}
+	}
+
+	private async testLocalCliProvider(): Promise<void> {
+		const command =
+			this.plugin.settings.provider === "codex-cli"
+				? this.plugin.settings.codexCliCommand
+				: this.plugin.settings.claudeCliCommand;
+		if (!command.trim()) {
+			const providerName =
+				this.plugin.settings.provider === "codex-cli" ? "Codex CLI" : "Claude CLI";
+			new Notice(`CueCraft: enter your ${providerName} command first.`);
+			return;
+		}
+		const provider = this.plugin.makeProvider();
+		const status = await provider.testConnection();
+		if (status.ok) {
+			this.plugin.settings.providerConnectionStatus =
+				recordProviderConnectionSuccess(this.plugin.settings);
+			await this.plugin.saveSettings();
+			this.display();
+		}
+		new Notice(formatCueCraftNotice(status.message));
 	}
 
 	private async testCloudProvider(): Promise<void> {
@@ -1950,7 +2142,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				return;
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				new Notice(`CueCraft: ${message}`);
+				new Notice(formatCueCraftNotice(message));
 				return;
 			}
 		}
@@ -1972,7 +2164,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return;
 		}
 		if (status.ok) {
-			new Notice(`CueCraft: ${status.message}`);
+			new Notice(formatCueCraftNotice(status.message));
 			return;
 		}
 		if (
@@ -1989,7 +2181,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 			return;
 		}
-		new Notice(`CueCraft: ${status.message}`);
+		new Notice(formatCueCraftNotice(status.message));
 	}
 }
 

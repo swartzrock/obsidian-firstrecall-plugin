@@ -16,6 +16,7 @@ import {
 	shortFormHookCardState,
 	shortFormHookFocusLabel,
 	shortFormHookStatusIcon,
+	shortFormHookTitleDensity,
 	type ShortFormHookModel,
 	type ShortFormHookRailCard,
 } from "./short-form-hook";
@@ -33,6 +34,7 @@ import {
 	type CueFontSize,
 } from "./cornell-layout";
 import { CUE_ACCENTS, cueAccentClass } from "./cornell-accent";
+import { CORNELL_DISPLAY_MODES, type CornellDisplayMode } from "./cornell-display";
 
 export const VIEW_TYPE_CORNELL = "cuecraft-cornell";
 
@@ -50,8 +52,6 @@ export class CornellView extends ItemView {
 	private revealAll = false;
 	/** When true, the in-view display-controls row (style/width/font) is shown. */
 	private displayOpen = false;
-	/** Transient prototype display mode for compact hook cards. */
-	private hookMode = false;
 	private focusedHookSectionId: string | null = null;
 	/** The last Markdown note we rendered, used as a fallback on restart. */
 	private lastFile: TFile | null = null;
@@ -88,7 +88,7 @@ export class CornellView extends ItemView {
 	 * lands the user in an actually-studying state instead of a no-op toggle.
 	 */
 	async enterStudyMode(): Promise<void> {
-		this.hookMode = false;
+		this.focusedHookSectionId = null;
 		this.studyMode = true;
 		this.revealed.clear();
 		this.revealAll = false;
@@ -98,10 +98,11 @@ export class CornellView extends ItemView {
 	/** Re-render from the active note's cache. Safe to call repeatedly. */
 	async render(): Promise<void> {
 		const root = this.contentEl;
+		const hookMode = this.isHookMode();
 		root.empty();
 		root.addClass("cuecraft-cornell");
 		root.toggleClass("cuecraft-cornell-study", this.studyMode);
-		root.toggleClass("cuecraft-hook-mode", this.hookMode);
+		root.toggleClass("cuecraft-hook-mode", hookMode);
 		root.toggleClass(
 			"cuecraft-cornell-hide-keywords",
 			!this.plugin.settings.generateKeywords
@@ -148,9 +149,9 @@ export class CornellView extends ItemView {
 
 		this.renderToolbar(root, file);
 		if (this.displayOpen) this.renderDisplayRow(root);
-		if (!this.hookMode) this.renderFailedBanner(root, built.model, file);
+		if (!hookMode) this.renderFailedBanner(root, built.model, file);
 		root.createEl("div", { cls: "cuecraft-cornell-title", text: built.title });
-		const hookModel = this.hookMode
+		const hookModel = hookMode
 			? buildShortFormHookModel(built.model)
 			: null;
 		await this.renderGrid(root, built.model, file, hookModel);
@@ -207,7 +208,7 @@ export class CornellView extends ItemView {
 		input.setAttr("aria-label", "Study mode");
 		input.addEventListener("change", () => {
 			this.studyMode = input.checked;
-			if (this.studyMode) this.setHookMode(false);
+			if (this.studyMode) this.focusedHookSectionId = null;
 			this.revealed.clear();
 			this.revealAll = false;
 			void this.render();
@@ -236,11 +237,10 @@ export class CornellView extends ItemView {
 	}
 
 	/**
-	 * The Hybrid display-controls row: an in-view (no overlay) strip of Style /
-	 * cue-column-width / cue-font-size controls that the ⚙ Display button expands.
-	 * Each control writes straight to settings and live-re-renders, so the effect
-	 * is visible immediately under the controls. Settings remains the place to set
-	 * the saved default.
+	 * The Hybrid display-controls row: an in-view (no overlay) strip of Mode /
+	 * Style / cue-column-width / cue-font-size controls that the ⚙ Display button
+	 * expands. Each control writes straight to settings and live-rerenders, so the
+	 * effect is visible immediately under the controls.
 	 */
 	private renderDisplayRow(root: HTMLElement): void {
 		const row = root.createEl("div", { cls: "cuecraft-cornell-display" });
@@ -292,19 +292,15 @@ export class CornellView extends ItemView {
 			text: "Mode",
 		});
 		const seg = ctl.createEl("div", { cls: "cuecraft-cornell-seg" });
-		for (const opt of [
-			{ id: "classic", label: "Classic" },
-			{ id: "hook", label: "Hook rail" },
-		]) {
+		for (const opt of CORNELL_DISPLAY_MODES) {
 			const btn = seg.createEl("button", {
 				cls: "cuecraft-cornell-seg-btn",
 				text: opt.label,
 			});
 			const isHook = opt.id === "hook";
-			btn.toggleClass("is-on", this.hookMode === isHook);
+			btn.toggleClass("is-on", this.isHookMode() === isHook);
 			btn.addEventListener("click", () => {
-				this.setHookMode(isHook);
-				void this.render();
+				void this.setDisplayMode(opt.id);
 			});
 		}
 	}
@@ -414,6 +410,7 @@ export class CornellView extends ItemView {
 		});
 		if (card.kind === "hook") {
 			if (card.confidence) cue.dataset.confidence = card.confidence;
+			cue.dataset.titleDensity = shortFormHookTitleDensity(card.hookTitle);
 			cue.setAttr("title", card.originalQuestion);
 			cue.createEl("div", {
 				cls: "cuecraft-hook-title",
@@ -539,7 +536,7 @@ export class CornellView extends ItemView {
 		}
 		const body = cell.createEl("div", { cls: "cuecraft-cornell-body" });
 		body.dataset.section = row.id;
-		if (this.hookMode) body.tabIndex = -1;
+		if (this.isHookMode()) body.tabIndex = -1;
 		const answer = buildCornellAnswerPresentation({
 			sectionId: row.id,
 			studyMode: this.studyMode,
@@ -603,13 +600,23 @@ export class CornellView extends ItemView {
 		}
 	}
 
-	private setHookMode(enabled: boolean): void {
-		this.hookMode = enabled;
+	private isHookMode(): boolean {
+		return (
+			!this.studyMode &&
+			this.plugin.settings.cornellDisplayMode === "hook"
+		);
+	}
+
+	private async setDisplayMode(mode: CornellDisplayMode): Promise<void> {
 		this.focusedHookSectionId = null;
-		if (!enabled) return;
-		this.studyMode = false;
-		this.revealed.clear();
-		this.revealAll = false;
+		this.plugin.settings.cornellDisplayMode = mode;
+		if (mode === "hook") {
+			this.studyMode = false;
+			this.revealed.clear();
+			this.revealAll = false;
+		}
+		await this.plugin.saveSettings();
+		this.plugin.refreshCornellViews();
 	}
 
 	private focusHookSection(sectionId: string): void {

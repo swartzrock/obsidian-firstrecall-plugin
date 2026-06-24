@@ -10,6 +10,12 @@ import {
 	normalizeAnthropicModelSelection,
 	refreshAnthropicModelOptions,
 } from "../src/anthropic-models";
+import { normalizeProviderId } from "../src/provider-id";
+import {
+	DEFAULT_CORNELL_DISPLAY_MODE,
+	cornellDisplayModeOption,
+	isCornellDisplayMode,
+} from "../src/cornell-display";
 import { DEFAULT_READING_MODE_DISPLAY } from "../src/reading-cues";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 
@@ -28,6 +34,28 @@ function modelInfo(id: string, display_name: string): ModelInfo {
 describe("settings defaults", () => {
 	it("defaults Reading mode to the compact review button", () => {
 		expect(DEFAULT_READING_MODE_DISPLAY).toBe("review-button");
+	});
+
+	it("defaults Cornell display mode to the classic Cornell view", () => {
+		expect(DEFAULT_CORNELL_DISPLAY_MODE).toBe("classic");
+		expect(cornellDisplayModeOption(DEFAULT_CORNELL_DISPLAY_MODE).label).toBe(
+			"Cornell"
+		);
+	});
+
+	it("validates persisted Cornell display mode values", () => {
+		expect(isCornellDisplayMode("classic")).toBe(true);
+		expect(isCornellDisplayMode("hook")).toBe(true);
+		for (const bad of ["", "hooks", "study", null, undefined, 1, {}]) {
+			expect(isCornellDisplayMode(bad)).toBe(false);
+		}
+	});
+
+	it("normalizes legacy CLI provider ids", () => {
+		expect(normalizeProviderId("claude")).toBe("claude-cli");
+		expect(normalizeProviderId("codex")).toBe("codex-cli");
+		expect(normalizeProviderId("claude-cli")).toBe("claude-cli");
+		expect(normalizeProviderId("nope")).toBe("ollama");
 	});
 });
 
