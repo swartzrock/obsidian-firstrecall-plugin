@@ -263,6 +263,31 @@ describe("renderCueElement", () => {
 		});
 	});
 
+	it("renders active-section composer hook DOM", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 7,
+					heading: "Who It Is For",
+					question: "Who should use this workflow?",
+					keywords: ["students", "researchers"],
+					confidence: "medium",
+					error: null,
+				},
+				"active-section-composer"
+			);
+			expect(
+				el.classList.contains("cuecraft-editor-hook-active-section-composer")
+			).toBe(true);
+			expect(el.dataset.display).toBe("active-section-composer");
+			expect(el.dataset.state).toBe("current");
+			expect(el.getAttribute("role")).toBe("note");
+			expect(
+				el.querySelector(".cuecraft-editor-hook-title")?.textContent
+			).toBe("Who should use this workflow");
+		});
+	});
+
 	it("renders anchored failed cue state without keywords", () => {
 		withDocument(() => {
 			const el = renderCueElement(

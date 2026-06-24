@@ -2,7 +2,8 @@ export type EditorCueDisplay =
 	| "inline-cues"
 	| "anchored-card-rail"
 	| "collapsed-tabs"
-	| "threaded-margin-notes";
+	| "threaded-margin-notes"
+	| "active-section-composer";
 
 export interface EditorCueDisplayOption {
 	id: EditorCueDisplay;
@@ -32,6 +33,11 @@ export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
 		id: "threaded-margin-notes",
 		label: "Threaded margin notes",
 		description: "Show calmer hook notes connected by a margin thread.",
+	},
+	{
+		id: "active-section-composer",
+		label: "Active-section composer",
+		description: "Emphasize the current section's hook while keeping others nearby.",
 	},
 ];
 
