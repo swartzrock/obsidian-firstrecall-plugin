@@ -923,9 +923,77 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	pointer-events: auto;
 }
 
+.cuecraft-editor-hook-threaded-margin-notes {
+	position: relative;
+	max-width: min(20rem, 100%);
+	margin: 0.25em 0 0.85em;
+	padding: 0.5em 0.75em 0.55em 1.1em;
+	border-inline-start: 2px solid
+		color-mix(in srgb, var(--interactive-accent) 56%, transparent);
+	border-radius: 0 var(--radius-s) var(--radius-s) 0;
+	background: color-mix(
+		in srgb,
+		var(--background-secondary) 72%,
+		transparent
+	);
+	box-shadow: inset 0 0 0 1px
+		color-mix(in srgb, var(--background-modifier-border) 72%, transparent);
+}
+
+.cuecraft-editor-hook-threaded-margin-notes::before {
+	content: "";
+	position: absolute;
+	inset-block-start: -0.75em;
+	inset-block-end: -0.85em;
+	inset-inline-start: -0.55em;
+	width: 2px;
+	background: color-mix(
+		in srgb,
+		var(--interactive-accent) 32%,
+		transparent
+	);
+}
+
+.cuecraft-editor-hook-threaded-margin-notes::after {
+	content: "";
+	position: absolute;
+	inset-block-start: 0.95em;
+	inset-inline-start: -0.85em;
+	width: 0.65em;
+	height: 0.65em;
+	border: 2px solid var(--interactive-accent);
+	border-radius: 50%;
+	background: var(--background-primary);
+}
+
+.cuecraft-editor-hook-threaded-margin-notes[data-tone="warm"]::after,
+.cuecraft-editor-hook-threaded-margin-notes[data-tone="warm"] {
+	border-color: color-mix(in srgb, var(--color-orange) 76%, var(--interactive-accent));
+}
+
+.cuecraft-editor-hook-threaded-margin-notes[data-tone="cool"]::after,
+.cuecraft-editor-hook-threaded-margin-notes[data-tone="cool"] {
+	border-color: color-mix(in srgb, var(--color-cyan) 76%, var(--interactive-accent));
+}
+
+.cuecraft-editor-hook-threaded-margin-notes .cuecraft-editor-hook-heading {
+	margin-bottom: 0.25em;
+	color: var(--text-muted);
+}
+
+.cuecraft-editor-hook-threaded-margin-notes .cuecraft-editor-hook-title {
+	font-weight: var(--font-semibold);
+}
+
+.cuecraft-editor-hook-threaded-margin-notes .cuecraft-editor-hook-keywords {
+	margin-top: 0.4em;
+	color: var(--text-muted);
+}
+
 @media (min-width: 980px) {
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-anchored-card-rail,
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-collapsed-tabs {
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-collapsed-tabs,
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-threaded-margin-notes {
 		float: left;
 		clear: left;
 		margin-inline-start: calc(-1 * min(19rem, 32vw));

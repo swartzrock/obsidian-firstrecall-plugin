@@ -235,6 +235,34 @@ describe("renderCueElement", () => {
 		});
 	});
 
+	it("renders threaded margin note hook DOM", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 5,
+					heading: "How To Upskill Employees",
+					question: "How does organizational knowledge make teams faster?",
+					keywords: ["standards", "workflow"],
+					confidence: "high",
+					error: null,
+				},
+				"threaded-margin-notes",
+				2
+			);
+			expect(
+				el.classList.contains("cuecraft-editor-hook-threaded-margin-notes")
+			).toBe(true);
+			expect(el.dataset.display).toBe("threaded-margin-notes");
+			expect(el.dataset.state).toBe("upcoming");
+			expect(
+				el.querySelector(".cuecraft-editor-hook-heading")?.textContent
+			).toBe("How To Upskill Employees");
+			expect(
+				el.querySelector(".cuecraft-editor-hook-keywords")?.textContent
+			).toBe("standards · workflow");
+		});
+	});
+
 	it("renders anchored failed cue state without keywords", () => {
 		withDocument(() => {
 			const el = renderCueElement(

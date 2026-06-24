@@ -69,10 +69,12 @@ describe("settings defaults", () => {
 			"inline-cues",
 			"anchored-card-rail",
 			"collapsed-tabs",
+			"threaded-margin-notes",
 		]);
 		expect(isEditorCueDisplay("inline-cues")).toBe(true);
 		expect(isEditorCueDisplay("anchored-card-rail")).toBe(true);
 		expect(isEditorCueDisplay("collapsed-tabs")).toBe(true);
+		expect(isEditorCueDisplay("threaded-margin-notes")).toBe(true);
 		for (const bad of ["", "hook", "cornell", null, undefined, 1, {}]) {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}

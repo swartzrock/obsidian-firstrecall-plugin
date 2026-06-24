@@ -1,7 +1,8 @@
 export type EditorCueDisplay =
 	| "inline-cues"
 	| "anchored-card-rail"
-	| "collapsed-tabs";
+	| "collapsed-tabs"
+	| "threaded-margin-notes";
 
 export interface EditorCueDisplayOption {
 	id: EditorCueDisplay;
@@ -26,6 +27,11 @@ export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
 		id: "collapsed-tabs",
 		label: "Collapsed color tabs",
 		description: "Show compact cue tabs with one expanded hook peek.",
+	},
+	{
+		id: "threaded-margin-notes",
+		label: "Threaded margin notes",
+		description: "Show calmer hook notes connected by a margin thread.",
 	},
 ];
 
