@@ -17,6 +17,12 @@ import {
 	isCornellDisplayMode,
 } from "../src/cornell-display";
 import { DEFAULT_READING_MODE_DISPLAY } from "../src/reading-cues";
+import {
+	DEFAULT_EDITOR_CUE_DISPLAY,
+	EDITOR_CUE_DISPLAY_OPTIONS,
+	editorCueDisplayOption,
+	isEditorCueDisplay,
+} from "../src/editor-cue-display";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 
 function modelInfo(id: string, display_name: string): ModelInfo {
@@ -43,11 +49,28 @@ describe("settings defaults", () => {
 		);
 	});
 
+	it("defaults editor cue display to inline cues", () => {
+		expect(DEFAULT_EDITOR_CUE_DISPLAY).toBe("inline-cues");
+		expect(editorCueDisplayOption(DEFAULT_EDITOR_CUE_DISPLAY).label).toBe(
+			"Inline cues"
+		);
+	});
+
 	it("validates persisted Cornell display mode values", () => {
 		expect(isCornellDisplayMode("classic")).toBe(true);
 		expect(isCornellDisplayMode("hook")).toBe(true);
 		for (const bad of ["", "hooks", "study", null, undefined, 1, {}]) {
 			expect(isCornellDisplayMode(bad)).toBe(false);
+		}
+	});
+
+	it("validates persisted editor cue display values", () => {
+		expect(EDITOR_CUE_DISPLAY_OPTIONS.map((option) => option.id)).toEqual([
+			"inline-cues",
+		]);
+		expect(isEditorCueDisplay("inline-cues")).toBe(true);
+		for (const bad of ["", "hook", "cornell", null, undefined, 1, {}]) {
+			expect(isEditorCueDisplay(bad)).toBe(false);
 		}
 	});
 
