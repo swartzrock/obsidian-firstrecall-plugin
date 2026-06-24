@@ -109,13 +109,13 @@ export function renderCueElement(
 }
 
 function renderInlineCueElement(cue: CueLineData): HTMLElement {
-	const root = document.createElement("div");
+	const root = cueDocument().createElement("div");
 	root.className = "cuecraft-cue";
 
 	if (cue.error) {
 		root.classList.add("cuecraft-cue-error");
 		root.title = cue.error;
-		const q = document.createElement("div");
+		const q = cueDocument().createElement("div");
 		q.className = "cuecraft-cue-question";
 		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
 		root.appendChild(q);
@@ -126,13 +126,13 @@ function renderInlineCueElement(cue: CueLineData): HTMLElement {
 		root.dataset.confidence = cue.confidence;
 	}
 
-	const q = document.createElement("div");
+	const q = cueDocument().createElement("div");
 	q.className = "cuecraft-cue-question";
 	q.textContent = cue.question;
 	root.appendChild(q);
 
 	if (cue.keywords.length) {
-		const kw = document.createElement("div");
+		const kw = cueDocument().createElement("div");
 		kw.className = "cuecraft-cue-keywords";
 		kw.textContent = cue.keywords.join(" · ");
 		root.appendChild(kw);
@@ -141,7 +141,7 @@ function renderInlineCueElement(cue: CueLineData): HTMLElement {
 }
 
 function renderEditorHookElement(card: EditorHookCard): HTMLElement {
-	const root = document.createElement("div");
+	const root = cueDocument().createElement("div");
 	root.className = `cuecraft-editor-hook cuecraft-editor-hook-${card.display}`;
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");
@@ -153,19 +153,19 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	if (card.confidence) root.dataset.confidence = card.confidence;
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
-	const eyebrow = document.createElement("div");
+	const eyebrow = cueDocument().createElement("div");
 	eyebrow.className = "cuecraft-editor-hook-heading";
 	eyebrow.textContent = card.heading;
 	root.appendChild(eyebrow);
 
-	const title = document.createElement("div");
+	const title = cueDocument().createElement("div");
 	title.className = "cuecraft-editor-hook-title";
 	title.textContent = card.hookTitle;
 	root.appendChild(title);
 
 	if (card.error) {
 		root.title = card.error;
-		const error = document.createElement("div");
+		const error = cueDocument().createElement("div");
 		error.className = "cuecraft-editor-hook-status";
 		error.textContent = "Generation failed - regenerate";
 		root.appendChild(error);
@@ -173,12 +173,18 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	}
 
 	if (card.keywords.length) {
-		const keywords = document.createElement("div");
+		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
 		keywords.textContent = card.keywords.join(" · ");
 		root.appendChild(keywords);
 	}
 	return root;
+}
+
+function cueDocument(): Document {
+	return typeof activeDocument === "undefined"
+		? globalThis.document
+		: activeDocument;
 }
 
 /** Replace all cues currently rendered in the editor. */
