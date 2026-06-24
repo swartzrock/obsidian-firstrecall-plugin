@@ -1,3 +1,19 @@
+import { CUE_ACCENTS, type CueAccent } from "./cornell-accent";
+import {
+	CORNELL_DISPLAY_MODES,
+	type CornellDisplayMode,
+} from "./cornell-display";
+import {
+	CORNELL_STYLES,
+	type CornellStyle,
+} from "./cornell-style";
+import {
+	CUE_COLUMN_WIDTHS,
+	CUE_FONT_SIZES,
+	type CueColumnWidth,
+	type CueFontSize,
+} from "./cornell-layout";
+
 export interface AppearanceThumbnailOption<T extends string> {
 	id: T;
 	label: string;
@@ -48,7 +64,7 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 		button.disabled = Boolean(option.disabled);
 		button.setAttribute("aria-label", option.label);
 
-		const preview = doc.createElement("span");
+		const preview = doc.createElement("div");
 		preview.className = "cuecraft-thumbnail-preview";
 		preview.setAttribute("aria-hidden", "true");
 		option.renderPreview?.(preview, option);
@@ -101,4 +117,131 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 		rootEl: root,
 		setValue: updateSelected,
 	};
+}
+
+const SAMPLE_QUESTION =
+	"How does tailoring AI with organizational knowledge upskill employees, and why does encoding that expertise into reusable plugins or agents make them faster and smarter?";
+
+const SAMPLE_SUPPORTS = [
+	"org knowledge",
+	"standards/workflows",
+	"shippable output",
+];
+
+export function cornellDisplayModeThumbnailOptions(): AppearanceThumbnailOption<
+	CornellDisplayMode
+>[] {
+	return CORNELL_DISPLAY_MODES.map((option) => ({
+		id: option.id,
+		label: option.label,
+		description: option.description,
+		renderPreview: (previewEl) => {
+			renderCuePreview(previewEl, [
+				"cuecraft-preview-display",
+				`cuecraft-preview-display-${option.id}`,
+			]);
+		},
+	}));
+}
+
+export function cornellStyleThumbnailOptions(): AppearanceThumbnailOption<
+	CornellStyle
+>[] {
+	return CORNELL_STYLES.map((option) => ({
+		id: option.id,
+		label: option.label,
+		description: option.description,
+		renderPreview: (previewEl) => {
+			renderCuePreview(previewEl, [
+				"cuecraft-preview-style",
+				`cuecraft-preview-style-${option.id}`,
+			]);
+		},
+	}));
+}
+
+export function cueColumnWidthThumbnailOptions(): AppearanceThumbnailOption<
+	CueColumnWidth
+>[] {
+	return CUE_COLUMN_WIDTHS.map((option) => ({
+		id: option.id,
+		label: option.label,
+		description: option.description,
+		renderPreview: (previewEl) => {
+			renderCuePreview(previewEl, [
+				"cuecraft-preview-width",
+				`cuecraft-preview-width-${option.id}`,
+			]);
+		},
+	}));
+}
+
+export function cueFontSizeThumbnailOptions(): AppearanceThumbnailOption<
+	CueFontSize
+>[] {
+	return CUE_FONT_SIZES.map((option) => ({
+		id: option.id,
+		label: option.label,
+		description: option.description,
+		renderPreview: (previewEl) => {
+			renderCuePreview(previewEl, [
+				"cuecraft-preview-font",
+				`cuecraft-preview-font-${option.id}`,
+			]);
+		},
+	}));
+}
+
+export function cueAccentThumbnailOptions(): AppearanceThumbnailOption<CueAccent>[] {
+	return CUE_ACCENTS.map((option) => ({
+		id: option.id,
+		label: option.label,
+		renderPreview: (previewEl) => {
+			renderCuePreview(previewEl, [
+				"cuecraft-preview-accent",
+				`cuecraft-preview-accent-${option.id}`,
+			]);
+		},
+	}));
+}
+
+function renderCuePreview(previewEl: HTMLElement, classes: string[]): void {
+	const doc = previewEl.ownerDocument;
+	const surface = doc.createElement("div");
+	surface.className = ["cuecraft-preview-surface", ...classes].join(" ");
+
+	const card = doc.createElement("div");
+	card.className = "cuecraft-preview-card";
+	surface.appendChild(card);
+
+	const rail = doc.createElement("div");
+	rail.className = "cuecraft-preview-rail";
+	card.appendChild(rail);
+
+	const content = doc.createElement("div");
+	content.className = "cuecraft-preview-content";
+	card.appendChild(content);
+
+	const question = doc.createElement("div");
+	question.className = "cuecraft-preview-question";
+	question.textContent = SAMPLE_QUESTION;
+	content.appendChild(question);
+
+	const support = doc.createElement("div");
+	support.className = "cuecraft-preview-support";
+	for (const [index, term] of SAMPLE_SUPPORTS.entries()) {
+		const item = doc.createElement("span");
+		item.className = "cuecraft-preview-support-term";
+		item.textContent = term;
+		support.appendChild(item);
+		if (index < SAMPLE_SUPPORTS.length - 1) {
+			const separator = doc.createElement("span");
+			separator.className = "cuecraft-preview-support-separator";
+			separator.textContent = "\u00b7";
+			support.appendChild(separator);
+		}
+	}
+	content.appendChild(support);
+
+	previewEl.appendChild(surface);
 }

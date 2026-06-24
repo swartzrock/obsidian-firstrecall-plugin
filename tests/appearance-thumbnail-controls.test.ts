@@ -1,6 +1,15 @@
 import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
+import { CUE_ACCENTS } from "../src/cornell-accent";
+import { CORNELL_DISPLAY_MODES } from "../src/cornell-display";
+import { CUE_COLUMN_WIDTHS, CUE_FONT_SIZES } from "../src/cornell-layout";
+import { CORNELL_STYLES } from "../src/cornell-style";
 import {
+	cornellDisplayModeThumbnailOptions,
+	cornellStyleThumbnailOptions,
+	cueAccentThumbnailOptions,
+	cueColumnWidthThumbnailOptions,
+	cueFontSizeThumbnailOptions,
 	renderAppearanceThumbnailGroup,
 	type AppearanceThumbnailOption,
 } from "../src/appearance-thumbnail-controls";
@@ -154,5 +163,104 @@ describe("renderAppearanceThumbnailGroup", () => {
 				.querySelector<HTMLButtonElement>("[data-option-id='handwritten']")
 				?.classList.contains("is-selected")
 		).toBe(true);
+	});
+});
+
+describe("Appearance thumbnail option recipes", () => {
+	it("covers every existing Appearance option with a preview recipe", () => {
+		expect(cornellDisplayModeThumbnailOptions().map((option) => option.id)).toEqual(
+			CORNELL_DISPLAY_MODES.map((option) => option.id)
+		);
+		expect(cornellStyleThumbnailOptions().map((option) => option.id)).toEqual(
+			CORNELL_STYLES.map((option) => option.id)
+		);
+		expect(cueColumnWidthThumbnailOptions().map((option) => option.id)).toEqual(
+			CUE_COLUMN_WIDTHS.map((option) => option.id)
+		);
+		expect(cueFontSizeThumbnailOptions().map((option) => option.id)).toEqual(
+			CUE_FONT_SIZES.map((option) => option.id)
+		);
+		expect(cueAccentThumbnailOptions().map((option) => option.id)).toEqual(
+			CUE_ACCENTS.map((option) => option.id)
+		);
+	});
+
+	it("renders Cornell and Hook rail display previews with real cue text", () => {
+		const root = setupDom();
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: cornellDisplayModeThumbnailOptions(),
+			value: "classic",
+			onSelect: vi.fn(),
+		});
+
+		expect(root.textContent).toContain("How does tailoring AI");
+		expect(root.textContent).toContain("org knowledge");
+		expect(
+			root.querySelector(".cuecraft-preview-display-classic")
+		).not.toBeNull();
+		expect(root.querySelector(".cuecraft-preview-display-hook")).not.toBeNull();
+	});
+
+	it("renders Handwritten as a first-class distinct style preview", () => {
+		const root = setupDom();
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: cornellStyleThumbnailOptions(),
+			value: "classic",
+			onSelect: vi.fn(),
+		});
+
+		const handwrittenButton = root.querySelector<HTMLElement>(
+			"[data-option-id='handwritten']"
+		);
+		expect(handwrittenButton?.textContent).toContain("Handwritten");
+		expect(
+			handwrittenButton?.querySelector(".cuecraft-preview-style-handwritten")
+		).not.toBeNull();
+	});
+
+	it("renders distinct width and font-size preview classes", () => {
+		const root = setupDom();
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: cueColumnWidthThumbnailOptions(),
+			value: "medium",
+			onSelect: vi.fn(),
+		});
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: cueFontSizeThumbnailOptions(),
+			value: "medium",
+			onSelect: vi.fn(),
+		});
+
+		expect(root.querySelector(".cuecraft-preview-width-narrow")).not.toBeNull();
+		expect(root.querySelector(".cuecraft-preview-width-medium")).not.toBeNull();
+		expect(root.querySelector(".cuecraft-preview-width-wide")).not.toBeNull();
+		expect(root.querySelector(".cuecraft-preview-font-small")).not.toBeNull();
+		expect(root.querySelector(".cuecraft-preview-font-medium")).not.toBeNull();
+		expect(root.querySelector(".cuecraft-preview-font-large")).not.toBeNull();
+	});
+
+	it("renders accent previews that tint the rail and support text", () => {
+		const root = setupDom();
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: cueAccentThumbnailOptions(),
+			value: "violet",
+			onSelect: vi.fn(),
+		});
+
+		for (const accent of CUE_ACCENTS) {
+			const button = root.querySelector<HTMLElement>(
+				`[data-option-id='${accent.id}']`
+			);
+			expect(
+				button?.querySelector(`.cuecraft-preview-accent-${accent.id}`)
+			).not.toBeNull();
+			expect(button?.querySelector(".cuecraft-preview-rail")).not.toBeNull();
+			expect(button?.querySelector(".cuecraft-preview-support")).not.toBeNull();
+		}
 	});
 });
