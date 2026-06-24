@@ -197,6 +197,7 @@ describe("renderCueElement", () => {
 				el.classList.contains("cuecraft-editor-hook-anchored-card-rail")
 			).toBe(true);
 			expect(el.dataset.display).toBe("anchored-card-rail");
+			expect(el.dataset.line).toBe("3");
 			expect(el.dataset.state).toBe("current");
 			expect(el.dataset.confidence).toBe("medium");
 			expect(
@@ -285,6 +286,32 @@ describe("renderCueElement", () => {
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("Who should use this workflow");
+		});
+	});
+
+	it("renders hook minimap DOM", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 9,
+					heading: "Study Takeaway",
+					question: "What should the reader remember?",
+					keywords: ["takeaway"],
+					confidence: "high",
+					error: null,
+				},
+				"hook-minimap",
+				3
+			);
+			expect(el.classList.contains("cuecraft-editor-hook-hook-minimap")).toBe(
+				true
+			);
+			expect(el.dataset.display).toBe("hook-minimap");
+			expect(el.dataset.line).toBe("9");
+			expect(el.dataset.state).toBe("upcoming");
+			expect(
+				el.querySelector(".cuecraft-editor-hook-title")?.textContent
+			).toBe("What should the reader remember");
 		});
 	});
 

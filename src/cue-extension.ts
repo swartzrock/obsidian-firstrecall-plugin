@@ -146,6 +146,7 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");
 	root.dataset.display = card.display;
+	root.dataset.line = String(card.line);
 	root.dataset.state = card.state;
 	root.dataset.titleDensity = card.titleDensity;
 	root.dataset.tone = card.tone;

@@ -71,12 +71,14 @@ describe("settings defaults", () => {
 			"collapsed-tabs",
 			"threaded-margin-notes",
 			"active-section-composer",
+			"hook-minimap",
 		]);
 		expect(isEditorCueDisplay("inline-cues")).toBe(true);
 		expect(isEditorCueDisplay("anchored-card-rail")).toBe(true);
 		expect(isEditorCueDisplay("collapsed-tabs")).toBe(true);
 		expect(isEditorCueDisplay("threaded-margin-notes")).toBe(true);
 		expect(isEditorCueDisplay("active-section-composer")).toBe(true);
+		expect(isEditorCueDisplay("hook-minimap")).toBe(true);
 		for (const bad of ["", "hook", "cornell", null, undefined, 1, {}]) {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}
