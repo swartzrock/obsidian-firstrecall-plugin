@@ -55,6 +55,7 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 	}
 
 	const buttons = new Map<T, HTMLButtonElement>();
+	let currentValue = config.value;
 
 	for (const option of config.options) {
 		const button = doc.createElement("button");
@@ -88,7 +89,7 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 		button.appendChild(selected);
 
 		button.addEventListener("click", () => {
-			if (button.disabled || option.id === config.value) return;
+			if (button.disabled || option.id === currentValue) return;
 			updateSelected(option.id);
 			void config.onSelect(option.id);
 		});
@@ -98,7 +99,7 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 	}
 
 	function updateSelected(value: T): void {
-		config.value = value;
+		currentValue = value;
 		for (const [id, button] of buttons) {
 			const selected = id === value;
 			button.classList.toggle("is-selected", selected);

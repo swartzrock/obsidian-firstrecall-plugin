@@ -145,9 +145,18 @@
 
 .cuecraft-thumbnail-group {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(138px, 100%), 1fr));
 	gap: 10px;
 	width: 100%;
+}
+
+.cuecraft-thumbnail-group-display-mode {
+	grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+}
+
+.cuecraft-thumbnail-group-view-style,
+.cuecraft-thumbnail-group-accent {
+	grid-template-columns: repeat(auto-fit, minmax(min(112px, 100%), 1fr));
 }
 
 .cuecraft-thumbnail-setting {
@@ -176,6 +185,7 @@
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
 	background: var(--background-primary);
+	box-sizing: border-box;
 	color: var(--text-normal);
 	box-shadow: none;
 	text-align: center;
@@ -200,12 +210,14 @@
 
 .cuecraft-thumbnail-preview {
 	display: block;
+	width: 100%;
 	aspect-ratio: 16 / 9;
 	min-height: 54px;
 	overflow: hidden;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
 	background: var(--background-secondary);
+	box-sizing: border-box;
 }
 
 .cuecraft-thumbnail-label {
@@ -226,6 +238,7 @@
 	position: absolute;
 	top: 7px;
 	right: 7px;
+	max-width: calc(100% - 14px);
 	padding: 2px 6px;
 	border-radius: var(--radius-s);
 	background: var(--interactive-accent);
@@ -233,6 +246,9 @@
 	font-size: var(--font-ui-smaller);
 	font-weight: var(--font-semibold);
 	line-height: 1.2;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .cuecraft-preview-surface {
@@ -681,6 +697,22 @@
 	.cuecraft-settings-flow .setting-item-info,
 	.cuecraft-settings-flow .setting-item-control {
 		width: 100%;
+	}
+
+	.cuecraft-thumbnail-setting {
+		align-items: stretch;
+	}
+
+	.cuecraft-thumbnail-setting .setting-item-control {
+		width: 100%;
+		flex-basis: auto;
+	}
+
+	.cuecraft-thumbnail-group,
+	.cuecraft-thumbnail-group-display-mode,
+	.cuecraft-thumbnail-group-view-style,
+	.cuecraft-thumbnail-group-accent {
+		grid-template-columns: 1fr;
 	}
 }
 
@@ -1750,45 +1782,8 @@ button.cuecraft-study-area-remove {
 	height: 16px;
 }
 
-/* Accent-color swatches (Appearance). The selected one shows a ring + check. */
-.cuecraft-swatches {
-	display: flex;
-	align-items: center;
-	gap: 8px;
-}
-
-/* `button.cuecraft-swatch` (raised specificity) beats Obsidian's themed
- * `.theme-dark button` background, which otherwise leaves the circles blank. */
-.cuecraft-swatches button.cuecraft-swatch {
-	position: relative;
-	width: 22px;
-	height: 22px;
-	padding: 0;
-	border-radius: 50%;
-	border: 2px solid transparent;
-	background-color: var(--cuecraft-accent, var(--interactive-accent));
-	cursor: pointer;
-	box-shadow: none;
-}
-
-.cuecraft-swatch.is-selected {
-	border-color: var(--text-normal);
-}
-
-.cuecraft-swatch.is-selected::after {
-	content: "\2713";
-	position: absolute;
-	inset: 0;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	color: var(--text-on-accent);
-	font-size: 12px;
-	font-weight: var(--font-bold);
-}
-
-/* Accent palette. `--cuecraft-accent` is the single knob the swatch and the
- * cue/chip styles read, so adding a color here is all it takes. */
+/* Accent palette. `--cuecraft-accent` is the single knob the Cornell cue and
+ * support styles read, so adding a color here is all it takes. */
 .cuecraft-accent-violet {
 	--cuecraft-accent: #8b5cf6;
 }
