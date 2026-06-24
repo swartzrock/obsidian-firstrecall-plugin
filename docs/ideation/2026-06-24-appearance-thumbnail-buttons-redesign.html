@@ -1,0 +1,2345 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CueCraft Appearance Thumbnail Buttons</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #edf2f0;
+      --paper: #ffffff;
+      --paper-2: #f5f7f6;
+      --ink: #242423;
+      --muted: #62605c;
+      --faint: #8c8982;
+      --line: #d5ddda;
+      --line-strong: #aebbb7;
+      --accent: #0e7c6b;
+      --accent-2: #b95f2a;
+      --focus: #1a73e8;
+      --shadow: 0 20px 70px rgba(45, 38, 27, 0.14);
+      --radius: 8px;
+      --radius-sm: 6px;
+      --slide-w: 1180px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #fbfcfb 0%, var(--bg) 62%);
+      color: var(--ink);
+      font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .deck-shell {
+      min-height: 100vh;
+    }
+
+    .deck-nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 28px;
+      border-bottom: 1px solid rgba(110, 101, 88, 0.20);
+      background: rgba(251, 252, 251, 0.88);
+      backdrop-filter: blur(16px);
+    }
+
+    .deck-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 220px;
+      font-size: 13px;
+      font-weight: 720;
+      color: var(--muted);
+    }
+
+    .brand-mark {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--accent);
+      border-radius: 6px;
+      background:
+        linear-gradient(90deg, transparent 32%, var(--accent) 32%, var(--accent) 37%, transparent 37%),
+        linear-gradient(180deg, #ffffff 0%, #e7eeeb 100%);
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+    }
+
+    .slide-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .slide-links a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 5px 10px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 680;
+    }
+
+    .slide-links a:hover,
+    .slide-links a:focus-visible {
+      color: var(--ink);
+      border-color: var(--line);
+      background: var(--paper);
+      outline: none;
+    }
+
+    .deck-actions {
+      display: flex;
+      justify-content: flex-end;
+      min-width: 220px;
+      color: var(--faint);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .slide {
+      min-height: calc(100vh - 62px);
+      padding: 46px 28px;
+      scroll-margin-top: 68px;
+    }
+
+    .slide-inner {
+      width: min(var(--slide-w), 100%);
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.82fr) minmax(520px, 1.18fr);
+      gap: 38px;
+      align-items: center;
+      min-height: calc(100vh - 160px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 780;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      max-width: 720px;
+      margin-bottom: 18px;
+      font-size: 76px;
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin-bottom: 12px;
+      font-size: 50px;
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin-bottom: 8px;
+      font-size: 21px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .lede {
+      max-width: 620px;
+      margin-bottom: 22px;
+      color: var(--muted);
+      font-size: 20px;
+      line-height: 1.42;
+    }
+
+    .small-copy {
+      max-width: 68ch;
+      color: var(--muted);
+    }
+
+    .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.76);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.62fr) minmax(560px, 1.38fr);
+      gap: 32px;
+      align-items: start;
+    }
+
+    .section-note {
+      position: sticky;
+      top: 96px;
+      padding: 22px 0;
+    }
+
+    .section-note p {
+      max-width: 36ch;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .frame {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.90);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .obsidian-window {
+      display: grid;
+      grid-template-columns: 228px minmax(0, 1fr);
+      min-height: 650px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .side-rail {
+      border-right: 1px solid var(--line);
+      background: #eef3f1;
+      padding: 22px 18px;
+    }
+
+    .side-label {
+      margin-bottom: 18px;
+      color: var(--faint);
+      font-size: 13px;
+      font-weight: 760;
+    }
+
+    .side-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      margin-bottom: 8px;
+      padding: 9px 10px;
+      border-radius: var(--radius);
+      color: var(--muted);
+      font-size: 16px;
+      font-weight: 620;
+    }
+
+    .side-item.is-active {
+      background: #dfe9e5;
+      color: var(--ink);
+    }
+
+    .side-icon {
+      width: 21px;
+      height: 21px;
+      border: 2px solid currentColor;
+      border-radius: 50%;
+      opacity: 0.72;
+    }
+
+    .settings-page {
+      padding: 28px 34px 36px;
+      background: #f8faf9;
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border: 0;
+      background: transparent;
+      color: var(--faint);
+      font-size: 26px;
+      line-height: 1;
+      cursor: default;
+    }
+
+    .settings-title {
+      margin: 0;
+      font-size: 29px;
+      line-height: 1.06;
+      letter-spacing: 0;
+    }
+
+    .settings-subtitle {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.3;
+    }
+
+    .setting-card {
+      margin-bottom: 14px;
+      padding: 18px 18px 20px;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      background: #eef3f1;
+    }
+
+    .setting-card.compact {
+      padding: 16px;
+    }
+
+    .setting-topline {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 14px;
+    }
+
+    .setting-card h3 {
+      margin-bottom: 5px;
+      font-size: 22px;
+      font-weight: 660;
+    }
+
+    .setting-card p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .choice-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .choice-grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .choice-grid.three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .choice-grid.four {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .choice-grid.five {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .thumb-choice {
+      position: relative;
+      min-width: 0;
+      padding: 8px;
+      border: 1px solid #d7d1c6;
+      border-radius: var(--radius);
+      background: #ffffff;
+      color: var(--ink);
+      text-align: left;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.9);
+      cursor: pointer;
+      transition:
+        transform 120ms ease,
+        border-color 120ms ease,
+        box-shadow 120ms ease,
+        background-color 120ms ease;
+    }
+
+    .thumb-choice:hover {
+      transform: translateY(-1px);
+      border-color: var(--line-strong);
+      box-shadow: 0 7px 22px rgba(45, 38, 27, 0.10);
+    }
+
+    .thumb-choice:focus-visible {
+      outline: 3px solid rgba(26, 115, 232, 0.32);
+      outline-offset: 2px;
+    }
+
+    .thumb-choice.is-selected {
+      border-color: var(--focus);
+      box-shadow:
+        0 0 0 2px rgba(26, 115, 232, 0.16),
+        0 7px 22px rgba(45, 38, 27, 0.12);
+    }
+
+    .thumb-choice.is-selected::after {
+      content: "Selected";
+      position: absolute;
+      right: 8px;
+      top: 8px;
+      padding: 2px 6px;
+      border-radius: 999px;
+      background: var(--focus);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    .thumb-title {
+      display: block;
+      margin-top: 8px;
+      overflow-wrap: anywhere;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 720;
+      line-height: 1.2;
+    }
+
+    .thumb-caption {
+      display: block;
+      margin: 4px auto 0;
+      max-width: 22ch;
+      color: var(--muted);
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.25;
+    }
+
+    .mini {
+      display: block;
+      position: relative;
+      width: 100%;
+      height: 92px;
+      border: 1px solid #d7d0c4;
+      border-radius: var(--radius-sm);
+      background: #f7f9f8;
+      overflow: hidden;
+    }
+
+    .mini::before,
+    .mini::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .mini .cue,
+    .mini .note,
+    .mini .line,
+    .mini .support,
+    .mini .mark,
+    .mini .badge {
+      position: absolute;
+      display: block;
+      border-radius: 999px;
+      pointer-events: none;
+    }
+
+    .mini .cue {
+      left: 9%;
+      top: 17%;
+      width: 28%;
+      height: 66%;
+      border-radius: 5px;
+      background: #e8f1ee;
+      border-left: 3px solid var(--mini-accent, #8b5cf6);
+    }
+
+    .mini .cue::before {
+      content: "";
+      position: absolute;
+      left: 16%;
+      top: 19%;
+      width: 64%;
+      height: 5px;
+      border-radius: 999px;
+      background: #343a37;
+      box-shadow:
+        0 13px 0 #89918d,
+        0 26px 0 #a9b1ad;
+    }
+
+    .mini .note {
+      left: 44%;
+      top: 17%;
+      width: 47%;
+      height: 66%;
+      border-radius: 5px;
+      background: #fff;
+      border: 1px solid #e5dfd4;
+    }
+
+    .mini .note::before {
+      content: "";
+      position: absolute;
+      left: 11%;
+      top: 21%;
+      width: 70%;
+      height: 4px;
+      border-radius: 999px;
+      background: #858f8b;
+      box-shadow:
+        0 12px 0 #c3cbc7,
+        0 24px 0 #c3cbc7,
+        0 36px 0 #d8dfdc;
+    }
+
+    .mini .line {
+      left: 49%;
+      width: 27%;
+      height: 3px;
+      background: #b4bdb9;
+      opacity: 0.72;
+    }
+
+    .mini .line.one {
+      top: 36%;
+    }
+
+    .mini .line.two {
+      top: 48%;
+      width: 24%;
+    }
+
+    .mini .line.three {
+      top: 60%;
+      width: 34%;
+    }
+
+    .mini .support {
+      left: 14%;
+      bottom: 18%;
+      width: 16%;
+      height: 6px;
+      background: color-mix(in srgb, var(--mini-accent, #8b5cf6) 56%, white);
+    }
+
+    .mini.display-classic .cue {
+      left: 8%;
+      top: 8%;
+      width: 46%;
+      height: 84%;
+      border: 1px solid #dedede;
+      border-left: 2px solid var(--mini-accent, #8b5cf6);
+      border-radius: 3px;
+      background: #f3f3f3;
+    }
+
+    .mini.display-classic .cue::before {
+      content: "Who is this study-assistant\A workflow designed for, and\A what common need connects\A students, researchers,\A professionals, and Obsidian\A users?";
+      left: 8%;
+      right: 8%;
+      top: 10%;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+      white-space: pre-line;
+      color: #5d5d5d;
+      font-size: 5.8px;
+      line-height: 1.10;
+      font-weight: 760;
+    }
+
+    .mini.display-classic .note,
+    .mini.display-classic .line {
+      display: none;
+    }
+
+    .mini.display-classic .support {
+      left: 12%;
+      bottom: 9%;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      background: none;
+    }
+
+    .mini.display-classic .support::before {
+      content: "active recall\A dense notes";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      white-space: pre-line;
+      color: color-mix(in srgb, var(--mini-accent, #8b5cf6) 78%, white);
+      font-size: 5.7px;
+      line-height: 1.08;
+      font-weight: 500;
+    }
+
+    .mini.display-classic::after {
+      left: 61%;
+      top: 8%;
+      bottom: 8%;
+      width: 1px;
+      background: #d6d6d6;
+    }
+
+    .mini.display-hook .cue {
+      left: 9%;
+      top: 18%;
+      width: 82%;
+      height: 64%;
+      border: 3px solid #657171;
+      border-radius: 11px;
+      background: linear-gradient(90deg, #8bd5d4 0%, #c7eef0 100%);
+      box-shadow: none;
+    }
+
+    .mini.display-hook .cue::before {
+      content: "Who is this study-assistant workflow de-\A signed for, and what common need con-\A nects students, researchers,\A professionals, and Obsidian users";
+      left: 7%;
+      top: 32%;
+      width: 62%;
+      height: auto;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+      white-space: pre-line;
+      color: #5c6160;
+      font-size: 6.5px;
+      line-height: 1.02;
+      font-weight: 800;
+    }
+
+    .mini.display-hook .note,
+    .mini.display-hook .line,
+    .mini.display-hook .support {
+      display: none;
+    }
+
+    .mini.display-hook::after {
+      content: "?";
+      right: 8%;
+      bottom: -12%;
+      color: rgba(92, 97, 96, 0.14);
+      font-size: 44px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .mini.style-classic .note,
+    .mini.style-classic .line,
+    .mini.style-exam .note,
+    .mini.style-exam .line,
+    .mini.style-legal .note,
+    .mini.style-legal .line,
+    .mini.style-minimal .note,
+    .mini.style-minimal .line,
+    .mini.style-handwritten .note,
+    .mini.style-handwritten .line {
+      display: none;
+    }
+
+    .mini.style-classic .cue,
+    .mini.style-exam .cue,
+    .mini.style-legal .cue,
+    .mini.style-minimal .cue,
+    .mini.style-handwritten .cue {
+      left: 7%;
+      top: 9%;
+      width: 86%;
+      height: 82%;
+      border-radius: 3px;
+    }
+
+    .mini.style-classic .cue::before,
+    .mini.style-exam .cue::before,
+    .mini.style-legal .cue::before,
+    .mini.style-minimal .cue::before,
+    .mini.style-handwritten .cue::before {
+      left: 8%;
+      right: 8%;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+      white-space: pre-line;
+    }
+
+    .mini.style-classic .support,
+    .mini.style-exam .support,
+    .mini.style-legal .support,
+    .mini.style-minimal .support,
+    .mini.style-handwritten .support {
+      left: 8%;
+      bottom: 8%;
+      width: 72%;
+      height: auto;
+      border-radius: 0;
+      background: none;
+    }
+
+    .mini.style-classic .support::before,
+    .mini.style-exam .support::before,
+    .mini.style-legal .support::before,
+    .mini.style-minimal .support::before,
+    .mini.style-handwritten .support::before {
+      content: "org knowledge\A standards/workflows";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      white-space: pre-line;
+      font-size: 6.5px;
+      line-height: 1.12;
+      font-weight: 500;
+      color: color-mix(in srgb, var(--mini-accent, #8b5cf6) 78%, white);
+    }
+
+    .mini.style-classic {
+      background: #fbfbfb;
+    }
+
+    .mini.style-classic .cue {
+      border: 1px solid #dedede;
+      border-left: 2px solid var(--mini-accent, #8b5cf6);
+      background: #f3f3f3;
+    }
+
+    .mini.style-classic .cue::before {
+      content: "How does tailoring AI with\A organizational knowledge\A upskill employees, and why\A does encoding expertise\A make them faster?";
+      top: 13%;
+      color: #5d5d5d;
+      font-size: 6.7px;
+      line-height: 1.16;
+      font-weight: 760;
+    }
+
+    .mini.style-exam .cue {
+      border: 1px solid #d8d8d8;
+      border-left: 4px solid var(--mini-accent, #8b5cf6);
+      background: #f3f3f3;
+    }
+
+    .mini.style-exam .cue::before {
+      content: "How does tailoring AI with\A organizational knowledge\A upskill employees, and why\A does encoding expertise\A make them faster?";
+      top: 26%;
+      color: #5d5d5d;
+      font-size: 6.4px;
+      line-height: 1.12;
+      font-weight: 760;
+    }
+
+    .mini.style-exam .badge {
+      left: 15%;
+      top: 16%;
+      width: 38%;
+      height: 10px;
+      border: 1px solid #d7d7d7;
+      border-radius: 3px;
+      background: transparent;
+    }
+
+    .mini.style-exam .badge::before {
+      content: "QUESTION";
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      color: #888;
+      font-size: 5.8px;
+      line-height: 1;
+      letter-spacing: 0.06em;
+    }
+
+    .mini.style-legal {
+      background:
+        repeating-linear-gradient(#f7efbb 0 13px, #e2d593 13px 14px);
+    }
+
+    .mini.style-legal::before {
+      right: 4%;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: #d98b8b;
+    }
+
+    .mini.style-legal .cue {
+      border: 0;
+      border-left: 2px solid var(--mini-accent, #8b5cf6);
+      background: rgba(255, 250, 212, 0.28);
+    }
+
+    .mini.style-legal .cue::before {
+      content: "How does tailoring AI with\A organizational knowledge\A upskill employees, and why\A does encoding expertise\A make them faster?";
+      top: 12%;
+      color: #5d5540;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 6.6px;
+      line-height: 1.10;
+      font-weight: 700;
+    }
+
+    .mini.style-legal .support::before {
+      color: #7a6c36;
+      font-family: Georgia, "Times New Roman", serif;
+      font-style: italic;
+    }
+
+    .mini.style-minimal {
+      background: #fbfbfb;
+    }
+
+    .mini.style-minimal .cue {
+      border: 0;
+      border-left: 1px solid #d6d6d6;
+      background: transparent;
+    }
+
+    .mini.style-minimal .cue::before {
+      content: "How does tailoring AI with\A organizational knowledge upskill\A employees, and why does\A encoding expertise make\A them faster?";
+      top: 15%;
+      color: #8a8a8a;
+      font-size: 6.5px;
+      line-height: 1.23;
+      font-weight: 500;
+    }
+
+    .mini.style-minimal .support::before {
+      color: #c0c0c0;
+    }
+
+    .mini.style-handwritten {
+      background: #fbfbfb;
+    }
+
+    .mini.style-handwritten .cue {
+      border: 0;
+      border-left: 2px dashed var(--mini-accent, #8b5cf6);
+      background: #f1f1f1;
+      transform: rotate(-0.6deg);
+    }
+
+    .mini.style-handwritten .cue::before {
+      content: "How does tailoring AI with\A organizational knowledge upskill\A employees, and why does encoding\A expertise make them faster?";
+      top: 14%;
+      color: #585858;
+      font-family: "Comic Sans MS", "Bradley Hand", "Segoe Print", cursive;
+      font-size: 6.7px;
+      line-height: 1.18;
+      font-weight: 800;
+      transform: rotate(-0.4deg);
+    }
+
+    .mini.style-handwritten .cue::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 18%;
+      bottom: 18%;
+      width: 0;
+      border-left: 2px dashed color-mix(in srgb, var(--mini-accent, #8b5cf6) 72%, white);
+    }
+
+    .mini.style-handwritten .support::before {
+      color: color-mix(in srgb, var(--mini-accent, #8b5cf6) 82%, white);
+      font-family: "Comic Sans MS", "Bradley Hand", "Segoe Print", cursive;
+      font-weight: 700;
+    }
+
+    .mini.width-narrow .note,
+    .mini.width-narrow .line,
+    .mini.width-medium .note,
+    .mini.width-medium .line,
+    .mini.width-wide .note,
+    .mini.width-wide .line {
+      display: none;
+    }
+
+    .mini.width-narrow .cue,
+    .mini.width-medium .cue,
+    .mini.width-wide .cue {
+      border: 1px solid #dedede;
+      border-left: 2px solid var(--mini-accent, #8b5cf6);
+      border-radius: 3px;
+      background: #f3f3f3;
+    }
+
+    .mini.width-narrow .cue::before,
+    .mini.width-medium .cue::before,
+    .mini.width-wide .cue::before {
+      left: 8%;
+      right: 8%;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+      white-space: pre-line;
+      color: #5d5d5d;
+      font-weight: 760;
+    }
+
+    .mini.width-narrow .support,
+    .mini.width-medium .support,
+    .mini.width-wide .support {
+      left: auto;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      background: none;
+    }
+
+    .mini.width-narrow .support::before,
+    .mini.width-medium .support::before,
+    .mini.width-wide .support::before {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      white-space: pre-line;
+      color: color-mix(in srgb, var(--mini-accent, #8b5cf6) 78%, white);
+      font-size: 6.4px;
+      line-height: 1.12;
+      font-weight: 500;
+    }
+
+    .mini.width-narrow .cue {
+      left: 8%;
+      top: 5%;
+      width: 58%;
+      height: 90%;
+    }
+
+    .mini.width-narrow .cue::before {
+      content: "How does tailoring AI\A with organizational\A knowledge upskill\A employees, and why\A does encoding that\A expertise into\A reusable plugins or\A agents make them\A faster and smarter?";
+      top: 9%;
+      font-size: 5.7px;
+      line-height: 1.10;
+    }
+
+    .mini.width-narrow .support {
+      left: 14%;
+      bottom: 8%;
+    }
+
+    .mini.width-narrow .support::before {
+      content: "org knowledge\A standards/workflows";
+    }
+
+    .mini.width-medium .cue {
+      left: 7%;
+      top: 8%;
+      width: 74%;
+      height: 84%;
+    }
+
+    .mini.width-medium .cue::before {
+      content: "How does tailoring AI with\A organizational knowledge\A upskill employees, and why\A does encoding expertise\A make them faster and smarter?";
+      top: 12%;
+      font-size: 6.2px;
+      line-height: 1.14;
+    }
+
+    .mini.width-medium .support {
+      left: 13%;
+      bottom: 10%;
+    }
+
+    .mini.width-medium .support::before {
+      content: "org knowledge\A standards/workflows";
+    }
+
+    .mini.width-wide .cue {
+      left: 5%;
+      top: 17%;
+      width: 90%;
+      height: 66%;
+    }
+
+    .mini.width-wide .cue::before {
+      content: "How does tailoring AI with organizational\A knowledge upskill employees, and why does\A encoding expertise make them faster?";
+      top: 14%;
+      font-size: 6.5px;
+      line-height: 1.14;
+    }
+
+    .mini.width-wide .support {
+      left: 10%;
+      bottom: 20%;
+    }
+
+    .mini.width-wide .support::before {
+      content: "org knowledge - standards/workflows -\A shippable output";
+    }
+
+    .mini.font-small .note,
+    .mini.font-small .line,
+    .mini.font-medium .note,
+    .mini.font-medium .line,
+    .mini.font-large .note,
+    .mini.font-large .line {
+      display: none;
+    }
+
+    .mini.font-small .cue,
+    .mini.font-medium .cue,
+    .mini.font-large .cue {
+      left: 7%;
+      top: 8%;
+      width: 78%;
+      height: 84%;
+      border: 1px solid #dedede;
+      border-left: 2px solid var(--mini-accent, #8b5cf6);
+      border-radius: 3px;
+      background: #f3f3f3;
+    }
+
+    .mini.font-small .cue::before,
+    .mini.font-medium .cue::before,
+    .mini.font-large .cue::before {
+      left: 8%;
+      right: 8%;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+      white-space: pre-line;
+      color: #5d5d5d;
+      font-weight: 760;
+    }
+
+    .mini.font-small .support,
+    .mini.font-medium .support,
+    .mini.font-large .support {
+      left: 13%;
+      bottom: 10%;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      background: none;
+    }
+
+    .mini.font-small .support::before,
+    .mini.font-medium .support::before,
+    .mini.font-large .support::before {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      white-space: pre-line;
+      color: color-mix(in srgb, var(--mini-accent, #8b5cf6) 78%, white);
+      font-weight: 500;
+    }
+
+    .mini.font-small .cue::before {
+      content: "How does tailoring AI with\A organizational knowledge upskill\A employees, and why does\A encoding expertise into\A reusable plugins or agents make\A them faster and smarter?";
+      top: 13%;
+      font-size: 5.7px;
+      line-height: 1.12;
+    }
+
+    .mini.font-small .support::before {
+      content: "org knowledge - standards/workflows -\A shippable output";
+      font-size: 5.3px;
+      line-height: 1.06;
+    }
+
+    .mini.font-medium .cue::before {
+      content: "How does tailoring AI with\A organizational knowledge\A upskill employees, and why\A does encoding expertise\A make them faster and smarter?";
+      top: 12%;
+      font-size: 6.5px;
+      line-height: 1.14;
+    }
+
+    .mini.font-medium .support::before {
+      content: "org knowledge\A standards/workflows\A shippable output";
+      font-size: 6.2px;
+      line-height: 1.10;
+    }
+
+    .mini.font-large .cue::before {
+      content: "How does tailoring AI with\A organizational knowledge\A upskill employees, and why\A does encoding that\A expertise into reusable\A plugins or agents make\A them faster and smarter?";
+      top: 12%;
+      font-size: 7.4px;
+      line-height: 1.08;
+    }
+
+    .mini.font-large .support::before {
+      content: "org knowledge\A standards/workflows\A shippable output";
+      font-size: 6.8px;
+      line-height: 1.08;
+    }
+
+    .mini.accent-violet {
+      --mini-accent: #8b5cf6;
+    }
+
+    .mini.accent-teal {
+      --mini-accent: #14b8a6;
+    }
+
+    .mini.accent-amber {
+      --mini-accent: #f59e0b;
+    }
+
+    .mini.accent-rose {
+      --mini-accent: #f43f5e;
+    }
+
+    .mini.border-on::after {
+      top: 16%;
+      bottom: 16%;
+      left: 43%;
+      width: 2px;
+      background: #8b857c;
+    }
+
+    .mini.border-off::after {
+      top: 16%;
+      bottom: 16%;
+      left: 43%;
+      width: 2px;
+      background: repeating-linear-gradient(180deg, #bdb6ab 0 5px, transparent 5px 10px);
+      opacity: 0.25;
+    }
+
+    .mini.accent-sample .note,
+    .mini.accent-sample .line {
+      display: none;
+    }
+
+    .mini.accent-sample .cue {
+      left: 7%;
+      top: 8%;
+      width: 78%;
+      height: 84%;
+      border: 1px solid #dedede;
+      border-left: 2px solid var(--mini-accent, #8b5cf6);
+      border-radius: 3px;
+      background: #f3f3f3;
+    }
+
+    .mini.accent-sample .cue::before {
+      content: "How does tailoring AI with\A organizational knowledge\A upskill employees, and why\A does encoding expertise\A make them faster and smarter?";
+      left: 8%;
+      right: 8%;
+      top: 12%;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      background: none;
+      box-shadow: none;
+      white-space: pre-line;
+      color: #5d5d5d;
+      font-size: 6.5px;
+      line-height: 1.14;
+      font-weight: 760;
+    }
+
+    .mini.accent-sample.accent-violet .cue::before {
+      color: #202020;
+    }
+
+    .mini.accent-sample .support {
+      left: 13%;
+      bottom: 10%;
+      width: auto;
+      height: auto;
+      border-radius: 0;
+      background: none;
+    }
+
+    .mini.accent-sample .support::before {
+      content: "org knowledge\A standards/workflows\A shippable output";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      white-space: pre-line;
+      color: var(--mini-accent, #8b5cf6);
+      font-size: 6.2px;
+      line-height: 1.10;
+      font-weight: 500;
+    }
+
+    .mini.accent-sample.border-on::after {
+      display: none;
+    }
+
+    .mini.compact-off .support {
+      width: 24%;
+      height: 7px;
+      box-shadow: 0 10px 0 rgba(139, 92, 246, 0.22);
+    }
+
+    .mini.compact-on .support {
+      width: 17%;
+      height: 4px;
+      box-shadow: 0 7px 0 rgba(139, 92, 246, 0.18), 0 14px 0 rgba(139, 92, 246, 0.14);
+    }
+
+    .control-note {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .option-mock {
+      display: grid;
+      gap: 15px;
+    }
+
+    .option-a .setting-card {
+      background: #eef3f1;
+    }
+
+    .gallery-section {
+      padding: 20px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .gallery-section:last-child {
+      border-bottom: 0;
+    }
+
+    .gallery-title-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .gallery-title-row h3 {
+      margin-bottom: 0;
+    }
+
+    .gallery-title-row span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 640;
+    }
+
+    .two-column-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 0.96fr) minmax(300px, 0.72fr);
+      min-height: 660px;
+    }
+
+    .stack-panel {
+      padding: 24px;
+      border-right: 1px solid var(--line);
+      background: #fbfcfb;
+    }
+
+    .preview-panel {
+      position: sticky;
+      top: 84px;
+      align-self: start;
+      min-height: 660px;
+      padding: 24px;
+      background: #e6eeeb;
+    }
+
+    .large-preview {
+      position: relative;
+      min-height: 480px;
+      border: 1px solid #c3cfcb;
+      border-radius: 14px;
+      background:
+        linear-gradient(90deg, rgba(14, 124, 107, 0.12) 0 30%, transparent 30%),
+        #ffffff;
+      overflow: hidden;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+    }
+
+    .large-preview .preview-title {
+      position: absolute;
+      left: 32px;
+      top: 26px;
+      right: 32px;
+      height: 17px;
+      border-radius: 999px;
+      background: #484640;
+      opacity: 0.82;
+    }
+
+    .large-preview .preview-cue {
+      position: absolute;
+      left: 30px;
+      top: 86px;
+      width: 28%;
+      height: 72px;
+      border-radius: 8px;
+      border-left: 4px solid var(--mini-accent, #8b5cf6);
+      background: #fff;
+      box-shadow: 0 104px 0 #fff, 0 208px 0 #fff;
+    }
+
+    .large-preview .preview-note {
+      position: absolute;
+      left: 43%;
+      top: 86px;
+      right: 30px;
+      height: 72px;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 104px 0 #fff, 0 208px 0 #fff;
+    }
+
+    .large-preview .preview-lines {
+      position: absolute;
+      left: 47%;
+      top: 110px;
+      width: 38%;
+      height: 6px;
+      border-radius: 999px;
+      background: #b9c3bf;
+      box-shadow:
+        0 18px 0 #d3dcda,
+        0 104px 0 #b9c3bf,
+        0 122px 0 #d3dcda,
+        0 208px 0 #b9c3bf,
+        0 226px 0 #d3dcda;
+    }
+
+    .large-preview.handwritten .preview-cue {
+      transform: rotate(-1.8deg);
+      border: 2px dashed var(--mini-accent, #8b5cf6);
+      font-family: "Comic Sans MS", "Bradley Hand", "Segoe Print", cursive;
+    }
+
+    .large-preview.handwritten .preview-cue::before {
+      content: "How do cue cards change reading?";
+      position: absolute;
+      inset: 16px 13px auto;
+      color: #5b5b58;
+      font-size: 15px;
+      font-weight: 760;
+      line-height: 1.15;
+    }
+
+    .large-preview.handwritten .preview-lines {
+      transform: rotate(0.2deg);
+    }
+
+    .matrix {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .matrix-card {
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .matrix-card h3 {
+      margin-bottom: 3px;
+    }
+
+    .matrix-card p {
+      margin-bottom: 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .dense-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .dense-grid .mini {
+      height: 68px;
+    }
+
+    .dense-grid .thumb-title {
+      font-size: 12px;
+    }
+
+    .principles {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 22px;
+    }
+
+    .principle {
+      min-height: 154px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .principle strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 15px;
+    }
+
+    .principle p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .recommendation {
+      display: grid;
+      grid-template-columns: minmax(280px, 0.78fr) minmax(520px, 1.22fr);
+      gap: 24px;
+      align-items: start;
+    }
+
+    .rank-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .rank {
+      display: grid;
+      grid-template-columns: 40px 1fr;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.86);
+    }
+
+    .rank-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 780;
+    }
+
+    .rank p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .implementation-card {
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .implementation-card ul {
+      margin: 16px 0 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    .implementation-card li + li {
+      margin-top: 8px;
+    }
+
+    .note-strip {
+      margin-top: 18px;
+      padding: 14px 16px;
+      border-left: 4px solid var(--accent);
+      border-radius: 8px;
+      background: #eaf4ef;
+      color: #315d52;
+      font-size: 14px;
+    }
+
+    @media (max-width: 980px) {
+      .deck-nav {
+        align-items: flex-start;
+        padding: 12px 16px;
+      }
+
+      .deck-actions {
+        display: none;
+      }
+
+      .slide {
+        padding: 34px 16px;
+      }
+
+      .hero,
+      .split,
+      .recommendation {
+        grid-template-columns: 1fr;
+      }
+
+      .section-note {
+        position: static;
+        padding: 0;
+      }
+
+      .obsidian-window {
+        grid-template-columns: 1fr;
+      }
+
+      .side-rail {
+        display: none;
+      }
+
+      .settings-page {
+        padding: 22px 16px 26px;
+      }
+
+      .choice-grid.five,
+      .choice-grid.four,
+      .choice-grid.three {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .two-column-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .stack-panel {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .preview-panel {
+        position: static;
+        min-height: 0;
+      }
+
+      .matrix,
+      .principles {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .deck-brand {
+        min-width: 0;
+      }
+
+      .slide-links {
+        justify-content: flex-start;
+      }
+
+      h1 {
+        font-size: 42px;
+      }
+
+      .choice-grid.two,
+      .choice-grid.three,
+      .choice-grid.four,
+      .choice-grid.five,
+      .dense-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .setting-topline,
+      .gallery-title-row {
+        display: block;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html {
+        scroll-behavior: auto;
+      }
+
+      .thumb-choice {
+        transition: none;
+      }
+
+      .thumb-choice:hover {
+        transform: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck-shell">
+    <nav class="deck-nav" aria-label="Slide navigation">
+      <div class="deck-brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Appearance thumbnails</span>
+      </div>
+      <div class="slide-links">
+        <a href="#brief">Brief</a>
+        <a href="#option-a">A: Rows</a>
+        <a href="#option-b">B: Gallery</a>
+        <a href="#option-c">C: Preview</a>
+        <a href="#option-d">D: Matrix</a>
+        <a href="#recommendation">Recommendation</a>
+      </div>
+      <div class="deck-actions">Scroll or use the links</div>
+    </nav>
+
+    <main>
+      <section class="slide" id="brief">
+        <div class="slide-inner hero">
+          <div>
+            <p class="eyebrow">CueCraft Appearance</p>
+            <h1>Make every visual setting visible before it is chosen.</h1>
+            <p class="lede">The dropdowns hide the actual effect. This redesign turns each Appearance choice into a thumbnail button: tiny Cornell scenes for display mode, style, width, font size, accent, border, and support density.</p>
+            <div class="tag-row" aria-label="Design constraints">
+              <span class="tag">Obsidian-native</span>
+              <span class="tag">No dropdowns for visual choices</span>
+              <span class="tag">Handwritten is visible upfront</span>
+              <span class="tag">Mobile-safe grids</span>
+            </div>
+          </div>
+          <div class="obsidian-window" aria-label="Thumbnail button concept mockup">
+            <aside class="side-rail" aria-hidden="true">
+              <div class="side-label">Options</div>
+              <div class="side-item"><span class="side-icon"></span>General</div>
+              <div class="side-item"><span class="side-icon"></span>Editor</div>
+              <div class="side-item"><span class="side-icon"></span>Files and links</div>
+              <div class="side-item is-active"><span class="side-icon"></span>Appearance</div>
+              <div class="side-item"><span class="side-icon"></span>Hotkeys</div>
+            </aside>
+            <div class="settings-page">
+              <div class="settings-header">
+                <button class="back" type="button" aria-label="Back" tabindex="-1">&lt;</button>
+                <div>
+                  <h2 class="settings-title">Appearance</h2>
+                  <p class="settings-subtitle">Cornell view styling, layout, cue accents, and visual density.</p>
+                </div>
+              </div>
+
+              <article class="setting-card">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Cornell view style</h3>
+                    <p>Choose by comparing a miniature note treatment.</p>
+                  </div>
+                  <span class="control-note">5 choices</span>
+                </div>
+                <div class="choice-grid five" role="group" aria-label="Cornell view style">
+                  <button class="thumb-choice" type="button">
+                    <span class="mini style-classic accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Classic</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini style-exam accent-violet" aria-hidden="true"><span class="cue"></span><span class="badge"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Exam Prep</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini style-legal accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Legal Pad</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini style-minimal accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Minimal</span>
+                  </button>
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini style-handwritten accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Handwritten</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="setting-card compact">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Cue column width</h3>
+                    <p>Show the spatial tradeoff directly.</p>
+                  </div>
+                </div>
+                <div class="choice-grid three" role="group" aria-label="Cue column width">
+                  <button class="thumb-choice" type="button">
+                    <span class="mini width-narrow accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span></span>
+                    <span class="thumb-title">Narrow</span>
+                  </button>
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini width-medium accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span></span>
+                    <span class="thumb-title">Medium</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini width-wide accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span></span>
+                    <span class="thumb-title">Wide</span>
+                  </button>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="option-a">
+        <div class="slide-inner split">
+          <div class="section-note">
+            <p class="eyebrow">Option A</p>
+            <h2>Expanded rows</h2>
+            <p>Closest to the current settings page. Each existing row keeps its label and description, but the control area becomes a thumbnail button group.</p>
+            <p class="small-copy">Best if you want a low-risk implementation path that still solves the hidden-preview problem.</p>
+          </div>
+          <div class="obsidian-window option-a">
+            <aside class="side-rail" aria-hidden="true">
+              <div class="side-label">Options</div>
+              <div class="side-item"><span class="side-icon"></span>General</div>
+              <div class="side-item"><span class="side-icon"></span>Editor</div>
+              <div class="side-item is-active"><span class="side-icon"></span>Appearance</div>
+              <div class="side-item"><span class="side-icon"></span>Hotkeys</div>
+            </aside>
+            <div class="settings-page">
+              <div class="settings-header">
+                <button class="back" type="button" aria-label="Back" tabindex="-1">&lt;</button>
+                <div>
+                  <h2 class="settings-title">Appearance</h2>
+                  <p class="settings-subtitle">Cornell view styling, layout, cue accents, and visual density.</p>
+                </div>
+              </div>
+
+              <article class="setting-card">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Cornell display mode</h3>
+                    <p>Choose the structure of the Cornell surface.</p>
+                  </div>
+                </div>
+                <div class="choice-grid two" role="group" aria-label="Cornell display mode">
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini display-classic accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Cornell</span>
+                    <span class="thumb-caption">Full cue column beside the note.</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini display-hook accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Hook rail</span>
+                    <span class="thumb-caption">Compact cards for section scanning.</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="setting-card">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Cornell view style</h3>
+                    <p>Preset changes are visual, so the picker should be visual too.</p>
+                  </div>
+                </div>
+                <div class="choice-grid five" role="group" aria-label="Cornell view style">
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini style-classic accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Classic</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini style-exam accent-violet" aria-hidden="true"><span class="cue"></span><span class="badge"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Exam Prep</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini style-legal accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Legal Pad</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini style-minimal accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Minimal</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini style-handwritten accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                    <span class="thumb-title">Handwritten</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="setting-card">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Cue column width</h3>
+                    <p>Show how much room the cue rail takes before choosing.</p>
+                  </div>
+                </div>
+                <div class="choice-grid three" role="group" aria-label="Cue column width">
+                  <button class="thumb-choice" type="button">
+                    <span class="mini width-narrow accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span></span>
+                    <span class="thumb-title">Narrow</span>
+                    <span class="thumb-caption">More space for notes.</span>
+                  </button>
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini width-medium accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span></span>
+                    <span class="thumb-title">Medium</span>
+                    <span class="thumb-caption">Balanced default.</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini width-wide accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span></span>
+                    <span class="thumb-title">Wide</span>
+                    <span class="thumb-caption">Longer cue questions.</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="setting-card">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Cue font size</h3>
+                    <p>Preview the cue text scale in the rail itself.</p>
+                  </div>
+                </div>
+                <div class="choice-grid three" role="group" aria-label="Cue font size">
+                  <button class="thumb-choice" type="button">
+                    <span class="mini font-small accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Small</span>
+                  </button>
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini font-medium accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Medium</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini font-large accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Large</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="setting-card">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Cue accent color</h3>
+                    <p>Use small Cornell thumbnails instead of plain color dots.</p>
+                  </div>
+                </div>
+                <div class="choice-grid four" role="group" aria-label="Cue accent color">
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini accent-sample accent-violet border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Violet</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini accent-sample accent-teal border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Teal</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini accent-sample accent-amber border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Amber</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini accent-sample accent-rose border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Rose</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="setting-card">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Show cue column border</h3>
+                    <p>Make the divider choice spatial instead of a switch.</p>
+                  </div>
+                </div>
+                <div class="choice-grid two" role="group" aria-label="Show cue column border">
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini border-on accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Border on</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini border-off accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Border off</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="setting-card">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Compact supports</h3>
+                    <p>Show support spacing and size as the choice itself.</p>
+                  </div>
+                </div>
+                <div class="choice-grid two" role="group" aria-label="Compact supports">
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini compact-off accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Comfort supports</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini compact-on accent-violet" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Compact supports</span>
+                  </button>
+                </div>
+              </article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="option-b">
+        <div class="slide-inner split">
+          <div class="section-note">
+            <p class="eyebrow">Option B</p>
+            <h2>Gallery sections</h2>
+            <p>Groups choices by what they affect: structure, visual skin, reading scale, and density. The page feels less like a form and more like a visual control board.</p>
+            <p class="small-copy">Best if Appearance is meant to become a polished customization destination.</p>
+          </div>
+          <div class="frame">
+            <div class="settings-page">
+              <div class="settings-header">
+                <button class="back" type="button" aria-label="Back" tabindex="-1">&lt;</button>
+                <div>
+                  <h2 class="settings-title">Appearance</h2>
+                  <p class="settings-subtitle">Pick a Cornell surface by sight.</p>
+                </div>
+              </div>
+            </div>
+
+            <section class="gallery-section" aria-label="Structure">
+              <div class="gallery-title-row">
+                <h3>Structure</h3>
+                <span>Mode and cue rail width</span>
+              </div>
+              <div class="choice-grid two" role="group" aria-label="Structure choices">
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini display-classic accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                  <span class="thumb-title">Cornell</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini display-hook accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                  <span class="thumb-title">Hook rail</span>
+                </button>
+              </div>
+              <div class="choice-grid three" role="group" aria-label="Cue width choices" style="margin-top: 12px;">
+                <button class="thumb-choice" type="button">
+                  <span class="mini width-narrow accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span></span>
+                  <span class="thumb-title">Narrow width</span>
+                </button>
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini width-medium accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span></span>
+                  <span class="thumb-title">Medium width</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini width-wide accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span></span>
+                  <span class="thumb-title">Wide width</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="gallery-section" aria-label="Style">
+              <div class="gallery-title-row">
+                <h3>Style</h3>
+                <span>Handwritten is visible without opening a menu</span>
+              </div>
+              <div class="choice-grid five" role="group" aria-label="Style choices">
+                <button class="thumb-choice" type="button">
+                  <span class="mini style-classic accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                  <span class="thumb-title">Classic</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini style-exam accent-teal" aria-hidden="true"><span class="cue"></span><span class="badge"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                  <span class="thumb-title">Exam Prep</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini style-legal accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                  <span class="thumb-title">Legal Pad</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini style-minimal accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                  <span class="thumb-title">Minimal</span>
+                </button>
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini style-handwritten accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="line two"></span><span class="support"></span></span>
+                  <span class="thumb-title">Handwritten</span>
+                </button>
+              </div>
+            </section>
+
+            <section class="gallery-section" aria-label="Reading comfort">
+              <div class="gallery-title-row">
+                <h3>Reading comfort</h3>
+                <span>Font, border, and supports</span>
+              </div>
+              <div class="choice-grid three" role="group" aria-label="Cue font size">
+                <button class="thumb-choice" type="button">
+                  <span class="mini font-small accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                  <span class="thumb-title">Small text</span>
+                </button>
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini font-medium accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                  <span class="thumb-title">Medium text</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini font-large accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                  <span class="thumb-title">Large text</span>
+                </button>
+              </div>
+              <div class="choice-grid four" role="group" aria-label="Density and border choices" style="margin-top: 12px;">
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini border-on accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                  <span class="thumb-title">Border on</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini border-off accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                  <span class="thumb-title">Border off</span>
+                </button>
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini compact-off accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                  <span class="thumb-title">Comfort supports</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini compact-on accent-teal" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                  <span class="thumb-title">Compact supports</span>
+                </button>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="option-c">
+        <div class="slide-inner split">
+          <div class="section-note">
+            <p class="eyebrow">Option C</p>
+            <h2>Picker plus live preview</h2>
+            <p>Thumbnails remain the primary controls, while a pinned preview on the right shows the cumulative effect. This helps users understand combinations, not just isolated options.</p>
+            <p class="small-copy">Best if live re-rendering open Cornell views is not enough because settings may be used when no note is open.</p>
+          </div>
+          <div class="frame two-column-layout">
+            <div class="stack-panel">
+              <div class="settings-header">
+                <button class="back" type="button" aria-label="Back" tabindex="-1">&lt;</button>
+                <div>
+                  <h2 class="settings-title">Appearance</h2>
+                  <p class="settings-subtitle">Adjust the view and watch the sample change.</p>
+                </div>
+              </div>
+
+              <article class="setting-card compact">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Style</h3>
+                    <p>The selected style drives the sample.</p>
+                  </div>
+                </div>
+                <div class="choice-grid three" role="group" aria-label="Style choices">
+                  <button class="thumb-choice" type="button">
+                    <span class="mini style-classic accent-rose" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Classic</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini style-legal accent-rose" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Legal Pad</span>
+                  </button>
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini style-handwritten accent-rose" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Handwritten</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="setting-card compact">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Accent</h3>
+                    <p>Thumbnail buttons show where the color appears.</p>
+                  </div>
+                </div>
+                <div class="choice-grid four" role="group" aria-label="Accent choices">
+                  <button class="thumb-choice" type="button">
+                    <span class="mini accent-sample accent-violet border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Violet</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini accent-sample accent-teal border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Teal</span>
+                  </button>
+                  <button class="thumb-choice" type="button">
+                    <span class="mini accent-sample accent-amber border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Amber</span>
+                  </button>
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini accent-sample accent-rose border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Rose</span>
+                  </button>
+                </div>
+              </article>
+
+              <article class="setting-card compact">
+                <div class="setting-topline">
+                  <div>
+                    <h3>Density</h3>
+                    <p>Two-state settings become paired visual buttons.</p>
+                  </div>
+                </div>
+                <div class="choice-grid two" role="group" aria-label="Support density">
+                  <button class="thumb-choice" type="button">
+                    <span class="mini compact-off accent-rose" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Comfort supports</span>
+                  </button>
+                  <button class="thumb-choice is-selected" type="button">
+                    <span class="mini compact-on accent-rose" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span><span class="support"></span></span>
+                    <span class="thumb-title">Compact supports</span>
+                  </button>
+                </div>
+              </article>
+            </div>
+            <aside class="preview-panel" aria-label="Sample preview">
+              <h3>Sample note preview</h3>
+              <p class="small-copy">The large sample makes handwritten obvious without requiring a real note to be open.</p>
+              <div class="large-preview handwritten accent-rose">
+                <span class="preview-title"></span>
+                <span class="preview-cue"></span>
+                <span class="preview-note"></span>
+                <span class="preview-lines"></span>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="option-d">
+        <div class="slide-inner split">
+          <div class="section-note">
+            <p class="eyebrow">Option D</p>
+            <h2>Compact matrix</h2>
+            <p>Four concise blocks fit all Appearance controls above the fold on wide settings panes. This is the densest option, but still avoids hidden dropdown choices.</p>
+            <p class="small-copy">Best if the plugin should remain very close to Obsidian's compact preferences feel.</p>
+          </div>
+          <div class="matrix">
+            <article class="matrix-card">
+              <h3>Display</h3>
+              <p>Mode and width.</p>
+              <div class="dense-grid" role="group" aria-label="Display choices">
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini display-classic accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span></span>
+                  <span class="thumb-title">Cornell</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini display-hook accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span></span>
+                  <span class="thumb-title">Hook rail</span>
+                </button>
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini width-medium accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span></span>
+                  <span class="thumb-title">Medium width</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="matrix-card">
+              <h3>Style</h3>
+              <p>Five presets as small scenes.</p>
+              <div class="dense-grid" role="group" aria-label="Style choices">
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini style-classic accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span></span>
+                  <span class="thumb-title">Classic</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini style-exam accent-amber" aria-hidden="true"><span class="cue"></span><span class="badge"></span><span class="note"></span><span class="line one"></span></span>
+                  <span class="thumb-title">Exam Prep</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini style-legal accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span></span>
+                  <span class="thumb-title">Legal Pad</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini style-minimal accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span></span>
+                  <span class="thumb-title">Minimal</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini style-handwritten accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="line one"></span></span>
+                  <span class="thumb-title">Handwritten</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="matrix-card">
+              <h3>Scale</h3>
+              <p>Text size and support density.</p>
+              <div class="dense-grid" role="group" aria-label="Scale choices">
+                <button class="thumb-choice" type="button">
+                  <span class="mini font-small accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Small</span>
+                </button>
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini font-medium accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Medium</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini font-large accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Large</span>
+                </button>
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini compact-off accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Comfort</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini compact-on accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Compact</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="matrix-card">
+              <h3>Accent and border</h3>
+              <p>Color and column separation.</p>
+              <div class="dense-grid" role="group" aria-label="Accent and border choices">
+                <button class="thumb-choice" type="button">
+                  <span class="mini accent-sample accent-violet border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Violet</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini accent-sample accent-teal border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Teal</span>
+                </button>
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini accent-sample accent-amber border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Amber</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini accent-sample accent-rose border-on" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Rose</span>
+                </button>
+                <button class="thumb-choice is-selected" type="button">
+                  <span class="mini border-on accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Border on</span>
+                </button>
+                <button class="thumb-choice" type="button">
+                  <span class="mini border-off accent-amber" aria-hidden="true"><span class="cue"></span><span class="note"></span><span class="support"></span></span>
+                  <span class="thumb-title">Border off</span>
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="slide" id="recommendation">
+        <div class="slide-inner recommendation">
+          <div>
+            <p class="eyebrow">Recommendation</p>
+            <h2>Ship Option A first, keep Option C as the north star.</h2>
+            <p class="lede">Expanded rows preserve CueCraft's current settings architecture while making every visual choice inspectable. The live preview companion is the richer follow-up once the thumbnail component proves itself.</p>
+
+            <div class="rank-list">
+              <div class="rank">
+                <span class="rank-num">1</span>
+                <div>
+                  <strong>Option A: Expanded rows</strong>
+                  <p>Lowest implementation risk, clearest migration from dropdowns, strong enough to fix handwritten discoverability.</p>
+                </div>
+              </div>
+              <div class="rank">
+                <span class="rank-num">2</span>
+                <div>
+                  <strong>Option C: Picker plus live preview</strong>
+                  <p>Best long-term user confidence because combinations become visible, but it needs more layout and state work.</p>
+                </div>
+              </div>
+              <div class="rank">
+                <span class="rank-num">3</span>
+                <div>
+                  <strong>Option B or D</strong>
+                  <p>Good alternates depending on whether you want a gallery destination or a compact Obsidian-like preference pane.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="implementation-card">
+              <h3>Implementation notes</h3>
+              <p class="small-copy">Use one reusable thumbnail-button renderer for each option list. Keep the option arrays as the single source of truth and attach a small preview kind to each item.</p>
+              <ul>
+                <li>Replace dropdowns in Appearance with button groups using <code>aria-pressed</code> and visible focus states.</li>
+                <li>Convert toggles into paired thumbnail buttons: <code>Border on/off</code> and <code>Comfort/Compact supports</code>.</li>
+                <li>Keep accent buttons as thumbnails that show cue rail and support tint, not just colored circles.</li>
+                <li>Make Handwritten a normal style thumbnail with dashed border, rotated cue card, and handwriting-like strokes.</li>
+                <li>Use existing Obsidian variables in production CSS, while keeping the abstract renderings small and stable.</li>
+              </ul>
+            </div>
+
+            <div class="principles">
+              <div class="principle">
+                <strong>Comparable, not literal</strong>
+                <p>The thumbnail should show the difference clearly, not reproduce a full note.</p>
+              </div>
+              <div class="principle">
+                <strong>One click per choice</strong>
+                <p>No dropdown discovery step for visual options.</p>
+              </div>
+              <div class="principle">
+                <strong>Stable on mobile</strong>
+                <p>Buttons stack cleanly and labels wrap instead of shrinking unpredictably.</p>
+              </div>
+            </div>
+
+            <div class="note-strip">
+              The important behavior change: Handwritten stops being a hidden dropdown value and becomes a visible style card users can recognize before selecting it.
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const groups = document.querySelectorAll('[role="group"]');
+
+    groups.forEach((group) => {
+      const choices = Array.from(group.querySelectorAll('.thumb-choice'));
+      choices.forEach((choice) => {
+        choice.setAttribute('aria-pressed', choice.classList.contains('is-selected') ? 'true' : 'false');
+        choice.addEventListener('click', () => {
+          const allowMultiple = group.getAttribute('aria-label')?.toLowerCase().includes('density and border');
+          if (!allowMultiple) {
+            choices.forEach((item) => {
+              item.classList.remove('is-selected');
+              item.setAttribute('aria-pressed', 'false');
+            });
+          }
+          if (allowMultiple) {
+            choice.classList.toggle('is-selected');
+          } else {
+            choice.classList.add('is-selected');
+          }
+          choice.setAttribute('aria-pressed', choice.classList.contains('is-selected') ? 'true' : 'false');
+        });
+      });
+    });
+  </script>
+</body>
+</html>
