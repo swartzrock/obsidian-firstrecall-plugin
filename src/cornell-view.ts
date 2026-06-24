@@ -490,10 +490,21 @@ export class CornellView extends ItemView {
 		});
 		if (this.plugin.settings.generateKeywords && supports.terms.length) {
 			const kw = cue.createEl("div", { cls: "cuecraft-cornell-kw" });
-			kw.createEl("span", {
+			const supportText = kw.createEl("span", {
 				cls: "cuecraft-cornell-support-text",
-				text: supports.terms.join(" \u00b7 "),
 			});
+			for (const [index, term] of supports.terms.entries()) {
+				supportText.createEl("span", {
+					cls: "cuecraft-cornell-support-term",
+					text: term,
+				});
+				if (index < supports.terms.length - 1) {
+					supportText.createEl("span", {
+						cls: "cuecraft-cornell-support-separator",
+						text: "\u00b7",
+					});
+				}
+			}
 		}
 
 		// In Study Mode, clicking a cue toggles the note-side answer reveal.

@@ -705,9 +705,17 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-cornell-support-text {
+	display: inline-flex;
+	flex-wrap: wrap;
+	column-gap: 0.35em;
+	row-gap: 0.05em;
 	font-size: var(--font-ui-smaller, var(--font-small));
 	color: var(--text-muted);
 	text-wrap: pretty;
+}
+
+.cuecraft-cornell-support-separator {
+	opacity: 0.7;
 }
 
 /* Appearance toggles from Settings. */
@@ -721,7 +729,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-cornell-compact-chips .cuecraft-cornell-support-text {
+	column-gap: 0.2em;
+	row-gap: 0;
 	font-size: var(--font-smallest);
+	line-height: 1.2;
 }
 
 .cuecraft-cornell-no-border .cuecraft-cornell-cuecell {

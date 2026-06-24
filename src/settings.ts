@@ -1142,9 +1142,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					async (value) => {
 						this.plugin.settings.cornellDisplayMode =
 							value as CornellDisplayMode;
-						await this.plugin.saveSettings();
-						this.plugin.refreshCornellViews();
-						displaySetting.setDesc(displayDesc());
+						await this.saveAppearanceChange(() =>
+							displaySetting.setDesc(displayDesc())
+						);
 					}
 				);
 			});
@@ -1160,9 +1160,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				dd.setValue(this.plugin.settings.cornellStyle).onChange(
 					async (value) => {
 						this.plugin.settings.cornellStyle = value as CornellStyle;
-						await this.plugin.saveSettings();
-						this.plugin.refreshCornellViews();
-						styleSetting.setDesc(styleDesc());
+						await this.saveAppearanceChange(() =>
+							styleSetting.setDesc(styleDesc())
+						);
 					}
 				);
 			});
@@ -1179,9 +1179,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					async (value) => {
 						this.plugin.settings.cueColumnWidth =
 							value as CueColumnWidth;
-						await this.plugin.saveSettings();
-						this.plugin.refreshCornellViews();
-						widthSetting.setDesc(widthDesc());
+						await this.saveAppearanceChange(() =>
+							widthSetting.setDesc(widthDesc())
+						);
 					}
 				);
 			});
@@ -1198,9 +1198,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				dd.setValue(this.plugin.settings.cueFontSize).onChange(
 					async (value) => {
 						this.plugin.settings.cueFontSize = value as CueFontSize;
-						await this.plugin.saveSettings();
-						this.plugin.refreshCornellViews();
-						fontSetting.setDesc(fontDesc());
+						await this.saveAppearanceChange(() =>
+							fontSetting.setDesc(fontDesc())
+						);
 					}
 				);
 			});
@@ -1219,7 +1219,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showCueBorder)
 					.onChange(async (value) => {
 						this.plugin.settings.showCueBorder = value;
-						await this.plugin.saveSettings();
+						await this.saveAppearanceChange();
 					})
 			);
 
@@ -1231,9 +1231,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.compactChips)
 					.onChange(async (value) => {
 						this.plugin.settings.compactChips = value;
-						await this.plugin.saveSettings();
+						await this.saveAppearanceChange();
 					})
 			);
+	}
+
+	private async saveAppearanceChange(afterSave?: () => void): Promise<void> {
+		await this.plugin.saveSettings();
+		this.plugin.refreshCornellViews();
+		afterSave?.();
 	}
 
 	// ── Study Mode ────────────────────────────────────────────────────────
@@ -1286,8 +1292,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						if (selected) btn.addClass("is-selected");
 						this.plugin.registerDomEvent(btn, "click", async () => {
 							this.plugin.settings.cueAccent = accent.id;
-							await this.plugin.saveSettings();
-							this.plugin.refreshCornellViews();
+							await this.saveAppearanceChange();
 							paint();
 						});
 					}
