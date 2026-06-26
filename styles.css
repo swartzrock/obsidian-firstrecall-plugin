@@ -1137,13 +1137,19 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	}
 
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
-		padding-inline-end: 1rem;
+		flex: 0 0 0;
+		width: 0;
+		min-width: 0;
+		padding-inline-end: 0;
+		overflow: visible;
 	}
 
 	.markdown-source-view.mod-cm6
 		.cuecraft-editor-hook-gutter
 		.cm-gutterElement {
-		min-width: min(18rem, 30vw);
+		width: 0;
+		min-width: 0;
+		overflow: visible;
 	}
 
 	.markdown-source-view.mod-cm6
@@ -1151,6 +1157,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		.cuecraft-editor-hook {
 		margin: 0.35em 0 0.75em;
 		max-width: none;
+		transform: translateX(calc(-100% - 1.5rem));
 	}
 
 	.markdown-source-view.mod-cm6
