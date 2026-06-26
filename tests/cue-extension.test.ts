@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { JSDOM } from "jsdom";
-import { buildCueLineData, renderCueElement } from "../src/cue-extension";
+import { EditorState } from "@codemirror/state";
+import {
+	buildCueGutterMarkers,
+	buildCueLineData,
+	buildCueWidgetDecorations,
+	renderCueElement,
+} from "../src/cue-extension";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
@@ -337,5 +343,68 @@ describe("renderCueElement", () => {
 			);
 			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
 		});
+	});
+});
+
+describe("cue editor placement", () => {
+	const cues = [
+		{
+			line: 1,
+			heading: "A",
+			question: "What is A?",
+			keywords: ["alpha"],
+			confidence: "high" as const,
+			error: null,
+		},
+		{
+			line: 3,
+			heading: "B",
+			question: "What is B?",
+			keywords: ["beta"],
+			confidence: "medium" as const,
+			error: null,
+		},
+	];
+
+	it("renders hook displays into left-gutter markers", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const markers = buildCueGutterMarkers(state, {
+			cues,
+			display: "anchored-card-rail",
+		});
+		const positions: number[] = [];
+		markers.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([
+			state.doc.line(1).from,
+			state.doc.line(3).from,
+		]);
+	});
+
+	it("keeps inline cues out of the left gutter", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const markers = buildCueGutterMarkers(state, {
+			cues,
+			display: "inline-cues",
+		});
+		const positions: number[] = [];
+		markers.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([]);
+	});
+
+	it("keeps block widgets available as the narrow-pane fallback", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const widgets = buildCueWidgetDecorations(state, {
+			cues,
+			display: "anchored-card-rail",
+		});
+		const positions: number[] = [];
+		widgets.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([state.doc.line(1).to, state.doc.line(3).to]);
 	});
 });

@@ -784,6 +784,18 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	user-select: text;
 }
 
+.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
+	background: transparent;
+	border-inline-end: 0;
+}
+
+.markdown-source-view.mod-cm6
+	.cuecraft-editor-hook-gutter
+	.cm-gutterElement {
+	padding: 0;
+	overflow: visible;
+}
+
 .cuecraft-editor-hook-anchored-card-rail {
 	position: relative;
 	max-width: min(22rem, 100%);
@@ -1120,19 +1132,82 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 @media (min-width: 980px) {
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-anchored-card-rail,
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-collapsed-tabs,
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-threaded-margin-notes,
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-active-section-composer,
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-hook-minimap {
-		float: left;
-		clear: left;
-		margin-inline-start: calc(-1 * min(19rem, 32vw));
-		margin-inline-end: 1rem;
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-inline-fallback {
+		display: none;
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-anchored-card-rail {
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
+		padding-inline-end: 1rem;
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cm-gutterElement {
+		min-width: min(18rem, 30vw);
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook {
+		margin: 0.35em 0 0.75em;
+		max-width: none;
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-anchored-card-rail,
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-active-section-composer {
 		width: min(18rem, 30vw);
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-threaded-margin-notes {
+		width: min(17rem, 28vw);
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-collapsed-tabs[data-state="current"],
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-collapsed-tabs:hover,
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-collapsed-tabs:focus-visible {
+		width: min(18rem, 30vw);
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-hook-minimap
+		.cuecraft-editor-hook-title {
+		inset-inline-start: auto;
+		inset-inline-end: calc(100% + 0.55rem);
+		transform: translateX(0.25rem);
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-hook-minimap[data-state="current"]
+		.cuecraft-editor-hook-title,
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-hook-minimap:hover
+		.cuecraft-editor-hook-title,
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-hook-minimap:focus-visible
+		.cuecraft-editor-hook-title {
+		transform: translateX(0);
+	}
+}
+
+@media (max-width: 979.98px) {
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
+		display: none;
 	}
 }
 

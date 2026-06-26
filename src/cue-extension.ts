@@ -1,6 +1,17 @@
-import { StateEffect, StateField } from "@codemirror/state";
+import {
+	RangeSet,
+	RangeSetBuilder,
+	StateEffect,
+	StateField,
+} from "@codemirror/state";
 import type { EditorState, Range } from "@codemirror/state";
-import { Decoration, EditorView, WidgetType } from "@codemirror/view";
+import {
+	Decoration,
+	EditorView,
+	GutterMarker,
+	WidgetType,
+	gutter,
+} from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
 import type { NoteCache } from "./cache";
 import { buildEditorHookCard, type EditorHookCard } from "./editor-hook-rail";
@@ -89,11 +100,41 @@ class CueWidget extends WidgetType {
 	}
 
 	toDOM(): HTMLElement {
-		return renderCueElement(this.cue, this.display, this.index);
+		const element = renderCueElement(this.cue, this.display, this.index);
+		if (this.display !== "inline-cues") {
+			element.classList.add("cuecraft-editor-hook-inline-fallback");
+		}
+		return element;
 	}
 
 	ignoreEvent(): boolean {
 		return false;
+	}
+}
+
+class CueGutterMarker extends GutterMarker {
+	constructor(
+		private readonly cue: CueLineData,
+		private readonly display: EditorCueDisplay,
+		private readonly index: number
+	) {
+		super();
+	}
+
+	eq(other: GutterMarker): boolean {
+		return (
+			other instanceof CueGutterMarker &&
+			other.display === this.display &&
+			other.index === this.index &&
+			other.cue.question === this.cue.question &&
+			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
+			other.cue.confidence === this.cue.confidence &&
+			other.cue.error === this.cue.error
+		);
+	}
+
+	toDOM(): HTMLElement {
+		return renderCueElement(this.cue, this.display, this.index);
 	}
 }
 
@@ -190,7 +231,9 @@ function cueDocument(): Document {
 /** Replace all cues currently rendered in the editor. */
 export const setCuesEffect = StateEffect.define<CueEditorRenderState>();
 
-function buildDecorations(
+const emptyCueGutterMarkers = RangeSet.of<GutterMarker>([]);
+
+export function buildCueWidgetDecorations(
 	state: EditorState,
 	payload: CueEditorRenderState
 ): DecorationSet {
@@ -211,6 +254,26 @@ function buildDecorations(
 	return Decoration.set(ranges, true);
 }
 
+export function buildCueGutterMarkers(
+	state: EditorState,
+	payload: CueEditorRenderState
+): RangeSet<GutterMarker> {
+	if (payload.display === "inline-cues") return emptyCueGutterMarkers;
+
+	const builder = new RangeSetBuilder<GutterMarker>();
+	const doc = state.doc;
+	for (const [index, cue] of payload.cues.entries()) {
+		if (cue.line < 1 || cue.line > doc.lines) continue;
+		const headingLine = doc.line(cue.line);
+		builder.add(
+			headingLine.from,
+			headingLine.from,
+			new CueGutterMarker(cue, payload.display, index)
+		);
+	}
+	return builder.finish();
+}
+
 export const cueField = StateField.define<DecorationSet>({
 	create() {
 		return Decoration.none;
@@ -220,7 +283,7 @@ export const cueField = StateField.define<DecorationSet>({
 		for (const effect of tr.effects) {
 			if (effect.is(setCuesEffect)) {
 				// `tr.state` reflects the post-change doc for placement.
-				next = buildDecorations(tr.state, effect.value);
+				next = buildCueWidgetDecorations(tr.state, effect.value);
 			}
 		}
 		return next;
@@ -228,5 +291,25 @@ export const cueField = StateField.define<DecorationSet>({
 	provide: (f) => EditorView.decorations.from(f),
 });
 
+export const cueGutterField = StateField.define<RangeSet<GutterMarker>>({
+	create() {
+		return emptyCueGutterMarkers;
+	},
+	update(markers, tr) {
+		let next = markers.map(tr.changes);
+		for (const effect of tr.effects) {
+			if (effect.is(setCuesEffect)) {
+				next = buildCueGutterMarkers(tr.state, effect.value);
+			}
+		}
+		return next;
+	},
+});
+
+const cueGutter = gutter({
+	class: "cuecraft-editor-hook-gutter",
+	markers: (view) => view.state.field(cueGutterField),
+});
+
 /** Editor extension that renders CueCraft cues. Register via registerEditorExtension. */
-export const cueEditorExtension = [cueField];
+export const cueEditorExtension = [cueField, cueGutterField, cueGutter];
