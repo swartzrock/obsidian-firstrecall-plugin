@@ -112,7 +112,7 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 }
 
 const SAMPLE_QUESTION =
-	"How does tailoring AI with organizational knowledge upskill employees, and why does encoding that expertise into reusable plugins or agents make them faster and smarter?";
+	"How does org-trained AI help upskill employees and improve agent reusability?";
 
 const SAMPLE_SUPPORTS = [
 	"org knowledge",
