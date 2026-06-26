@@ -865,13 +865,75 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		);
 }
 
+.cuecraft-editor-hook-collapsed-tabs {
+	width: 2.65rem;
+	min-height: 3.4rem;
+	margin: 0.35em 0 0.55em;
+	padding: 0.55em 0.5em;
+	overflow: hidden;
+	border-inline-start: 6px solid var(--interactive-accent);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	box-shadow: inset 0 0 0 1px var(--background-modifier-border);
+	transition:
+		width 140ms ease,
+		background-color 140ms ease,
+		box-shadow 140ms ease;
+}
+
+.cuecraft-editor-hook-collapsed-tabs[data-tone="warm"] {
+	border-inline-start-color: var(--color-orange);
+}
+
+.cuecraft-editor-hook-collapsed-tabs[data-tone="cool"] {
+	border-inline-start-color: var(--color-cyan);
+}
+
+.cuecraft-editor-hook-collapsed-tabs .cuecraft-editor-hook-heading,
+.cuecraft-editor-hook-collapsed-tabs .cuecraft-editor-hook-keywords,
+.cuecraft-editor-hook-collapsed-tabs .cuecraft-editor-hook-status {
+	display: none;
+}
+
+.cuecraft-editor-hook-collapsed-tabs .cuecraft-editor-hook-title {
+	width: 16rem;
+	max-width: calc(100vw - 8rem);
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 120ms ease;
+}
+
+.cuecraft-editor-hook-collapsed-tabs[data-state="current"],
+.cuecraft-editor-hook-collapsed-tabs:hover,
+.cuecraft-editor-hook-collapsed-tabs:focus-visible {
+	width: min(19rem, 100%);
+	background: color-mix(
+		in srgb,
+		var(--background-secondary) 82%,
+		var(--interactive-accent)
+	);
+	box-shadow: inset 0 0 0 1px var(--background-modifier-border), var(--shadow-s);
+	outline: none;
+}
+
+.cuecraft-editor-hook-collapsed-tabs[data-state="current"] .cuecraft-editor-hook-title,
+.cuecraft-editor-hook-collapsed-tabs:hover .cuecraft-editor-hook-title,
+.cuecraft-editor-hook-collapsed-tabs:focus-visible .cuecraft-editor-hook-title {
+	opacity: 1;
+	pointer-events: auto;
+}
+
 @media (min-width: 980px) {
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-anchored-card-rail {
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-anchored-card-rail,
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-collapsed-tabs {
 		float: left;
 		clear: left;
-		width: min(18rem, 30vw);
 		margin-inline-start: calc(-1 * min(19rem, 32vw));
 		margin-inline-end: 1rem;
+	}
+
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-anchored-card-rail {
+		width: min(18rem, 30vw);
 	}
 }
 

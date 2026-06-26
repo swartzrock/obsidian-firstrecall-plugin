@@ -143,7 +143,10 @@ function renderInlineCueElement(cue: CueLineData): HTMLElement {
 function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	const root = document.createElement("div");
 	root.className = `cuecraft-editor-hook cuecraft-editor-hook-${card.display}`;
+	root.tabIndex = 0;
+	root.setAttribute("role", "note");
 	root.dataset.display = card.display;
+	root.dataset.state = card.state;
 	root.dataset.titleDensity = card.titleDensity;
 	root.dataset.tone = card.tone;
 	if (card.confidence) root.dataset.confidence = card.confidence;

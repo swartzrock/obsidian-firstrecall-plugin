@@ -1,4 +1,7 @@
-export type EditorCueDisplay = "inline-cues" | "anchored-card-rail";
+export type EditorCueDisplay =
+	| "inline-cues"
+	| "anchored-card-rail"
+	| "collapsed-tabs";
 
 export interface EditorCueDisplayOption {
 	id: EditorCueDisplay;
@@ -18,6 +21,11 @@ export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
 		id: "anchored-card-rail",
 		label: "Anchored card rail",
 		description: "Show colorful hook cards beside their editor sections.",
+	},
+	{
+		id: "collapsed-tabs",
+		label: "Collapsed color tabs",
+		description: "Show compact cue tabs with one expanded hook peek.",
 	},
 ];
 
