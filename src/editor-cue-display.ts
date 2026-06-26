@@ -3,7 +3,8 @@ export type EditorCueDisplay =
 	| "anchored-card-rail"
 	| "collapsed-tabs"
 	| "threaded-margin-notes"
-	| "active-section-composer";
+	| "active-section-composer"
+	| "hook-minimap";
 
 export interface EditorCueDisplayOption {
 	id: EditorCueDisplay;
@@ -38,6 +39,11 @@ export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
 		id: "active-section-composer",
 		label: "Active-section composer",
 		description: "Emphasize the current section's hook while keeping others nearby.",
+	},
+	{
+		id: "hook-minimap",
+		label: "Hook minimap",
+		description: "Show a compact section overview with a focused hook popout.",
 	},
 ];
 

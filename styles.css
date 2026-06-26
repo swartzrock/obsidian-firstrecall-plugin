@@ -1047,11 +1047,84 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	box-shadow: inset 4px 0 0 var(--color-red);
 }
 
+.cuecraft-editor-hook-hook-minimap {
+	position: relative;
+	width: 3.15rem;
+	min-height: 2.7rem;
+	margin: 0.25em 0 0.5em;
+	padding: 0.45em;
+	overflow: visible;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+	box-shadow: inset 0 0 0 2px
+		color-mix(in srgb, var(--interactive-accent) 18%, transparent);
+}
+
+.cuecraft-editor-hook-hook-minimap::before {
+	content: attr(data-line);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 1.8rem;
+	border-radius: var(--radius-s);
+	background: color-mix(
+		in srgb,
+		var(--interactive-accent) 22%,
+		var(--background-primary)
+	);
+	color: var(--text-muted);
+	font-size: var(--font-smallest);
+	font-weight: var(--font-semibold);
+}
+
+.cuecraft-editor-hook-hook-minimap .cuecraft-editor-hook-heading,
+.cuecraft-editor-hook-hook-minimap .cuecraft-editor-hook-keywords,
+.cuecraft-editor-hook-hook-minimap .cuecraft-editor-hook-status {
+	display: none;
+}
+
+.cuecraft-editor-hook-hook-minimap .cuecraft-editor-hook-title {
+	position: absolute;
+	z-index: 2;
+	inset-block-start: 0;
+	inset-inline-start: calc(100% + 0.55rem);
+	width: min(18rem, calc(100vw - 9rem));
+	padding: 0.55em 0.7em;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	box-shadow: var(--shadow-s);
+	opacity: 0;
+	pointer-events: none;
+	transform: translateX(-0.25rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+}
+
+.cuecraft-editor-hook-hook-minimap[data-state="current"]::before,
+.cuecraft-editor-hook-hook-minimap:hover::before,
+.cuecraft-editor-hook-hook-minimap:focus-visible::before {
+	background: var(--interactive-accent);
+	color: var(--text-on-accent);
+}
+
+.cuecraft-editor-hook-hook-minimap[data-state="current"] .cuecraft-editor-hook-title,
+.cuecraft-editor-hook-hook-minimap:hover .cuecraft-editor-hook-title,
+.cuecraft-editor-hook-hook-minimap:focus-visible .cuecraft-editor-hook-title {
+	opacity: 1;
+	pointer-events: auto;
+	transform: translateX(0);
+}
+
 @media (min-width: 980px) {
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-anchored-card-rail,
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-collapsed-tabs,
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-threaded-margin-notes,
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-active-section-composer {
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-active-section-composer,
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-hook-minimap {
 		float: left;
 		clear: left;
 		margin-inline-start: calc(-1 * min(19rem, 32vw));
