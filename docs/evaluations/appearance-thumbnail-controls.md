@@ -8,9 +8,9 @@ Use this checklist when reviewing the Appearance thumbnail-button redesign insid
 
 ## Checklist
 
-- Light theme: Cornell display mode, style, width, font size, and accent groups render without clipped labels, clipped selected badges, or overlapping previews.
+- Light theme: Cornell display mode, style, width, font size, and accent groups render without clipped labels, clipped selected borders, or overlapping previews.
 - Dark theme: all preview cards keep readable text, visible borders, and clear accent tint.
-- Narrow pane under 700px: each thumbnail group stacks to one column and the longest labels remain inside their buttons.
+- Narrow pane under 700px: thumbnail groups keep multiple columns when space allows and the longest labels remain inside their buttons.
 - Display mode: Cornell preview resembles a pale left-rail cue card; Hook rail preview resembles a rounded teal hook card.
 - Style: Classic, Exam Prep, Legal Pad, Minimal, and Handwritten are visually distinct before selection.
 - Width and font size: Narrow/Medium/Wide and Small/Medium/Large show visible differences from the same sample cue.

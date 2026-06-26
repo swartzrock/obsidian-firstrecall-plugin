@@ -65,14 +65,9 @@ describe("renderAppearanceThumbnailGroup", () => {
 		expect(buttons).toHaveLength(3);
 		expect(buttons[0].classList.contains("is-selected")).toBe(true);
 		expect(buttons[0].getAttribute("aria-pressed")).toBe("true");
-		expect(buttons[0].querySelector(".cuecraft-thumbnail-selected")?.hidden).toBe(
-			false
-		);
 		expect(buttons[1].classList.contains("is-selected")).toBe(false);
 		expect(buttons[1].getAttribute("aria-pressed")).toBe("false");
-		expect(buttons[1].querySelector(".cuecraft-thumbnail-selected")?.hidden).toBe(
-			true
-		);
+		expect(root.querySelector(".cuecraft-thumbnail-selected")).toBeNull();
 		expect(
 			root.querySelector(".cuecraft-thumbnail-group")?.getAttribute("aria-label")
 		).toBe("Cornell view style");
@@ -185,7 +180,7 @@ describe("Appearance thumbnail option recipes", () => {
 		);
 	});
 
-	it("renders Cornell and Hook rail display previews with real cue text", () => {
+	it("renders Cornell and Hook rail display previews with concise cue text", () => {
 		const root = setupDom();
 		renderAppearanceThumbnailGroup({
 			parentEl: root,
@@ -194,8 +189,9 @@ describe("Appearance thumbnail option recipes", () => {
 			onSelect: vi.fn(),
 		});
 
-		expect(root.textContent).toContain("How does tailoring AI");
-		expect(root.textContent).toContain("org knowledge");
+		expect(root.textContent).toContain("How do agents differ");
+		expect(root.textContent).toContain("active recall");
+		expect(root.textContent).not.toContain("organizational knowledge");
 		expect(
 			root.querySelector(".cuecraft-preview-display-classic")
 		).not.toBeNull();

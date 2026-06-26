@@ -151,7 +151,7 @@
 }
 
 .cuecraft-thumbnail-group-display-mode {
-	grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
 }
 
 .cuecraft-thumbnail-group-view-style,
@@ -197,12 +197,16 @@
 .cuecraft-thumbnail-button:hover,
 .cuecraft-thumbnail-button:focus-visible {
 	border-color: var(--interactive-accent);
-	box-shadow: 0 0 0 1px var(--interactive-accent);
+}
+
+.cuecraft-thumbnail-button:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
 }
 
 .cuecraft-thumbnail-button.is-selected {
+	border-width: 3px;
 	border-color: var(--interactive-accent);
-	box-shadow: 0 0 0 1px var(--interactive-accent);
 }
 
 .cuecraft-thumbnail-button:disabled {
@@ -243,23 +247,6 @@
 	white-space: normal;
 	-webkit-box-orient: vertical;
 	-webkit-line-clamp: 2;
-}
-
-.cuecraft-thumbnail-selected {
-	position: absolute;
-	top: 7px;
-	right: 7px;
-	max-width: calc(100% - 14px);
-	padding: 2px 6px;
-	border-radius: var(--radius-s);
-	background: var(--interactive-accent);
-	color: var(--text-on-accent);
-	font-size: var(--font-ui-smaller);
-	font-weight: var(--font-semibold);
-	line-height: 1.2;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
 }
 
 .cuecraft-preview-surface {
@@ -719,11 +706,17 @@
 		flex-basis: auto;
 	}
 
-	.cuecraft-thumbnail-group,
-	.cuecraft-thumbnail-group-display-mode,
+	.cuecraft-thumbnail-group {
+		grid-template-columns: repeat(auto-fit, minmax(min(138px, 100%), 1fr));
+	}
+
+	.cuecraft-thumbnail-group-display-mode {
+		grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
+	}
+
 	.cuecraft-thumbnail-group-view-style,
 	.cuecraft-thumbnail-group-accent {
-		grid-template-columns: 1fr;
+		grid-template-columns: repeat(auto-fit, minmax(min(112px, 100%), 1fr));
 	}
 }
 

@@ -83,11 +83,6 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 			button.appendChild(description);
 		}
 
-		const selected = doc.createElement("span");
-		selected.className = "cuecraft-thumbnail-selected";
-		selected.textContent = "Selected";
-		button.appendChild(selected);
-
 		button.addEventListener("click", () => {
 			if (button.disabled || option.id === currentValue) return;
 			updateSelected(option.id);
@@ -104,10 +99,6 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 			const selected = id === value;
 			button.classList.toggle("is-selected", selected);
 			button.setAttribute("aria-pressed", String(selected));
-			const selectedLabel = button.querySelector<HTMLElement>(
-				".cuecraft-thumbnail-selected"
-			);
-			if (selectedLabel) selectedLabel.hidden = !selected;
 		}
 	}
 
@@ -129,18 +120,29 @@ const SAMPLE_SUPPORTS = [
 	"shippable output",
 ];
 
+const DISPLAY_SAMPLE_QUESTION = "How do agents differ from chatbots?";
+const DISPLAY_SAMPLE_SUPPORTS = ["active recall", "MCP"];
+
 export function cornellDisplayModeThumbnailOptions(): AppearanceThumbnailOption<
 	CornellDisplayMode
 >[] {
 	return CORNELL_DISPLAY_MODES.map((option) => ({
 		id: option.id,
 		label: option.label,
-		description: option.description,
+		description:
+			option.id === "classic" ? "Cue column beside note." : "Compact hook cards.",
 		renderPreview: (previewEl) => {
-			renderCuePreview(previewEl, [
-				"cuecraft-preview-display",
-				`cuecraft-preview-display-${option.id}`,
-			]);
+			renderCuePreview(
+				previewEl,
+				[
+					"cuecraft-preview-display",
+					`cuecraft-preview-display-${option.id}`,
+				],
+				{
+					question: DISPLAY_SAMPLE_QUESTION,
+					supports: DISPLAY_SAMPLE_SUPPORTS,
+				}
+			);
 		},
 	}));
 }
@@ -206,10 +208,16 @@ export function cueAccentThumbnailOptions(): AppearanceThumbnailOption<CueAccent
 	}));
 }
 
-function renderCuePreview(previewEl: HTMLElement, classes: string[]): void {
+function renderCuePreview(
+	previewEl: HTMLElement,
+	classes: string[],
+	previewContent: { question?: string; supports?: readonly string[] } = {}
+): void {
 	const doc = previewEl.ownerDocument;
 	const surface = doc.createElement("div");
 	surface.className = ["cuecraft-preview-surface", ...classes].join(" ");
+	const questionText = previewContent.question ?? SAMPLE_QUESTION;
+	const supportTerms = previewContent.supports ?? SAMPLE_SUPPORTS;
 
 	const card = doc.createElement("div");
 	card.className = "cuecraft-preview-card";
@@ -225,17 +233,17 @@ function renderCuePreview(previewEl: HTMLElement, classes: string[]): void {
 
 	const question = doc.createElement("div");
 	question.className = "cuecraft-preview-question";
-	question.textContent = SAMPLE_QUESTION;
+	question.textContent = questionText;
 	content.appendChild(question);
 
 	const support = doc.createElement("div");
 	support.className = "cuecraft-preview-support";
-	for (const [index, term] of SAMPLE_SUPPORTS.entries()) {
+	for (const [index, term] of supportTerms.entries()) {
 		const item = doc.createElement("span");
 		item.className = "cuecraft-preview-support-term";
 		item.textContent = term;
 		support.appendChild(item);
-		if (index < SAMPLE_SUPPORTS.length - 1) {
+		if (index < supportTerms.length - 1) {
 			const separator = doc.createElement("span");
 			separator.className = "cuecraft-preview-support-separator";
 			separator.textContent = "\u00b7";
