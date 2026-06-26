@@ -53,6 +53,12 @@ import {
 	type ReadingModeDisplay,
 } from "./reading-cues";
 import {
+	DEFAULT_EDITOR_CUE_DISPLAY,
+	EDITOR_CUE_DISPLAY_OPTIONS,
+	editorCueDisplayOption,
+	type EditorCueDisplay,
+} from "./editor-cue-display";
+import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	buildAnthropicModelOptions,
 	describeAnthropicModel,
@@ -153,6 +159,7 @@ export interface CueCraftSettings {
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
 	cornellDisplayMode: CornellDisplayMode;
+	editorCueDisplay: EditorCueDisplay;
 	cornellStyle: CornellStyle;
 	cueColumnWidth: CueColumnWidth;
 	cueFontSize: CueFontSize;
@@ -213,6 +220,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cuePreset: "conceptual",
 	studyHideMode: "blur",
 	cornellDisplayMode: DEFAULT_CORNELL_DISPLAY_MODE,
+	editorCueDisplay: DEFAULT_EDITOR_CUE_DISPLAY,
 	cornellStyle: DEFAULT_CORNELL_STYLE,
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
@@ -434,6 +442,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private appearanceSummary(): string {
+		const editorDisplay = editorCueDisplayOption(
+			this.plugin.settings.editorCueDisplay
+		).label;
 		const mode = cornellDisplayModeOption(
 			this.plugin.settings.cornellDisplayMode
 		).label;
@@ -441,7 +452,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			CORNELL_STYLES.find(
 				(item) => item.id === this.plugin.settings.cornellStyle
 			)?.label ?? "Custom";
-		return `${mode} · ${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
+		return `${editorDisplay} · ${mode} · ${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
 	}
 
 	private studyAreasSummary(): string {
@@ -1136,6 +1147,26 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (showHeading) {
 			new Setting(containerEl).setName("Appearance").setHeading();
 		}
+
+		const editorDisplaySetting = new Setting(containerEl)
+			.setName("Editor cue display")
+			.addDropdown((dd) => {
+				for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
+					dd.addOption(option.id, option.label);
+				}
+				dd.setValue(this.plugin.settings.editorCueDisplay).onChange(
+					async (value) => {
+						this.plugin.settings.editorCueDisplay =
+							value as EditorCueDisplay;
+						await this.plugin.saveSettings();
+						this.plugin.refreshEditorCues();
+						editorDisplaySetting.setDesc(editorDisplayDesc());
+					}
+				);
+			});
+		const editorDisplayDesc = (): string =>
+			editorCueDisplayOption(this.plugin.settings.editorCueDisplay).description;
+		editorDisplaySetting.setDesc(editorDisplayDesc());
 
 		const displayDesc = (): string =>
 			cornellDisplayModeOption(this.plugin.settings.cornellDisplayMode)

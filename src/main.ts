@@ -53,6 +53,10 @@ import {
 	isCornellDisplayMode,
 } from "./cornell-display";
 import {
+	DEFAULT_EDITOR_CUE_DISPLAY,
+	isEditorCueDisplay,
+} from "./editor-cue-display";
+import {
 	selectExportableCues,
 	cuesToMarkdown,
 	cuesToAnki,
@@ -232,6 +236,13 @@ export default class CueCraftPlugin extends Plugin {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
 		}
 		if (
+			!isEditorCueDisplay(
+				(settings as { editorCueDisplay?: unknown }).editorCueDisplay
+			)
+		) {
+			settings.editorCueDisplay = DEFAULT_EDITOR_CUE_DISPLAY;
+		}
+		if (
 			!isCornellDisplayMode(
 				(settings as { cornellDisplayMode?: unknown }).cornellDisplayMode
 			)
@@ -347,6 +358,12 @@ export default class CueCraftPlugin extends Plugin {
 					})
 				: [];
 		cm.dispatch({ effects: setCuesEffect.of(cues) });
+	}
+
+	/** Rerender CueCraft's CodeMirror cue surface for the active note. */
+	refreshEditorCues(): void {
+		const active = this.app.workspace.getActiveFile();
+		if (active) this.renderCues(active);
 	}
 
 	/** Force the active Reading view to rerender its post-processed cue surface. */
