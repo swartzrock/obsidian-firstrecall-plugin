@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { buildCueLineData } from "../src/cue-extension";
+import { JSDOM } from "jsdom";
+import { buildCueLineData, renderCueElement } from "../src/cue-extension";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
@@ -132,5 +133,101 @@ describe("buildCueLineData", () => {
 		const headings = cues.map((c) => c.heading);
 		expect(headings).toContain("B");
 		expect(headings).toContain("C");
+	});
+});
+
+describe("renderCueElement", () => {
+	function withDocument<T>(fn: () => T): T {
+		const dom = new JSDOM("<!doctype html><html><body></body></html>");
+		const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+		Object.defineProperty(globalThis, "document", {
+			configurable: true,
+			value: dom.window.document,
+		});
+		try {
+			return fn();
+		} finally {
+			if (previous) {
+				Object.defineProperty(globalThis, "document", previous);
+			} else {
+				delete (globalThis as { document?: Document }).document;
+			}
+		}
+	}
+
+	it("keeps the existing inline cue DOM shape", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 1,
+					heading: "Terms",
+					question: "What is an agent?",
+					keywords: ["agent", "tool"],
+					confidence: "high",
+					error: null,
+				},
+				"inline-cues"
+			);
+			expect(el.className).toBe("cuecraft-cue");
+			expect(el.dataset.confidence).toBe("high");
+			expect(el.querySelector(".cuecraft-cue-question")?.textContent).toBe(
+				"What is an agent?"
+			);
+			expect(el.querySelector(".cuecraft-cue-keywords")?.textContent).toBe(
+				"agent · tool"
+			);
+		});
+	});
+
+	it("renders anchored card rail hook DOM", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 3,
+					heading: "Terms",
+					question: "How do agents differ from chatbots?",
+					keywords: ["agents"],
+					confidence: "medium",
+					error: null,
+				},
+				"anchored-card-rail"
+			);
+			expect(el.classList.contains("cuecraft-editor-hook")).toBe(true);
+			expect(
+				el.classList.contains("cuecraft-editor-hook-anchored-card-rail")
+			).toBe(true);
+			expect(el.dataset.display).toBe("anchored-card-rail");
+			expect(el.dataset.confidence).toBe("medium");
+			expect(
+				el.querySelector(".cuecraft-editor-hook-title")?.textContent
+			).toBe("How do agents differ from chatbots");
+			expect(
+				el.querySelector(".cuecraft-editor-hook-keywords")?.textContent
+			).toBe("agents");
+		});
+	});
+
+	it("renders anchored failed cue state without keywords", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 3,
+					heading: "Terms",
+					question: "",
+					keywords: [],
+					confidence: null,
+					error: "boom",
+				},
+				"anchored-card-rail"
+			);
+			expect(el.classList.contains("cuecraft-editor-hook-failed")).toBe(true);
+			expect(el.querySelector(".cuecraft-editor-hook-title")?.textContent).toBe(
+				"Cue unavailable"
+			);
+			expect(el.querySelector(".cuecraft-editor-hook-status")?.textContent).toBe(
+				"Generation failed - regenerate"
+			);
+			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
+		});
 	});
 });

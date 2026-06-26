@@ -357,7 +357,12 @@ export default class CueCraftPlugin extends Plugin {
 						showKeywords: this.settings.generateKeywords,
 					})
 				: [];
-		cm.dispatch({ effects: setCuesEffect.of(cues) });
+		cm.dispatch({
+			effects: setCuesEffect.of({
+				cues,
+				display: this.settings.editorCueDisplay,
+			}),
+		});
 	}
 
 	/** Rerender CueCraft's CodeMirror cue surface for the active note. */
