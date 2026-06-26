@@ -150,6 +150,20 @@
 	width: 100%;
 }
 
+.cuecraft-thumbnail-setting {
+	align-items: flex-start;
+}
+
+.cuecraft-thumbnail-setting .setting-item-info {
+	flex: 1 1 220px;
+}
+
+.cuecraft-thumbnail-setting .setting-item-control {
+	flex: 2 1 520px;
+	justify-content: stretch;
+	width: min(100%, 720px);
+}
+
 .cuecraft-thumbnail-button {
 	position: relative;
 	display: flex;

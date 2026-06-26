@@ -31,17 +31,22 @@ import {
 	type CueDensity,
 	type QuestionStyle,
 } from "./cue-generation";
+import { DEFAULT_CUE_ACCENT, type CueAccent } from "./cornell-accent";
 import {
-	CUE_ACCENTS,
-	DEFAULT_CUE_ACCENT,
-	type CueAccent,
-} from "./cornell-accent";
-import {
-	CORNELL_DISPLAY_MODES,
 	DEFAULT_CORNELL_DISPLAY_MODE,
 	cornellDisplayModeOption,
 	type CornellDisplayMode,
 } from "./cornell-display";
+import {
+	cornellDisplayModeThumbnailOptions,
+	cornellStyleThumbnailOptions,
+	cueAccentThumbnailOptions,
+	cueColumnWidthThumbnailOptions,
+	cueFontSizeThumbnailOptions,
+	renderAppearanceThumbnailGroup,
+	type AppearanceThumbnailGroup,
+	type AppearanceThumbnailOption,
+} from "./appearance-thumbnail-controls";
 import {
 	DEFAULT_READING_MODE_DISPLAY,
 	READING_MODE_DISPLAY_OPTIONS,
@@ -1132,84 +1137,73 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Setting(containerEl).setName("Appearance").setHeading();
 		}
 
-		const displaySetting = new Setting(containerEl)
-			.setName("Cornell display mode")
-			.addDropdown((dd) => {
-				for (const option of CORNELL_DISPLAY_MODES) {
-					dd.addOption(option.id, option.label);
-				}
-				dd.setValue(this.plugin.settings.cornellDisplayMode).onChange(
-					(value) => {
-						this.plugin.settings.cornellDisplayMode =
-							value as CornellDisplayMode;
-						this.queueAppearanceChange(() => {
-							displaySetting.setDesc(displayDesc());
-						});
-					}
-				);
-			});
 		const displayDesc = (): string =>
 			cornellDisplayModeOption(this.plugin.settings.cornellDisplayMode)
 				.description;
-		displaySetting.setDesc(displayDesc());
+		this.renderAppearanceThumbnailSetting<CornellDisplayMode>(containerEl, {
+			name: "Cornell display mode",
+			description: displayDesc,
+			options: cornellDisplayModeThumbnailOptions(),
+			value: () => this.plugin.settings.cornellDisplayMode,
+			setValue: (value) => {
+				this.plugin.settings.cornellDisplayMode = value;
+			},
+			className: "cuecraft-thumbnail-group-display-mode",
+		});
 
-		const styleSetting = new Setting(containerEl)
-			.setName("Cornell view style")
-			.addDropdown((dd) => {
-				for (const s of CORNELL_STYLES) dd.addOption(s.id, s.label);
-				dd.setValue(this.plugin.settings.cornellStyle).onChange(
-					(value) => {
-						this.plugin.settings.cornellStyle = value as CornellStyle;
-						this.queueAppearanceChange(() => {
-							styleSetting.setDesc(styleDesc());
-						});
-					}
-				);
-			});
 		const styleDesc = (): string =>
 			CORNELL_STYLES.find((s) => s.id === this.plugin.settings.cornellStyle)
 				?.description ?? "Visual preset for the Cornell view.";
-		styleSetting.setDesc(styleDesc());
+		this.renderAppearanceThumbnailSetting<CornellStyle>(containerEl, {
+			name: "Cornell view style",
+			description: styleDesc,
+			options: cornellStyleThumbnailOptions(),
+			value: () => this.plugin.settings.cornellStyle,
+			setValue: (value) => {
+				this.plugin.settings.cornellStyle = value;
+			},
+			className: "cuecraft-thumbnail-group-view-style",
+		});
 
-		const widthSetting = new Setting(containerEl)
-			.setName("Cue column width")
-			.addDropdown((dd) => {
-				for (const w of CUE_COLUMN_WIDTHS) dd.addOption(w.id, w.label);
-				dd.setValue(this.plugin.settings.cueColumnWidth).onChange(
-					(value) => {
-						this.plugin.settings.cueColumnWidth =
-							value as CueColumnWidth;
-						this.queueAppearanceChange(() => {
-							widthSetting.setDesc(widthDesc());
-						});
-					}
-				);
-			});
 		const widthDesc = (): string =>
 			CUE_COLUMN_WIDTHS.find(
 				(w) => w.id === this.plugin.settings.cueColumnWidth
 			)?.description ?? "Width of the Cornell cue rail.";
-		widthSetting.setDesc(widthDesc());
+		this.renderAppearanceThumbnailSetting<CueColumnWidth>(containerEl, {
+			name: "Cue column width",
+			description: widthDesc,
+			options: cueColumnWidthThumbnailOptions(),
+			value: () => this.plugin.settings.cueColumnWidth,
+			setValue: (value) => {
+				this.plugin.settings.cueColumnWidth = value;
+			},
+			className: "cuecraft-thumbnail-group-cue-width",
+		});
 
-		const fontSetting = new Setting(containerEl)
-			.setName("Cue font size")
-			.addDropdown((dd) => {
-				for (const f of CUE_FONT_SIZES) dd.addOption(f.id, f.label);
-				dd.setValue(this.plugin.settings.cueFontSize).onChange(
-					(value) => {
-						this.plugin.settings.cueFontSize = value as CueFontSize;
-						this.queueAppearanceChange(() => {
-							fontSetting.setDesc(fontDesc());
-						});
-					}
-				);
-			});
 		const fontDesc = (): string =>
 			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
 				?.description ?? "Font size of the Cornell cue text.";
-		fontSetting.setDesc(fontDesc());
+		this.renderAppearanceThumbnailSetting<CueFontSize>(containerEl, {
+			name: "Cue font size",
+			description: fontDesc,
+			options: cueFontSizeThumbnailOptions(),
+			value: () => this.plugin.settings.cueFontSize,
+			setValue: (value) => {
+				this.plugin.settings.cueFontSize = value;
+			},
+			className: "cuecraft-thumbnail-group-cue-font",
+		});
 
-		this.renderAccentSwatches(containerEl);
+		this.renderAppearanceThumbnailSetting<CueAccent>(containerEl, {
+			name: "Cue accent color",
+			description: () => "Accent used for the cue rail and support text.",
+			options: cueAccentThumbnailOptions(),
+			value: () => this.plugin.settings.cueAccent,
+			setValue: (value) => {
+				this.plugin.settings.cueAccent = value;
+			},
+			className: "cuecraft-thumbnail-group-accent",
+		});
 
 		new Setting(containerEl)
 			.setName("Show cue column border")
@@ -1242,8 +1236,38 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		afterSave?.();
 	}
 
-	private queueAppearanceChange(afterSave?: () => void): void {
-		void this.saveAppearanceChange(afterSave);
+	private renderAppearanceThumbnailSetting<T extends string>(
+		containerEl: HTMLElement,
+		config: {
+			name: string;
+			description: () => string;
+			options: readonly AppearanceThumbnailOption<T>[];
+			value: () => T;
+			setValue: (value: T) => void;
+			className?: string;
+		}
+	): void {
+		const setting = new Setting(containerEl)
+			.setName(config.name)
+			.setDesc(config.description());
+		setting.settingEl.addClass("cuecraft-thumbnail-setting");
+		setting.then(() => {
+			let group: AppearanceThumbnailGroup<T>;
+			group = renderAppearanceThumbnailGroup({
+				parentEl: setting.controlEl,
+				options: config.options,
+				value: config.value(),
+				groupLabel: config.name,
+				className: config.className,
+				onSelect: async (value) => {
+					config.setValue(value);
+					await this.saveAppearanceChange(() => {
+						setting.setDesc(config.description());
+						group.setValue(config.value());
+					});
+				},
+			});
+		});
 	}
 
 	// ── Study Mode ────────────────────────────────────────────────────────
@@ -1268,41 +1292,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
-	}
-
-	/** Accent-color swatches (Appearance) rendered as custom buttons. */
-	private renderAccentSwatches(containerEl: HTMLElement): void {
-		new Setting(containerEl)
-			.setName("Cue accent color")
-			.setDesc("Accent used for the cue rail and support text.")
-			.then((setting) => {
-				const wrap = setting.controlEl.createDiv({
-					cls: "cuecraft-swatches",
-				});
-				const paint = (): void => {
-					wrap.empty();
-					for (const accent of CUE_ACCENTS) {
-						const selected =
-							this.plugin.settings.cueAccent === accent.id;
-						const btn = wrap.createEl("button", {
-							cls: `cuecraft-swatch cuecraft-accent-${accent.id}`,
-							attr: {
-								type: "button",
-								"aria-label": accent.label,
-								title: accent.label,
-								"aria-pressed": String(selected),
-							},
-						});
-						if (selected) btn.addClass("is-selected");
-						this.plugin.registerDomEvent(btn, "click", async () => {
-							this.plugin.settings.cueAccent = accent.id;
-							await this.saveAppearanceChange();
-							paint();
-						});
-					}
-				};
-				paint();
-			});
 	}
 
 	private renderOllamaCredentialSettings(containerEl: HTMLElement): void {
