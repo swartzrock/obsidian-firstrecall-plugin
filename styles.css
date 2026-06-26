@@ -784,6 +784,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	user-select: text;
 }
 
+.cuecraft-editor-hook-inline-fallback {
+	display: none;
+}
+
 .markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
 	background: transparent;
 	border-inline-end: 0;
@@ -846,6 +850,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	position: relative;
 	z-index: 1;
 	font-weight: 800;
+	overflow-wrap: anywhere;
 }
 
 .cuecraft-editor-hook[data-title-density="long"] .cuecraft-editor-hook-title {
@@ -865,6 +870,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	color: color-mix(in srgb, var(--text-normal) 68%, transparent);
 	font-size: var(--font-smallest);
 	font-weight: var(--font-medium);
+	overflow-wrap: anywhere;
 }
 
 .cuecraft-editor-hook-failed {
@@ -1132,10 +1138,6 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 @media (min-width: 980px) {
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-inline-fallback {
-		display: none;
-	}
-
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
 		flex: 0 0 0;
 		width: 0;
@@ -1212,9 +1214,71 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	}
 }
 
+@media (min-width: 980px) and (max-width: 1320px) {
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook {
+		font-size: var(--font-smallest);
+		line-height: 1.16;
+		transform: translateX(calc(-100% - 0.875rem));
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-anchored-card-rail,
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-active-section-composer {
+		width: clamp(10.5rem, 18vw, 14rem);
+		padding: 0.7em 0.75em;
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-threaded-margin-notes {
+		width: clamp(9.75rem, 17vw, 13rem);
+		padding: 0.45em 0.6em 0.5em 0.85em;
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-collapsed-tabs[data-state="current"],
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-collapsed-tabs:hover,
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-collapsed-tabs:focus-visible {
+		width: clamp(10.5rem, 18vw, 14rem);
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-title {
+		font-size: var(--font-smallest);
+		line-height: 1.12;
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-heading,
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-keywords,
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-status {
+		font-size: var(--font-smallest);
+	}
+}
+
 @media (max-width: 979.98px) {
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
 		display: none;
+	}
+
+	.cuecraft-editor-hook-inline-fallback {
+		display: block;
 	}
 }
 
