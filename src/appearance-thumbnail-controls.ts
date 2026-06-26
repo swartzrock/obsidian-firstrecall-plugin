@@ -55,6 +55,7 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 	}
 
 	const buttons = new Map<T, HTMLButtonElement>();
+	let currentValue = config.value;
 
 	for (const option of config.options) {
 		const button = doc.createElement("button");
@@ -82,13 +83,8 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 			button.appendChild(description);
 		}
 
-		const selected = doc.createElement("span");
-		selected.className = "cuecraft-thumbnail-selected";
-		selected.textContent = "Selected";
-		button.appendChild(selected);
-
 		button.addEventListener("click", () => {
-			if (button.disabled || option.id === config.value) return;
+			if (button.disabled || option.id === currentValue) return;
 			updateSelected(option.id);
 			void config.onSelect(option.id);
 		});
@@ -98,15 +94,11 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 	}
 
 	function updateSelected(value: T): void {
-		config.value = value;
+		currentValue = value;
 		for (const [id, button] of buttons) {
 			const selected = id === value;
 			button.classList.toggle("is-selected", selected);
 			button.setAttribute("aria-pressed", String(selected));
-			const selectedLabel = button.querySelector<HTMLElement>(
-				".cuecraft-thumbnail-selected"
-			);
-			if (selectedLabel) selectedLabel.hidden = !selected;
 		}
 	}
 
@@ -120,13 +112,17 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 }
 
 const SAMPLE_QUESTION =
-	"How does tailoring AI with organizational knowledge upskill employees, and why does encoding that expertise into reusable plugins or agents make them faster and smarter?";
+	"How does org-trained AI help upskill employees and improve agent reusability?";
 
-const SAMPLE_SUPPORTS = [
-	"org knowledge",
-	"standards/workflows",
-	"shippable output",
-];
+const SAMPLE_SUPPORTS = ["organizations", "workflows"];
+
+const DISPLAY_SAMPLE_QUESTION = "How do agents differ from chatbots?";
+const DISPLAY_SAMPLE_SUPPORTS = ["active recall", "MCP"];
+
+interface CuePreviewContent {
+	question?: string | null;
+	supports?: readonly string[] | null;
+}
 
 export function cornellDisplayModeThumbnailOptions(): AppearanceThumbnailOption<
 	CornellDisplayMode
@@ -134,12 +130,20 @@ export function cornellDisplayModeThumbnailOptions(): AppearanceThumbnailOption<
 	return CORNELL_DISPLAY_MODES.map((option) => ({
 		id: option.id,
 		label: option.label,
-		description: option.description,
+		description:
+			option.id === "classic" ? "Cue column beside note." : "Compact hook cards.",
 		renderPreview: (previewEl) => {
-			renderCuePreview(previewEl, [
-				"cuecraft-preview-display",
-				`cuecraft-preview-display-${option.id}`,
-			]);
+			renderCuePreview(
+				previewEl,
+				[
+					"cuecraft-preview-display",
+					`cuecraft-preview-display-${option.id}`,
+				],
+				{
+					question: DISPLAY_SAMPLE_QUESTION,
+					supports: DISPLAY_SAMPLE_SUPPORTS,
+				}
+			);
 		},
 	}));
 }
@@ -152,10 +156,15 @@ export function cornellStyleThumbnailOptions(): AppearanceThumbnailOption<
 		label: option.label,
 		description: option.description,
 		renderPreview: (previewEl) => {
-			renderCuePreview(previewEl, [
-				"cuecraft-preview-style",
-				`cuecraft-preview-style-${option.id}`,
-			]);
+			renderCuePreview(
+				previewEl,
+				[
+					"cuecraft-preview-style",
+					`cuecraft-preview-style-${option.id}`,
+					"cuecraft-preview-cue-only",
+				],
+				{ supports: null }
+			);
 		},
 	}));
 }
@@ -168,10 +177,15 @@ export function cueColumnWidthThumbnailOptions(): AppearanceThumbnailOption<
 		label: option.label,
 		description: option.description,
 		renderPreview: (previewEl) => {
-			renderCuePreview(previewEl, [
-				"cuecraft-preview-width",
-				`cuecraft-preview-width-${option.id}`,
-			]);
+			renderCuePreview(
+				previewEl,
+				[
+					"cuecraft-preview-width",
+					`cuecraft-preview-width-${option.id}`,
+					"cuecraft-preview-cue-only",
+				],
+				{ supports: null }
+			);
 		},
 	}));
 }
@@ -184,10 +198,15 @@ export function cueFontSizeThumbnailOptions(): AppearanceThumbnailOption<
 		label: option.label,
 		description: option.description,
 		renderPreview: (previewEl) => {
-			renderCuePreview(previewEl, [
-				"cuecraft-preview-font",
-				`cuecraft-preview-font-${option.id}`,
-			]);
+			renderCuePreview(
+				previewEl,
+				[
+					"cuecraft-preview-font",
+					`cuecraft-preview-font-${option.id}`,
+					"cuecraft-preview-cue-only",
+				],
+				{ supports: null }
+			);
 		},
 	}));
 }
@@ -197,18 +216,35 @@ export function cueAccentThumbnailOptions(): AppearanceThumbnailOption<CueAccent
 		id: option.id,
 		label: option.label,
 		renderPreview: (previewEl) => {
-			renderCuePreview(previewEl, [
-				"cuecraft-preview-accent",
-				`cuecraft-preview-accent-${option.id}`,
-			]);
+			renderCuePreview(
+				previewEl,
+				[
+					"cuecraft-preview-accent",
+					`cuecraft-preview-accent-${option.id}`,
+					"cuecraft-preview-terms-only",
+				],
+				{ question: null }
+			);
 		},
 	}));
 }
 
-function renderCuePreview(previewEl: HTMLElement, classes: string[]): void {
+function renderCuePreview(
+	previewEl: HTMLElement,
+	classes: string[],
+	previewContent: CuePreviewContent = {}
+): void {
 	const doc = previewEl.ownerDocument;
 	const surface = doc.createElement("div");
 	surface.className = ["cuecraft-preview-surface", ...classes].join(" ");
+	const questionText =
+		previewContent.question === undefined
+			? SAMPLE_QUESTION
+			: previewContent.question;
+	const supportTerms =
+		previewContent.supports === undefined
+			? SAMPLE_SUPPORTS
+			: previewContent.supports;
 
 	const card = doc.createElement("div");
 	card.className = "cuecraft-preview-card";
@@ -222,26 +258,30 @@ function renderCuePreview(previewEl: HTMLElement, classes: string[]): void {
 	content.className = "cuecraft-preview-content";
 	card.appendChild(content);
 
-	const question = doc.createElement("div");
-	question.className = "cuecraft-preview-question";
-	question.textContent = SAMPLE_QUESTION;
-	content.appendChild(question);
-
-	const support = doc.createElement("div");
-	support.className = "cuecraft-preview-support";
-	for (const [index, term] of SAMPLE_SUPPORTS.entries()) {
-		const item = doc.createElement("span");
-		item.className = "cuecraft-preview-support-term";
-		item.textContent = term;
-		support.appendChild(item);
-		if (index < SAMPLE_SUPPORTS.length - 1) {
-			const separator = doc.createElement("span");
-			separator.className = "cuecraft-preview-support-separator";
-			separator.textContent = "\u00b7";
-			support.appendChild(separator);
-		}
+	if (questionText) {
+		const question = doc.createElement("div");
+		question.className = "cuecraft-preview-question";
+		question.textContent = questionText;
+		content.appendChild(question);
 	}
-	content.appendChild(support);
+
+	if (supportTerms?.length) {
+		const support = doc.createElement("div");
+		support.className = "cuecraft-preview-support";
+		for (const [index, term] of supportTerms.entries()) {
+			const item = doc.createElement("span");
+			item.className = "cuecraft-preview-support-term";
+			item.textContent = term;
+			support.appendChild(item);
+			if (index < supportTerms.length - 1) {
+				const separator = doc.createElement("span");
+				separator.className = "cuecraft-preview-support-separator";
+				separator.textContent = "\u00b7";
+				support.appendChild(separator);
+			}
+		}
+		content.appendChild(support);
+	}
 
 	previewEl.appendChild(surface);
 }
