@@ -238,7 +238,10 @@ describe("Appearance thumbnail option recipes", () => {
 		expect(root.querySelector(".cuecraft-preview-font-medium")).not.toBeNull();
 		expect(root.querySelector(".cuecraft-preview-font-large")).not.toBeNull();
 		expect(root.textContent).toContain("How does org-trained AI");
+		expect(root.textContent).toContain("organizations");
+		expect(root.textContent).toContain("workflows");
 		expect(root.textContent).not.toContain("organizational knowledge");
+		expect(root.textContent).not.toContain("standards/workflows");
 	});
 
 	it("renders accent previews that tint the rail and support text", () => {

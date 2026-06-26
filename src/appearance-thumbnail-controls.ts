@@ -114,11 +114,7 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 const SAMPLE_QUESTION =
 	"How does org-trained AI help upskill employees and improve agent reusability?";
 
-const SAMPLE_SUPPORTS = [
-	"org knowledge",
-	"standards/workflows",
-	"shippable output",
-];
+const SAMPLE_SUPPORTS = ["organizations", "workflows"];
 
 const DISPLAY_SAMPLE_QUESTION = "How do agents differ from chatbots?";
 const DISPLAY_SAMPLE_SUPPORTS = ["active recall", "MCP"];
