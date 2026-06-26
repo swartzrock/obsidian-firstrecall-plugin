@@ -1,9 +1,24 @@
-import { StateEffect, StateField } from "@codemirror/state";
+import {
+	RangeSet,
+	RangeSetBuilder,
+	StateEffect,
+	StateField,
+} from "@codemirror/state";
 import type { EditorState, Range } from "@codemirror/state";
-import { Decoration, EditorView, WidgetType } from "@codemirror/view";
+import {
+	Decoration,
+	EditorView,
+	GutterMarker,
+	WidgetType,
+	gutter,
+} from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
 import type { NoteCache } from "./cache";
-import { buildEditorHookCard, type EditorHookCard } from "./editor-hook-rail";
+import {
+	buildEditorHookCard,
+	type EditorHookCard,
+	type EditorHookCardState,
+} from "./editor-hook-rail";
 import type { EditorCueDisplay } from "./editor-cue-display";
 import { isCueEligibleSection, type Section } from "./parser";
 
@@ -89,7 +104,11 @@ class CueWidget extends WidgetType {
 	}
 
 	toDOM(): HTMLElement {
-		return renderCueElement(this.cue, this.display, this.index);
+		const element = renderCueElement(this.cue, this.display, this.index);
+		if (this.display !== "inline-cues") {
+			element.classList.add("cuecraft-editor-hook-inline-fallback");
+		}
+		return element;
 	}
 
 	ignoreEvent(): boolean {
@@ -97,25 +116,54 @@ class CueWidget extends WidgetType {
 	}
 }
 
+class CueGutterMarker extends GutterMarker {
+	constructor(
+		private readonly cue: CueLineData,
+		private readonly display: EditorCueDisplay,
+		private readonly index: number,
+		private readonly state: EditorHookCardState = "upcoming"
+	) {
+		super();
+	}
+
+	eq(other: GutterMarker): boolean {
+		return (
+			other instanceof CueGutterMarker &&
+			other.display === this.display &&
+			other.index === this.index &&
+			other.state === this.state &&
+			other.cue.question === this.cue.question &&
+			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
+			other.cue.confidence === this.cue.confidence &&
+			other.cue.error === this.cue.error
+		);
+	}
+
+	toDOM(): HTMLElement {
+		return renderCueElement(this.cue, this.display, this.index, this.state);
+	}
+}
+
 export function renderCueElement(
 	cue: CueLineData,
 	display: EditorCueDisplay,
-	index = 0
+	index = 0,
+	state: EditorHookCardState = "upcoming"
 ): HTMLElement {
 	if (display !== "inline-cues") {
-		return renderEditorHookElement(buildEditorHookCard(cue, display, index));
+		return renderEditorHookElement(buildEditorHookCard(cue, display, index, state));
 	}
 	return renderInlineCueElement(cue);
 }
 
 function renderInlineCueElement(cue: CueLineData): HTMLElement {
-	const root = document.createElement("div");
+	const root = cueDocument().createElement("div");
 	root.className = "cuecraft-cue";
 
 	if (cue.error) {
 		root.classList.add("cuecraft-cue-error");
 		root.title = cue.error;
-		const q = document.createElement("div");
+		const q = cueDocument().createElement("div");
 		q.className = "cuecraft-cue-question";
 		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
 		root.appendChild(q);
@@ -126,13 +174,13 @@ function renderInlineCueElement(cue: CueLineData): HTMLElement {
 		root.dataset.confidence = cue.confidence;
 	}
 
-	const q = document.createElement("div");
+	const q = cueDocument().createElement("div");
 	q.className = "cuecraft-cue-question";
 	q.textContent = cue.question;
 	root.appendChild(q);
 
 	if (cue.keywords.length) {
-		const kw = document.createElement("div");
+		const kw = cueDocument().createElement("div");
 		kw.className = "cuecraft-cue-keywords";
 		kw.textContent = cue.keywords.join(" · ");
 		root.appendChild(kw);
@@ -141,7 +189,7 @@ function renderInlineCueElement(cue: CueLineData): HTMLElement {
 }
 
 function renderEditorHookElement(card: EditorHookCard): HTMLElement {
-	const root = document.createElement("div");
+	const root = cueDocument().createElement("div");
 	root.className = `cuecraft-editor-hook cuecraft-editor-hook-${card.display}`;
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");
@@ -153,19 +201,18 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	if (card.confidence) root.dataset.confidence = card.confidence;
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
-	const eyebrow = document.createElement("div");
-	eyebrow.className = "cuecraft-editor-hook-heading";
-	eyebrow.textContent = card.heading;
-	root.appendChild(eyebrow);
-
-	const title = document.createElement("div");
+	const title = cueDocument().createElement("div");
 	title.className = "cuecraft-editor-hook-title";
-	title.textContent = card.hookTitle;
+	title.textContent =
+		(card.display === "active-section-composer" && card.state === "current") ||
+		card.display === "hook-minimap"
+			? card.originalQuestion
+			: card.hookTitle;
 	root.appendChild(title);
 
 	if (card.error) {
 		root.title = card.error;
-		const error = document.createElement("div");
+		const error = cueDocument().createElement("div");
 		error.className = "cuecraft-editor-hook-status";
 		error.textContent = "Generation failed - regenerate";
 		root.appendChild(error);
@@ -173,7 +220,7 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	}
 
 	if (card.keywords.length) {
-		const keywords = document.createElement("div");
+		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
 		keywords.textContent = card.keywords.join(" · ");
 		root.appendChild(keywords);
@@ -181,13 +228,23 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	return root;
 }
 
+function cueDocument(): Document {
+	return typeof activeDocument === "undefined"
+		? globalThis.document
+		: activeDocument;
+}
+
 /** Replace all cues currently rendered in the editor. */
 export const setCuesEffect = StateEffect.define<CueEditorRenderState>();
 
-function buildDecorations(
+const emptyCueGutterMarkers = RangeSet.of<GutterMarker>([]);
+
+export function buildCueWidgetDecorations(
 	state: EditorState,
 	payload: CueEditorRenderState
 ): DecorationSet {
+	if (payload.display !== "inline-cues") return Decoration.none;
+
 	const ranges: Range<Decoration>[] = [];
 	const doc = state.doc;
 	for (const [index, cue] of payload.cues.entries()) {
@@ -205,6 +262,46 @@ function buildDecorations(
 	return Decoration.set(ranges, true);
 }
 
+export function buildCueGutterMarkers(
+	state: EditorState,
+	payload: CueEditorRenderState
+): RangeSet<GutterMarker> {
+	if (payload.display === "inline-cues") return emptyCueGutterMarkers;
+
+	const builder = new RangeSetBuilder<GutterMarker>();
+	const doc = state.doc;
+	const activeLine = doc.lineAt(state.selection.main.head).number;
+	const currentCueLine = activeCueLine(payload.display, payload.cues, activeLine);
+	for (const [index, cue] of payload.cues.entries()) {
+		if (cue.line < 1 || cue.line > doc.lines) continue;
+		const headingLine = doc.line(cue.line);
+		const cardState = cue.line === currentCueLine ? "current" : "upcoming";
+		builder.add(
+			headingLine.from,
+			headingLine.from,
+			new CueGutterMarker(cue, payload.display, index, cardState)
+		);
+	}
+	return builder.finish();
+}
+
+function activeCueLine(
+	display: EditorCueDisplay,
+	cues: CueLineData[],
+	activeLine: number
+): number | null {
+	if (display !== "active-section-composer" && display !== "hook-minimap") {
+		return null;
+	}
+
+	let current: number | null = null;
+	for (const cue of cues) {
+		if (cue.line > activeLine) break;
+		current = cue.line;
+	}
+	return current;
+}
+
 export const cueField = StateField.define<DecorationSet>({
 	create() {
 		return Decoration.none;
@@ -214,7 +311,7 @@ export const cueField = StateField.define<DecorationSet>({
 		for (const effect of tr.effects) {
 			if (effect.is(setCuesEffect)) {
 				// `tr.state` reflects the post-change doc for placement.
-				next = buildDecorations(tr.state, effect.value);
+				next = buildCueWidgetDecorations(tr.state, effect.value);
 			}
 		}
 		return next;
@@ -222,5 +319,40 @@ export const cueField = StateField.define<DecorationSet>({
 	provide: (f) => EditorView.decorations.from(f),
 });
 
+interface CueGutterState {
+	markers: RangeSet<GutterMarker>;
+	payload: CueEditorRenderState | null;
+}
+
+export const cueGutterField = StateField.define<CueGutterState>({
+	create() {
+		return { markers: emptyCueGutterMarkers, payload: null };
+	},
+	update(value, tr) {
+		let payload = value.payload;
+		for (const effect of tr.effects) {
+			if (effect.is(setCuesEffect)) {
+				payload = effect.value;
+			}
+		}
+		if (!payload) {
+			return { markers: value.markers.map(tr.changes), payload };
+		}
+		if (
+			tr.effects.some((effect) => effect.is(setCuesEffect)) ||
+			tr.selection ||
+			tr.docChanged
+		) {
+			return { markers: buildCueGutterMarkers(tr.state, payload), payload };
+		}
+		return { markers: value.markers.map(tr.changes), payload };
+	},
+});
+
+const cueGutter = gutter({
+	class: "cuecraft-editor-hook-gutter",
+	markers: (view) => view.state.field(cueGutterField).markers,
+});
+
 /** Editor extension that renders CueCraft cues. Register via registerEditorExtension. */
-export const cueEditorExtension = [cueField];
+export const cueEditorExtension = [cueField, cueGutterField, cueGutter];

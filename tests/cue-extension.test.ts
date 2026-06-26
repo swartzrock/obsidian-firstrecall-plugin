@@ -1,11 +1,35 @@
 import { describe, it, expect } from "vitest";
 import { JSDOM } from "jsdom";
-import { buildCueLineData, renderCueElement } from "../src/cue-extension";
+import { EditorState } from "@codemirror/state";
+import {
+	buildCueGutterMarkers,
+	buildCueLineData,
+	buildCueWidgetDecorations,
+	renderCueElement,
+} from "../src/cue-extension";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
+
+function withDocument<T>(fn: () => T): T {
+	const dom = new JSDOM("<!doctype html><html><body></body></html>");
+	const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+	Object.defineProperty(globalThis, "document", {
+		configurable: true,
+		value: dom.window.document,
+	});
+	try {
+		return fn();
+	} finally {
+		if (previous) {
+			Object.defineProperty(globalThis, "document", previous);
+		} else {
+			delete (globalThis as { document?: Document }).document;
+		}
+	}
+}
 
 function cacheFrom(
 	overrides: (
@@ -137,24 +161,6 @@ describe("buildCueLineData", () => {
 });
 
 describe("renderCueElement", () => {
-	function withDocument<T>(fn: () => T): T {
-		const dom = new JSDOM("<!doctype html><html><body></body></html>");
-		const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
-		Object.defineProperty(globalThis, "document", {
-			configurable: true,
-			value: dom.window.document,
-		});
-		try {
-			return fn();
-		} finally {
-			if (previous) {
-				Object.defineProperty(globalThis, "document", previous);
-			} else {
-				delete (globalThis as { document?: Document }).document;
-			}
-		}
-	}
-
 	it("keeps the existing inline cue DOM shape", () => {
 		withDocument(() => {
 			const el = renderCueElement(
@@ -198,8 +204,9 @@ describe("renderCueElement", () => {
 			).toBe(true);
 			expect(el.dataset.display).toBe("anchored-card-rail");
 			expect(el.dataset.line).toBe("3");
-			expect(el.dataset.state).toBe("current");
+			expect(el.dataset.state).toBe("upcoming");
 			expect(el.dataset.confidence).toBe("medium");
+			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("How do agents differ from chatbots");
@@ -220,8 +227,7 @@ describe("renderCueElement", () => {
 					confidence: "low",
 					error: null,
 				},
-				"collapsed-tabs",
-				1
+				"collapsed-tabs"
 			);
 			expect(el.classList.contains("cuecraft-editor-hook-collapsed-tabs")).toBe(
 				true
@@ -229,6 +235,7 @@ describe("renderCueElement", () => {
 			expect(el.dataset.display).toBe("collapsed-tabs");
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.dataset.confidence).toBe("low");
+			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("Who is this workflow designed for");
@@ -255,9 +262,7 @@ describe("renderCueElement", () => {
 			).toBe(true);
 			expect(el.dataset.display).toBe("threaded-margin-notes");
 			expect(el.dataset.state).toBe("upcoming");
-			expect(
-				el.querySelector(".cuecraft-editor-hook-heading")?.textContent
-			).toBe("How To Upskill Employees");
+			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-keywords")?.textContent
 			).toBe("standards · workflow");
@@ -281,27 +286,53 @@ describe("renderCueElement", () => {
 				el.classList.contains("cuecraft-editor-hook-active-section-composer")
 			).toBe(true);
 			expect(el.dataset.display).toBe("active-section-composer");
-			expect(el.dataset.state).toBe("current");
+			expect(el.dataset.state).toBe("upcoming");
 			expect(el.getAttribute("role")).toBe("note");
+			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("Who should use this workflow");
 		});
 	});
 
+	it("renders current active-section composer with the full question", () => {
+		withDocument(() => {
+			const question =
+				"How does tailoring AI with organizational knowledge upskill employees, and why does encoding that expertise into reusable plugins or agents make them faster and smarter?";
+			const el = renderCueElement(
+				{
+					line: 7,
+					heading: "How To Upskill Employees",
+					question,
+					keywords: ["org knowledge"],
+					confidence: "medium",
+					error: null,
+				},
+				"active-section-composer",
+				0,
+				"current"
+			);
+			expect(el.dataset.state).toBe("current");
+			expect(el.querySelector(".cuecraft-editor-hook-title")?.textContent).toBe(
+				question
+			);
+		});
+	});
+
 	it("renders hook minimap DOM", () => {
 		withDocument(() => {
+			const question =
+				"What should the reader remember about tailoring AI to local workflows?";
 			const el = renderCueElement(
 				{
 					line: 9,
 					heading: "Study Takeaway",
-					question: "What should the reader remember?",
+					question,
 					keywords: ["takeaway"],
 					confidence: "high",
 					error: null,
 				},
-				"hook-minimap",
-				3
+				"hook-minimap"
 			);
 			expect(el.classList.contains("cuecraft-editor-hook-hook-minimap")).toBe(
 				true
@@ -309,9 +340,10 @@ describe("renderCueElement", () => {
 			expect(el.dataset.display).toBe("hook-minimap");
 			expect(el.dataset.line).toBe("9");
 			expect(el.dataset.state).toBe("upcoming");
+			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
-			).toBe("What should the reader remember");
+			).toBe(question);
 		});
 	});
 
@@ -337,5 +369,119 @@ describe("renderCueElement", () => {
 			);
 			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
 		});
+	});
+});
+
+describe("cue editor placement", () => {
+	const cues = [
+		{
+			line: 1,
+			heading: "A",
+			question: "What is A?",
+			keywords: ["alpha"],
+			confidence: "high" as const,
+			error: null,
+		},
+		{
+			line: 3,
+			heading: "B",
+			question: "What is B?",
+			keywords: ["beta"],
+			confidence: "medium" as const,
+			error: null,
+		},
+	];
+
+	it("renders hook displays into left-gutter markers", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const markers = buildCueGutterMarkers(state, {
+			cues,
+			display: "anchored-card-rail",
+		});
+		const positions: number[] = [];
+		markers.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([
+			state.doc.line(1).from,
+			state.doc.line(3).from,
+		]);
+	});
+
+	it("marks the active composer card current for the cursor section", () => {
+		withDocument(() => {
+			const state = EditorState.create({
+				doc: NOTE,
+				selection: { anchor: NOTE.indexOf("beta") },
+			});
+			const markers = buildCueGutterMarkers(state, {
+				cues,
+				display: "active-section-composer",
+			});
+			const states: Array<string | undefined> = [];
+			markers.between(0, state.doc.length, (_from, _to, marker) => {
+				const element = marker.toDOM(null as never) as HTMLElement;
+				states.push(element.dataset.state);
+			});
+			expect(states).toEqual(["upcoming", "current"]);
+		});
+	});
+
+	it("keeps collapsed tabs upcoming even when the cursor is in a section", () => {
+		withDocument(() => {
+			const state = EditorState.create({
+				doc: NOTE,
+				selection: { anchor: NOTE.indexOf("beta") },
+			});
+			const markers = buildCueGutterMarkers(state, {
+				cues,
+				display: "collapsed-tabs",
+			});
+			const states: Array<string | undefined> = [];
+			markers.between(0, state.doc.length, (_from, _to, marker) => {
+				const element = marker.toDOM(null as never) as HTMLElement;
+				states.push(element.dataset.state);
+			});
+			expect(states).toEqual(["upcoming", "upcoming"]);
+		});
+	});
+
+	it("keeps inline cues out of the left gutter", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const markers = buildCueGutterMarkers(state, {
+			cues,
+			display: "inline-cues",
+		});
+		const positions: number[] = [];
+		markers.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([]);
+	});
+
+	it("does not render hook displays as body block widgets", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const widgets = buildCueWidgetDecorations(state, {
+			cues,
+			display: "anchored-card-rail",
+		});
+		const positions: number[] = [];
+		widgets.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([]);
+	});
+
+	it("renders inline cues as body block widgets", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const widgets = buildCueWidgetDecorations(state, {
+			cues,
+			display: "inline-cues",
+		});
+		const positions: number[] = [];
+		widgets.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([state.doc.line(1).to, state.doc.line(3).to]);
 	});
 });

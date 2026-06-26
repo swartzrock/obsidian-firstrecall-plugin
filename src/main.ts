@@ -110,6 +110,7 @@ export default class CueCraftPlugin extends Plugin {
 	private currentRun: AbortController | null = null;
 	private autoGenerateTimers = new Map<string, number>();
 	private studyAreaMaintenanceTimers = new Map<string, number>();
+	private editorLayoutFrame: number | null = null;
 	private cueSettingsChanged = false;
 	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {}, hidden: {} };
 	private settingTab!: CueCraftSettingTab;
@@ -168,6 +169,11 @@ export default class CueCraftPlugin extends Plugin {
 			)
 		);
 		this.registerEvent(
+			this.app.workspace.on("layout-change", () =>
+				this.scheduleEditorLayoutRefresh()
+			)
+		);
+		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
 				if (file instanceof TFile) void this.visibility.rename(oldPath, file.path);
 			})
@@ -206,6 +212,10 @@ export default class CueCraftPlugin extends Plugin {
 			window.clearTimeout(timer);
 		}
 		this.studyAreaMaintenanceTimers.clear();
+		if (this.editorLayoutFrame !== null) {
+			window.cancelAnimationFrame(this.editorLayoutFrame);
+			this.editorLayoutFrame = null;
+		}
 		this.currentRun?.abort();
 	}
 
@@ -357,12 +367,42 @@ export default class CueCraftPlugin extends Plugin {
 						showKeywords: this.settings.generateKeywords,
 					})
 				: [];
+		this.updateEditorHookLayout(
+			cm,
+			cues.length > 0 && this.settings.editorCueDisplay !== "inline-cues"
+		);
 		cm.dispatch({
 			effects: setCuesEffect.of({
 				cues,
 				display: this.settings.editorCueDisplay,
 			}),
 		});
+	}
+
+	private scheduleEditorLayoutRefresh(): void {
+		if (this.editorLayoutFrame !== null) {
+			window.cancelAnimationFrame(this.editorLayoutFrame);
+		}
+		this.editorLayoutFrame = window.requestAnimationFrame(() => {
+			this.editorLayoutFrame = null;
+			this.refreshEditorCues();
+		});
+	}
+
+	private updateEditorHookLayout(cm: EditorView, hasHookRail: boolean): void {
+		const leftDockOpen = this.isLeftDockOpen();
+		cm.dom.classList.toggle(
+			"cuecraft-editor-hook-page-shift",
+			hasHookRail && leftDockOpen
+		);
+	}
+
+	private isLeftDockOpen(): boolean {
+		const leftDock = activeDocument.querySelector<HTMLElement>(
+			".workspace-split.mod-left-split"
+		);
+		if (!leftDock) return false;
+		return leftDock.getBoundingClientRect().width > 120;
 	}
 
 	/** Rerender CueCraft's CodeMirror cue surface for the active note. */
