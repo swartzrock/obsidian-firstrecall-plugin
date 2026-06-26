@@ -214,6 +214,9 @@ describe("Appearance thumbnail option recipes", () => {
 		expect(
 			handwrittenButton?.querySelector(".cuecraft-preview-style-handwritten")
 		).not.toBeNull();
+		expect(root.textContent).toContain("How does org-trained AI");
+		expect(root.querySelector(".cuecraft-preview-style .cuecraft-preview-support"))
+			.toBeNull();
 	});
 
 	it("renders distinct width and font-size preview classes", () => {
@@ -238,8 +241,7 @@ describe("Appearance thumbnail option recipes", () => {
 		expect(root.querySelector(".cuecraft-preview-font-medium")).not.toBeNull();
 		expect(root.querySelector(".cuecraft-preview-font-large")).not.toBeNull();
 		expect(root.textContent).toContain("How does org-trained AI");
-		expect(root.textContent).toContain("organizations");
-		expect(root.textContent).toContain("workflows");
+		expect(root.querySelector(".cuecraft-preview-support")).toBeNull();
 		expect(root.textContent).not.toContain("organizational knowledge");
 		expect(root.textContent).not.toContain("standards/workflows");
 	});
@@ -260,8 +262,11 @@ describe("Appearance thumbnail option recipes", () => {
 			expect(
 				button?.querySelector(`.cuecraft-preview-accent-${accent.id}`)
 			).not.toBeNull();
+			expect(button?.querySelector(".cuecraft-preview-question")).toBeNull();
 			expect(button?.querySelector(".cuecraft-preview-rail")).not.toBeNull();
 			expect(button?.querySelector(".cuecraft-preview-support")).not.toBeNull();
+			expect(button?.textContent).toContain("organizations");
+			expect(button?.textContent).toContain("workflows");
 		}
 	});
 });
