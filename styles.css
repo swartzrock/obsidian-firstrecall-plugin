@@ -1220,7 +1220,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		.cuecraft-editor-hook {
 		font-size: var(--font-smallest);
 		line-height: 1.16;
-		transform: translateX(calc(-100% - 0.875rem));
+		transform: translateX(calc(-100% - 0.5rem));
 	}
 
 	.markdown-source-view.mod-cm6
@@ -1229,14 +1229,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	.markdown-source-view.mod-cm6
 		.cuecraft-editor-hook-gutter
 		.cuecraft-editor-hook-active-section-composer {
-		width: clamp(10.5rem, 18vw, 14rem);
+		width: clamp(7.25rem, 13vw, 10rem);
 		padding: 0.7em 0.75em;
 	}
 
 	.markdown-source-view.mod-cm6
 		.cuecraft-editor-hook-gutter
 		.cuecraft-editor-hook-threaded-margin-notes {
-		width: clamp(9.75rem, 17vw, 13rem);
+		width: clamp(7rem, 12.5vw, 9.5rem);
 		padding: 0.45em 0.6em 0.5em 0.85em;
 	}
 
@@ -1249,7 +1249,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	.markdown-source-view.mod-cm6
 		.cuecraft-editor-hook-gutter
 		.cuecraft-editor-hook-collapsed-tabs:focus-visible {
-		width: clamp(10.5rem, 18vw, 14rem);
+		width: clamp(7.25rem, 13vw, 10rem);
 	}
 
 	.markdown-source-view.mod-cm6
@@ -1274,11 +1274,65 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 @media (max-width: 979.98px) {
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
-		display: none;
+		flex: 0 0 0;
+		width: 0;
+		min-width: 0;
+		padding-inline-end: 0;
+		overflow: visible;
 	}
 
-	.cuecraft-editor-hook-inline-fallback {
-		display: block;
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cm-gutterElement {
+		width: 0;
+		min-width: 0;
+		overflow: visible;
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook {
+		margin: 0.3em 0 0.65em;
+		max-width: none;
+		font-size: var(--font-smallest);
+		line-height: 1.12;
+		transform: translateX(calc(-100% - 0.375rem));
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-anchored-card-rail,
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-active-section-composer {
+		width: clamp(6rem, 15vw, 7.5rem);
+		padding: 0.6em 0.65em;
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-threaded-margin-notes {
+		width: clamp(5.75rem, 14vw, 7rem);
+		padding: 0.4em 0.55em 0.45em 0.75em;
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-collapsed-tabs[data-state="current"],
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-collapsed-tabs:hover,
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-collapsed-tabs:focus-visible {
+		width: clamp(6rem, 15vw, 7.5rem);
+	}
+
+	.markdown-source-view.mod-cm6
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-title {
+		font-size: var(--font-smallest);
+		line-height: 1.1;
 	}
 }
 

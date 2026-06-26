@@ -237,6 +237,8 @@ export function buildCueWidgetDecorations(
 	state: EditorState,
 	payload: CueEditorRenderState
 ): DecorationSet {
+	if (payload.display !== "inline-cues") return Decoration.none;
+
 	const ranges: Range<Decoration>[] = [];
 	const doc = state.doc;
 	for (const [index, cue] of payload.cues.entries()) {

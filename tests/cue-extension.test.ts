@@ -395,11 +395,24 @@ describe("cue editor placement", () => {
 		expect(positions).toEqual([]);
 	});
 
-	it("keeps block widgets available as the narrow-pane fallback", () => {
+	it("does not render hook displays as body block widgets", () => {
 		const state = EditorState.create({ doc: NOTE });
 		const widgets = buildCueWidgetDecorations(state, {
 			cues,
 			display: "anchored-card-rail",
+		});
+		const positions: number[] = [];
+		widgets.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([]);
+	});
+
+	it("renders inline cues as body block widgets", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const widgets = buildCueWidgetDecorations(state, {
+			cues,
+			display: "inline-cues",
 		});
 		const positions: number[] = [];
 		widgets.between(0, state.doc.length, (from) => {
