@@ -1547,37 +1547,38 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	padding-top: 6px;
 }
 
-/* ---- Legal Pad: yellow ruled paper, red margin rule, serif type ---- */
-.cuecraft-style-legal-pad .cuecraft-cornell-grid {
-	background-color: #f8f4d8;
-	background-image: repeating-linear-gradient(#f8f4d8 0 27px, #e4dcae 27px 28px);
+/* ---- Legal Pad: yellow ruled cue cards with serif type ---- */
+.cuecraft-style-legal-pad .cuecraft-cornell-cue {
+	border-top-color: rgb(191 144 68 / 0.28);
+	border-right: 1px solid rgb(191 144 68 / 0.28);
+	border-bottom-color: rgb(191 144 68 / 0.28);
+	background-color: #fbf6d2;
+	background-image:
+		linear-gradient(
+			90deg,
+			transparent 0 18px,
+			rgb(217 139 139 / 0.72) 18px 19px,
+			transparent 19px
+		),
+		repeating-linear-gradient(
+			0deg,
+			#fbf6d2 0,
+			#fbf6d2 25px,
+			#e6ddb0 25px,
+			#e6ddb0 26px
+		);
 	color: #2b2a23;
 	font-family: Georgia, "Times New Roman", serif;
-	border-radius: 6px;
+	padding-left: 28px;
 }
 
-.cuecraft-style-legal-pad .cuecraft-cornell-cuecell {
-	border-right-width: 1px;
-	border-right-color: #d98b8b;
-}
-
-.cuecraft-style-legal-pad .cuecraft-cornell-cue {
-	border-left-color: #d98b8b;
-}
-
-.cuecraft-style-legal-pad .cuecraft-cornell-q,
-.cuecraft-style-legal-pad .cuecraft-cornell-heading {
+.cuecraft-style-legal-pad .cuecraft-cornell-q {
 	color: #2b2a23;
 }
 
 .cuecraft-style-legal-pad .cuecraft-cornell-support-text {
 	color: #6a5d2a;
 	font-style: italic;
-}
-
-.cuecraft-style-legal-pad .cuecraft-cornell-body,
-.cuecraft-style-legal-pad .cuecraft-cornell-body p {
-	color: #2b2a23;
 }
 
 /* ---- Minimal: quiet, borderless cues ---- */
