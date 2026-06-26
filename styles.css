@@ -990,10 +990,68 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	color: var(--text-muted);
 }
 
+.cuecraft-editor-hook-active-section-composer {
+	max-width: min(24rem, 100%);
+	margin: 0.35em 0 0.7em;
+	padding: 0.75em 0.9em;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-secondary);
+	box-shadow: inset 0 0 0 1px transparent;
+}
+
+.cuecraft-editor-hook-active-section-composer[data-state="current"] {
+	border-color: color-mix(
+		in srgb,
+		var(--interactive-accent) 52%,
+		var(--background-modifier-border)
+	);
+	background:
+		linear-gradient(
+			90deg,
+			color-mix(in srgb, var(--interactive-accent) 18%, transparent),
+			transparent 36%
+		),
+		var(--background-secondary);
+	box-shadow: inset 4px 0 0 var(--interactive-accent), var(--shadow-s);
+}
+
+.cuecraft-editor-hook-active-section-composer[data-state="upcoming"] {
+	max-width: min(18rem, 100%);
+	padding-block: 0.45em;
+	color: var(--text-muted);
+	background: color-mix(
+		in srgb,
+		var(--background-secondary) 54%,
+		transparent
+	);
+}
+
+.cuecraft-editor-hook-active-section-composer[data-state="upcoming"]
+	.cuecraft-editor-hook-heading,
+.cuecraft-editor-hook-active-section-composer[data-state="upcoming"]
+	.cuecraft-editor-hook-keywords {
+	display: none;
+}
+
+.cuecraft-editor-hook-active-section-composer[data-state="upcoming"]
+	.cuecraft-editor-hook-title {
+	overflow: hidden;
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-medium);
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cuecraft-editor-hook-active-section-composer.cuecraft-editor-hook-failed {
+	box-shadow: inset 4px 0 0 var(--color-red);
+}
+
 @media (min-width: 980px) {
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-anchored-card-rail,
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-collapsed-tabs,
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-threaded-margin-notes {
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-threaded-margin-notes,
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-active-section-composer {
 		float: left;
 		clear: left;
 		margin-inline-start: calc(-1 * min(19rem, 32vw));

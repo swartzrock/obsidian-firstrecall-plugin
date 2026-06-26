@@ -70,11 +70,13 @@ describe("settings defaults", () => {
 			"anchored-card-rail",
 			"collapsed-tabs",
 			"threaded-margin-notes",
+			"active-section-composer",
 		]);
 		expect(isEditorCueDisplay("inline-cues")).toBe(true);
 		expect(isEditorCueDisplay("anchored-card-rail")).toBe(true);
 		expect(isEditorCueDisplay("collapsed-tabs")).toBe(true);
 		expect(isEditorCueDisplay("threaded-margin-notes")).toBe(true);
+		expect(isEditorCueDisplay("active-section-composer")).toBe(true);
 		for (const bad of ["", "hook", "cornell", null, undefined, 1, {}]) {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}
