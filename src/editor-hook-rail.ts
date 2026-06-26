@@ -44,7 +44,7 @@ export function buildEditorHookCard(
 		confidence: cue.confidence,
 		error: cue.error,
 		titleDensity: shortFormHookTitleDensity(hookTitle),
-		state: index === 0 ? "current" : "upcoming",
+		state: "upcoming",
 		tone: index % 2 === 0 ? "warm" : "cool",
 	};
 }

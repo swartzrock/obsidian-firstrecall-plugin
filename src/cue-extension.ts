@@ -194,11 +194,6 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	if (card.confidence) root.dataset.confidence = card.confidence;
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
-	const eyebrow = cueDocument().createElement("div");
-	eyebrow.className = "cuecraft-editor-hook-heading";
-	eyebrow.textContent = card.heading;
-	root.appendChild(eyebrow);
-
 	const title = cueDocument().createElement("div");
 	title.className = "cuecraft-editor-hook-title";
 	title.textContent = card.hookTitle;

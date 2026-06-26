@@ -29,13 +29,15 @@ describe("buildEditorHookCard", () => {
 			confidence: "high",
 			error: null,
 			titleDensity: "long",
-			state: "current",
+			state: "upcoming",
 			tone: "warm",
 		});
 	});
 
-	it("marks later cards as upcoming", () => {
+	it("does not mark cards current without active section state", () => {
+		const first = buildEditorHookCard(cue(), "collapsed-tabs", 0);
 		const card = buildEditorHookCard(cue(), "collapsed-tabs", 1);
+		expect(first.state).toBe("upcoming");
 		expect(card.state).toBe("upcoming");
 		expect(card.tone).toBe("cool");
 	});

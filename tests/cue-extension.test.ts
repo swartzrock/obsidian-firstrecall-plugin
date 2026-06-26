@@ -204,8 +204,9 @@ describe("renderCueElement", () => {
 			).toBe(true);
 			expect(el.dataset.display).toBe("anchored-card-rail");
 			expect(el.dataset.line).toBe("3");
-			expect(el.dataset.state).toBe("current");
+			expect(el.dataset.state).toBe("upcoming");
 			expect(el.dataset.confidence).toBe("medium");
+			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("How do agents differ from chatbots");
@@ -226,8 +227,7 @@ describe("renderCueElement", () => {
 					confidence: "low",
 					error: null,
 				},
-				"collapsed-tabs",
-				1
+				"collapsed-tabs"
 			);
 			expect(el.classList.contains("cuecraft-editor-hook-collapsed-tabs")).toBe(
 				true
@@ -235,6 +235,7 @@ describe("renderCueElement", () => {
 			expect(el.dataset.display).toBe("collapsed-tabs");
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.dataset.confidence).toBe("low");
+			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("Who is this workflow designed for");
@@ -261,9 +262,7 @@ describe("renderCueElement", () => {
 			).toBe(true);
 			expect(el.dataset.display).toBe("threaded-margin-notes");
 			expect(el.dataset.state).toBe("upcoming");
-			expect(
-				el.querySelector(".cuecraft-editor-hook-heading")?.textContent
-			).toBe("How To Upskill Employees");
+			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-keywords")?.textContent
 			).toBe("standards · workflow");
@@ -287,8 +286,9 @@ describe("renderCueElement", () => {
 				el.classList.contains("cuecraft-editor-hook-active-section-composer")
 			).toBe(true);
 			expect(el.dataset.display).toBe("active-section-composer");
-			expect(el.dataset.state).toBe("current");
+			expect(el.dataset.state).toBe("upcoming");
 			expect(el.getAttribute("role")).toBe("note");
+			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("Who should use this workflow");
@@ -306,8 +306,7 @@ describe("renderCueElement", () => {
 					confidence: "high",
 					error: null,
 				},
-				"hook-minimap",
-				3
+				"hook-minimap"
 			);
 			expect(el.classList.contains("cuecraft-editor-hook-hook-minimap")).toBe(
 				true
@@ -315,6 +314,7 @@ describe("renderCueElement", () => {
 			expect(el.dataset.display).toBe("hook-minimap");
 			expect(el.dataset.line).toBe("9");
 			expect(el.dataset.state).toBe("upcoming");
+			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("What should the reader remember");
