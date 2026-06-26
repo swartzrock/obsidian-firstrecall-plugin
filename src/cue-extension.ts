@@ -14,7 +14,11 @@ import {
 } from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
 import type { NoteCache } from "./cache";
-import { buildEditorHookCard, type EditorHookCard } from "./editor-hook-rail";
+import {
+	buildEditorHookCard,
+	type EditorHookCard,
+	type EditorHookCardState,
+} from "./editor-hook-rail";
 import type { EditorCueDisplay } from "./editor-cue-display";
 import { isCueEligibleSection, type Section } from "./parser";
 
@@ -116,7 +120,8 @@ class CueGutterMarker extends GutterMarker {
 	constructor(
 		private readonly cue: CueLineData,
 		private readonly display: EditorCueDisplay,
-		private readonly index: number
+		private readonly index: number,
+		private readonly state: EditorHookCardState = "upcoming"
 	) {
 		super();
 	}
@@ -126,6 +131,7 @@ class CueGutterMarker extends GutterMarker {
 			other instanceof CueGutterMarker &&
 			other.display === this.display &&
 			other.index === this.index &&
+			other.state === this.state &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
@@ -134,17 +140,18 @@ class CueGutterMarker extends GutterMarker {
 	}
 
 	toDOM(): HTMLElement {
-		return renderCueElement(this.cue, this.display, this.index);
+		return renderCueElement(this.cue, this.display, this.index, this.state);
 	}
 }
 
 export function renderCueElement(
 	cue: CueLineData,
 	display: EditorCueDisplay,
-	index = 0
+	index = 0,
+	state: EditorHookCardState = "upcoming"
 ): HTMLElement {
 	if (display !== "inline-cues") {
-		return renderEditorHookElement(buildEditorHookCard(cue, display, index));
+		return renderEditorHookElement(buildEditorHookCard(cue, display, index, state));
 	}
 	return renderInlineCueElement(cue);
 }
@@ -196,7 +203,11 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 
 	const title = cueDocument().createElement("div");
 	title.className = "cuecraft-editor-hook-title";
-	title.textContent = card.hookTitle;
+	title.textContent =
+		(card.display === "active-section-composer" && card.state === "current") ||
+		card.display === "hook-minimap"
+			? card.originalQuestion
+			: card.hookTitle;
 	root.appendChild(title);
 
 	if (card.error) {
@@ -259,16 +270,36 @@ export function buildCueGutterMarkers(
 
 	const builder = new RangeSetBuilder<GutterMarker>();
 	const doc = state.doc;
+	const activeLine = doc.lineAt(state.selection.main.head).number;
+	const currentCueLine = activeCueLine(payload.display, payload.cues, activeLine);
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const headingLine = doc.line(cue.line);
+		const cardState = cue.line === currentCueLine ? "current" : "upcoming";
 		builder.add(
 			headingLine.from,
 			headingLine.from,
-			new CueGutterMarker(cue, payload.display, index)
+			new CueGutterMarker(cue, payload.display, index, cardState)
 		);
 	}
 	return builder.finish();
+}
+
+function activeCueLine(
+	display: EditorCueDisplay,
+	cues: CueLineData[],
+	activeLine: number
+): number | null {
+	if (display !== "active-section-composer" && display !== "hook-minimap") {
+		return null;
+	}
+
+	let current: number | null = null;
+	for (const cue of cues) {
+		if (cue.line > activeLine) break;
+		current = cue.line;
+	}
+	return current;
 }
 
 export const cueField = StateField.define<DecorationSet>({
@@ -288,24 +319,39 @@ export const cueField = StateField.define<DecorationSet>({
 	provide: (f) => EditorView.decorations.from(f),
 });
 
-export const cueGutterField = StateField.define<RangeSet<GutterMarker>>({
+interface CueGutterState {
+	markers: RangeSet<GutterMarker>;
+	payload: CueEditorRenderState | null;
+}
+
+export const cueGutterField = StateField.define<CueGutterState>({
 	create() {
-		return emptyCueGutterMarkers;
+		return { markers: emptyCueGutterMarkers, payload: null };
 	},
-	update(markers, tr) {
-		let next = markers.map(tr.changes);
+	update(value, tr) {
+		let payload = value.payload;
 		for (const effect of tr.effects) {
 			if (effect.is(setCuesEffect)) {
-				next = buildCueGutterMarkers(tr.state, effect.value);
+				payload = effect.value;
 			}
 		}
-		return next;
+		if (!payload) {
+			return { markers: value.markers.map(tr.changes), payload };
+		}
+		if (
+			tr.effects.some((effect) => effect.is(setCuesEffect)) ||
+			tr.selection ||
+			tr.docChanged
+		) {
+			return { markers: buildCueGutterMarkers(tr.state, payload), payload };
+		}
+		return { markers: value.markers.map(tr.changes), payload };
 	},
 });
 
 const cueGutter = gutter({
 	class: "cuecraft-editor-hook-gutter",
-	markers: (view) => view.state.field(cueGutterField),
+	markers: (view) => view.state.field(cueGutterField).markers,
 });
 
 /** Editor extension that renders CueCraft cues. Register via registerEditorExtension. */

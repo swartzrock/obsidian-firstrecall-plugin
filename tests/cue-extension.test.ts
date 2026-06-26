@@ -13,6 +13,24 @@ import type { NoteGenerationResult } from "../src/generator";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
 
+function withDocument<T>(fn: () => T): T {
+	const dom = new JSDOM("<!doctype html><html><body></body></html>");
+	const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
+	Object.defineProperty(globalThis, "document", {
+		configurable: true,
+		value: dom.window.document,
+	});
+	try {
+		return fn();
+	} finally {
+		if (previous) {
+			Object.defineProperty(globalThis, "document", previous);
+		} else {
+			delete (globalThis as { document?: Document }).document;
+		}
+	}
+}
+
 function cacheFrom(
 	overrides: (
 		s: ReturnType<typeof parseSections>[number],
@@ -143,24 +161,6 @@ describe("buildCueLineData", () => {
 });
 
 describe("renderCueElement", () => {
-	function withDocument<T>(fn: () => T): T {
-		const dom = new JSDOM("<!doctype html><html><body></body></html>");
-		const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
-		Object.defineProperty(globalThis, "document", {
-			configurable: true,
-			value: dom.window.document,
-		});
-		try {
-			return fn();
-		} finally {
-			if (previous) {
-				Object.defineProperty(globalThis, "document", previous);
-			} else {
-				delete (globalThis as { document?: Document }).document;
-			}
-		}
-	}
-
 	it("keeps the existing inline cue DOM shape", () => {
 		withDocument(() => {
 			const el = renderCueElement(
@@ -295,13 +295,39 @@ describe("renderCueElement", () => {
 		});
 	});
 
+	it("renders current active-section composer with the full question", () => {
+		withDocument(() => {
+			const question =
+				"How does tailoring AI with organizational knowledge upskill employees, and why does encoding that expertise into reusable plugins or agents make them faster and smarter?";
+			const el = renderCueElement(
+				{
+					line: 7,
+					heading: "How To Upskill Employees",
+					question,
+					keywords: ["org knowledge"],
+					confidence: "medium",
+					error: null,
+				},
+				"active-section-composer",
+				0,
+				"current"
+			);
+			expect(el.dataset.state).toBe("current");
+			expect(el.querySelector(".cuecraft-editor-hook-title")?.textContent).toBe(
+				question
+			);
+		});
+	});
+
 	it("renders hook minimap DOM", () => {
 		withDocument(() => {
+			const question =
+				"What should the reader remember about tailoring AI to local workflows?";
 			const el = renderCueElement(
 				{
 					line: 9,
 					heading: "Study Takeaway",
-					question: "What should the reader remember?",
+					question,
 					keywords: ["takeaway"],
 					confidence: "high",
 					error: null,
@@ -317,7 +343,7 @@ describe("renderCueElement", () => {
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
-			).toBe("What should the reader remember");
+			).toBe(question);
 		});
 	});
 
@@ -380,6 +406,44 @@ describe("cue editor placement", () => {
 			state.doc.line(1).from,
 			state.doc.line(3).from,
 		]);
+	});
+
+	it("marks the active composer card current for the cursor section", () => {
+		withDocument(() => {
+			const state = EditorState.create({
+				doc: NOTE,
+				selection: { anchor: NOTE.indexOf("beta") },
+			});
+			const markers = buildCueGutterMarkers(state, {
+				cues,
+				display: "active-section-composer",
+			});
+			const states: Array<string | undefined> = [];
+			markers.between(0, state.doc.length, (_from, _to, marker) => {
+				const element = marker.toDOM(null as never) as HTMLElement;
+				states.push(element.dataset.state);
+			});
+			expect(states).toEqual(["upcoming", "current"]);
+		});
+	});
+
+	it("keeps collapsed tabs upcoming even when the cursor is in a section", () => {
+		withDocument(() => {
+			const state = EditorState.create({
+				doc: NOTE,
+				selection: { anchor: NOTE.indexOf("beta") },
+			});
+			const markers = buildCueGutterMarkers(state, {
+				cues,
+				display: "collapsed-tabs",
+			});
+			const states: Array<string | undefined> = [];
+			markers.between(0, state.doc.length, (_from, _to, marker) => {
+				const element = marker.toDOM(null as never) as HTMLElement;
+				states.push(element.dataset.state);
+			});
+			expect(states).toEqual(["upcoming", "upcoming"]);
+		});
 	});
 
 	it("keeps inline cues out of the left gutter", () => {

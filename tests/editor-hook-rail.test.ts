@@ -42,6 +42,16 @@ describe("buildEditorHookCard", () => {
 		expect(card.tone).toBe("cool");
 	});
 
+	it("accepts explicit active section state", () => {
+		const card = buildEditorHookCard(
+			cue(),
+			"active-section-composer",
+			0,
+			"current"
+		);
+		expect(card.state).toBe("current");
+	});
+
 	it("marks long hook titles with density metadata", () => {
 		const card = buildEditorHookCard(
 			cue({

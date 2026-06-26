@@ -27,7 +27,8 @@ export interface EditorHookCard {
 export function buildEditorHookCard(
 	cue: CueLineData,
 	display: EditorCueDisplay,
-	index = 0
+	index = 0,
+	state: EditorHookCardState = "upcoming"
 ): EditorHookCard {
 	const failed = Boolean(cue.error);
 	const hookTitle = failed
@@ -44,7 +45,7 @@ export function buildEditorHookCard(
 		confidence: cue.confidence,
 		error: cue.error,
 		titleDensity: shortFormHookTitleDensity(hookTitle),
-		state: "upcoming",
+		state,
 		tone: index % 2 === 0 ? "warm" : "cool",
 	};
 }
