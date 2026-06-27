@@ -117,4 +117,41 @@ describe("auto-generation settle delay", () => {
 		expect(calls).toBe(0);
 		expect(timers.has("note.md")).toBe(false);
 	});
+
+	it("supports resolving the latest eligible target when the timer fires", () => {
+		const timers = new Map<string, number>();
+		const harness = createTimerHarness();
+		let currentAreaId: string | null = "area-1";
+		const runs: string[] = [];
+
+		scheduleAutoGenerationTimer({
+			timers,
+			key: "note.md",
+			delaySeconds: 10,
+			timerApi: harness.api,
+			onRun: () => {
+				if (!currentAreaId) return;
+				runs.push(currentAreaId);
+			},
+		});
+
+		currentAreaId = null;
+		harness.fire(timers.get("note.md")!);
+		expect(runs).toEqual([]);
+
+		scheduleAutoGenerationTimer({
+			timers,
+			key: "note.md",
+			delaySeconds: 10,
+			timerApi: harness.api,
+			onRun: () => {
+				if (!currentAreaId) return;
+				runs.push(currentAreaId);
+			},
+		});
+
+		currentAreaId = "area-2";
+		harness.fire(timers.get("note.md")!);
+		expect(runs).toEqual(["area-2"]);
+	});
 });
