@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import * as byok from "../../src/byok";
 import type {
@@ -7,6 +8,18 @@ import type {
 } from "../../src/byok";
 
 describe("BYOK public contract", () => {
+	it("documents examples against the public barrel", () => {
+		const doc = readFileSync("docs/byok-extraction.md", "utf8");
+		const codeExamples = [...doc.matchAll(/```(?:ts|typescript)\n([\s\S]*?)```/g)]
+			.map((match) => match[1] ?? "")
+			.join("\n");
+
+		expect(codeExamples).toContain('from "./byok"');
+		expect(codeExamples).not.toMatch(
+			/from\s+["'][^"']*byok\/(?:models|providers|registry|setup-status|types)/
+		);
+	});
+
 	it("represents all current provider config variants", () => {
 		const configs: ByokProviderConfig[] = [
 			{ provider: "ollama", host: "http://localhost:11434", model: "llama3.1:8b" },
