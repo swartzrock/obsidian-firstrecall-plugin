@@ -7,7 +7,7 @@ import {
 	modelOptionSearchText,
 	renderModelCombobox,
 } from "../src/model-combobox";
-import { normalizeStringId, type ModelOption } from "../src/model-options";
+import { normalizeStringId, type ModelOption } from "../src/byok";
 
 function opt(
 	id: string,

@@ -1,33 +1,18 @@
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
+import type {
+	ByokProviderId,
+	ByokSetupStatus,
+	ByokVerificationSnapshot,
+	ByokVerificationSnapshotMap,
+} from "./types";
 
-export type ProviderSetupStatusId =
-	| "ollama"
-	| "anthropic"
-	| "openai"
-	| "google"
-	| "xai"
-	| "openrouter"
-	| "codex-cli"
-	| "claude-cli";
+export type ProviderSetupStatusId = ByokProviderId;
 
 export const CLI_DEFAULT_MODEL_SENTINEL = "__cuecraft_cli_default__";
 
-export interface ProviderConnectionSnapshot {
-	credentialFingerprint: string;
-	modelId: string;
-	testedAt: string;
-}
+export type ProviderConnectionSnapshot = ByokVerificationSnapshot;
 
-export interface ProviderConnectionStatusMap {
-	ollama?: ProviderConnectionSnapshot;
-	anthropic?: ProviderConnectionSnapshot;
-	openai?: ProviderConnectionSnapshot;
-	google?: ProviderConnectionSnapshot;
-	xai?: ProviderConnectionSnapshot;
-	openrouter?: ProviderConnectionSnapshot;
-	"codex-cli"?: ProviderConnectionSnapshot;
-	"claude-cli"?: ProviderConnectionSnapshot;
-}
+export type ProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 
 export interface ProviderSetupStatusSettings {
 	provider: ProviderSetupStatusId;
@@ -51,12 +36,7 @@ export interface ProviderSetupStatusSettings {
 	providerConnectionStatus?: ProviderConnectionStatusMap;
 }
 
-export interface DerivedProviderSetupStatus {
-	keySaved: boolean;
-	modelSelected: boolean;
-	connection: "untested" | "verified" | "stale";
-	testedAt?: string;
-}
+export type DerivedProviderSetupStatus = ByokSetupStatus;
 
 function trimValue(value: unknown): string {
 	return typeof value === "string" ? value.trim() : "";

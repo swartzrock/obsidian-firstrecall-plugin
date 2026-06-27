@@ -9,7 +9,7 @@ import {
 	isAnthropicCustomModelSelection,
 	normalizeAnthropicModelSelection,
 	refreshAnthropicModelOptions,
-} from "../src/anthropic-models";
+} from "../src/byok";
 import {
 	AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS,
 	DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,

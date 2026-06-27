@@ -6,12 +6,12 @@ import {
 	summaryOutputSchema,
 	type CueOutput,
 	type SummaryOutput,
-} from "../schemas";
+} from "../../schemas";
 import {
 	cueDensityGuidance,
 	keywordGuidance,
 	questionStyleGuidance,
-} from "../cue-generation";
+} from "../../cue-generation";
 import {
 	AiProvider,
 	CueInput,

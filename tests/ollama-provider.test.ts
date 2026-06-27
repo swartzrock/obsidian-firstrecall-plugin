@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { OllamaProvider } from "../src/providers/ollama-provider";
-import { ProviderError, HttpClient, HttpResponse } from "../src/providers/types";
+import { OllamaProvider } from "../src/byok/providers/ollama-provider";
+import { ProviderError, HttpClient, HttpResponse } from "../src/byok/providers/types";
 
 function jsonResponse(body: unknown, status = 200): HttpResponse {
 	return { status, text: JSON.stringify(body), json: body };

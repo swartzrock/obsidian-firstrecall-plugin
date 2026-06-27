@@ -6,8 +6,9 @@ import {
 	modelCompatibilityWarning,
 	modelStructuredOutputSupport,
 	sortCueCraftModelOptions,
-} from "../src/model-compatibility";
-import { normalizeStringId, type ModelOption } from "../src/model-options";
+	normalizeStringId,
+	type ModelOption,
+} from "../src/byok";
 
 function opt(
 	id: string,

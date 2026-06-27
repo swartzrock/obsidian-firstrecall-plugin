@@ -2,8 +2,8 @@ import {
 	cueDensityGuidance,
 	keywordGuidance,
 	questionStyleGuidance,
-} from "../cue-generation";
-import { validateCueBatch } from "../schemas";
+} from "../../cue-generation";
+import { validateCueBatch } from "../../schemas";
 import type { CueBatchResult, CueInput } from "./types";
 
 const CUE_BATCH_ITEM_SCHEMA = {

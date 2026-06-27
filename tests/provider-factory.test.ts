@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { CueCraftSettings } from "../src/settings";
-import { ClaudeCliProvider } from "../src/providers/claude-cli-provider";
-import { CodexCliProvider } from "../src/providers/codex-cli-provider";
-import { makeProviderFromSettings } from "../src/providers/provider-factory";
-import type { HttpClient } from "../src/providers/types";
+import { ClaudeCliProvider } from "../src/byok/providers/claude-cli-provider";
+import { CodexCliProvider } from "../src/byok/providers/codex-cli-provider";
+import {
+	makeCueCraftByokProvider,
+	cueCraftProviderConfigFromSettings,
+	type CueCraftHttpClient,
+} from "../src/byok-cuecraft-adapter";
 
 function settings(
 	overrides: Partial<CueCraftSettings> = {}
@@ -30,10 +33,39 @@ function settings(
 	} as CueCraftSettings;
 }
 
-const http: HttpClient = async () => ({ status: 200, text: "{}", json: {} });
+const http: CueCraftHttpClient = async () => ({ status: 200, text: "{}", json: {} });
 const fetchImpl = (async () => new Response("{}")) as typeof fetch;
 
-describe("makeProviderFromSettings", () => {
+describe("makeCueCraftByokProvider", () => {
+	it("maps CueCraft settings into BYOK provider config", () => {
+		expect(
+			cueCraftProviderConfigFromSettings(
+				settings({
+					provider: "openrouter",
+					openrouterApiKey: "sk-or-test",
+					openrouterModel: "anthropic/claude-sonnet-4",
+				})
+			)
+		).toEqual({
+			provider: "openrouter",
+			apiKey: "sk-or-test",
+			model: "anthropic/claude-sonnet-4",
+		});
+		expect(
+			cueCraftProviderConfigFromSettings(
+				settings({
+					provider: "codex-cli",
+					codexCliCommand: "codex",
+					codexCliModel: "",
+				})
+			)
+		).toEqual({
+			provider: "codex-cli",
+			command: "codex",
+			model: "",
+		});
+	});
+
 	it.each([
 		["ollama", "ollama"],
 		["anthropic", "anthropic"],
@@ -43,12 +75,12 @@ describe("makeProviderFromSettings", () => {
 		["openrouter", "openrouter"],
 	] as const)("creates the existing %s provider", (provider, expectedId) => {
 		expect(
-			makeProviderFromSettings(settings({ provider }), { fetchImpl, http }).id
+			makeCueCraftByokProvider(settings({ provider }), { fetchImpl, http }).id
 		).toBe(expectedId);
 	});
 
 	it("creates the Codex CLI provider without a sequential concurrency cap", () => {
-		const provider = makeProviderFromSettings(
+		const provider = makeCueCraftByokProvider(
 			settings({ provider: "codex-cli" }),
 			{ fetchImpl, http }
 		);
@@ -58,7 +90,7 @@ describe("makeProviderFromSettings", () => {
 	});
 
 	it("creates the Claude CLI provider without a sequential concurrency cap", () => {
-		const provider = makeProviderFromSettings(
+		const provider = makeCueCraftByokProvider(
 			settings({ provider: "claude-cli" }),
 			{ fetchImpl, http }
 		);

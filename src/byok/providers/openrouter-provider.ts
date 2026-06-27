@@ -10,7 +10,7 @@ import {
 	normalizeOpenRouterModel,
 	type ModelOption,
 	type OpenRouterRawModel,
-} from "../model-options";
+} from "../models/model-options";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 

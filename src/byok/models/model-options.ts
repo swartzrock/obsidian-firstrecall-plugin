@@ -1,25 +1,11 @@
+import type { ByokModelOption, ByokModelOptionSource } from "../types";
 import { compareFetchedModelIds } from "./fetched-model-sorting";
 
 /** Provider source that produced this option. */
-export type ModelOptionSource =
-	| "openrouter"
-	| "openai"
-	| "google"
-	| "xai"
-	| "ollama"
-	| "anthropic"
-	| "string";
+export type ModelOptionSource = ByokModelOptionSource;
 
 /** Normalized model metadata shared across all providers. */
-export interface ModelOption {
-	id: string;
-	label: string;
-	provider: string;
-	contextLength: number | null;
-	pricing: { prompt: number; completion: number } | null;
-	supportedParameters: string[] | null;
-	source: ModelOptionSource;
-}
+export type ModelOption = ByokModelOption;
 
 /** Subset of the OpenRouter `/models` API response we normalize from. */
 export interface OpenRouterRawModel {
