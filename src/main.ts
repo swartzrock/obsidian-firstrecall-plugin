@@ -1018,16 +1018,24 @@ export default class CueCraftPlugin extends Plugin {
 			hidden
 		);
 		if (!area) return;
-		const existing = this.studyAreaMaintenanceTimers.get(file.path);
-		if (existing) window.clearTimeout(existing);
-		const timer = window.setTimeout(() => {
-			this.studyAreaMaintenanceTimers.delete(file.path);
-			void this.runStudyArea(area.id, "maintain-note", {
-				automatic: true,
-				targetFile: file,
-			});
-		}, 1200);
-		this.studyAreaMaintenanceTimers.set(file.path, timer);
+		scheduleAutoGenerationTimer({
+			timers: this.studyAreaMaintenanceTimers,
+			key: file.path,
+			delaySeconds: this.settings.autoGenerationSettleDelaySeconds,
+			timerApi: window,
+			onRun: () => {
+				const currentArea = findMaintainedStudyAreaForPath(
+					this.settings.studyAreas,
+					file.path,
+					this.visibility.isHidden(file.path)
+				);
+				if (!currentArea) return;
+				void this.runStudyArea(currentArea.id, "maintain-note", {
+					automatic: true,
+					targetFile: file,
+				});
+			},
+		});
 	}
 
 	/** Open a fuzzy picker listing the active note's sections, then regen. */
