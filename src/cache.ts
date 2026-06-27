@@ -178,8 +178,9 @@ export function isStale(cache: NoteCache, currentSections: Section[]): boolean {
  * Ids of cached sections that need regenerating: their content changed since the
  * cache was built (hash mismatch against the current parse) or they previously
  * errored. Matched by stable section id, so reordering alone doesn't count.
- * Newly added sections (absent from the cache) are not included — those come
- * from a full Generate.
+ * Newly added sections are intentionally not included here; use
+ * `sectionIdsNeedingGeneration` for incremental generation paths that should
+ * handle additions without a full-note run.
  */
 export function staleSectionIds(
 	cache: NoteCache,
@@ -195,6 +196,66 @@ export function staleSectionIds(
 		}
 	}
 	return ids;
+}
+
+/**
+ * Ids that need a provider call in an incremental generation pass: new sections
+ * missing from the cache, changed sections, or previous failures. Removed and
+ * reordered sections are handled by cache reconciliation without provider work.
+ */
+export function sectionIdsNeedingGeneration(
+	cache: NoteCache,
+	currentSections: Section[]
+): string[] {
+	const cached = new Map(cache.sections.map((s) => [s.id, s]));
+	const ids: string[] = [];
+	for (const live of cueEligibleSections(currentSections)) {
+		const existing = cached.get(live.id);
+		if (!existing || existing.error || existing.contentHash !== live.contentHash) {
+			ids.push(live.id);
+		}
+	}
+	return ids;
+}
+
+export interface ReconcileCacheSectionsOptions {
+	generatedAt?: string;
+	noteModifiedAt?: number;
+}
+
+/**
+ * Align cached sections with the current document order while preserving cues
+ * for unchanged sections. Newly generated sections replace/add by id; removed
+ * document sections disappear from the cache.
+ */
+export function reconcileCacheSections(
+	cache: NoteCache,
+	currentSections: Section[],
+	generatedSections: readonly CachedSection[] = [],
+	opts: ReconcileCacheSectionsOptions = {}
+): NoteCache {
+	const cached = new Map(cache.sections.map((s) => [s.id, s]));
+	const generated = new Map(generatedSections.map((s) => [s.id, s]));
+	const sections = cueEligibleSections(currentSections).flatMap((live) => {
+		const updated = generated.get(live.id);
+		if (updated) return [updated];
+		const existing = cached.get(live.id);
+		if (!existing) return [];
+		return [{
+			...existing,
+			heading: live.heading,
+			level: live.level,
+			lineNumber: live.lineNumber,
+			contentHash: live.contentHash,
+		}];
+	});
+
+	return {
+		...cache,
+		generatedAt: opts.generatedAt ?? new Date().toISOString(),
+		noteModifiedAt: opts.noteModifiedAt ?? cache.noteModifiedAt,
+		sections,
+	};
 }
 
 /**

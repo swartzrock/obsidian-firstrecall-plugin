@@ -351,7 +351,7 @@ describe("study area generation planning", () => {
 		]);
 	});
 
-	it("plans edited-section refresh and structural full generation separately", () => {
+	it("plans edited and structural changes as incremental refreshes", () => {
 		const cache = buildCache();
 		const editedOnly = planStudyAreaGeneration(area(), [
 			{
@@ -370,20 +370,38 @@ describe("study area generation planning", () => {
 			},
 		]);
 
+		const structuralSections = parseSections("# A\nalpha\n## B\nbeta\n## C\ngamma");
 		const structural = planStudyAreaGeneration(area(), [
 			{
 				path: "Courses/Biology/Structural.md",
 				cache,
-				currentSections: parseSections("# A\nalpha\n## B\nbeta\n## C\ngamma"),
+				currentSections: structuralSections,
 			},
 		]);
 		expect(structural.items).toEqual([
 			{
 				path: "Courses/Biology/Structural.md",
-				action: "generate-note",
+				action: "refresh-stale-sections",
+				sectionIds: [structuralSections[2].id],
+				readiness: "stale",
+				sectionCount: 1,
+			},
+		]);
+
+		const removedOnly = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Removed.md",
+				cache,
+				currentSections: parseSections("# A\nalpha"),
+			},
+		]);
+		expect(removedOnly.items).toEqual([
+			{
+				path: "Courses/Biology/Removed.md",
+				action: "refresh-stale-sections",
 				sectionIds: [],
 				readiness: "stale",
-				sectionCount: 3,
+				sectionCount: 0,
 			},
 		]);
 	});
