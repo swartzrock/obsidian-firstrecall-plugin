@@ -17,7 +17,10 @@ import {
 	CueCraftSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
-import { normalizeAutoGenerationSettleDelaySeconds } from "./auto-generation-delay";
+import {
+	normalizeAutoGenerationSettleDelaySeconds,
+	scheduleAutoGenerationTimer,
+} from "./auto-generation-delay";
 import { normalizeProviderId } from "./provider-id";
 import {
 	normalizeAnthropicModelSelection,
@@ -991,13 +994,18 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const hidden = this.visibility.isHidden(file.path);
 		if (this.settings.autoGenerateOnSave && !hidden) {
-			const existing = this.autoGenerateTimers.get(file.path);
-			if (existing) window.clearTimeout(existing);
-			const timer = window.setTimeout(() => {
-				this.autoGenerateTimers.delete(file.path);
-				void this.generateCuesForFile(file, { automatic: true });
-			}, 1200);
-			this.autoGenerateTimers.set(file.path, timer);
+			scheduleAutoGenerationTimer({
+				timers: this.autoGenerateTimers,
+				key: file.path,
+				delaySeconds: this.settings.autoGenerationSettleDelaySeconds,
+				timerApi: window,
+				shouldRun: () =>
+					this.settings.autoGenerateOnSave &&
+					!this.visibility.isHidden(file.path),
+				onRun: () => {
+					void this.generateCuesForFile(file, { automatic: true });
+				},
+			});
 		}
 		this.scheduleStudyAreaMaintenance(file, hidden);
 	}
