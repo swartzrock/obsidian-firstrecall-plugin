@@ -5,7 +5,9 @@ import {
 	buildCueGutterMarkers,
 	buildCueLineData,
 	buildCueWidgetDecorations,
+	cueGutterField,
 	renderCueElement,
+	setCuesEffect,
 } from "../src/cue-extension";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
@@ -405,6 +407,35 @@ describe("cue editor placement", () => {
 		expect(positions).toEqual([
 			state.doc.line(1).from,
 			state.doc.line(3).from,
+		]);
+	});
+
+	it("keeps hook gutter markers attached when edits move headings down", () => {
+		let state = EditorState.create({
+			doc: NOTE,
+			extensions: [cueGutterField],
+		});
+		state = state.update({
+			effects: setCuesEffect.of({
+				cues,
+				display: "anchored-card-rail",
+			}),
+		}).state;
+
+		state = state.update({
+			changes: {
+				from: state.doc.line(3).from,
+				insert: "\n\n",
+			},
+		}).state;
+
+		const positions: number[] = [];
+		state.field(cueGutterField).markers.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([
+			state.doc.line(1).from,
+			state.doc.line(5).from,
 		]);
 	});
 

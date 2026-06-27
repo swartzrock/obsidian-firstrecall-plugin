@@ -3,6 +3,7 @@ import {
 	RangeSetBuilder,
 	StateEffect,
 	StateField,
+	type Transaction,
 } from "@codemirror/state";
 import type { EditorState, Range } from "@codemirror/state";
 import {
@@ -302,6 +303,27 @@ function activeCueLine(
 	return current;
 }
 
+function mapCuePayloadThroughChanges(
+	payload: CueEditorRenderState,
+	tr: Transaction
+): CueEditorRenderState {
+	if (!tr.docChanged) return payload;
+	const cues = payload.cues.map((cue) => ({
+		...cue,
+		line: mapCueLineThroughChanges(cue.line, tr),
+	}));
+	return { ...payload, cues };
+}
+
+function mapCueLineThroughChanges(line: number, tr: Transaction): number {
+	const oldDoc = tr.startState.doc;
+	if (line < 1 || line > oldDoc.lines) return line;
+	const oldLine = oldDoc.line(line);
+	const mappedPos = tr.changes.mapPos(oldLine.from, 1);
+	const boundedPos = Math.min(mappedPos, tr.state.doc.length);
+	return tr.state.doc.lineAt(boundedPos).number;
+}
+
 export const cueField = StateField.define<DecorationSet>({
 	create() {
 		return Decoration.none;
@@ -330,16 +352,21 @@ export const cueGutterField = StateField.define<CueGutterState>({
 	},
 	update(value, tr) {
 		let payload = value.payload;
+		let payloadChanged = false;
 		for (const effect of tr.effects) {
 			if (effect.is(setCuesEffect)) {
 				payload = effect.value;
+				payloadChanged = true;
 			}
 		}
 		if (!payload) {
 			return { markers: value.markers.map(tr.changes), payload };
 		}
+		if (!payloadChanged) {
+			payload = mapCuePayloadThroughChanges(payload, tr);
+		}
 		if (
-			tr.effects.some((effect) => effect.is(setCuesEffect)) ||
+			payloadChanged ||
 			tr.selection ||
 			tr.docChanged
 		) {
