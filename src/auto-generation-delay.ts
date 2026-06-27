@@ -29,3 +29,9 @@ export function normalizeAutoGenerationSettleDelaySeconds(
 		? value
 		: DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS;
 }
+
+export function formatAutoGenerationSettleDelayLabel(
+	value: AutoGenerationSettleDelaySeconds
+): string {
+	return `${value} second${value === 1 ? "" : "s"}`;
+}

@@ -13,6 +13,7 @@ import {
 import {
 	AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS,
 	DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
+	formatAutoGenerationSettleDelayLabel,
 	normalizeAutoGenerationSettleDelaySeconds,
 } from "../src/auto-generation-delay";
 import { normalizeProviderId } from "../src/provider-id";
@@ -63,6 +64,20 @@ describe("settings defaults", () => {
 		for (const bad of [0, 2, 100, "", "10", null, undefined, {}, []]) {
 			expect(normalizeAutoGenerationSettleDelaySeconds(bad)).toBe(10);
 		}
+	});
+
+	it("formats auto-generation settle delay preset labels", () => {
+		expect(
+			AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS.map((seconds) =>
+				formatAutoGenerationSettleDelayLabel(seconds)
+			)
+		).toEqual([
+			"1 second",
+			"5 seconds",
+			"10 seconds",
+			"25 seconds",
+			"60 seconds",
+		]);
 	});
 
 	it("defaults Reading mode to the compact review button", () => {
