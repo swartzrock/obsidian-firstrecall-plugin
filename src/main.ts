@@ -20,11 +20,12 @@ import {
 import { normalizeProviderId } from "./provider-id";
 import {
 	normalizeAnthropicModelSelection,
-} from "./anthropic-models";
+	type ByokProviderRuntime,
+	type ByokHttpClient,
+} from "./byok";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
-import type { AiProvider, HttpClient } from "./providers/types";
-import { makeProviderFromSettings } from "./providers/provider-factory";
+import { makeCueCraftByokProvider } from "./byok-cuecraft-adapter";
 import { parseSections, type Section } from "./parser";
 import {
 	CacheStore,
@@ -890,7 +891,7 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/** Wraps Obsidian's requestUrl as the provider HTTP client (avoids CORS). */
-	private makeHttpClient(): HttpClient {
+	private makeHttpClient(): ByokHttpClient {
 		return async (req) => {
 			const res = await requestUrl({
 				url: req.url,
@@ -940,8 +941,8 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
-	makeProvider(): AiProvider {
-		return makeProviderFromSettings(this.settings, {
+	makeProvider(): ByokProviderRuntime {
+		return makeCueCraftByokProvider(this.settings, {
 			fetchImpl: this.makeFetch(),
 			http: this.makeHttpClient(),
 		});
@@ -1421,7 +1422,7 @@ export default class CueCraftPlugin extends Plugin {
 	private async runStudyAreaQueueItem(
 		file: TFile,
 		item: StudyAreaQueueItem,
-		provider: AiProvider,
+		provider: ByokProviderRuntime,
 		controller: AbortController,
 		onProgress?: (completedSections: number) => void
 	): Promise<"completed" | "failed" | "canceled"> {
@@ -1479,7 +1480,7 @@ export default class CueCraftPlugin extends Plugin {
 		file: TFile,
 		markdown: string,
 		sectionIds: readonly string[],
-		provider: AiProvider,
+		provider: ByokProviderRuntime,
 		controller: AbortController,
 		onProgress?: (completedSections: number) => void
 	): Promise<"completed" | "failed" | "canceled"> {

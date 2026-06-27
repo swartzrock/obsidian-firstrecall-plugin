@@ -10,13 +10,14 @@ import {
 	resolveSectionConcurrency,
 } from "../src/generator";
 import type {
-	AiProvider,
-	CueBatchResult,
-	CueInput,
-	ProviderStatus,
-	SummaryInput,
-} from "../src/providers/types";
-import type { CueOutput, SummaryOutput } from "../src/schemas";
+	ByokCueBatchResult,
+	ByokCueInput,
+	ByokCueOutput,
+	ByokProviderRuntime,
+	ByokProviderStatus,
+	ByokSummaryInput,
+	ByokSummaryOutput,
+} from "../src/byok";
 
 interface MockOptions {
 	failOnHeading?: string;
@@ -28,31 +29,31 @@ interface MockOptions {
 	sectionConcurrencyLimit?: number;
 }
 
-function mockProvider(opts: MockOptions = {}): AiProvider & {
+function mockProvider(opts: MockOptions = {}): ByokProviderRuntime & {
 	summaryCalls: number;
-	lastSummaryInput?: SummaryInput;
-	cueInputs: CueInput[];
-	batchInputs: CueInput[][];
+	lastSummaryInput?: ByokSummaryInput;
+	cueInputs: ByokCueInput[];
+	batchInputs: ByokCueInput[][];
 } {
-	const provider: AiProvider & {
+	const provider: ByokProviderRuntime & {
 		summaryCalls: number;
-		lastSummaryInput?: SummaryInput;
-		cueInputs: CueInput[];
-		batchInputs: CueInput[][];
+		lastSummaryInput?: ByokSummaryInput;
+		cueInputs: ByokCueInput[];
+		batchInputs: ByokCueInput[][];
 	} = {
-		id: "mock",
+		id: "ollama",
 		label: "Mock",
 		requiresNetwork: false,
 		requiresDownload: false,
 		sectionConcurrencyLimit: opts.sectionConcurrencyLimit,
 		summaryCalls: 0,
-		lastSummaryInput: undefined as SummaryInput | undefined,
-		cueInputs: [] as CueInput[],
-		batchInputs: [] as CueInput[][],
-		async testConnection(): Promise<ProviderStatus> {
+		lastSummaryInput: undefined as ByokSummaryInput | undefined,
+		cueInputs: [] as ByokCueInput[],
+		batchInputs: [] as ByokCueInput[][],
+		async testConnection(): Promise<ByokProviderStatus> {
 			return { ok: true, message: "ok" };
 		},
-		async generateCue(input: CueInput): Promise<CueOutput> {
+		async generateCue(input: ByokCueInput): Promise<ByokCueOutput> {
 			provider.cueInputs.push(input);
 			opts.onCue?.();
 			if (opts.delayMs) {
@@ -68,16 +69,16 @@ function mockProvider(opts: MockOptions = {}): AiProvider & {
 				rationale: input.heading === "Terms" ? "clear section" : undefined,
 			};
 		},
-		async generateSummary(input: SummaryInput): Promise<SummaryOutput> {
+		async generateSummary(input: ByokSummaryInput): Promise<ByokSummaryOutput> {
 			provider.summaryCalls++;
 			provider.lastSummaryInput = input;
-			return { summary: "the summary" };
+			return { summary: "the summary", learningObjective: null };
 		},
 	};
 	if (opts.batch) {
 		provider.generateCues = async (
-			inputs: CueInput[]
-		): Promise<CueBatchResult[]> => {
+			inputs: ByokCueInput[]
+		): Promise<ByokCueBatchResult[]> => {
 			provider.batchInputs.push(inputs);
 			opts.onBatch?.();
 			return inputs.map((input) => {

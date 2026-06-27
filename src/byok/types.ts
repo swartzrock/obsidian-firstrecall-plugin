@@ -129,8 +129,8 @@ export type ByokListedModel = string | ByokModelOption;
 export type ByokCueConfidence = "high" | "medium" | "low";
 
 export interface ByokCueGenerationOptions {
-	cueDensity?: "brief" | "balanced" | "detailed";
-	questionStyle?: "conceptual" | "exam" | "simple";
+	cueDensity?: 1 | 2 | 3;
+	questionStyle?: "recall" | "socratic" | "exam";
 	generateKeywords?: boolean;
 	autoSummary?: boolean;
 }
