@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { CueCraftSettings } from "../src/settings";
 import { ClaudeCliProvider } from "../src/providers/claude-cli-provider";
 import { CodexCliProvider } from "../src/providers/codex-cli-provider";
-import { makeProviderFromSettings } from "../src/providers/provider-factory";
+import {
+	makeProviderFromSettings,
+	providerConfigFromSettings,
+} from "../src/providers/provider-factory";
 import type { HttpClient } from "../src/providers/types";
 
 function settings(
@@ -34,6 +37,35 @@ const http: HttpClient = async () => ({ status: 200, text: "{}", json: {} });
 const fetchImpl = (async () => new Response("{}")) as typeof fetch;
 
 describe("makeProviderFromSettings", () => {
+	it("maps CueCraft settings into BYOK provider config", () => {
+		expect(
+			providerConfigFromSettings(
+				settings({
+					provider: "openrouter",
+					openrouterApiKey: "sk-or-test",
+					openrouterModel: "anthropic/claude-sonnet-4",
+				})
+			)
+		).toEqual({
+			provider: "openrouter",
+			apiKey: "sk-or-test",
+			model: "anthropic/claude-sonnet-4",
+		});
+		expect(
+			providerConfigFromSettings(
+				settings({
+					provider: "codex-cli",
+					codexCliCommand: "codex",
+					codexCliModel: "",
+				})
+			)
+		).toEqual({
+			provider: "codex-cli",
+			command: "codex",
+			model: "",
+		});
+	});
+
 	it.each([
 		["ollama", "ollama"],
 		["anthropic", "anthropic"],
