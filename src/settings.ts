@@ -106,7 +106,10 @@ import {
 import { formatCueCraftNotice } from "./notice";
 import type { ProviderId } from "./provider-id";
 import {
+	AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS,
 	DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
+	formatAutoGenerationSettleDelayLabel,
+	normalizeAutoGenerationSettleDelaySeconds,
 	type AutoGenerationSettleDelaySeconds,
 } from "./auto-generation-delay";
 
@@ -830,6 +833,29 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		new Setting(containerEl)
+			.setName("Auto-generation delay")
+			.setDesc(
+				"Wait this long after you stop typing before CueCraft auto-generates cues. Longer delays reduce repeated API calls."
+			)
+			.addDropdown((dropdown) => {
+				for (const seconds of AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS) {
+					dropdown.addOption(
+						String(seconds),
+						formatAutoGenerationSettleDelayLabel(seconds)
+					);
+				}
+				dropdown
+					.setValue(
+						String(this.plugin.settings.autoGenerationSettleDelaySeconds)
+					)
+					.onChange(async (value) => {
+						this.plugin.settings.autoGenerationSettleDelaySeconds =
+							normalizeAutoGenerationSettleDelaySeconds(Number(value));
+						await this.plugin.saveSettings();
+					});
+			});
 	}
 
 	// ── Study areas ───────────────────────────────────────────────────────
