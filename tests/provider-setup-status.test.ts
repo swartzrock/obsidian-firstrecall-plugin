@@ -4,7 +4,7 @@ import {
 	deriveProviderSetupStatus,
 	recordProviderConnectionSuccess,
 	type ProviderSetupStatusSettings,
-} from "../src/provider-setup-status";
+} from "../src/byok";
 
 function baseSettings(
 	overrides: Partial<ProviderSetupStatusSettings> = {}
