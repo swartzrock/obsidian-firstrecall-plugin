@@ -6,8 +6,8 @@ import {
 	type LoginShellPathLoader,
 	type LocalProcess,
 	type LocalProcessSpawner,
-} from "../src/providers/local-command-runner";
-import { ProviderError } from "../src/providers/types";
+} from "../src/byok/providers/local-command-runner";
+import { ProviderError } from "../src/byok/providers/types";
 
 class FakeProcess extends EventEmitter implements LocalProcess {
 	readonly stdout = new PassThrough();
