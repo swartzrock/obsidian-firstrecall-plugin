@@ -79,7 +79,7 @@ Stay in CueCraft:
 
 - `src/byok-cuecraft-adapter.ts`
 - `src/settings.ts`, `src/main.ts`, `src/generator.ts`, note parsing/cache/export/view code, and all Obsidian UI modules.
-- Compatibility shims in `src/providers/*`, `src/model-options.ts`, `src/model-compatibility.ts`, `src/fetched-model-sorting.ts`, `src/anthropic-models.ts`, and `src/provider-setup-status.ts` until downstream imports are removed.
+- Any app-specific compatibility adapters that a future consumer needs. CueCraft no longer keeps the old `src/providers/*` or top-level model/setup shims.
 
 ## Extraction Sequence
 
@@ -89,7 +89,7 @@ Stay in CueCraft:
 4. Keep the import-boundary tests in the package test suite so package code cannot drift back toward CueCraft or Obsidian imports.
 5. Publish package types from the public barrel only; avoid documenting internal submodule imports.
 6. Update CueCraft to consume the package barrel and keep `src/byok-cuecraft-adapter.ts` as the app-specific bridge.
-7. Remove CueCraft compatibility shims only after all local imports and any supported downstream imports have moved.
+7. Keep CueCraft free of local compatibility shims unless a real downstream consumer needs a transition path.
 
 ## Extraction Checklist
 

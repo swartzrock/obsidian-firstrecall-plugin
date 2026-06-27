@@ -9,7 +9,7 @@ import {
 	isAnthropicCustomModelSelection,
 	normalizeAnthropicModelSelection,
 	refreshAnthropicModelOptions,
-} from "../src/anthropic-models";
+} from "../src/byok";
 import { normalizeProviderId } from "../src/provider-id";
 import {
 	DEFAULT_CORNELL_DISPLAY_MODE,
