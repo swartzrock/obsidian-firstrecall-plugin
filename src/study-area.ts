@@ -1,6 +1,6 @@
 import {
 	isStale,
-	staleSectionIds,
+	sectionIdsNeedingGeneration,
 	type NoteCache,
 } from "./cache";
 import { cueEligibleSections, type Section } from "./parser";
@@ -315,17 +315,16 @@ function planQueueItem(
 		};
 	}
 	if (readiness === "stale" && mode !== "retry-failed" && note.cache) {
-		const sectionIds = staleSectionIds(note.cache, note.currentSections);
-		const action = canRefreshStaleSections(note.cache, note.currentSections)
-			? "refresh-stale-sections"
-			: "generate-note";
+		const sectionIds = sectionIdsNeedingGeneration(
+			note.cache,
+			note.currentSections
+		);
 		return {
 			path: note.path,
-			action,
+			action: "refresh-stale-sections",
 			sectionIds,
 			readiness,
-			sectionCount:
-				action === "generate-note" ? eligibleSections.length : sectionIds.length,
+			sectionCount: sectionIds.length,
 		};
 	}
 	if (readiness === "failed" && note.cache) {
@@ -340,18 +339,6 @@ function planQueueItem(
 		};
 	}
 	return null;
-}
-
-function canRefreshStaleSections(
-	cache: NoteCache,
-	currentSections: readonly Section[]
-): boolean {
-	const eligibleSections = cueEligibleSections(currentSections);
-	if (cache.sections.length !== eligibleSections.length) return false;
-	return cache.sections.every((cached, index) => {
-		const current = eligibleSections[index];
-		return current && current.id === cached.id;
-	});
 }
 
 function failedSectionIds(

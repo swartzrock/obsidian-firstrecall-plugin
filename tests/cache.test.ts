@@ -7,7 +7,9 @@ import {
 	isStale,
 	loadCache,
 	migrateCache,
+	reconcileCacheSections,
 	replaceSection,
+	sectionIdsNeedingGeneration,
 	staleSectionIds,
 	validateCache,
 	type NoteCache,
@@ -231,6 +233,86 @@ describe("staleSectionIds", () => {
 		const onlyA = parseSections("# A\nalpha");
 		// B is gone from the note, so it is not returned (full Generate handles removals).
 		expect(staleSectionIds(cache, onlyA)).toEqual([]);
+	});
+});
+
+describe("sectionIdsNeedingGeneration", () => {
+	it("is empty when cached sections still match the note", () => {
+		const cache = build();
+		expect(sectionIdsNeedingGeneration(cache, parseSections(NOTE))).toEqual([]);
+	});
+
+	it("includes edited and newly added sections only", () => {
+		const cache = build();
+		const current = parseSections("# A\nalpha edited\n## B\nbeta\n## C\ngamma");
+		const eligible = cueEligibleSections(current);
+
+		expect(sectionIdsNeedingGeneration(cache, current)).toEqual([
+			eligible[0].id,
+			eligible[2].id,
+		]);
+	});
+
+	it("includes previous failures even when their content is unchanged", () => {
+		const cache = build();
+		cache.sections[1] = { ...cache.sections[1], error: "boom" };
+
+		expect(sectionIdsNeedingGeneration(cache, parseSections(NOTE))).toEqual([
+			cache.sections[1].id,
+		]);
+	});
+
+	it("does not call the provider for removed sections", () => {
+		const cache = build();
+		expect(sectionIdsNeedingGeneration(cache, parseSections("# A\nalpha"))).toEqual([]);
+	});
+});
+
+describe("reconcileCacheSections", () => {
+	it("updates cached section metadata without replacing the cue", () => {
+		const cache = build();
+		const current = parseSections("# A\nalpha\n\n\n## B\nbeta");
+		const result = reconcileCacheSections(cache, current, [], {
+			generatedAt: "2099-01-01T00:00:00.000Z",
+			noteModifiedAt: 2000,
+		});
+
+		expect(result.sections[1].question).toBe("Q:B");
+		expect(result.sections[1].lineNumber).toBe(cueEligibleSections(current)[1].lineNumber);
+		expect(result.generatedAt).toBe("2099-01-01T00:00:00.000Z");
+		expect(result.noteModifiedAt).toBe(2000);
+	});
+
+	it("adds generated sections and removes sections no longer in the note", () => {
+		const cache = build();
+		const current = parseSections("# A\nalpha\n## C\ngamma");
+		const sectionC = cueEligibleSections(current)[1];
+		const generatedC = {
+			id: sectionC.id,
+			heading: sectionC.heading,
+			level: sectionC.level,
+			lineNumber: sectionC.lineNumber,
+			contentHash: sectionC.contentHash,
+			keywords: ["gamma"],
+			question: "Q:C",
+			confidence: "medium" as const,
+			rationale: null,
+			error: null,
+		};
+
+		const result = reconcileCacheSections(cache, current, [generatedC]);
+
+		expect(result.sections.map((section) => section.heading)).toEqual(["A", "C"]);
+		expect(result.sections.map((section) => section.question)).toEqual(["Q:A", "Q:C"]);
+	});
+
+	it("preserves existing cues when sections are reordered", () => {
+		const cache = build();
+		const current = parseSections("## B\nbeta\n# A\nalpha");
+		const result = reconcileCacheSections(cache, current);
+
+		expect(result.sections.map((section) => section.heading)).toEqual(["B", "A"]);
+		expect(result.sections.map((section) => section.question)).toEqual(["Q:B", "Q:A"]);
 	});
 });
 
