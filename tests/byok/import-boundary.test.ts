@@ -7,13 +7,27 @@ interface SourceFile {
 	source: string;
 }
 
-const FORBIDDEN_BARE_IMPORTS = new Set(["obsidian"]);
+const FORBIDDEN_BARE_IMPORTS = new Set(["obsidian", "@codemirror/view"]);
 const FORBIDDEN_LOCAL_MODULES = new Set([
 	"appearance-thumbnail-controls",
+	"cornell-view",
+	"cue-extension",
+	"editor-cue-display",
 	"main",
 	"model-combobox",
+	"notice",
+	"reading-cues",
 	"settings",
+	"study-area",
+	"visibility",
 ]);
+const FORBIDDEN_SOURCE_PATTERNS: Array<[RegExp, string]> = [
+	[/\bHTML[A-Za-z]*Element\b/, "DOM element type"],
+	[/\bcreateEl\b/, "Obsidian DOM helper"],
+	[/\bactiveDocument\b/, "Obsidian active document global"],
+	[/\bdocument\./, "DOM document access"],
+	[/\bwindow\./, "DOM window access"],
+];
 
 function importedSpecifiers(source: string): string[] {
 	const specifiers: string[] = [];
@@ -51,6 +65,11 @@ function findForbiddenByokImports(files: SourceFile[]): string[] {
 				violations.push(`${file.path} imports ${specifier}`);
 			}
 		}
+		for (const [pattern, label] of FORBIDDEN_SOURCE_PATTERNS) {
+			if (pattern.test(file.source)) {
+				violations.push(`${file.path} uses ${label}`);
+			}
+		}
 	}
 	return violations;
 }
@@ -86,16 +105,24 @@ describe("BYOK import boundary", () => {
 					path: "src/byok/bad.ts",
 					source:
 						'import { App } from "obsidian";\n' +
+						'import type { EditorView } from "@codemirror/view";\n' +
 						'import type { CueCraftSettings } from "../settings";\n' +
 						'import { renderModelCombobox } from "../model-combobox";\n' +
-						'import { OpenAIProvider } from "../../providers/openai-provider";\n',
+						'import { OpenAIProvider } from "../../providers/openai-provider";\n' +
+						'const root: HTMLElement | null = document.querySelector(".x");\n' +
+						'activeDocument.body.createEl("div");\n',
 				},
 			])
 		).toEqual([
 			"src/byok/bad.ts imports obsidian",
+			"src/byok/bad.ts imports @codemirror/view",
 			"src/byok/bad.ts imports ../settings",
 			"src/byok/bad.ts imports ../model-combobox",
 			"src/byok/bad.ts imports ../../providers/openai-provider",
+			"src/byok/bad.ts uses DOM element type",
+			"src/byok/bad.ts uses Obsidian DOM helper",
+			"src/byok/bad.ts uses Obsidian active document global",
+			"src/byok/bad.ts uses DOM document access",
 		]);
 	});
 
