@@ -17,6 +17,7 @@ import {
 	CueCraftSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
+import { normalizeAutoGenerationSettleDelaySeconds } from "./auto-generation-delay";
 import { normalizeProviderId } from "./provider-id";
 import {
 	normalizeAnthropicModelSelection,
@@ -243,6 +244,11 @@ export default class CueCraftPlugin extends Plugin {
 		settings.studyAreas = loadStudyAreas(
 			(settings as { studyAreas?: unknown }).studyAreas
 		);
+		settings.autoGenerationSettleDelaySeconds =
+			normalizeAutoGenerationSettleDelaySeconds(
+				(settings as { autoGenerationSettleDelaySeconds?: unknown })
+					.autoGenerationSettleDelaySeconds
+			);
 		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
 		}

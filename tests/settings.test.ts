@@ -10,6 +10,11 @@ import {
 	normalizeAnthropicModelSelection,
 	refreshAnthropicModelOptions,
 } from "../src/byok";
+import {
+	AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS,
+	DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
+	normalizeAutoGenerationSettleDelaySeconds,
+} from "../src/auto-generation-delay";
 import { normalizeProviderId } from "../src/provider-id";
 import {
 	DEFAULT_CORNELL_DISPLAY_MODE,
@@ -38,6 +43,28 @@ function modelInfo(id: string, display_name: string): ModelInfo {
 }
 
 describe("settings defaults", () => {
+	it("defaults auto-generation settle delay to 10 seconds", () => {
+		expect(DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS).toBe(10);
+	});
+
+	it("offers supported auto-generation settle delay presets", () => {
+		expect(AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS).toEqual([
+			1,
+			5,
+			10,
+			25,
+			60,
+		]);
+	});
+
+	it("normalizes persisted auto-generation settle delay values", () => {
+		expect(normalizeAutoGenerationSettleDelaySeconds(1)).toBe(1);
+		expect(normalizeAutoGenerationSettleDelaySeconds(60)).toBe(60);
+		for (const bad of [0, 2, 100, "", "10", null, undefined, {}, []]) {
+			expect(normalizeAutoGenerationSettleDelaySeconds(bad)).toBe(10);
+		}
+	});
+
 	it("defaults Reading mode to the compact review button", () => {
 		expect(DEFAULT_READING_MODE_DISPLAY).toBe("review-button");
 	});
