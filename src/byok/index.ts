@@ -5,6 +5,11 @@ export {
 	byokProviderDefinitions,
 	isByokProviderId,
 } from "./registry";
+export * from "./models/anthropic-models";
+export * from "./models/fetched-model-sorting";
+export * from "./models/model-compatibility";
+export * from "./models/model-options";
+export * from "./setup-status";
 export type {
 	ByokCliProviderConfig,
 	ByokCloudProviderConfig,
