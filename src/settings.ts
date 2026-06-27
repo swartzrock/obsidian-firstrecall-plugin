@@ -103,6 +103,10 @@ import {
 } from "./study-area";
 import { formatCueCraftNotice } from "./notice";
 import type { ProviderId } from "./provider-id";
+import {
+	DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
+	type AutoGenerationSettleDelaySeconds,
+} from "./auto-generation-delay";
 
 /**
  * CueCraft supports a local provider (Ollama), local CLI providers, and several
@@ -164,6 +168,7 @@ export interface CueCraftSettings {
 	cueColumnWidth: CueColumnWidth;
 	cueFontSize: CueFontSize;
 	autoGenerateOnSave: boolean;
+	autoGenerationSettleDelaySeconds: AutoGenerationSettleDelaySeconds;
 	studyAreas: StudyArea[];
 	sectionConcurrency: number;
 	cueDensity: CueDensity;
@@ -225,6 +230,8 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
 	autoGenerateOnSave: false,
+	autoGenerationSettleDelaySeconds:
+		DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
 	studyAreas: DEFAULT_STUDY_AREAS,
 	sectionConcurrency: 5,
 	cueDensity: DEFAULT_CUE_DENSITY,
