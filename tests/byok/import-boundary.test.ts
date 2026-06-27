@@ -40,6 +40,10 @@ function findForbiddenByokImports(files: SourceFile[]): string[] {
 				violations.push(`${file.path} imports ${specifier}`);
 				continue;
 			}
+			if (specifier.startsWith("..") && specifier.includes("/providers/")) {
+				violations.push(`${file.path} imports ${specifier}`);
+				continue;
+			}
 			if (
 				specifier.startsWith(".") &&
 				FORBIDDEN_LOCAL_MODULES.has(localModuleName(specifier))
@@ -83,13 +87,15 @@ describe("BYOK import boundary", () => {
 					source:
 						'import { App } from "obsidian";\n' +
 						'import type { CueCraftSettings } from "../settings";\n' +
-						'import { renderModelCombobox } from "../model-combobox";\n',
+						'import { renderModelCombobox } from "../model-combobox";\n' +
+						'import { OpenAIProvider } from "../../providers/openai-provider";\n',
 				},
 			])
 		).toEqual([
 			"src/byok/bad.ts imports obsidian",
 			"src/byok/bad.ts imports ../settings",
 			"src/byok/bad.ts imports ../model-combobox",
+			"src/byok/bad.ts imports ../../providers/openai-provider",
 		]);
 	});
 

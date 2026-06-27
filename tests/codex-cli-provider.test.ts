@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	CodexCliProvider,
 	extractCodexCliOutput,
-} from "../src/providers/codex-cli-provider";
-import { defaultLocalCliCwd } from "../src/providers/local-command-runner";
+} from "../src/byok/providers/codex-cli-provider";
+import { defaultLocalCliCwd } from "../src/byok/providers/local-command-runner";
 import type {
 	LocalCommandRequest,
 	LocalCommandResult,
-} from "../src/providers/local-command-runner";
-import { ProviderError } from "../src/providers/types";
+} from "../src/byok/providers/local-command-runner";
+import { ProviderError } from "../src/byok/providers/types";
 
 function result(stdout: string, stderr = ""): LocalCommandResult {
 	return { stdout, stderr, exitCode: 0 };

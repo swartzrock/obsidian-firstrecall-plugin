@@ -1,11 +1,11 @@
-import { AnthropicProvider } from "../../providers/anthropic-provider";
-import { ClaudeCliProvider } from "../../providers/claude-cli-provider";
-import { CodexCliProvider } from "../../providers/codex-cli-provider";
-import { GoogleProvider } from "../../providers/google-provider";
-import { OllamaProvider } from "../../providers/ollama-provider";
-import { OpenAIProvider } from "../../providers/openai-provider";
-import { OpenRouterProvider } from "../../providers/openrouter-provider";
-import { XaiProvider } from "../../providers/xai-provider";
+import { AnthropicProvider } from "./anthropic-provider";
+import { ClaudeCliProvider } from "./claude-cli-provider";
+import { CodexCliProvider } from "./codex-cli-provider";
+import { GoogleProvider } from "./google-provider";
+import { OllamaProvider } from "./ollama-provider";
+import { OpenAIProvider } from "./openai-provider";
+import { OpenRouterProvider } from "./openrouter-provider";
+import { XaiProvider } from "./xai-provider";
 import type {
 	ByokProviderConfig,
 	ByokProviderDeps,
