@@ -1,9 +1,9 @@
 import {
 	normalizeStringId,
+	sortCueCraftModelOptions,
 	type ModelOption,
 	type ModelOptionSource,
-} from "./model-options";
-import { sortCueCraftModelOptions } from "./model-compatibility";
+} from "./byok";
 
 let nextComboboxId = 0;
 
