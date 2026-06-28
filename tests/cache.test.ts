@@ -30,12 +30,14 @@ function sampleResult(): NoteGenerationResult {
 			question: `Q:${s.heading}`,
 			confidence: "high" as const,
 			rationale: null,
+			sectionLens: null,
 			error: null,
 		}));
 	return {
 		sections,
 		summary: "a summary",
 		learningObjective: "understand A and B",
+		noteBrief: null,
 		canceled: false,
 	};
 }
@@ -58,6 +60,35 @@ describe("buildNoteCache + validateCache", () => {
 		expect(cache.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
 		expect(cache.sections).toHaveLength(2);
 		expect(cache.outline.learningObjective).toBe("understand A and B");
+		expect(cache.sections[0].sectionLens).toBeNull();
+		expect(cache.noteBrief).toBeNull();
+		expect(validateCache(cache).ok).toBe(true);
+	});
+
+	it("persists generated Section Lens and Note Brief artifacts", () => {
+		const result = sampleResult();
+		result.sections[0].sectionLens = {
+			takeaway: "Focus on A.",
+			keyPhrase: "A",
+			explanation: "A frames the rest of the note.",
+		};
+		result.noteBrief = {
+			overview: "A and B explain the note.",
+			whatMatters: { title: "A matters", detail: "It frames the note." },
+			reviewFirst: { title: "A", detail: "Start with the parent idea." },
+			sayItBack: { title: "Why does A matter?", detail: "Answer before review." },
+		};
+		const cache = buildNoteCache({
+			result,
+			provider: "ollama",
+			model: "llama3.1:8b",
+			preset: "conceptual",
+			generationMode: "whole-note-context",
+			noteModifiedAt: 1000,
+		});
+
+		expect(cache.sections[0].sectionLens?.keyPhrase).toBe("A");
+		expect(cache.noteBrief?.reviewFirst.title).toBe("A");
 		expect(validateCache(cache).ok).toBe(true);
 	});
 
@@ -99,6 +130,7 @@ describe("isStale", () => {
 			question: "What does Prefix Sum explain?",
 			confidence: "high" as const,
 			rationale: null,
+			sectionLens: null,
 			error: null,
 		}));
 		const cache = buildNoteCache({
@@ -106,6 +138,7 @@ describe("isStale", () => {
 				sections,
 				summary: "summary",
 				learningObjective: null,
+				noteBrief: null,
 				canceled: false,
 			},
 			provider: "ollama",
@@ -119,7 +152,7 @@ describe("isStale", () => {
 	});
 });
 
-describe("migrateCache (v1 -> v2)", () => {
+describe("migrateCache", () => {
 	it("upgrades a v1 cache by filling new fields", () => {
 		const v1 = {
 			schemaVersion: 1,
@@ -144,24 +177,51 @@ describe("migrateCache (v1 -> v2)", () => {
 		const migrated = migrateCache(v1);
 		expect(migrated).not.toBeNull();
 		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
-			expect(migrated?.preset).toBe("conceptual");
-			expect(migrated?.generationMode).toBe("whole-note-context");
-			expect(migrated?.sections[0].level).toBe(0);
-			expect(migrated?.sections[0].rationale).toBeNull();
-			expect(validateCache(migrated).ok).toBe(true);
-		});
+		expect(migrated?.preset).toBe("conceptual");
+		expect(migrated?.generationMode).toBe("whole-note-context");
+		expect(migrated?.sections[0].level).toBe(0);
+		expect(migrated?.sections[0].rationale).toBeNull();
+		expect(migrated?.sections[0].sectionLens).toBeNull();
+		expect(migrated?.noteBrief).toBeNull();
+		expect(validateCache(migrated).ok).toBe(true);
+	});
 
-		it("upgrades a v2 cache by adding rationale fields", () => {
-			const v2 = {
-				...build(),
-				schemaVersion: 2,
-				sections: build().sections.map(({ rationale: _rationale, ...section }) => section),
-			};
-			const migrated = migrateCache(v2);
-			expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
-			expect(migrated?.sections[0].rationale).toBeNull();
-			expect(validateCache(migrated).ok).toBe(true);
-		});
+	it("upgrades a v2 cache by adding rationale fields", () => {
+		const v2 = {
+			...build(),
+			schemaVersion: 2,
+			noteBrief: undefined,
+			sections: build().sections.map(
+				({
+					rationale: _rationale,
+					sectionLens: _sectionLens,
+					...section
+				}) => section
+			),
+		};
+		const migrated = migrateCache(v2);
+		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
+		expect(migrated?.sections[0].rationale).toBeNull();
+		expect(migrated?.sections[0].sectionLens).toBeNull();
+		expect(migrated?.noteBrief).toBeNull();
+		expect(validateCache(migrated).ok).toBe(true);
+	});
+
+	it("upgrades a v3 cache by adding review artifact fields", () => {
+		const v3 = {
+			...build(),
+			schemaVersion: 3,
+			noteBrief: undefined,
+			sections: build().sections.map(
+				({ sectionLens: _sectionLens, ...section }) => section
+			),
+		};
+		const migrated = migrateCache(v3);
+		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
+		expect(migrated?.sections[0].sectionLens).toBeNull();
+		expect(migrated?.noteBrief).toBeNull();
+		expect(validateCache(migrated).ok).toBe(true);
+	});
 
 	it("returns null for unmigratable junk", () => {
 		expect(migrateCache(42)).toBeNull();
@@ -297,6 +357,7 @@ describe("reconcileCacheSections", () => {
 			question: "Q:C",
 			confidence: "medium" as const,
 			rationale: null,
+			sectionLens: null,
 			error: null,
 		};
 

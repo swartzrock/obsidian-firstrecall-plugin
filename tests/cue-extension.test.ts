@@ -55,6 +55,7 @@ function cacheFrom(
 		sections,
 		summary: "s",
 		learningObjective: null,
+		noteBrief: null,
 		canceled: false,
 	};
 	return buildNoteCache({
@@ -128,6 +129,7 @@ describe("buildCueLineData", () => {
 			})),
 			summary: null,
 			learningObjective: null,
+			noteBrief: null,
 			canceled: false,
 		};
 		const cache = buildNoteCache({

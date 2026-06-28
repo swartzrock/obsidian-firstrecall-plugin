@@ -140,11 +140,28 @@ export interface ByokCueOutput {
 	keywords: string[];
 	confidence: ByokCueConfidence;
 	rationale?: string | null;
+	sectionLens?: {
+		takeaway: string;
+		keyPhrase: string;
+		explanation: string;
+	} | null;
 }
 
 export interface ByokSummaryOutput {
 	summary: string;
 	learningObjective: string | null;
+}
+
+export interface ByokNoteBriefCard {
+	title: string;
+	detail: string;
+}
+
+export interface ByokNoteBriefOutput {
+	overview: string;
+	whatMatters: ByokNoteBriefCard;
+	reviewFirst: ByokNoteBriefCard;
+	sayItBack: ByokNoteBriefCard;
 }
 
 export interface ByokCueInput {
@@ -164,6 +181,18 @@ export interface ByokSummaryInput {
 	noteTitle: string;
 	fullText: string;
 	sectionQuestions: string[];
+}
+
+export interface ByokNoteBriefSectionInput {
+	heading: string;
+	question: string;
+	keywords: string[];
+}
+
+export interface ByokNoteBriefInput {
+	noteTitle: string;
+	fullText: string;
+	sections: ByokNoteBriefSectionInput[];
 }
 
 export interface ByokProviderRuntime {
@@ -186,6 +215,10 @@ export interface ByokProviderRuntime {
 		input: ByokSummaryInput,
 		signal?: AbortSignal
 	): Promise<ByokSummaryOutput>;
+	generateNoteBrief?(
+		input: ByokNoteBriefInput,
+		signal?: AbortSignal
+	): Promise<ByokNoteBriefOutput>;
 }
 
 export class ByokProviderError extends Error {

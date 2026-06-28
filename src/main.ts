@@ -1752,6 +1752,7 @@ function toCachedSection(result: SectionResult): CachedSection {
 		question: result.question,
 		confidence: result.confidence,
 		rationale: result.rationale,
+		sectionLens: result.sectionLens,
 		error: result.error,
 	};
 }

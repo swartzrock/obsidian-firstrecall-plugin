@@ -105,6 +105,7 @@ function buildCache(markdown = NOTE): NoteCache {
 		sections,
 		summary: "summary",
 		learningObjective: "learn biology",
+		noteBrief: null,
 		canceled: false,
 	};
 	return buildNoteCache({
