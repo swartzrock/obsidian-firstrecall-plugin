@@ -1,39 +1,25 @@
 #!/usr/bin/env bash
-# Compound Engineering environment health check
-# Outputs a formatted diagnostic report in one pass
+# Compound Engineering environment health check.
+# Reports optional tool capabilities and repo-local config safety in one pass.
 
 set -o pipefail
 
 # =====================================================
-#  Dependency config
+#  Optional capability config
 # =====================================================
-# Format: name|tier|install_cmd|url
-# Tiers: recommended (flagged if missing), optional (noted if missing)
-# To add a dependency: add a line here. No other changes needed.
+# Format: name|install_cmd|url|capability
 
 deps=(
-  "agent-browser|recommended|CI=true npm install -g agent-browser --no-audit --no-fund --loglevel=error && agent-browser install && npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -y|https://github.com/vercel-labs/agent-browser"
-  "gh|recommended|NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install -q gh|https://cli.github.com"
-  "jq|recommended|NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install -q jq|https://jqlang.github.io/jq/"
-  "vhs|recommended|NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install -q vhs|https://github.com/charmbracelet/vhs"
-  "silicon|recommended|NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install -q silicon|https://github.com/Aloxaf/silicon"
-  "ffmpeg|recommended|NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install -q ffmpeg|https://ffmpeg.org/download.html"
-  "ast-grep|recommended|NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install -q ast-grep|https://ast-grep.github.io"
-)
-
-# Agent skills installed via the `skills` CLI (vercel-labs/skills).
-# Format: name|tier|install_cmd|url
-# Presence is resolved via `npx --yes skills list --global --json`
-# when npx and jq are available, then by probing known global skill roots.
-
-skills=(
-  "ast-grep|recommended|npx skills add ast-grep/agent-skill -g -y|https://github.com/ast-grep/agent-skill"
+  "agent-browser|CI=true npm install -g agent-browser --no-audit --no-fund --loglevel=error && agent-browser install|https://github.com/vercel-labs/agent-browser|browser testing, dogfood QA, and visual polish inspection"
+  "gh|NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install -q gh|https://cli.github.com|GitHub PR, issue, and review workflows"
+  "jq|NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install -q jq|https://jqlang.github.io/jq/|JSON inspection in shell-based workflows"
+  "ast-grep|NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install -q ast-grep|https://ast-grep.github.io|syntax-aware structural code search"
+  "ffmpeg|NONINTERACTIVE=1 HOMEBREW_NO_AUTO_UPDATE=1 brew install -q ffmpeg|https://ffmpeg.org/download.html|media chunking and screenshot extraction for Riffrec analysis"
 )
 
 # =====================================================
 #  Args
 # =====================================================
-# --version VERSION  (optional) plugin version to display (passed by the agent)
 
 plugin_version=""
 while [ $# -gt 0 ]; do
@@ -48,7 +34,6 @@ done
 # =====================================================
 
 ok()      { echo "  🟢  $1"; }
-fail()    { echo "  🔴  $1"; }
 warn()    { echo "  🟡  $1"; }
 skip()    { echo "  ➖  $1"; }
 detail()  { echo "       $1"; }
@@ -58,78 +43,23 @@ has_brew=$(command -v brew >/dev/null 2>&1 && echo "yes" || echo "no")
 in_repo=$(git rev-parse --is-inside-work-tree >/dev/null 2>&1 && echo "yes" || echo "no")
 
 # =====================================================
-#  Check tools
+#  Check optional capabilities
 # =====================================================
 
-cli_ok=0; cli_total=0; issues=0
-
+capability_ok=0
+capability_total=0
+capability_missing=0
 results=()
+
 for entry in "${deps[@]}"; do
-  IFS='|' read -r name tier install_cmd url <<< "$entry"
-  cli_total=$((cli_total + 1))
+  IFS='|' read -r name install_cmd url capability <<< "$entry"
+  capability_total=$((capability_total + 1))
   if command -v "$name" >/dev/null 2>&1; then
-    cli_ok=$((cli_ok + 1))
-    results+=("$name|$tier|ok|$install_cmd|$url")
+    capability_ok=$((capability_ok + 1))
+    results+=("$name|ok|$install_cmd|$url|$capability")
   else
-    results+=("$name|$tier|missing|$install_cmd|$url")
-  fi
-done
-
-# =====================================================
-#  Check skills
-# =====================================================
-
-has_npx="no"
-has_jq="no"
-command -v npx >/dev/null 2>&1 && has_npx="yes"
-command -v jq >/dev/null 2>&1 && has_jq="yes"
-
-installed_skill_names=""
-if [ "$has_npx" = "yes" ] && [ "$has_jq" = "yes" ]; then
-  installed_skill_names=$(npx --yes skills list --global --json 2>/dev/null | jq -r '.[].name' 2>/dev/null)
-fi
-
-skill_ok=0; skill_total=0
-skill_results=()
-skill_roots=(
-  "$HOME/.claude/skills"
-  "$HOME/.agents/skills"
-  "$HOME/.codex/skills"
-)
-
-skill_exists_on_disk() {
-  local name="$1"
-  local root
-
-  for root in "${skill_roots[@]}"; do
-    if [ -e "$root/$name" ]; then
-      return 0
-    fi
-  done
-
-  return 1
-}
-
-for entry in "${skills[@]}"; do
-  IFS='|' read -r name tier install_cmd url <<< "$entry"
-  skill_total=$((skill_total + 1))
-
-  is_installed="no"
-  if [ -n "$installed_skill_names" ]; then
-    if printf '%s\n' "$installed_skill_names" | grep -qx "$name"; then
-      is_installed="yes"
-    fi
-  fi
-
-  if [ "$is_installed" = "no" ] && skill_exists_on_disk "$name"; then
-    is_installed="yes"
-  fi
-
-  if [ "$is_installed" = "yes" ]; then
-    skill_ok=$((skill_ok + 1))
-    skill_results+=("$name|$tier|ok|$install_cmd|$url")
-  else
-    skill_results+=("$name|$tier|missing|$install_cmd|$url")
+    capability_missing=$((capability_missing + 1))
+    results+=("$name|missing|$install_cmd|$url|$capability")
   fi
 done
 
@@ -139,14 +69,18 @@ done
 
 legacy_cfg="skip"
 repo_cfg_gitignore="skip"
+local_cfg="skip"
 example_cfg="skip"
+project_issues=0
 
 if [ "$in_repo" = "yes" ]; then
   repo_root=$(git rev-parse --show-toplevel 2>/dev/null)
   legacy_cfg="missing"
   [ -f "$repo_root/compound-engineering.local.md" ] && legacy_cfg="present"
 
-  if [ -e "$repo_root/.compound-engineering/config.local.yaml" ] || [ -d "$repo_root/.compound-engineering" ]; then
+  local_cfg="missing"
+  if [ -e "$repo_root/.compound-engineering/config.local.yaml" ]; then
+    local_cfg="present"
     if git check-ignore -q "$repo_root/.compound-engineering/config.local.yaml" 2>/dev/null; then
       repo_cfg_gitignore="ok"
     else
@@ -175,91 +109,68 @@ if [ -n "$plugin_version" ]; then
   ok "Plugin version v${plugin_version}"
 fi
 
-# --- Tools ---
-
-section "Tools  ${cli_ok}/${cli_total}"
+section "Optional capabilities  ${capability_ok}/${capability_total}"
 
 for result in "${results[@]}"; do
-  IFS='|' read -r name tier status install_cmd url <<< "$result"
+  IFS='|' read -r name status install_cmd url capability <<< "$result"
   if [ "$status" = "ok" ]; then
-    ok "$name"
+    ok "$name -- $capability"
   else
-    warn "$name"
-    issues=$((issues + 1))
-    case "$install_cmd" in
-      *brew\ install*)
-        if [ "$has_brew" = "yes" ]; then detail "$install_cmd"
-        else detail "$url"; fi ;;
-      *)
-        detail "$install_cmd"
-        detail "$url" ;;
-    esac
-  fi
-done
-
-# --- Skills ---
-
-if [ "${#skills[@]}" -gt 0 ]; then
-  section "Skills  ${skill_ok}/${skill_total}"
-
-  for result in "${skill_results[@]}"; do
-    IFS='|' read -r name tier status install_cmd url <<< "$result"
-    if [ "$status" = "ok" ]; then
-      ok "$name"
+    warn "$name -- unavailable: $capability"
+    if [[ "$install_cmd" == *"brew install"* ]] && [ "$has_brew" != "yes" ]; then
+      detail "$url"
     else
-      warn "$name"
-      issues=$((issues + 1))
       detail "$install_cmd"
       detail "$url"
     fi
-  done
-fi
-
-# --- Project ---
+  fi
+done
 
 if [ "$in_repo" = "yes" ]; then
-  has_project_issues="no"
+  section "Project config"
 
   if [ "$legacy_cfg" = "present" ]; then
-    has_project_issues="yes"
-  fi
-  if [ "$repo_cfg_gitignore" = "missing" ]; then
-    has_project_issues="yes"
-  fi
-  if [ "$example_cfg" = "missing" ] || [ "$example_cfg" = "outdated" ]; then
-    has_project_issues="yes"
+    warn "Obsolete compound-engineering.local.md exists"
+    project_issues=$((project_issues + 1))
+  else
+    ok "No obsolete compound-engineering.local.md"
   fi
 
-  if [ "$has_project_issues" = "yes" ]; then
-    section "Project"
-
-    if [ "$legacy_cfg" = "present" ]; then
-      warn "Outdated Compound Engineering config in this repo"
-      issues=$((issues + 1))
+  if [ "$local_cfg" = "present" ]; then
+    ok ".compound-engineering/config.local.yaml exists"
+    if [ "$repo_cfg_gitignore" = "ok" ]; then
+      ok "Local config is gitignored"
+    else
+      warn "Local config is not safely gitignored"
+      project_issues=$((project_issues + 1))
     fi
-
-    if [ "$repo_cfg_gitignore" = "missing" ]; then
-      warn "Local config not safely gitignored"
-      issues=$((issues + 1))
-    fi
-
-    if [ "$example_cfg" = "missing" ]; then
-      warn "Example config missing (.compound-engineering/config.local.example.yaml)"
-      issues=$((issues + 1))
-    elif [ "$example_cfg" = "outdated" ]; then
-      warn "Example config outdated (new settings available)"
-      issues=$((issues + 1))
-    fi
+  else
+    skip "No local config yet (.compound-engineering/config.local.yaml)"
   fi
+
+  if [ "$example_cfg" = "ok" ]; then
+    ok "Example config is current"
+  elif [ "$example_cfg" = "missing" ]; then
+    warn "Example config missing (.compound-engineering/config.local.example.yaml)"
+    project_issues=$((project_issues + 1))
+  elif [ "$example_cfg" = "outdated" ]; then
+    warn "Example config outdated (new settings available)"
+    project_issues=$((project_issues + 1))
+  fi
+else
+  section "Project config"
+  skip "Not inside a git repository"
 fi
 
-# --- Bottom line ---
-
 echo ""
-if [ "$issues" -eq 0 ]; then
-  echo " ✅  All clear  ${cli_ok}/${cli_total} tools  ${skill_ok}/${skill_total} skills"
+if [ "$project_issues" -eq 0 ]; then
+  echo " ✅  Project config healthy. Optional capabilities available: ${capability_ok}/${capability_total}"
 else
-  echo " ⚠️   ${issues} issue(s) found  ${cli_ok}/${cli_total} tools  ${skill_ok}/${skill_total} skills"
+  echo " ⚠️   ${project_issues} project issue(s) found. Optional capabilities available: ${capability_ok}/${capability_total}"
+fi
+
+if [ "$capability_missing" -gt 0 ]; then
+  echo "     Missing optional tools do not block setup; install them only for the workflows you use."
 fi
 
 echo ""

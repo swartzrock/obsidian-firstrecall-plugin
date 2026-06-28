@@ -1,10 +1,10 @@
 ---
 name: ce-simplify-code
-description: "Simplify and refine recently changed code for clarity, reuse, quality, and efficiency while preserving behavior."
+description: "Simplify recently changed code for clarity, reuse, quality, and efficiency while preserving behavior. Use for tidy/refactor passes; use ce-debug for bugs."
 argument-hint: "[blank to simplify current branch changes, or describe what to simplify]"
 ---
 
-You are an engineer that is an expert at simplifying code with a specific focus on enhancing code clarity, consistency, and maintainability while preserving exact functionality. Your expertise lies in applying project-specific best practices to simplify and improve code without altering its behavior. You prioritize readable, explicit code over overly compact solutions.
+Simplify code for clarity, consistency, and maintainability while preserving exact functionality. Prioritize readable, explicit code over overly compact solutions.
 
 Review the changed code for reuse, quality, and efficiency. Fix any issues found. Then verify behavior is preserved by running the project's test suite.
 
@@ -16,13 +16,13 @@ Resolve the simplification scope in this order:
 2. **Otherwise, in a git repository**, default to the diff between the current branch and its base branch (e.g., `git diff origin/main...` or against the configured upstream). This covers the common case of "simplify everything I've added on this feature branch before opening a PR." If the branch has no upstream or base ref, fall back to staged + unstaged changes (`git diff HEAD`).
 3. **Outside a git repository or when no diff is available**, review the most recently modified files mentioned by the user or edited earlier in this conversation.
 
-If none of the above produces a non-empty scope, stop and ask the user what to simplify rather than guessing.
+If none of the above produces a non-empty scope, stop and ask the user what to simplify rather than guessing. Use the platform's blocking question tool: `AskUserQuestion` in Claude Code (call `ToolSearch` with `select:AskUserQuestion` first if its schema isn't loaded), `request_user_input` in Codex, `ask_question` in Antigravity CLI (`agy`), `ask_user` in Pi (requires the `pi-ask-user` extension). Fall back to numbered options in chat only when no blocking tool exists in the harness or the call errors (e.g., Codex edit modes) — not because a schema load is required. Never silently skip the question.
 
 ## Step 2: Launch 3 review agents in parallel
 
-Spawn the three reviewer agents below in a single message via the platform's subagent dispatch primitive — `Agent`/`Task` in Claude Code, `spawn_agent` in Codex, `subagent` in Pi via the `pi-subagents` extension. Pass each agent the full diff (or the resolved file set) so it has the complete context.
+Spawn the three reviewer agents below in a single message via the platform's subagent dispatch primitive — `Agent`/`Task` in Claude Code, `spawn_agent` in Codex — where available; otherwise run the work inline or serially. Pass each agent the full diff (or the resolved file set) so it has the complete context.
 
-**Model selection.** Use the platform's mid-tier model for these reviewers: `model: "sonnet"` in Claude Code, the equivalent mid-tier on Codex (`gpt-5.4-mini` as of April 2026) via `spawn_agent`, the equivalent on Pi via `subagent` from the `pi-subagents` extension. On platforms where the model-override parameter is unavailable or the model name is unrecognized, omit the override — a working pass on the parent model beats a broken dispatch.
+**Model selection.** Use the platform's mid-tier model for these reviewers when the current harness exposes a known override. In Claude Code this is the Sonnet class; in Codex use the current mini/mid-tier model exposed by `spawn_agent` when known. On platforms where the model-override parameter is unavailable or the model name is unknown or unrecognized, omit the override -- a working pass on the parent model beats a broken dispatch.
 
 **Permission mode.** Omit the `mode` parameter on the dispatch call so the user's configured permission settings apply.
 
@@ -33,6 +33,7 @@ For each change:
 1. **Search for existing utilities and helpers** that could replace newly written code. Look for similar patterns elsewhere in the codebase — common locations are utility directories, shared modules, and files adjacent to the changed ones.
 2. **Flag any new function that duplicates existing functionality.** Suggest the existing function to use instead.
 3. **Flag any inline logic that could use an existing utility** — hand-rolled string manipulation, manual path handling, custom environment checks, ad-hoc type guards, and similar patterns are common candidates.
+4. **Flag diff code that reimplements a language standard-library or runtime primitive** — a hand-written routine the built-in stdlib/runtime API already provides (e.g., a manual array-dedup loop where the language ships a set-based idiom, a hand-rolled deep-clone/deep-merge where the runtime has one). Suggest the built-in **only when it is behavior-equivalent** for the inputs actually in play. Do not propose swaps that change behavior or UX: native UI controls (e.g., a custom date picker to `<input type=date>`), locale/`Intl`-dependent formatting, sort-stability assumptions, and serialization edge cases differ from their hand-rolled versions and are out of scope for a behavior-preserving pass.
 
 ### Agent 2: Code Quality Reviewer
 
@@ -68,6 +69,8 @@ Wait for all three agents to complete. Aggregate their findings and fix each iss
 
 Before applying each fix, confirm it preserves behavior: same output for every input, same error behavior, and same side effects and ordering. If a fix can't clear that test, skip it — automated checks in Step 4 don't cover every behavior.
 
+**Never simplify away a safety check.** Input validation at trust boundaries, error handling that prevents data loss, security checks (authorization, escaping, sanitization), and accessibility affordances are not removable boilerplate — preserve them even when a finding frames them as redundant or inline-able. Code that drops one of these is not simpler, it is unfinished. If a proposed simplification would thin or remove one, skip it.
+
 ## Step 4: Verify behavior is preserved
 
 The premise of this skill is that simplification preserves exact functionality. After applying fixes:
@@ -86,3 +89,5 @@ If no test suite, lint, or typecheck is configured, state that explicitly in the
 ## Step 5: Summarize
 
 Briefly summarize what was good vs improved and fixed, including which checks were run and their results. If there were no findings to act on, confirm the code didn't require any changes.
+
+**Quantify the impact by dimension.** Report what was actually applied, not a line count: fixes applied per reviewer dimension (reuse, quality, efficiency), how many findings were skipped as false-positive or not worth addressing, and the behavior-preservation result (checks run and outcome). For example: "Applied 6 — reuse 2, quality 3, efficiency 1; skipped 2 false positives; typecheck + lint clean, 11 scoped tests pass." Do not headline a net-lines-removed figure or frame fewer lines as the win — many clarity, safety, and efficiency fixes preserve or add lines. The measure is what improved and that behavior held, not how much code shrank.
