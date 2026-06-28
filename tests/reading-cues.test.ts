@@ -10,6 +10,11 @@ import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
+const SECTION_LENS = {
+	keyPhrase: "agent autonomy",
+	takeaway: "Agents use tools to complete multi-step work.",
+	explanation: "The section contrasts one-shot chat with tool-using agents.",
+};
 
 function cacheFrom(
 	overrides: (
@@ -26,6 +31,7 @@ function cacheFrom(
 		keywords: ["k1", "k2"],
 		question: `Q:${s.heading}`,
 		confidence: "high" as const,
+		sectionLens: SECTION_LENS,
 		error: null as string | null,
 		...overrides(s, i),
 	}));
@@ -60,6 +66,19 @@ describe("buildReadingCueMap", () => {
 		});
 		expect(map.get(1)?.question).toBe("Q:A");
 		expect(map.get(1)?.keywords).toEqual([]);
+	});
+
+	it("can omit Section Lens from mapped reading cues", () => {
+		const map = buildReadingCueMap(cacheFrom(), NOTE, {
+			showSectionLens: false,
+		});
+		expect(map.get(1)?.question).toBe("Q:A");
+		expect(map.get(1)?.sectionLens).toBeNull();
+	});
+
+	it("includes Section Lens by default", () => {
+		const map = buildReadingCueMap(cacheFrom(), NOTE);
+		expect(map.get(1)?.sectionLens?.keyPhrase).toBe("agent autonomy");
 	});
 
 	it("re-resolves lines after content shifts headings down", () => {

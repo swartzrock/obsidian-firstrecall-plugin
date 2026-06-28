@@ -14,6 +14,11 @@ import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
+const SECTION_LENS = {
+	keyPhrase: "agent autonomy",
+	takeaway: "Agents use tools to complete multi-step work.",
+	explanation: "The section contrasts one-shot chat with tool-using agents.",
+};
 
 function withDocument<T>(fn: () => T): T {
 	const dom = new JSDOM("<!doctype html><html><body></body></html>");
@@ -48,6 +53,7 @@ function cacheFrom(
 		keywords: ["k1", "k2"],
 		question: `Q:${s.heading}`,
 		confidence: "high" as const,
+		sectionLens: SECTION_LENS,
 		error: null as string | null,
 		...overrides(s, i),
 	}));
@@ -77,6 +83,7 @@ describe("buildCueLineData", () => {
 			question: "Q:A",
 			keywords: ["k1", "k2"],
 			confidence: "high",
+			sectionLens: SECTION_LENS,
 		});
 	});
 
@@ -88,6 +95,16 @@ describe("buildCueLineData", () => {
 		expect(cues).toHaveLength(3);
 		expect(cues[0].question).toBe("Q:A");
 		expect(cues.every((c) => c.keywords.length === 0)).toBe(true);
+	});
+
+	it("can hide Section Lens data while keeping questions visible", () => {
+		const cache = cacheFrom();
+		const cues = buildCueLineData(cache, parseSections(NOTE), {
+			showSectionLens: false,
+		});
+		expect(cues).toHaveLength(3);
+		expect(cues[0].question).toBe("Q:A");
+		expect(cues.every((c) => c.sectionLens === null)).toBe(true);
 	});
 
 	it("emits a warning marker for errored sections instead of skipping them", () => {
@@ -124,6 +141,7 @@ describe("buildCueLineData", () => {
 				keywords: ["k"],
 				question: `Q:${s.heading}`,
 				confidence: "high" as const,
+				sectionLens: SECTION_LENS,
 				rationale: null,
 				error: null,
 			})),
@@ -174,6 +192,7 @@ describe("renderCueElement", () => {
 					question: "What is an agent?",
 					keywords: ["agent", "tool"],
 					confidence: "high",
+					sectionLens: SECTION_LENS,
 					error: null,
 				},
 				"inline-cues"
@@ -186,6 +205,9 @@ describe("renderCueElement", () => {
 			expect(el.querySelector(".cuecraft-cue-keywords")?.textContent).toBe(
 				"agent · tool"
 			);
+			expect(
+				el.querySelector(".cuecraft-section-lens-phrase")?.textContent
+			).toBe("agent autonomy");
 		});
 	});
 
@@ -198,6 +220,7 @@ describe("renderCueElement", () => {
 					question: "How do agents differ from chatbots?",
 					keywords: ["agents"],
 					confidence: "medium",
+					sectionLens: SECTION_LENS,
 					error: null,
 				},
 				"anchored-card-rail"
@@ -217,6 +240,9 @@ describe("renderCueElement", () => {
 			expect(
 				el.querySelector(".cuecraft-editor-hook-keywords")?.textContent
 			).toBe("agents");
+			expect(
+				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
 		});
 	});
 
@@ -229,6 +255,7 @@ describe("renderCueElement", () => {
 					question: "Who is this workflow designed for?",
 					keywords: [],
 					confidence: "low",
+					sectionLens: SECTION_LENS,
 					error: null,
 				},
 				"collapsed-tabs"
@@ -256,6 +283,7 @@ describe("renderCueElement", () => {
 					question: "How does organizational knowledge make teams faster?",
 					keywords: ["standards", "workflow"],
 					confidence: "high",
+					sectionLens: SECTION_LENS,
 					error: null,
 				},
 				"threaded-margin-notes",
@@ -282,6 +310,7 @@ describe("renderCueElement", () => {
 					question: "Who should use this workflow?",
 					keywords: ["students", "researchers"],
 					confidence: "medium",
+					sectionLens: SECTION_LENS,
 					error: null,
 				},
 				"active-section-composer"
@@ -310,6 +339,7 @@ describe("renderCueElement", () => {
 					question,
 					keywords: ["org knowledge"],
 					confidence: "medium",
+					sectionLens: SECTION_LENS,
 					error: null,
 				},
 				"active-section-composer",
@@ -334,6 +364,7 @@ describe("renderCueElement", () => {
 					question,
 					keywords: ["takeaway"],
 					confidence: "high",
+					sectionLens: SECTION_LENS,
 					error: null,
 				},
 				"hook-minimap"
@@ -360,6 +391,7 @@ describe("renderCueElement", () => {
 					question: "",
 					keywords: [],
 					confidence: null,
+					sectionLens: null,
 					error: "boom",
 				},
 				"anchored-card-rail"
@@ -384,6 +416,7 @@ describe("cue editor placement", () => {
 			question: "What is A?",
 			keywords: ["alpha"],
 			confidence: "high" as const,
+			sectionLens: SECTION_LENS,
 			error: null,
 		},
 		{
@@ -392,6 +425,7 @@ describe("cue editor placement", () => {
 			question: "What is B?",
 			keywords: ["beta"],
 			confidence: "medium" as const,
+			sectionLens: SECTION_LENS,
 			error: null,
 		},
 	];

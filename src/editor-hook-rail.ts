@@ -4,6 +4,7 @@ import {
 } from "./short-form-hook";
 import type { CueLineData, Confidence } from "./cue-extension";
 import type { EditorCueDisplay } from "./editor-cue-display";
+import type { SectionLens } from "./schemas";
 
 export type EditorHookCardKind = "hook" | "failed";
 export type EditorHookCardState = "current" | "upcoming";
@@ -18,6 +19,7 @@ export interface EditorHookCard {
 	originalQuestion: string;
 	keywords: string[];
 	confidence: Confidence | null;
+	sectionLens: SectionLens | null;
 	error: string | null;
 	titleDensity: "standard" | "long" | "dense";
 	state: EditorHookCardState;
@@ -43,6 +45,7 @@ export function buildEditorHookCard(
 		originalQuestion: cue.question,
 		keywords: cue.keywords,
 		confidence: cue.confidence,
+		sectionLens: cue.sectionLens,
 		error: cue.error,
 		titleDensity: shortFormHookTitleDensity(hookTitle),
 		state,
