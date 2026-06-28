@@ -589,17 +589,27 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		this.renderProviderSetupPanel(setupFlowEl);
 
-		this.renderSettingsFlowHeading(
-			setupFlowEl,
-			"Tune speed",
-			isCueCraftLocalCliProvider(this.plugin.settings.provider)
-				? "Adjust how many sections CueCraft batches into each local CLI request."
-				: "Adjust how aggressively CueCraft generates section cues in parallel."
-		);
+		this.renderAiModelAdvancedSection(setupFlowEl);
+	}
 
+	private renderAiModelAdvancedSection(containerEl: HTMLElement): void {
+		const detailsEl = containerEl.createEl("details", {
+			cls: "cuecraft-ai-advanced",
+		});
+		detailsEl.createEl("summary", {
+			cls: "cuecraft-ai-advanced-summary",
+			text: "Advanced",
+		});
+		const bodyEl = detailsEl.createDiv({
+			cls: "cuecraft-ai-advanced-body",
+		});
+		this.renderParallelRequestsSetting(bodyEl);
+	}
+
+	private renderParallelRequestsSetting(containerEl: HTMLElement): void {
 		const concurrencyDesc = (): string =>
 			formatParallelRequestsDescription(this.plugin.settings);
-		const concurrencySetting = new Setting(setupFlowEl)
+		const concurrencySetting = new Setting(containerEl)
 			.setName("Parallel requests")
 			.addSlider((sl) =>
 				sl
@@ -613,7 +623,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					})
 			);
 		concurrencySetting.setDesc(concurrencyDesc());
-
 	}
 
 	private renderProviderSetupPanel(containerEl: HTMLElement): void {
