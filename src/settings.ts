@@ -591,23 +591,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
-			"Verify setup",
-			"Run a quick provider check before generating cues."
-		);
-
-		new Setting(setupFlowEl)
-			.setName("Test connection")
-			.setDesc("Verify CueCraft can reach the selected provider.")
-			.addButton((btn) =>
-				btn
-					.setButtonText("Test connection")
-					.onClick(() => this.testConnection())
-			);
-
-		this.renderProviderSetupStatus(setupFlowEl);
-
-		this.renderSettingsFlowHeading(
-			setupFlowEl,
 			"Tune speed",
 			isCueCraftLocalCliProvider(this.plugin.settings.provider)
 				? "Adjust how many sections CueCraft batches into each local CLI request."
@@ -651,6 +634,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		this.renderProviderCredentialSettings(fieldsEl);
 		this.renderProviderModelSettings(fieldsEl);
+		this.renderProviderSetupStatus(fieldsEl);
 	}
 
 	private renderProviderPicker(containerEl: HTMLElement): void {
@@ -724,26 +708,21 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const cliModelLabel = this.selectedModelLabel() === "CLI default"
 			? "CLI default"
 			: "Model override";
+		const description =
+			status.connection === "verified" && status.testedAt
+				? `Last checked ${new Date(status.testedAt).toLocaleString()}.`
+				: status.connection === "stale"
+					? "Saved check no longer matches these settings."
+					: "Run a quick provider check before generating cues.";
 		const statusSetting = new Setting(containerEl)
-			.setName("Setup status")
-			.setDesc(
-				status.connection === "verified" && status.testedAt
-					? isCli
-						? `Last verified the current CLI command and model setting ${new Date(status.testedAt).toLocaleString()}.`
-						: status.modelSelected
-						? `Last verified the current key and selected model ${new Date(status.testedAt).toLocaleString()}.`
-						: `Last verified provider access ${new Date(status.testedAt).toLocaleString()}. Choose a model and test again to verify generation with that model.`
-					: status.connection === "stale"
-						? isCli
-							? "The saved connection check no longer matches the current CLI command or model setting."
-							: "The saved connection check no longer matches the current key or selected model."
-						: isCli
-							? "Save the CLI command, then run Test connection. Leave the model blank to use your CLI default."
-							: "Save the key or host, choose a model, then run Test connection. Without a selected model, CueCraft checks provider access only."
-			);
-		statusSetting.controlEl.addClass("cuecraft-status-chips");
+			.setName("Connection")
+			.setDesc(description);
+		statusSetting.settingEl.addClass("cuecraft-provider-connection-setting");
+		const chipsEl = statusSetting.controlEl.createDiv({
+			cls: "cuecraft-status-chips",
+		});
 		this.renderStatusChip(
-			statusSetting.controlEl,
+			chipsEl,
 			isCli
 				? status.keySaved
 					? "Command saved"
@@ -754,7 +733,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			status.keySaved ? "is-positive" : "is-muted"
 		);
 		this.renderStatusChip(
-			statusSetting.controlEl,
+			chipsEl,
 			isCli
 				? cliModelLabel
 				: status.modelSelected
@@ -763,7 +742,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			status.modelSelected ? "is-positive" : "is-muted"
 		);
 		this.renderStatusChip(
-			statusSetting.controlEl,
+			chipsEl,
 			status.connection === "verified"
 				? "Connection verified"
 				: status.connection === "stale"
@@ -774,6 +753,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				: status.connection === "stale"
 					? "is-warning"
 					: "is-muted"
+		);
+		statusSetting.addButton((btn) =>
+			btn
+				.setButtonText("Test connection")
+				.onClick(() => void this.testConnection())
 		);
 	}
 

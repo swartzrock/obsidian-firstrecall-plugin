@@ -253,6 +253,20 @@
 	padding-right: 0;
 }
 
+.cuecraft-active-provider-fields > .cuecraft-provider-connection-setting {
+	margin-top: 4px;
+	border-top: 1px solid var(--background-modifier-border);
+}
+
+.cuecraft-provider-connection-setting .setting-item-control {
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.cuecraft-provider-connection-setting .cuecraft-status-chips {
+	justify-content: flex-start;
+}
+
 .cuecraft-thumbnail-group {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(138px, 100%), 1fr));
