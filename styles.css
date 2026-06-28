@@ -222,6 +222,37 @@
 	background: var(--background-primary);
 }
 
+.cuecraft-active-provider-panel {
+	margin: 12px 0;
+	padding: 10px 12px 4px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-m);
+	background: var(--background-primary);
+}
+
+.cuecraft-active-provider-header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+	margin-bottom: 4px;
+}
+
+.cuecraft-active-provider-title {
+	overflow: hidden;
+	color: var(--text-normal);
+	font-size: var(--font-ui-medium);
+	font-weight: var(--font-semibold);
+	line-height: 1.25;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cuecraft-active-provider-fields > .setting-item {
+	padding-left: 0;
+	padding-right: 0;
+}
+
 .cuecraft-thumbnail-group {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(138px, 100%), 1fr));
