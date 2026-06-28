@@ -289,29 +289,6 @@
 	justify-content: flex-start;
 }
 
-.cuecraft-ai-advanced {
-	margin-top: 10px;
-	border-top: 1px solid var(--background-modifier-border);
-}
-
-.cuecraft-ai-advanced-summary {
-	display: flex;
-	align-items: center;
-	min-height: 38px;
-	color: var(--text-muted);
-	font-size: var(--font-ui-small);
-	font-weight: var(--font-semibold);
-	cursor: pointer;
-}
-
-.cuecraft-ai-advanced[open] .cuecraft-ai-advanced-summary {
-	color: var(--text-normal);
-}
-
-.cuecraft-ai-advanced-body {
-	padding-bottom: 4px;
-}
-
 .cuecraft-thumbnail-group {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(138px, 100%), 1fr));

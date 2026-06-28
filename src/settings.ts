@@ -576,34 +576,32 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Setting(containerEl).setName("AI model").setHeading();
 		}
 
-		const setupFlowEl = containerEl.createDiv({
+		const providerFlowEl = containerEl.createDiv({
 			cls: "cuecraft-settings-flow",
 		});
 		this.renderSettingsFlowHeading(
-			setupFlowEl,
+			providerFlowEl,
 			"Provider",
 			"Pick where CueCraft should generate cues."
 		);
 
-		this.renderProviderPicker(setupFlowEl);
+		this.renderProviderPicker(providerFlowEl);
 
-		this.renderProviderSetupPanel(setupFlowEl);
+		this.renderProviderSetupPanel(providerFlowEl);
 
-		this.renderAiModelAdvancedSection(setupFlowEl);
+		this.renderAiModelPerformanceSection(containerEl);
 	}
 
-	private renderAiModelAdvancedSection(containerEl: HTMLElement): void {
-		const detailsEl = containerEl.createEl("details", {
-			cls: "cuecraft-ai-advanced",
+	private renderAiModelPerformanceSection(containerEl: HTMLElement): void {
+		const performanceFlowEl = containerEl.createDiv({
+			cls: "cuecraft-settings-flow",
 		});
-		detailsEl.createEl("summary", {
-			cls: "cuecraft-ai-advanced-summary",
-			text: "Advanced",
-		});
-		const bodyEl = detailsEl.createDiv({
-			cls: "cuecraft-ai-advanced-body",
-		});
-		this.renderParallelRequestsSetting(bodyEl);
+		this.renderSettingsFlowHeading(
+			performanceFlowEl,
+			"Performance",
+			"Tune how quickly CueCraft generates cues."
+		);
+		this.renderParallelRequestsSetting(performanceFlowEl);
 	}
 
 	private renderParallelRequestsSetting(containerEl: HTMLElement): void {
