@@ -1,4 +1,5 @@
 import {
+	BYOK_PROVIDER_IDS,
 	byokProviderDefinition,
 	createByokProvider,
 	deriveProviderSetupStatus,
@@ -12,7 +13,9 @@ import {
 	type ByokProviderDeps,
 	type ByokProviderId,
 	type ByokProviderRuntime,
+	type ByokProviderStoredSettings,
 	type ByokSetupStatus,
+	type ByokStoredSettings,
 	type ByokVerificationSnapshotMap,
 } from "./byok";
 import type { CueCraftSettings } from "./settings";
@@ -21,6 +24,8 @@ export type CueCraftByokRuntime = ByokProviderRuntime;
 export type CueCraftHttpClient = ByokHttpClient;
 export type CueCraftProviderFactoryDeps = ByokProviderDeps;
 export type CueCraftProviderConnectionStatusMap = ByokVerificationSnapshotMap;
+export type CueCraftByokSettings = ByokStoredSettings;
+export type CueCraftByokProviderSettings = ByokProviderStoredSettings;
 export type { ByokProviderConfig, ByokProviderDeps } from "./byok";
 
 export type CueCraftFetchedModelProvider =
@@ -34,6 +39,82 @@ export interface CueCraftAppliedModelRefresh {
 	models: string[];
 	options: ByokModelOption[];
 	message: string;
+}
+
+function emptyStoredProviderSettings(): ByokProviderStoredSettings {
+	return {
+		credential: "",
+		model: "",
+		availableModels: [],
+		modelOptions: [],
+		hasFetchedModels: false,
+		modelRefreshMessage: "",
+	};
+}
+
+function storedProviderSettingsFromCueCraftSettings(
+	settings: CueCraftSettings,
+	provider: ByokProviderId
+): ByokProviderStoredSettings {
+	const stored = emptyStoredProviderSettings();
+	stored.credential = cueCraftProviderCredential(settings, provider);
+	stored.model = cueCraftProviderModel(settings, provider);
+	switch (provider) {
+		case "ollama":
+			stored.availableModels = [...settings.ollamaAvailableModels];
+			stored.hasFetchedModels = settings.ollamaHasFetchedModels;
+			stored.modelRefreshMessage = settings.ollamaModelRefreshMessage;
+			break;
+		case "anthropic":
+			stored.availableModels = settings.anthropicAvailableModels.map(
+				(model) => model.id
+			);
+			stored.hasFetchedModels = settings.anthropicHasFetchedModels;
+			stored.modelRefreshMessage = settings.anthropicModelRefreshMessage;
+			break;
+		case "openai":
+			stored.availableModels = [...settings.openaiAvailableModels];
+			stored.hasFetchedModels = settings.openaiHasFetchedModels;
+			stored.modelRefreshMessage = settings.openaiModelRefreshMessage;
+			break;
+		case "google":
+			stored.availableModels = [...settings.googleAvailableModels];
+			stored.hasFetchedModels = settings.googleHasFetchedModels;
+			stored.modelRefreshMessage = settings.googleModelRefreshMessage;
+			break;
+		case "xai":
+			stored.availableModels = [...settings.xaiAvailableModels];
+			stored.hasFetchedModels = settings.xaiHasFetchedModels;
+			stored.modelRefreshMessage = settings.xaiModelRefreshMessage;
+			break;
+		case "openrouter":
+			stored.availableModels = [...settings.openrouterAvailableModels];
+			stored.modelOptions = [...settings.openrouterModelOptions];
+			stored.hasFetchedModels = settings.openrouterHasFetchedModels;
+			stored.modelRefreshMessage = settings.openrouterModelRefreshMessage;
+			break;
+		case "codex-cli":
+		case "claude-cli":
+			break;
+	}
+	return stored;
+}
+
+export function cueCraftByokSettingsFromCueCraftSettings(
+	settings: CueCraftSettings
+): ByokStoredSettings {
+	const providers: ByokStoredSettings["providers"] = {};
+	for (const provider of BYOK_PROVIDER_IDS) {
+		providers[provider] = storedProviderSettingsFromCueCraftSettings(
+			settings,
+			provider
+		);
+	}
+	return {
+		selectedProvider: settings.provider,
+		providers,
+		verification: { ...settings.providerConnectionStatus },
+	};
 }
 
 export function cueCraftProviderConfigFromSettings(

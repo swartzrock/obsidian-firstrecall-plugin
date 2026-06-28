@@ -87,17 +87,41 @@ describe("BYOK public contract", () => {
 		const byId = new Map(definitions.map((definition) => [definition.id, definition]));
 
 		expect(definitions).toHaveLength(8);
+		for (const definition of definitions) {
+			expect(definition.shortLabel.length).toBeGreaterThan(0);
+			expect(definition.productLabel.length).toBeGreaterThan(0);
+			expect(definition.icon.viewBox.length).toBeGreaterThan(0);
+			expect(definition.icon.svg).toContain("<");
+			expect(definition.icon.sourceUrl.length).toBeGreaterThan(0);
+			expect(definition.credentialField.label.length).toBeGreaterThan(0);
+			expect(definition.credentialField.placeholder.length).toBeGreaterThan(0);
+			expect(definition.credentialField.missingMessage.length).toBeGreaterThan(0);
+			expect(definition.modelField.label.length).toBeGreaterThan(0);
+			expect(definition.modelField.placeholder.length).toBeGreaterThan(0);
+		}
 		expect(byId.get("ollama")).toMatchObject({
 			label: "Ollama",
+			shortLabel: "Ollama",
+			productLabel: "Ollama",
 			credentialKind: "host",
+			credentialField: {
+				label: "Ollama host",
+				secret: false,
+			},
 			requiresNetwork: false,
 			supportsModelListing: true,
 		} satisfies Partial<ByokProviderDefinition>);
 		expect(byId.get("openrouter")).toMatchObject({
 			label: "OpenRouter",
+			shortLabel: "OpenRouter",
 			credentialKind: "api-key",
+			icon: {
+				source: "custom",
+			},
 			supportsModelListing: true,
 		} satisfies Partial<ByokProviderDefinition>);
+		expect(byId.get("anthropic")?.icon.source).toBe("svgl");
+		expect(byId.get("openai")?.icon.source).toBe("svgl");
 		expect(byId.get("codex-cli")).toMatchObject({
 			label: "Codex CLI",
 			credentialKind: "command",

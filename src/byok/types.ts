@@ -12,12 +12,45 @@ export type ByokCredentialKind = "api-key" | "host" | "command";
 
 export type ByokModelBehavior = "required" | "optional";
 
+export type ByokProviderIconSource = "svgl" | "custom";
+
+export interface ByokProviderIconDefinition {
+	source: ByokProviderIconSource;
+	sourceUrl: string;
+	viewBox: string;
+	svg: string;
+}
+
+export interface ByokCredentialFieldDefinition {
+	label: string;
+	placeholder: string;
+	description: string;
+	secret: boolean;
+	missingMessage: string;
+	resetModelsMessage?: string;
+}
+
+export interface ByokModelFieldDefinition {
+	label: string;
+	placeholder: string;
+	description: string;
+	listModelsLabel?: string;
+	listModelsDescription?: string;
+	emptyListMessage?: string;
+	optionSource?: ByokModelOptionSource;
+}
+
 export interface ByokProviderDefinition {
 	id: ByokProviderId;
 	label: string;
+	shortLabel: string;
+	productLabel: string;
 	vendor: string;
+	icon: ByokProviderIconDefinition;
 	credentialKind: ByokCredentialKind;
+	credentialField: ByokCredentialFieldDefinition;
 	modelBehavior: ByokModelBehavior;
+	modelField: ByokModelFieldDefinition;
 	requiresNetwork: boolean;
 	requiresDownload: boolean;
 	supportsModelListing: boolean;
@@ -116,6 +149,21 @@ export interface ByokModelOption {
 	pricing: { prompt: number; completion: number } | null;
 	supportedParameters: string[] | null;
 	source: ByokModelOptionSource;
+}
+
+export interface ByokProviderStoredSettings {
+	credential: string;
+	model: string;
+	availableModels: string[];
+	modelOptions: ByokModelOption[];
+	hasFetchedModels: boolean;
+	modelRefreshMessage: string;
+}
+
+export interface ByokStoredSettings {
+	selectedProvider: ByokProviderId;
+	providers: Partial<Record<ByokProviderId, ByokProviderStoredSettings>>;
+	verification: ByokVerificationSnapshotMap;
 }
 
 export interface ByokModelRefreshResult {

@@ -29,7 +29,10 @@ import {
 } from "./byok";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
-import { makeCueCraftByokProvider } from "./byok-cuecraft-adapter";
+import {
+	cueCraftByokSettingsFromCueCraftSettings,
+	makeCueCraftByokProvider,
+} from "./byok-cuecraft-adapter";
 import { parseSections, type Section } from "./parser";
 import {
 	CacheStore,
@@ -303,6 +306,7 @@ export default class CueCraftPlugin extends Plugin {
 			anthropicModelSelection?: string;
 			anthropicAvailableModels?: ModelInfo[];
 		});
+		settings.byok = cueCraftByokSettingsFromCueCraftSettings(settings);
 		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
 		const caches: Record<string, NoteCache> = {};
 		for (const [path, value] of Object.entries(rawCaches)) {
@@ -315,6 +319,10 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	async saveSettings(): Promise<void> {
+		this.settings.byok = cueCraftByokSettingsFromCueCraftSettings(
+			this.settings
+		);
+		this.data.settings = this.settings;
 		await this.saveData(this.data);
 		this.updateRibbonLabel();
 		if (!this.studyMode) {
