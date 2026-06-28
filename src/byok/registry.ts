@@ -2,12 +2,12 @@ import type { ByokProviderDefinition, ByokProviderId } from "./types";
 import { BYOK_PROVIDER_ICONS } from "./provider-icons";
 
 export const BYOK_PROVIDER_IDS = [
-	"ollama",
 	"anthropic",
 	"openai",
 	"google",
 	"xai",
 	"openrouter",
+	"ollama",
 	"codex-cli",
 	"claude-cli",
 ] as const satisfies readonly ByokProviderId[];

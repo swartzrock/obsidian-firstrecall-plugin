@@ -1454,36 +1454,24 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const s = this.plugin.settings;
 		const definition = byokProviderDefinition("ollama");
 		const field = definition.modelField;
-		this.renderFetchedModelSelector(containerEl, {
+		const modelSetting = this.renderFetchedModelSelector(containerEl, {
 			modelLabel: field.label,
-			modelDesc: field.description,
+			modelDesc: this.resolveModelRefreshDescription(
+				s.ollamaModelRefreshMessage,
+				field.description
+			),
 			modelPlaceholder: field.placeholder,
 			availableModels: s.ollamaAvailableModels,
 			modelOptionSource: field.optionSource ?? "ollama",
 			getModel: () => s.ollamaModel,
 			setModel: (value) => (s.ollamaModel = value),
 		});
-		new Setting(containerEl)
-			.setName(field.listModelsLabel ?? "Ollama models")
-			.setDesc(
-				this.resolveModelRefreshDescription(
-					s.ollamaModelRefreshMessage,
-					s.ollamaHost.trim()
-						? field.listModelsDescription ?? ""
-						: definition.credentialField.resetModelsMessage ??
-							definition.credentialField.missingMessage
-				)
-			)
-			.addButton((btn) =>
-				btn
-					.setButtonText(
-						s.ollamaHasFetchedModels
-							? "Refresh models"
-							: `Fetch ${definition.shortLabel} models`
-					)
-					.setDisabled(!s.ollamaHost.trim())
-					.onClick(() => void this.refreshOllamaModels())
-			);
+		this.addModelRefreshButton(modelSetting, {
+			definition,
+			hasFetchedModels: s.ollamaHasFetchedModels,
+			disabled: !s.ollamaHost.trim(),
+			onClick: () => void this.refreshOllamaModels(),
+		});
 	}
 
 	private renderCliCredentialSettings(
@@ -1542,10 +1530,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const s = this.plugin.settings;
 		const field = byokProviderDefinition("anthropic").credentialField;
 
-		new Setting(containerEl)
+		const setting = new Setting(containerEl)
 			.setName(field.label)
 			.setDesc(field.description)
 			.addText((text) => {
+				text.inputEl.addClass("cuecraft-api-key-input");
 				text
 					.setPlaceholder(field.placeholder)
 					.setValue(s.anthropicApiKey)
@@ -1579,6 +1568,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					);
 				});
 			});
+		setting.settingEl.addClass("cuecraft-api-key-setting");
 	}
 
 	private renderAnthropicModelSettings(containerEl: HTMLElement): void {
@@ -1595,8 +1585,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		);
 		const hasApiKey = s.anthropicApiKey.trim().length > 0;
 
-		const modelSetting = new Setting(containerEl).setName(field.label);
-		if (modelHint) modelSetting.setDesc(modelHint);
+		const modelSetting = new Setting(containerEl)
+			.setName(field.label)
+			.setDesc(
+				this.resolveModelRefreshDescription(
+					s.anthropicModelRefreshMessage,
+					modelHint || field.description
+				)
+			);
+		modelSetting.settingEl.addClass("cuecraft-model-setting");
 		modelSetting.addDropdown((dd) => {
 			dd.addOption(ANTHROPIC_CUSTOM_MODEL_ID, "Custom model ID...");
 			for (const model of modelOptions) {
@@ -1621,6 +1618,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					this.display();
 				});
 		});
+		this.addModelRefreshButton(modelSetting, {
+			definition,
+			hasFetchedModels: s.anthropicHasFetchedModels,
+			disabled: !hasApiKey,
+			onClick: () => void this.refreshAnthropicModels(),
+		});
 
 		if (isCustomSelection) {
 			new Setting(containerEl)
@@ -1637,28 +1640,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						})
 				);
 		}
-
-		new Setting(containerEl)
-			.setName(field.listModelsLabel ?? "Anthropic models")
-			.setDesc(
-				this.resolveModelRefreshDescription(
-					s.anthropicModelRefreshMessage,
-					hasApiKey
-						? field.listModelsDescription ?? ""
-						: definition.credentialField.resetModelsMessage ??
-							definition.credentialField.missingMessage
-				)
-			)
-			.addButton((btn) =>
-				btn
-					.setButtonText(
-						s.anthropicHasFetchedModels
-							? "Refresh models"
-							: `Fetch ${definition.shortLabel} models`
-					)
-					.setDisabled(!hasApiKey)
-					.onClick(() => void this.refreshAnthropicModels())
-			);
 
 	}
 
@@ -1905,10 +1886,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			setKey: (v: string) => void;
 		}
 	): void {
-		new Setting(containerEl)
+		const setting = new Setting(containerEl)
 			.setName(opts.field.label)
 			.setDesc(opts.field.description)
 			.addText((text) => {
+				text.inputEl.addClass("cuecraft-api-key-input");
 				text
 					.setPlaceholder(opts.field.placeholder)
 					.setValue(opts.getKey())
@@ -1936,6 +1918,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					);
 				});
 			});
+		setting.settingEl.addClass("cuecraft-api-key-setting");
 	}
 
 	private renderFetchedModelSelector(
@@ -1950,7 +1933,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			getModel: () => string;
 			setModel: (v: string) => void;
 		}
-	): void {
+	): Setting {
 		const currentModel = opts.getModel();
 		const modelOptions =
 			opts.modelOptions && opts.modelOptions.length > 0
@@ -1968,6 +1951,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const modelSetting = new Setting(containerEl)
 			.setName(opts.modelLabel)
 			.setDesc(opts.modelDesc);
+		modelSetting.settingEl.addClass("cuecraft-model-setting");
 		const warning =
 			opts.modelOptionSource === "openrouter"
 				? modelCompatibilityWarning(selectedOption)
@@ -1994,6 +1978,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
 			badgesForOption: modelCompatibilityBadges,
 		});
+		return modelSetting;
 	}
 
 	private renderCloudModelSettings(
@@ -2011,9 +1996,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 	): void {
 		const modelField = opts.definition.modelField;
-		this.renderFetchedModelSelector(containerEl, {
+		const modelSetting = this.renderFetchedModelSelector(containerEl, {
 			modelLabel: modelField.label,
-			modelDesc: modelField.description,
+			modelDesc: this.resolveModelRefreshDescription(
+				opts.getRefreshMessage(),
+				modelField.description
+			),
 			modelPlaceholder: modelField.placeholder,
 			availableModels: opts.getAvailableModels(),
 			modelOptions: opts.getModelOptions?.(),
@@ -2021,33 +2009,37 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			getModel: opts.getModel,
 			setModel: opts.setModel,
 		});
+		this.addModelRefreshButton(modelSetting, {
+			definition: opts.definition,
+			hasFetchedModels: opts.getHasFetchedModels(),
+			disabled: !opts.getApiKey().trim(),
+			onClick: () =>
+				void this.refreshCloudModels({
+					provider: opts.provider,
+					providerName: opts.definition.shortLabel,
+				}),
+		});
+	}
 
-		new Setting(containerEl)
-			.setName(modelField.listModelsLabel ?? `${opts.definition.shortLabel} models`)
-			.setDesc(
-				this.resolveModelRefreshDescription(
-					opts.getRefreshMessage(),
-					opts.getApiKey().trim()
-						? modelField.listModelsDescription ?? ""
-						: opts.definition.credentialField.resetModelsMessage ??
-							opts.definition.credentialField.missingMessage
+	private addModelRefreshButton(
+		setting: Setting,
+		opts: {
+			definition: ByokProviderDefinition;
+			hasFetchedModels: boolean;
+			disabled: boolean;
+			onClick: () => void;
+		}
+	): void {
+		setting.addButton((btn) =>
+			btn
+				.setButtonText(
+					opts.hasFetchedModels
+						? "Refresh models"
+						: `Fetch ${opts.definition.shortLabel} models`
 				)
-			)
-			.addButton((btn) =>
-				btn
-					.setButtonText(
-						opts.getHasFetchedModels()
-							? "Refresh models"
-							: `Fetch ${opts.definition.shortLabel} models`
-					)
-					.setDisabled(!opts.getApiKey().trim())
-					.onClick(() =>
-						void this.refreshCloudModels({
-							provider: opts.provider,
-							providerName: opts.definition.shortLabel,
-						})
-					)
-			);
+				.setDisabled(opts.disabled)
+				.onClick(opts.onClick)
+		);
 	}
 
 	private resolveModelRefreshDescription(
