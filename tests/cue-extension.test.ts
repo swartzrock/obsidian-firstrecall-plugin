@@ -6,6 +6,7 @@ import {
 	buildCueLineData,
 	buildCueWidgetDecorations,
 	cueGutterField,
+	renderNoteBriefElement,
 	renderCueElement,
 	setCuesEffect,
 } from "../src/cue-extension";
@@ -18,6 +19,21 @@ const SECTION_LENS = {
 	keyPhrase: "agent autonomy",
 	takeaway: "Agents use tools to complete multi-step work.",
 	explanation: "The section contrasts one-shot chat with tool-using agents.",
+};
+const NOTE_BRIEF = {
+	overview: "The note explains how agents use tools to complete work.",
+	whatMatters: {
+		title: "Agent workflow",
+		detail: "Agents can plan, decide, and use tools.",
+	},
+	reviewFirst: {
+		title: "Agent versus chatbot",
+		detail: "Review the contrast with single-turn chatbots first.",
+	},
+	sayItBack: {
+		title: "Explain the distinction",
+		detail: "Say why tool use changes the task boundary.",
+	},
 };
 
 function withDocument<T>(fn: () => T): T {
@@ -408,6 +424,28 @@ describe("renderCueElement", () => {
 	});
 });
 
+describe("renderNoteBriefElement", () => {
+	it("renders the overview and structured review cards", () => {
+		withDocument(() => {
+			const el = renderNoteBriefElement(NOTE_BRIEF, "editor");
+			expect(el.classList.contains("cuecraft-note-brief")).toBe(true);
+			expect(el.classList.contains("cuecraft-note-brief-editor")).toBe(true);
+			expect(el.querySelector(".cuecraft-note-brief-label")?.textContent).toBe(
+				"Note brief"
+			);
+			expect(
+				el.querySelector(".cuecraft-note-brief-overview")?.textContent
+			).toBe("The note explains how agents use tools to complete work.");
+			expect(el.querySelectorAll(".cuecraft-note-brief-card")).toHaveLength(3);
+			const reviewTitle =
+				"[data-card='reviewFirst'] .cuecraft-note-brief-card-title";
+			expect(
+				el.querySelector(reviewTitle)?.textContent
+			).toBe("Agent versus chatbot");
+		});
+	});
+});
+
 describe("cue editor placement", () => {
 	const cues = [
 		{
@@ -531,6 +569,34 @@ describe("cue editor placement", () => {
 		const widgets = buildCueWidgetDecorations(state, {
 			cues,
 			display: "anchored-card-rail",
+		});
+		const positions: number[] = [];
+		widgets.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([]);
+	});
+
+	it("renders a single Note Brief widget near the top of the editor", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const widgets = buildCueWidgetDecorations(state, {
+			cues,
+			display: "anchored-card-rail",
+			noteBrief: NOTE_BRIEF,
+		});
+		const positions: number[] = [];
+		widgets.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([state.doc.line(1).to]);
+	});
+
+	it("omits the Note Brief widget when it is disabled or missing", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const widgets = buildCueWidgetDecorations(state, {
+			cues,
+			display: "anchored-card-rail",
+			noteBrief: null,
 		});
 		const positions: number[] = [];
 		widgets.between(0, state.doc.length, (from) => {

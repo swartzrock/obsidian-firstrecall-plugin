@@ -3,6 +3,7 @@ import {
 	buildReadingCueMap,
 	READING_MODE_DISPLAY_OPTIONS,
 	readingModeDisplayState,
+	readingNoteBriefDisplayState,
 	readingReviewAffordanceState,
 } from "../src/reading-cues";
 import { buildNoteCache } from "../src/cache";
@@ -223,6 +224,69 @@ describe("readingModeDisplayState", () => {
 				hasCache: true,
 				hasUsableCues: false,
 				isHidden: false,
+			})
+		).toEqual(hidden);
+	});
+});
+
+describe("readingNoteBriefDisplayState", () => {
+	it("shows Note Brief only when reading surfaces, cache, data, and toggle are available", () => {
+		expect(
+			readingNoteBriefDisplayState({
+				renderInReadingMode: true,
+				showNoteBrief: true,
+				hasCache: true,
+				hasNoteBrief: true,
+				isHidden: false,
+			})
+		).toEqual({ showNoteBrief: true });
+	});
+
+	it("hides Note Brief when disabled, hidden, uncached, or missing data", () => {
+		const hidden = { showNoteBrief: false };
+		expect(
+			readingNoteBriefDisplayState({
+				renderInReadingMode: false,
+				showNoteBrief: true,
+				hasCache: true,
+				hasNoteBrief: true,
+				isHidden: false,
+			})
+		).toEqual(hidden);
+		expect(
+			readingNoteBriefDisplayState({
+				renderInReadingMode: true,
+				showNoteBrief: false,
+				hasCache: true,
+				hasNoteBrief: true,
+				isHidden: false,
+			})
+		).toEqual(hidden);
+		expect(
+			readingNoteBriefDisplayState({
+				renderInReadingMode: true,
+				showNoteBrief: true,
+				hasCache: false,
+				hasNoteBrief: true,
+				isHidden: false,
+			})
+		).toEqual(hidden);
+		expect(
+			readingNoteBriefDisplayState({
+				renderInReadingMode: true,
+				showNoteBrief: true,
+				hasCache: true,
+				hasNoteBrief: false,
+				isHidden: false,
+			})
+		).toEqual(hidden);
+		expect(
+			readingNoteBriefDisplayState({
+				renderInReadingMode: true,
+				showNoteBrief: true,
+				hasCache: true,
+				hasNoteBrief: true,
+				isHidden: true,
 			})
 		).toEqual(hidden);
 	});

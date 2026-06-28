@@ -35,6 +35,7 @@ import {
 } from "./cornell-layout";
 import { CUE_ACCENTS, cueAccentClass } from "./cornell-accent";
 import { CORNELL_DISPLAY_MODES, type CornellDisplayMode } from "./cornell-display";
+import { renderNoteBriefElement } from "./cue-extension";
 
 export const VIEW_TYPE_CORNELL = "cuecraft-cornell";
 
@@ -155,7 +156,7 @@ export class CornellView extends ItemView {
 			? buildShortFormHookModel(built.model)
 			: null;
 		await this.renderGrid(root, built.model, file, hookModel);
-		if (hookModel) this.renderHookSummary(root, hookModel);
+		if (hookModel) this.renderHookSummary(root, hookModel, built.model);
 		else this.renderSummary(root, built.model);
 	}
 
@@ -564,6 +565,10 @@ export class CornellView extends ItemView {
 	}
 
 	private renderSummary(root: HTMLElement, model: CornellModel): void {
+		if (this.plugin.settings.showNoteBrief && model.noteBrief) {
+			root.appendChild(renderNoteBriefElement(model.noteBrief, "cornell"));
+			return;
+		}
 		const takeaway = buildCornellTakeawayPresentation({
 			summary: model.summary,
 			learningObjective: model.learningObjective,
@@ -589,8 +594,13 @@ export class CornellView extends ItemView {
 
 	private renderHookSummary(
 		root: HTMLElement,
-		model: ShortFormHookModel
+		model: ShortFormHookModel,
+		cornellModel: CornellModel
 	): void {
+		if (this.plugin.settings.showNoteBrief && cornellModel.noteBrief) {
+			root.appendChild(renderNoteBriefElement(cornellModel.noteBrief, "cornell"));
+			return;
+		}
 		const summary = model.summary;
 		if (!summary) return;
 		const wrap = root.createEl("div", { cls: "cuecraft-hook-summary" });
