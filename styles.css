@@ -235,7 +235,7 @@
 	align-items: center;
 	gap: 10px;
 	min-width: 0;
-	margin-bottom: 4px;
+	margin: 1em 0 1em 0.5em;
 }
 
 .cuecraft-active-provider-title {
@@ -251,6 +251,28 @@
 .cuecraft-active-provider-fields > .setting-item {
 	padding-left: 0;
 	padding-right: 0;
+}
+
+.cuecraft-active-provider-fields {
+	margin-top: 14px;
+}
+
+.cuecraft-active-provider-fields .cuecraft-api-key-setting .setting-item-control {
+	flex: 1 1 520px;
+}
+
+.cuecraft-active-provider-fields .cuecraft-api-key-input {
+	width: 360px;
+	max-width: 100%;
+}
+
+.cuecraft-active-provider-fields .cuecraft-model-setting .setting-item-control {
+	flex-wrap: nowrap;
+	gap: 8px;
+}
+
+.cuecraft-active-provider-fields .cuecraft-model-setting button {
+	white-space: nowrap;
 }
 
 .cuecraft-active-provider-fields > .cuecraft-provider-connection-setting {
@@ -818,6 +840,10 @@
 		flex-wrap: wrap;
 		justify-content: flex-start;
 		gap: 8px;
+	}
+
+	.cuecraft-active-provider-fields .cuecraft-model-setting .setting-item-control {
+		flex-wrap: wrap;
 	}
 
 	.cuecraft-settings-flow .setting-item-control input,

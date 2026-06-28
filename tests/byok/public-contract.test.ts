@@ -22,12 +22,12 @@ describe("BYOK public contract", () => {
 
 	it("represents all current provider config variants", () => {
 		const configs: ByokProviderConfig[] = [
-			{ provider: "ollama", host: "http://localhost:11434", model: "llama3.1:8b" },
 			{ provider: "anthropic", apiKey: "sk-ant-test", model: "claude-sonnet-4-6" },
 			{ provider: "openai", apiKey: "sk-openai-test", model: "gpt-4o-mini" },
 			{ provider: "google", apiKey: "AIza-test", model: "gemini-1.5-flash" },
 			{ provider: "xai", apiKey: "xai-test", model: "grok-2-latest" },
 			{ provider: "openrouter", apiKey: "sk-or-test", model: "openai/gpt-4o" },
+			{ provider: "ollama", host: "http://localhost:11434", model: "llama3.1:8b" },
 			{ provider: "codex-cli", command: "codex" },
 			{ provider: "claude-cli", command: "claude", model: "sonnet" },
 		];
