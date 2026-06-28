@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
 	applyCueCraftListedModels,
 	applyCueCraftModelRefreshFailure,
+	cueCraftByokSettingsFromCueCraftSettings,
 	cueCraftProviderConfigFromSettings,
 	deriveCueCraftProviderSetupStatus,
 	makeCueCraftByokProvider,
@@ -215,5 +216,46 @@ describe("CueCraft provider connection adapters", () => {
 
 		s.openaiModel = "gpt-4o";
 		expect(deriveCueCraftProviderSetupStatus(s).connection).toBe("stale");
+	});
+});
+
+describe("CueCraft BYOK settings migration", () => {
+	it("projects flat CueCraft provider settings into BYOK-owned storage", () => {
+		const s = settings({
+			provider: "openrouter",
+			openrouterApiKey: "sk-or-test",
+			openrouterModel: "anthropic/claude-sonnet-4",
+			openrouterAvailableModels: ["anthropic/claude-sonnet-4"],
+			openrouterModelOptions: [openrouterOption],
+			openrouterHasFetchedModels: true,
+			openrouterModelRefreshMessage: "",
+		});
+		s.providerConnectionStatus = recordCueCraftProviderConnectionSuccess(
+			s,
+			"2026-06-27T00:00:00.000Z"
+		);
+
+		expect(cueCraftByokSettingsFromCueCraftSettings(s)).toMatchObject({
+			selectedProvider: "openrouter",
+			providers: {
+				openrouter: {
+					credential: "sk-or-test",
+					model: "anthropic/claude-sonnet-4",
+					availableModels: ["anthropic/claude-sonnet-4"],
+					modelOptions: [openrouterOption],
+					hasFetchedModels: true,
+					modelRefreshMessage: "",
+				},
+				"codex-cli": {
+					credential: "codex",
+					model: "gpt-5",
+				},
+			},
+			verification: {
+				openrouter: {
+					testedAt: "2026-06-27T00:00:00.000Z",
+				},
+			},
+		});
 	});
 });

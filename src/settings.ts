@@ -70,6 +70,7 @@ import {
 	modelCompatibilityWarning,
 	normalizeModelIds,
 	sortFetchedModelIds,
+	type ByokStoredSettings,
 	type ModelOption,
 	type ModelOptionSource,
 } from "./byok";
@@ -165,6 +166,7 @@ export interface CueCraftSettings {
 	ollamaHasFetchedModels: boolean;
 	ollamaModelRefreshMessage: string;
 	providerConnectionStatus: CueCraftProviderConnectionStatusMap;
+	byok: ByokStoredSettings;
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
 	cornellDisplayMode: CornellDisplayMode;
@@ -227,6 +229,36 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	ollamaHasFetchedModels: false,
 	ollamaModelRefreshMessage: "",
 	providerConnectionStatus: {},
+	byok: {
+		selectedProvider: "ollama",
+		providers: {
+			ollama: {
+				credential: "http://localhost:11434",
+				model: "llama3.1:8b",
+				availableModels: [],
+				modelOptions: [],
+				hasFetchedModels: false,
+				modelRefreshMessage: "",
+			},
+			"codex-cli": {
+				credential: "codex",
+				model: "",
+				availableModels: [],
+				modelOptions: [],
+				hasFetchedModels: false,
+				modelRefreshMessage: "",
+			},
+			"claude-cli": {
+				credential: "claude",
+				model: "",
+				availableModels: [],
+				modelOptions: [],
+				hasFetchedModels: false,
+				modelRefreshMessage: "",
+			},
+		},
+		verification: {},
+	},
 	cuePreset: "conceptual",
 	studyHideMode: "blur",
 	cornellDisplayMode: DEFAULT_CORNELL_DISPLAY_MODE,

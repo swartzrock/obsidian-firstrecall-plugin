@@ -1,0 +1,1653 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CueCraft AI Settings Simplification</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #eef3f1;
+      --paper: #ffffff;
+      --paper-2: #f7f8f7;
+      --paper-3: #f0f3f2;
+      --ink: #242423;
+      --muted: #63615d;
+      --faint: #8b8984;
+      --line: #d9dedc;
+      --line-strong: #bfc8c4;
+      --accent: #0d7668;
+      --accent-soft: #e4f2ee;
+      --blue: #42bfe7;
+      --blue-soft: #edf9fd;
+      --green: #15b76d;
+      --warn: #c98613;
+      --danger: #d94a59;
+      --shadow: 0 20px 70px rgba(39, 34, 26, 0.14);
+      --shadow-card: 0 3px 8px rgba(32, 31, 29, 0.12);
+      --radius: 8px;
+      --radius-sm: 6px;
+      --slide-w: 1180px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #fbfcfb 0%, var(--bg) 64%);
+      color: var(--ink);
+      font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .icon-sprite {
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+    }
+
+    .deck-nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 14px 28px;
+      border-bottom: 1px solid rgba(110, 101, 88, 0.2);
+      background: rgba(251, 252, 251, 0.9);
+      backdrop-filter: blur(16px);
+    }
+
+    .deck-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 220px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .brand-mark {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--accent);
+      border-radius: 6px;
+      background:
+        linear-gradient(90deg, transparent 32%, var(--accent) 32%, var(--accent) 37%, transparent 37%),
+        linear-gradient(180deg, #fff 0%, #e8eeec 100%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.72);
+    }
+
+    .slide-links {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .slide-links a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 5px 10px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 12px;
+      font-weight: 680;
+    }
+
+    .slide-links a:hover,
+    .slide-links a:focus-visible {
+      color: var(--ink);
+      border-color: var(--line);
+      background: var(--paper);
+      outline: none;
+    }
+
+    .deck-note {
+      min-width: 220px;
+      color: var(--faint);
+      font-size: 12px;
+      font-weight: 650;
+      text-align: right;
+    }
+
+    .slide {
+      min-height: calc(100vh - 62px);
+      padding: 46px 28px;
+      scroll-margin-top: 68px;
+    }
+
+    .slide-inner {
+      width: min(var(--slide-w), 100%);
+      margin: 0 auto;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(300px, 0.82fr) minmax(520px, 1.18fr);
+      gap: 42px;
+      align-items: center;
+      min-height: calc(100vh - 160px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 780;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin-top: 0;
+    }
+
+    h1 {
+      max-width: 740px;
+      margin-bottom: 18px;
+      font-size: 72px;
+      line-height: 0.96;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin-bottom: 12px;
+      font-size: 46px;
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin-bottom: 8px;
+      font-size: 20px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 22px;
+      line-height: 1.32;
+    }
+
+    .section-copy {
+      max-width: 760px;
+      margin-bottom: 24px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.42;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 24px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 4px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255,255,255,0.78);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-top: 28px;
+    }
+
+    .before-card,
+    .after-card,
+    .design-note,
+    .impl-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.82);
+      box-shadow: var(--shadow-card);
+    }
+
+    .before-card,
+    .after-card {
+      padding: 18px;
+    }
+
+    .mini-title {
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .flow-stack {
+      display: grid;
+      gap: 9px;
+    }
+
+    .flow-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 46px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--paper-2);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .flow-row strong {
+      color: var(--ink);
+    }
+
+    .condensed-row {
+      display: grid;
+      grid-template-columns: 38px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 56px;
+      padding: 8px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .condensed-row strong {
+      display: block;
+      color: var(--ink);
+      font-size: 15px;
+    }
+
+    .mock-window {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .mock-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 46px;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      color: var(--faint);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .mock-topbar span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .dot-row i {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--line-strong);
+    }
+
+    .settings-page {
+      padding: 20px 22px 24px;
+      background: #fbfbfa;
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 16px;
+    }
+
+    .settings-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 3px;
+      color: var(--ink);
+      font-size: 22px;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    .settings-kicker {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .ghost-action,
+    .primary-action,
+    .quiet-action {
+      min-height: 32px;
+      padding: 5px 11px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 680;
+      white-space: nowrap;
+    }
+
+    .ghost-action {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: var(--shadow-card);
+    }
+
+    .quiet-action {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .primary-action {
+      border: 1px solid #151515;
+      background: #151515;
+      color: #fff;
+    }
+
+    .provider-panel {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper-2);
+    }
+
+    .panel-heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .panel-heading h3 {
+      margin: 0 0 2px;
+      font-size: 16px;
+    }
+
+    .panel-heading p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .compact-provider-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .compact-specimen {
+      display: grid;
+      gap: 8px;
+    }
+
+    .compact-title {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 22px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .compact-title span {
+      color: var(--faint);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .provider-button-grid {
+      display: grid;
+      gap: 8px;
+    }
+
+    .provider-button-grid.is-three {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .provider-button {
+      position: relative;
+      display: grid;
+      grid-template-columns: 28px minmax(0, 1fr) 16px;
+      align-items: center;
+      gap: 9px;
+      min-height: 56px;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: none;
+      text-align: left;
+    }
+
+    .provider-button:hover,
+    .provider-button:focus-visible {
+      border-color: var(--line-strong);
+      box-shadow: var(--shadow-card);
+      outline: none;
+    }
+
+    .provider-button.is-selected {
+      border-width: 2px;
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+    }
+
+    .provider-button-label {
+      overflow: hidden;
+      font-size: 13px;
+      font-weight: 760;
+      line-height: 1.1;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .provider-radio {
+      display: inline-grid;
+      place-items: center;
+      width: 15px;
+      height: 15px;
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+      background: var(--paper-3);
+    }
+
+    .provider-button.is-selected .provider-radio {
+      border-color: #1727ff;
+      background: #1727ff;
+    }
+
+    .provider-button.is-selected .provider-radio::after {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #fff;
+      content: "";
+    }
+
+    .provider-card {
+      position: relative;
+      display: grid;
+      justify-items: center;
+      gap: 7px;
+      min-height: 92px;
+      padding: 12px 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--paper);
+      color: var(--ink);
+      box-shadow: none;
+      text-align: center;
+    }
+
+    .provider-card:hover,
+    .provider-card:focus-visible {
+      border-color: var(--line-strong);
+      box-shadow: var(--shadow-card);
+      outline: none;
+    }
+
+    .provider-card.is-selected {
+      border-width: 2px;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px rgba(66, 191, 231, 0.14), var(--shadow-card);
+    }
+
+    .provider-card.is-connected::after {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      content: "";
+    }
+
+    .provider-card span {
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 760;
+      line-height: 1.1;
+    }
+
+    .logo {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      color: #2b2b2b;
+      font-size: 15px;
+      font-weight: 820;
+      letter-spacing: 0;
+      box-shadow: 0 1px 2px rgba(32,31,29,0.08);
+    }
+
+    .logo svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    .provider-button .logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      box-shadow: none;
+    }
+
+    .logo.openai {
+      font-size: 18px;
+    }
+
+    .logo.anthropic {
+      font-size: 17px;
+      letter-spacing: -0.04em;
+    }
+
+    .logo.gemini {
+      color: #4b79ff;
+      font-size: 21px;
+    }
+
+    .logo.xai {
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    .logo.openrouter {
+      color: #5265f6;
+      font-size: 12px;
+    }
+
+    .logo.mistral {
+      color: #f26b21;
+    }
+
+    .logo.perplexity {
+      color: #20808d;
+    }
+
+    .logo.replicate {
+      color: #111;
+    }
+
+    .logo.ollama {
+      color: #2b6d61;
+    }
+
+    .logo.cli {
+      color: #242423;
+      font-size: 16px;
+    }
+
+    .active-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: center;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+    }
+
+    .active-provider {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+    }
+
+    .active-provider .logo {
+      width: 42px;
+      height: 42px;
+    }
+
+    .active-provider strong {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+      font-size: 16px;
+      line-height: 1.15;
+    }
+
+    .active-provider p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+
+    .status-chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 6px;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 25px;
+      padding: 3px 8px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1;
+      white-space: nowrap;
+    }
+
+    .status-chip::before {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--faint);
+      content: "";
+    }
+
+    .status-chip.good::before {
+      background: var(--green);
+    }
+
+    .status-chip.warn::before {
+      background: var(--warn);
+    }
+
+    .control-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 10px;
+    }
+
+    .control-row,
+    .control-row-full {
+      display: grid;
+      gap: 7px;
+      align-content: start;
+      min-height: 84px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--paper);
+    }
+
+    .control-row-full {
+      grid-column: 1 / -1;
+      min-height: auto;
+    }
+
+    .control-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 720;
+    }
+
+    .control-field,
+    .select-field {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 34px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .control-field {
+      justify-content: space-between;
+      padding: 5px 8px;
+    }
+
+    .select-field {
+      justify-content: space-between;
+      padding: 5px 8px;
+    }
+
+    .control-field code {
+      overflow: hidden;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .field-action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 26px;
+      padding: 3px 7px;
+      border: 1px solid var(--line);
+      border-radius: 5px;
+      background: var(--paper-2);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .setup-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+      margin-top: 1px;
+    }
+
+    .advanced-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 16px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--paper);
+    }
+
+    .advanced-row strong {
+      display: block;
+      color: var(--ink);
+      font-size: 13px;
+      line-height: 1.2;
+    }
+
+    .advanced-row span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.25;
+    }
+
+    .slider {
+      position: relative;
+      width: 112px;
+      height: 4px;
+      border-radius: 999px;
+      background: var(--line);
+    }
+
+    .slider::before {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 72px;
+      height: 4px;
+      border-radius: inherit;
+      background: var(--accent);
+      content: "";
+    }
+
+    .slider::after {
+      position: absolute;
+      top: 50%;
+      left: 66px;
+      width: 18px;
+      height: 18px;
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 5px rgba(32,31,29,0.2);
+      transform: translateY(-50%);
+      content: "";
+    }
+
+    .two-column-layout {
+      display: grid;
+      grid-template-columns: minmax(250px, 0.82fr) minmax(440px, 1.18fr);
+      gap: 14px;
+      align-items: start;
+    }
+
+    .provider-list {
+      display: grid;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+    }
+
+    .provider-list-row {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 58px;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .provider-list-row:last-child {
+      border-bottom: 0;
+    }
+
+    .provider-list-row.is-selected {
+      background: var(--blue-soft);
+    }
+
+    .provider-list-row strong {
+      display: block;
+      font-size: 13px;
+    }
+
+    .provider-list-row span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .small-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 21px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--paper-3);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .small-badge.good {
+      background: #e2f6ec;
+      color: #12784b;
+    }
+
+    .details-panel {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper-2);
+    }
+
+    .tabs {
+      display: flex;
+      gap: 18px;
+      margin: -4px 0 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tabs span {
+      padding: 0 0 9px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .tabs span.is-active {
+      color: var(--ink);
+      border-bottom: 2px solid var(--ink);
+    }
+
+    .modal-demo {
+      position: relative;
+      min-height: 520px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.78), rgba(255,255,255,0.92)),
+        repeating-linear-gradient(180deg, transparent 0, transparent 43px, rgba(217,222,220,0.72) 44px);
+      box-shadow: var(--shadow);
+    }
+
+    .modal-page {
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 24px;
+      padding: 24px;
+      opacity: 0.58;
+    }
+
+    .modal-sheet {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(540px, calc(100% - 48px));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      box-shadow: 0 24px 90px rgba(27, 25, 22, 0.24);
+      transform: translate(-50%, -50%);
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .modal-body h3 {
+      margin-bottom: 22px;
+      font-size: 24px;
+    }
+
+    .modal-body p {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-top: 1px solid var(--line);
+      background: var(--paper-2);
+    }
+
+    .field-stack {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .field-stack label {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .fake-input {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 38px;
+      padding: 7px 9px;
+      border: 1px solid var(--line-strong);
+      border-radius: var(--radius-sm);
+      background: #fff;
+      color: var(--faint);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.02);
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin: 15px 0;
+    }
+
+    .toggle {
+      width: 42px;
+      height: 24px;
+      border-radius: 999px;
+      background: var(--line);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+    }
+
+    .toggle::before {
+      display: block;
+      width: 20px;
+      height: 20px;
+      margin: 2px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+      content: "";
+    }
+
+    .mapping-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .design-note,
+    .impl-card {
+      padding: 16px;
+    }
+
+    .design-note strong,
+    .impl-card strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: 15px;
+    }
+
+    .design-note p,
+    .impl-card p {
+      margin-bottom: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .impl-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .provider-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 18px;
+    }
+
+    .provider-strip .provider-card {
+      width: 86px;
+      min-height: 84px;
+    }
+
+    @media (max-width: 920px) {
+      .deck-nav {
+        align-items: flex-start;
+      }
+
+      .deck-brand,
+      .deck-note {
+        min-width: 0;
+      }
+
+      .hero,
+      .comparison,
+      .compact-provider-layout,
+      .two-column-layout,
+      .modal-page,
+      .impl-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: 52px;
+      }
+
+      h2 {
+        font-size: 36px;
+      }
+
+      .provider-grid,
+      .provider-button-grid.is-three,
+      .mapping-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .control-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .settings-header,
+      .active-card {
+        grid-template-columns: 1fr;
+      }
+
+      .status-chip-row,
+      .setup-actions {
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .deck-nav {
+        position: static;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .slide {
+        padding: 30px 16px;
+      }
+
+      .provider-grid,
+      .provider-button-grid.is-three,
+      .mapping-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-heading {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <svg class="icon-sprite" aria-hidden="true">
+    <symbol id="ri-si-openai" viewBox="0 0 24 24">
+      <path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/>
+    </symbol>
+    <symbol id="ri-si-anthropic" viewBox="0 0 24 24">
+      <path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/>
+    </symbol>
+    <symbol id="ri-si-gemini" viewBox="0 0 24 24">
+      <path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/>
+    </symbol>
+    <symbol id="ri-si-x" viewBox="0 0 24 24">
+      <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/>
+    </symbol>
+    <symbol id="ri-si-openrouter" viewBox="0 0 512 512">
+      <path d="M3 248.945C18 248.945 76 236 106 219C136 202 136 202 198 158C276.497 102.293 332 120.945 423 120.945" fill="none" stroke="currentColor" stroke-width="90"/>
+      <path d="M511 121.5L357.25 210.268L357.25 32.7324L511 121.5Z"/>
+      <path d="M0 249C15 249 73 261.945 103 278.945C133 295.945 133 295.945 195 339.945C273.497 395.652 329 377 420 377" fill="none" stroke="currentColor" stroke-width="90"/>
+      <path d="M508 376.445L354.25 287.678L354.25 465.213L508 376.445Z"/>
+    </symbol>
+    <symbol id="ri-si-claude" viewBox="0 0 24 24">
+      <path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/>
+    </symbol>
+    <symbol id="ri-si-ollama" viewBox="0 0 24 24">
+      <path d="M16.361 10.26a.894.894 0 0 0-.558.47l-.072.148.001.207c0 .193.004.217.059.353.076.193.152.312.291.448.24.238.51.3.872.205a.86.86 0 0 0 .517-.436.752.752 0 0 0 .08-.498c-.064-.453-.33-.782-.724-.897a1.06 1.06 0 0 0-.466 0zm-9.203.005c-.305.096-.533.32-.65.639a1.187 1.187 0 0 0-.06.52c.057.309.31.59.598.667.362.095.632.033.872-.205.14-.136.215-.255.291-.448.055-.136.059-.16.059-.353l.001-.207-.072-.148a.894.894 0 0 0-.565-.472 1.02 1.02 0 0 0-.474.007Zm4.184 2c-.131.071-.223.25-.195.383.031.143.157.288.353.407.105.063.112.072.117.136.004.038-.01.146-.029.243-.02.094-.036.194-.036.222.002.074.07.195.143.253.064.052.076.054.255.059.164.005.198.001.264-.03.169-.082.212-.234.15-.525-.052-.243-.042-.28.087-.355.137-.08.281-.219.324-.314a.365.365 0 0 0-.175-.48.394.394 0 0 0-.181-.033c-.126 0-.207.03-.355.124l-.085.053-.053-.032c-.219-.13-.259-.145-.391-.143a.396.396 0 0 0-.193.032zm.39-2.195c-.373.036-.475.05-.654.086-.291.06-.68.195-.951.328-.94.46-1.589 1.226-1.787 2.114-.04.176-.045.234-.045.53 0 .294.005.357.043.524.264 1.16 1.332 2.017 2.714 2.173.3.033 1.596.033 1.896 0 1.11-.125 2.064-.727 2.493-1.571.114-.226.169-.372.22-.602.039-.167.044-.23.044-.523 0-.297-.005-.355-.045-.531-.288-1.29-1.539-2.304-3.072-2.497a6.873 6.873 0 0 0-.855-.031zm.645.937a3.283 3.283 0 0 1 1.44.514c.223.148.537.458.671.662.166.251.26.508.303.82.02.143.01.251-.043.482-.08.345-.332.705-.672.957a3.115 3.115 0 0 1-.689.348c-.382.122-.632.144-1.525.138-.582-.006-.686-.01-.853-.042-.57-.107-1.022-.334-1.35-.68-.264-.28-.385-.535-.45-.946-.03-.192.025-.509.137-.776.136-.326.488-.73.836-.963.403-.269.934-.46 1.422-.512.187-.02.586-.02.773-.002zm-5.503-11a1.653 1.653 0 0 0-.683.298C5.617.74 5.173 1.666 4.985 2.819c-.07.436-.119 1.04-.119 1.503 0 .544.064 1.24.155 1.721.02.107.031.202.023.208a8.12 8.12 0 0 1-.187.152 5.324 5.324 0 0 0-.949 1.02 5.49 5.49 0 0 0-.94 2.339 6.625 6.625 0 0 0-.023 1.357c.091.78.325 1.438.727 2.04l.13.195-.037.064c-.269.452-.498 1.105-.605 1.732-.084.496-.095.629-.095 1.294 0 .67.009.803.088 1.266.095.555.288 1.143.503 1.534.071.128.243.393.264.407.007.003-.014.067-.046.141a7.405 7.405 0 0 0-.548 1.873c-.062.417-.071.552-.071.991 0 .56.031.832.148 1.279L3.42 24h1.478l-.05-.091c-.297-.552-.325-1.575-.068-2.597.117-.472.25-.819.498-1.296l.148-.29v-.177c0-.165-.003-.184-.057-.293a.915.915 0 0 0-.194-.25 1.74 1.74 0 0 1-.385-.543c-.424-.92-.506-2.286-.208-3.451.124-.486.329-.918.544-1.154a.787.787 0 0 0 .223-.531c0-.195-.07-.355-.224-.522a3.136 3.136 0 0 1-.817-1.729c-.14-.96.114-2.005.69-2.834.563-.814 1.353-1.336 2.237-1.475.199-.033.57-.028.776.01.226.04.367.028.512-.041.179-.085.268-.19.374-.431.093-.215.165-.333.36-.576.234-.29.46-.489.822-.729.413-.27.884-.467 1.352-.561.17-.035.25-.04.569-.04.319 0 .398.005.569.04a4.07 4.07 0 0 1 1.914.997c.117.109.398.457.488.602.034.057.095.177.132.267.105.241.195.346.374.43.14.068.286.082.503.045.343-.058.607-.053.943.016 1.144.23 2.14 1.173 2.581 2.437.385 1.108.276 2.267-.296 3.153-.097.15-.193.27-.333.419-.301.322-.301.722-.001 1.053.493.539.801 1.866.708 3.036-.062.772-.26 1.463-.533 1.854a2.096 2.096 0 0 1-.224.258.916.916 0 0 0-.194.25c-.054.109-.057.128-.057.293v.178l.148.29c.248.476.38.823.498 1.295.253 1.008.231 2.01-.059 2.581a.845.845 0 0 0-.044.098c0 .006.329.009.732.009h.73l.02-.074.036-.134c.019-.076.057-.3.088-.516.029-.217.029-1.016 0-1.258-.11-.875-.295-1.57-.597-2.226-.032-.074-.053-.138-.046-.141.008-.005.057-.074.108-.152.376-.569.607-1.284.724-2.228.031-.26.031-1.378 0-1.628-.083-.645-.182-1.082-.348-1.525a6.083 6.083 0 0 0-.329-.7l-.038-.064.131-.194c.402-.604.636-1.262.727-2.04a6.625 6.625 0 0 0-.024-1.358 5.512 5.512 0 0 0-.939-2.339 5.325 5.325 0 0 0-.95-1.02 8.097 8.097 0 0 1-.186-.152.692.692 0 0 1 .023-.208c.208-1.087.201-2.443-.017-3.503-.19-.924-.535-1.658-.98-2.082-.354-.338-.716-.482-1.15-.455-.996.059-1.8 1.205-2.116 3.01a6.805 6.805 0 0 0-.097.726c0 .036-.007.066-.015.066a.96.96 0 0 1-.149-.078A4.857 4.857 0 0 0 12 3.03c-.832 0-1.687.243-2.456.698a.958.958 0 0 1-.148.078c-.008 0-.015-.03-.015-.066a6.71 6.71 0 0 0-.097-.725C8.997 1.392 8.337.319 7.46.048a2.096 2.096 0 0 0-.585-.041Zm.293 1.402c.248.197.523.759.682 1.388.03.113.06.244.069.292.007.047.026.152.041.233.067.365.098.76.102 1.24l.002.475-.12.175-.118.178h-.278c-.324 0-.646.041-.954.124l-.238.06c-.033.007-.038-.003-.057-.144a8.438 8.438 0 0 1 .016-2.323c.124-.788.413-1.501.696-1.711.067-.05.079-.049.157.013zm9.825-.012c.17.126.358.46.498.888.28.854.36 2.028.212 3.145-.019.14-.024.151-.057.144l-.238-.06a3.693 3.693 0 0 0-.954-.124h-.278l-.119-.178-.119-.175.002-.474c.004-.669.066-1.19.214-1.772.157-.623.434-1.185.68-1.382.078-.062.09-.063.159-.012z"/>
+    </symbol>
+    <symbol id="ri-si-mistral" viewBox="0 0 24 24">
+      <path d="M17.143 3.429v3.428h-3.429v3.429h-3.428V6.857H6.857V3.43H3.43v13.714H0v3.428h10.286v-3.428H6.857v-3.429h3.429v3.429h3.429v-3.429h3.428v3.429h-3.428v3.428H24v-3.428h-3.43V3.429z"/>
+    </symbol>
+    <symbol id="ri-si-perplexity" viewBox="0 0 24 24">
+      <path d="M22.3977 7.0896h-2.3106V.0676l-7.5094 6.3542V.1577h-1.1554v6.1966L4.4904 0v7.0896H1.6023v10.3976h2.8882V24l6.932-6.3591v6.2005h1.1554v-6.0469l6.9318 6.1807v-6.4879h2.8882V7.0896zm-3.4657-4.531v4.531h-5.355l5.355-4.531zm-13.2862.0676 4.8691 4.4634H5.6458V2.6262zM2.7576 16.332V8.245h7.8476l-6.1149 6.1147v1.9723H2.7576zm2.8882 5.0404v-3.8852h.0001v-2.6488l5.7763-5.7764v7.0111l-5.7764 5.2993zm12.7086.0248-5.7766-5.1509V9.0618l5.7766 5.7766v6.5588zm2.8882-5.0652h-1.733v-1.9723L13.3948 8.245h7.8478v8.087z"/>
+    </symbol>
+    <symbol id="ri-si-replicate" viewBox="0 0 24 24">
+      <path d="M24 10.262v2.712h-9.518V24h-3.034V10.262zm0-5.131v2.717H8.755V24H5.722V5.131zM24 0v2.717H3.034V24H0V0z"/>
+    </symbol>
+  </svg>
+  <nav class="deck-nav" aria-label="Slides">
+    <div class="deck-brand"><span class="brand-mark" aria-hidden="true"></span>CueCraft AI Settings</div>
+    <div class="slide-links">
+      <a href="#thesis">Thesis</a>
+      <a href="#option-a">Option A</a>
+      <a href="#option-a-cli">CLI Variant</a>
+      <a href="#option-b">Option B</a>
+      <a href="#option-c">Option C</a>
+      <a href="#handoff">Handoff</a>
+    </div>
+    <div class="deck-note">June 27, 2026</div>
+  </nav>
+
+  <main>
+    <section id="thesis" class="slide">
+      <div class="slide-inner hero">
+        <div>
+          <p class="eyebrow">Design thesis</p>
+          <h1>Make AI setup feel like choosing a tool, not reading a manual.</h1>
+          <p class="lead">The current page teaches every configuration step. The cleaner version should make the active provider obvious, show only the controls that matter now, and keep model/status/speed within one scan.</p>
+          <div class="pill-row">
+            <span class="pill">Provider icons first</span>
+            <span class="pill">No numbered wizard copy</span>
+            <span class="pill">Status near controls</span>
+            <span class="pill">Advanced speed tucked away</span>
+          </div>
+        </div>
+
+        <div class="comparison">
+          <article class="before-card">
+            <div class="mini-title">Current page rhythm</div>
+            <div class="flow-stack">
+              <div class="flow-row"><strong>1. Choose provider</strong><span>Dropdown</span></div>
+              <div class="flow-row"><strong>2. Add credentials</strong><span>Long description</span></div>
+              <div class="flow-row"><strong>3. Verify setup</strong><span>Button</span></div>
+              <div class="flow-row"><strong>4. Choose model</strong><span>Dropdown</span></div>
+              <div class="flow-row"><strong>Setup status</strong><span>Three chips</span></div>
+              <div class="flow-row"><strong>5. Tune speed</strong><span>Slider</span></div>
+            </div>
+          </article>
+
+          <article class="after-card">
+            <div class="mini-title">Simplified page rhythm</div>
+            <div class="flow-stack">
+              <div class="condensed-row">
+                <span class="logo anthropic"><svg aria-hidden="true"><use href="#ri-si-anthropic"></use></svg></span>
+                <span><strong>Anthropic</strong> Key saved, model selected</span>
+                <span class="small-badge good">Active</span>
+              </div>
+              <div class="condensed-row">
+                <span class="logo cli"><svg aria-hidden="true"><use href="#ri-si-openai"></use></svg></span>
+                <span><strong>Codex CLI</strong> Uses local login</span>
+                <span class="small-badge">Set up</span>
+              </div>
+              <div class="condensed-row">
+                <span class="logo ollama"><svg aria-hidden="true"><use href="#ri-si-ollama"></use></svg></span>
+                <span><strong>Ollama</strong> Local model host</span>
+                <span class="small-badge">Local</span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="option-a" class="slide">
+      <div class="slide-inner">
+        <p class="eyebrow">Option A, recommended</p>
+        <h2>Compact provider buttons with one active setup panel.</h2>
+        <p class="section-copy">Same structure, less bulk. The provider choice becomes a rounded button grid that can scale as more providers arrive, while the selected provider owns the API key, model, test, and status controls.</p>
+
+        <div class="mock-window">
+          <div class="mock-topbar">
+            <span><span aria-hidden="true">‹</span> Settings</span>
+            <div class="dot-row" aria-hidden="true"><i></i><i></i><i></i></div>
+          </div>
+          <div class="settings-page">
+            <header class="settings-header">
+              <div>
+                <div class="settings-title">AI model</div>
+                <p class="settings-kicker">Choose the provider and model CueCraft uses for cues.</p>
+              </div>
+              <button class="ghost-action">Test connection</button>
+            </header>
+
+            <section class="provider-panel">
+              <div class="panel-heading">
+                <div>
+                  <h3>Provider</h3>
+                  <p>Choose where CueCraft generates cues.</p>
+                </div>
+                <button class="quiet-action">Manage keys</button>
+              </div>
+
+              <div class="compact-provider-layout">
+                <div class="compact-specimen">
+                  <div class="compact-title">3 across <span>chosen direction</span></div>
+                  <div class="provider-button-grid is-three" role="list" aria-label="Provider choices, three across">
+                    <button class="provider-button"><span class="logo openai"><svg aria-hidden="true"><use href="#ri-si-openai"></use></svg></span><span class="provider-button-label">OpenAI</span><span class="provider-radio"></span></button>
+                    <button class="provider-button is-selected"><span class="logo anthropic"><svg aria-hidden="true"><use href="#ri-si-anthropic"></use></svg></span><span class="provider-button-label">Anthropic</span><span class="provider-radio"></span></button>
+                    <button class="provider-button"><span class="logo gemini"><svg aria-hidden="true"><use href="#ri-si-gemini"></use></svg></span><span class="provider-button-label">Gemini</span><span class="provider-radio"></span></button>
+                    <button class="provider-button"><span class="logo xai"><svg aria-hidden="true"><use href="#ri-si-x"></use></svg></span><span class="provider-button-label">xAI</span><span class="provider-radio"></span></button>
+                    <button class="provider-button"><span class="logo openrouter"><svg aria-hidden="true"><use href="#ri-si-openrouter"></use></svg></span><span class="provider-button-label">OpenRouter</span><span class="provider-radio"></span></button>
+                    <button class="provider-button"><span class="logo ollama"><svg aria-hidden="true"><use href="#ri-si-ollama"></use></svg></span><span class="provider-button-label">Ollama</span><span class="provider-radio"></span></button>
+                    <button class="provider-button"><span class="logo cli"><svg aria-hidden="true"><use href="#ri-si-openai"></use></svg></span><span class="provider-button-label">Codex CLI</span><span class="provider-radio"></span></button>
+                    <button class="provider-button"><span class="logo cli"><svg aria-hidden="true"><use href="#ri-si-claude"></use></svg></span><span class="provider-button-label">Claude CLI</span><span class="provider-radio"></span></button>
+                    <button class="provider-button"><span class="logo mistral"><svg aria-hidden="true"><use href="#ri-si-mistral"></use></svg></span><span class="provider-button-label">Mistral</span><span class="provider-radio"></span></button>
+                    <button class="provider-button"><span class="logo perplexity"><svg aria-hidden="true"><use href="#ri-si-perplexity"></use></svg></span><span class="provider-button-label">Perplexity</span><span class="provider-radio"></span></button>
+                    <button class="provider-button"><span class="logo replicate"><svg aria-hidden="true"><use href="#ri-si-replicate"></use></svg></span><span class="provider-button-label">Replicate</span><span class="provider-radio"></span></button>
+                    <button class="provider-button"><span class="logo cli">+</span><span class="provider-button-label">Custom</span><span class="provider-radio"></span></button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="active-card">
+                <div class="active-provider">
+                  <span class="logo anthropic"><svg aria-hidden="true"><use href="#ri-si-anthropic"></use></svg></span>
+                  <div>
+                    <strong>Anthropic <span class="small-badge good">Active</span></strong>
+                    <p>Uses your saved Claude API key.</p>
+                  </div>
+                </div>
+                <div class="status-chip-row" aria-label="Setup status">
+                  <span class="status-chip good">Key saved</span>
+                  <span class="status-chip good">Model selected</span>
+                  <span class="status-chip good">Verified</span>
+                </div>
+              </div>
+
+              <div class="control-grid">
+                <div class="control-row">
+                  <div class="control-label"><span>API key</span><button class="quiet-action">Reveal</button></div>
+                  <div class="control-field"><code>••••••••••••••••••••••••</code><button class="field-action">Edit</button></div>
+                </div>
+
+                <div class="control-row">
+                  <div class="control-label"><span>Model</span><button class="quiet-action">Refresh</button></div>
+                  <div class="select-field"><span>Claude Haiku 4.5</span><span aria-hidden="true">⌄</span></div>
+                </div>
+
+                <div class="control-row-full">
+                  <div class="advanced-row">
+                    <div>
+                      <strong>Parallel requests</strong>
+                      <span>Faster generation when your provider allows it.</span>
+                    </div>
+                    <div class="slider" aria-hidden="true"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="option-a-cli" class="slide">
+      <div class="slide-inner">
+        <p class="eyebrow">Option A, CLI state</p>
+        <h2>The same layout also handles local CLIs.</h2>
+        <p class="section-copy">The selected panel swaps key language for command language. No API-key section appears, and the model override stays visibly optional.</p>
+
+        <div class="mock-window">
+          <div class="mock-topbar">
+            <span><span aria-hidden="true">‹</span> Settings</span>
+            <div class="dot-row" aria-hidden="true"><i></i><i></i><i></i></div>
+          </div>
+          <div class="settings-page">
+            <header class="settings-header">
+              <div>
+                <div class="settings-title">AI model</div>
+                <p class="settings-kicker">Choose the provider and model CueCraft uses for cues.</p>
+              </div>
+              <button class="ghost-action">Test connection</button>
+            </header>
+
+            <section class="provider-panel">
+              <div class="provider-button-grid is-three" role="list" aria-label="Provider choices">
+                <button class="provider-button"><span class="logo openai"><svg aria-hidden="true"><use href="#ri-si-openai"></use></svg></span><span class="provider-button-label">OpenAI</span><span class="provider-radio"></span></button>
+                <button class="provider-button"><span class="logo anthropic"><svg aria-hidden="true"><use href="#ri-si-anthropic"></use></svg></span><span class="provider-button-label">Anthropic</span><span class="provider-radio"></span></button>
+                <button class="provider-button"><span class="logo gemini"><svg aria-hidden="true"><use href="#ri-si-gemini"></use></svg></span><span class="provider-button-label">Gemini</span><span class="provider-radio"></span></button>
+                <button class="provider-button"><span class="logo xai"><svg aria-hidden="true"><use href="#ri-si-x"></use></svg></span><span class="provider-button-label">xAI</span><span class="provider-radio"></span></button>
+                <button class="provider-button"><span class="logo openrouter"><svg aria-hidden="true"><use href="#ri-si-openrouter"></use></svg></span><span class="provider-button-label">OpenRouter</span><span class="provider-radio"></span></button>
+                <button class="provider-button"><span class="logo ollama"><svg aria-hidden="true"><use href="#ri-si-ollama"></use></svg></span><span class="provider-button-label">Ollama</span><span class="provider-radio"></span></button>
+                <button class="provider-button is-selected"><span class="logo cli"><svg aria-hidden="true"><use href="#ri-si-openai"></use></svg></span><span class="provider-button-label">Codex CLI</span><span class="provider-radio"></span></button>
+                <button class="provider-button"><span class="logo cli"><svg aria-hidden="true"><use href="#ri-si-claude"></use></svg></span><span class="provider-button-label">Claude CLI</span><span class="provider-radio"></span></button>
+              </div>
+
+              <div class="active-card">
+                <div class="active-provider">
+                  <span class="logo cli"><svg aria-hidden="true"><use href="#ri-si-openai"></use></svg></span>
+                  <div>
+                    <strong>Codex CLI <span class="small-badge good">Active</span></strong>
+                    <p>Uses your local CLI login. No API key stored.</p>
+                  </div>
+                </div>
+                <div class="status-chip-row" aria-label="Setup status">
+                  <span class="status-chip good">Command saved</span>
+                  <span class="status-chip good">CLI default</span>
+                  <span class="status-chip">Untested</span>
+                </div>
+              </div>
+
+              <div class="control-grid">
+                <div class="control-row">
+                  <div class="control-label"><span>Command</span></div>
+                  <div class="control-field"><code>codex</code><button class="field-action">Edit</button></div>
+                </div>
+
+                <div class="control-row">
+                  <div class="control-label"><span>Model override</span><span class="small-badge">Optional</span></div>
+                  <div class="control-field"><code>CLI default</code><button class="field-action">Edit</button></div>
+                </div>
+
+                <div class="control-row-full">
+                  <div class="advanced-row">
+                    <div>
+                      <strong>Local request batching</strong>
+                      <span>Keep one CLI process active at a time.</span>
+                    </div>
+                    <div class="slider" aria-hidden="true"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="option-b" class="slide">
+      <div class="slide-inner">
+        <p class="eyebrow">Option B</p>
+        <h2>Provider list with details on the right.</h2>
+        <p class="section-copy">This is closest to production admin tools: a persistent provider list, compact status badges, and a details panel for the selected provider. It scales well if CueCraft adds more providers later.</p>
+
+        <div class="mock-window">
+          <div class="mock-topbar">
+            <span><span aria-hidden="true">‹</span> AI model</span>
+            <div class="dot-row" aria-hidden="true"><i></i><i></i><i></i></div>
+          </div>
+          <div class="settings-page">
+            <header class="settings-header">
+              <div>
+                <div class="settings-title">AI model</div>
+                <p class="settings-kicker">Select the provider CueCraft should use.</p>
+              </div>
+              <button class="ghost-action">Test active provider</button>
+            </header>
+
+            <div class="two-column-layout">
+              <aside class="provider-list" aria-label="Providers">
+                <div class="provider-list-row">
+                  <span class="logo openai"><svg aria-hidden="true"><use href="#ri-si-openai"></use></svg></span>
+                  <span><strong>OpenAI</strong><span>API key saved</span></span>
+                  <span class="small-badge good">Ready</span>
+                </div>
+                <div class="provider-list-row is-selected">
+                  <span class="logo anthropic"><svg aria-hidden="true"><use href="#ri-si-anthropic"></use></svg></span>
+                  <span><strong>Anthropic</strong><span>Claude Haiku 4.5</span></span>
+                  <span class="small-badge good">Active</span>
+                </div>
+                <div class="provider-list-row">
+                  <span class="logo openrouter"><svg aria-hidden="true"><use href="#ri-si-openrouter"></use></svg></span>
+                  <span><strong>OpenRouter</strong><span>No key yet</span></span>
+                  <span class="small-badge">Set up</span>
+                </div>
+                <div class="provider-list-row">
+                  <span class="logo cli"><svg aria-hidden="true"><use href="#ri-si-openai"></use></svg></span>
+                  <span><strong>Codex CLI</strong><span>Command saved</span></span>
+                  <span class="small-badge good">Ready</span>
+                </div>
+                <div class="provider-list-row">
+                  <span class="logo ollama"><svg aria-hidden="true"><use href="#ri-si-ollama"></use></svg></span>
+                  <span><strong>Ollama</strong><span>Local host</span></span>
+                  <span class="small-badge">Local</span>
+                </div>
+              </aside>
+
+              <section class="details-panel">
+                <div class="active-card">
+                  <div class="active-provider">
+                    <span class="logo anthropic"><svg aria-hidden="true"><use href="#ri-si-anthropic"></use></svg></span>
+                    <div>
+                      <strong>Anthropic</strong>
+                      <p>Cloud generation through Claude.</p>
+                    </div>
+                  </div>
+                  <button class="primary-action">Use provider</button>
+                </div>
+
+                <div class="control-grid">
+                  <div class="control-row">
+                    <div class="control-label"><span>API key</span></div>
+                    <div class="control-field"><code>••••••••••••••••••••</code><button class="field-action">Edit</button></div>
+                  </div>
+                  <div class="control-row">
+                    <div class="control-label"><span>Model</span></div>
+                    <div class="select-field"><span>Claude Haiku 4.5</span><span aria-hidden="true">⌄</span></div>
+                  </div>
+                </div>
+
+                <div class="status-chip-row">
+                  <span class="status-chip good">Key saved</span>
+                  <span class="status-chip good">Model selected</span>
+                  <span class="status-chip good">Verified today</span>
+                </div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="option-c" class="slide">
+      <div class="slide-inner">
+        <p class="eyebrow">Option C</p>
+        <h2>Ultra-clean page plus setup modal.</h2>
+        <p class="section-copy">The main settings page stays focused on the active provider and default model. Editing a key opens a modal, matching the cleaner production examples.</p>
+
+        <div class="modal-demo">
+          <div class="modal-page">
+            <section>
+              <div class="settings-title">AI model</div>
+              <p class="settings-kicker">Anthropic is active. Claude Haiku 4.5 is selected.</p>
+              <div class="provider-strip">
+                <button class="provider-card is-connected"><span class="logo openai"><svg aria-hidden="true"><use href="#ri-si-openai"></use></svg></span><span>OpenAI</span></button>
+                <button class="provider-card is-selected is-connected"><span class="logo anthropic"><svg aria-hidden="true"><use href="#ri-si-anthropic"></use></svg></span><span>Anthropic</span></button>
+                <button class="provider-card"><span class="logo gemini"><svg aria-hidden="true"><use href="#ri-si-gemini"></use></svg></span><span>Gemini</span></button>
+                <button class="provider-card"><span class="logo openrouter"><svg aria-hidden="true"><use href="#ri-si-openrouter"></use></svg></span><span>OpenRouter</span></button>
+              </div>
+            </section>
+            <aside class="details-panel">
+              <span class="status-chip good">Verified</span>
+              <span class="status-chip good">Model selected</span>
+            </aside>
+          </div>
+
+          <div class="modal-sheet" role="dialog" aria-label="Add Anthropic API key">
+            <div class="modal-body">
+              <h3>Add Anthropic API key</h3>
+              <div class="field-stack">
+                <label>API key</label>
+                <div class="fake-input"><span>sk-ant-...</span><span aria-hidden="true">◉</span></div>
+              </div>
+              <div class="toggle-row">
+                <div>
+                  <strong>Local vault storage</strong>
+                  <p>Saved in this vault's plugin data.</p>
+                </div>
+                <div class="toggle" aria-hidden="true"></div>
+              </div>
+              <p>CueCraft tests the key before saving it as the active provider.</p>
+            </div>
+            <div class="modal-footer">
+              <button class="ghost-action">Cancel</button>
+              <button class="primary-action">Test and save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="handoff" class="slide">
+      <div class="slide-inner">
+        <p class="eyebrow">Implementation handoff</p>
+        <h2>Recommended path: Option A now, Option C later if key editing grows.</h2>
+        <p class="section-copy">Option A keeps the current single-page settings architecture, but removes the instructional scaffolding. It should be the smallest production change with the biggest clarity gain.</p>
+
+        <div class="mapping-grid">
+          <article class="design-note">
+            <strong>Replace the provider dropdown</strong>
+            <p>Use a compact rounded provider button group with icon, name, selected border, and radio dot. Import provider icons from react-icons/si where available.</p>
+          </article>
+          <article class="design-note">
+            <strong>Collapse copy into labels</strong>
+            <p>Remove numbered headings. Keep short field labels: API key, Command, Model, Test connection, Parallel requests.</p>
+          </article>
+          <article class="design-note">
+            <strong>Make status local</strong>
+            <p>Move Key saved, Model selected, and Verified chips into the active provider panel instead of a separate setup-status row.</p>
+          </article>
+          <article class="design-note">
+            <strong>Keep speed secondary</strong>
+            <p>Show the slider as an Advanced row or disclosure. Most users should not have to read it while choosing a provider.</p>
+          </article>
+          <article class="design-note">
+            <strong>Use provider-specific language</strong>
+            <p>CLI providers say Command and Model override. Cloud providers say API key and Model. Ollama says Host and Local model.</p>
+          </article>
+          <article class="design-note">
+            <strong>Preserve existing settings primitives</strong>
+            <p>Build with Obsidian CSS variables, CueCraft status chips, and the existing model combobox. Use react-icons/si where available and the supplied OpenRouter SVG.</p>
+          </article>
+        </div>
+
+        <div class="impl-grid">
+          <article class="impl-card">
+            <strong>Likely first PR</strong>
+            <p>Add provider icon metadata and a reusable provider picker component in settings. Use react-icons/si exports where available, plus the supplied OpenRouter SVG.</p>
+          </article>
+          <article class="impl-card">
+            <strong>Likely second PR</strong>
+            <p>Restructure the AI model subpage around the active provider panel, moving existing credential/model/status renderers into the compact layout.</p>
+          </article>
+          <article class="impl-card">
+            <strong>Likely third PR</strong>
+            <p>Move parallel requests into an Advanced row and tighten copy across provider-specific fields.</p>
+          </article>
+          <article class="impl-card">
+            <strong>Optional later PR</strong>
+            <p>Introduce setup modals for editing API keys if inline key editing still makes the page feel too busy.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
