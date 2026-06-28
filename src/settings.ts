@@ -61,15 +61,19 @@ import {
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	buildAnthropicModelOptions,
+	byokProviderDefinition,
+	byokProviderDefinitions,
 	describeAnthropicModel,
 	formatAnthropicModelHint,
 	formatAnthropicUnavailableModelMessage,
+	isByokProviderId,
 	isAnthropicCustomModelSelection,
 	refreshAnthropicModelOptions,
 	modelCompatibilityBadges,
 	modelCompatibilityWarning,
 	normalizeModelIds,
 	sortFetchedModelIds,
+	type ByokProviderDefinition,
 	type ByokStoredSettings,
 	type ModelOption,
 	type ModelOptionSource,
@@ -126,6 +130,15 @@ type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
 type CueCraftSettingsSubpage =
 	| SettingsSubpage
 	| "study-areas";
+const SVG_NS = "http://www.w3.org/2000/svg";
+const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
+	"clip-rule",
+	"d",
+	"fill",
+	"fill-rule",
+	"stroke",
+	"stroke-width",
+]);
 
 export interface CueCraftSettings {
 	provider: ProviderId;
@@ -520,24 +533,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private providerDisplayName(provider: ProviderId): string {
-		switch (provider) {
-			case "ollama":
-				return "Ollama";
-			case "anthropic":
-				return "Anthropic";
-			case "openai":
-				return "OpenAI";
-			case "google":
-				return "Gemini";
-			case "xai":
-				return "xAI";
-			case "openrouter":
-				return "OpenRouter";
-			case "codex-cli":
-				return "Codex CLI";
-			case "claude-cli":
-				return "Claude CLI";
-		}
+		return byokProviderDefinition(provider).shortLabel;
 	}
 
 	private selectedModelLabel(): string {
@@ -585,30 +581,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
-			"1. Choose provider",
+			"Provider",
 			"Pick where CueCraft should generate cues."
 		);
 
-		new Setting(setupFlowEl)
-			.setName("AI provider")
-			.setDesc("Where cues are generated. Ollama runs locally; API providers use saved keys; CLI providers use your local command login.")
-			.addDropdown((dd) =>
-				dd
-					.addOption("ollama", "Ollama (local)")
-					.addOption("anthropic", "Anthropic (Claude)")
-					.addOption("openai", "OpenAI (ChatGPT)")
-					.addOption("google", "Google (Gemini)")
-					.addOption("xai", "xAI (Grok)")
-					.addOption("openrouter", "OpenRouter")
-					.addOption("codex-cli", "Codex CLI")
-					.addOption("claude-cli", "Claude CLI")
-					.setValue(this.plugin.settings.provider)
-					.onChange(async (value) => {
-						this.plugin.settings.provider = value as ProviderId;
-						await this.plugin.saveSettings();
-						this.display();
-					})
-			);
+		this.renderProviderPicker(setupFlowEl);
 
 		this.renderSettingsFlowHeading(
 			setupFlowEl,
@@ -669,6 +646,71 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 		concurrencySetting.setDesc(concurrencyDesc());
 
+	}
+
+	private renderProviderPicker(containerEl: HTMLElement): void {
+		const pickerEl = containerEl.createDiv({
+			cls: "cuecraft-provider-picker",
+			attr: {
+				role: "radiogroup",
+				"aria-label": "AI provider",
+			},
+		});
+		for (const definition of byokProviderDefinitions()) {
+			const isSelected = definition.id === this.plugin.settings.provider;
+			const buttonEl = pickerEl.createEl("button", {
+				cls: `cuecraft-provider-button${isSelected ? " is-selected" : ""}`,
+				attr: {
+					type: "button",
+					role: "radio",
+					"aria-checked": String(isSelected),
+					"aria-label": definition.label,
+				},
+			});
+			this.renderProviderIcon(buttonEl, definition);
+			buttonEl.createSpan({
+				cls: "cuecraft-provider-button-label",
+				text: definition.shortLabel,
+			});
+			buttonEl.createSpan({ cls: "cuecraft-provider-radio" });
+			this.plugin.registerDomEvent(buttonEl, "click", () => {
+				void this.selectProvider(definition.id);
+			});
+		}
+	}
+
+	private renderProviderIcon(
+		containerEl: HTMLElement,
+		definition: ByokProviderDefinition
+	): void {
+		const iconEl = containerEl.createSpan({
+			cls: "cuecraft-provider-icon",
+			attr: { "aria-hidden": "true" },
+		});
+		const svgEl = activeDocument.createElementNS(SVG_NS, "svg");
+		svgEl.setAttribute("viewBox", definition.icon.viewBox);
+		svgEl.setAttribute("fill", "currentColor");
+		svgEl.setAttribute("stroke", "currentColor");
+		svgEl.setAttribute("focusable", "false");
+		for (const match of definition.icon.svg.matchAll(/<path\s+([^>]*)\/?>/g)) {
+			const pathEl = activeDocument.createElementNS(SVG_NS, "path");
+			for (const attr of (match[1] ?? "").matchAll(/([a-z-]+)="([^"]*)"/g)) {
+				const [, name, value] = attr;
+				if (name && value && SVG_PATH_ATTRIBUTE_ALLOWLIST.has(name)) {
+					pathEl.setAttribute(name, value);
+				}
+			}
+			svgEl.appendChild(pathEl);
+		}
+		iconEl.appendChild(svgEl);
+	}
+
+	private async selectProvider(provider: string): Promise<void> {
+		if (!isByokProviderId(provider)) return;
+		if (provider === this.plugin.settings.provider) return;
+		this.plugin.settings.provider = provider as ProviderId;
+		await this.plugin.saveSettings();
+		this.display();
 	}
 
 	private renderProviderSetupStatus(containerEl: HTMLElement): void {
