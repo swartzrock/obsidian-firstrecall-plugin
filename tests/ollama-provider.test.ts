@@ -31,6 +31,13 @@ const sectionLens = {
 	explanation: "This phrase anchors the section for recall.",
 };
 
+const noteBrief = {
+	overview: "This note explains the main study idea.",
+	whatMatters: { title: "Main idea", detail: "Focus on the central claim." },
+	reviewFirst: { title: "Start here", detail: "Review the first section." },
+	sayItBack: { title: "Say it back", detail: "Explain the note from memory." },
+};
+
 describe("OllamaProvider.testConnection", () => {
 	it("lists locally installed model ids", async () => {
 		const p = new OllamaProvider(baseOpts(generateClient([])));
@@ -183,5 +190,28 @@ describe("OllamaProvider.generateSummary", () => {
 		const body = JSON.parse(spy.mock.calls[0][0].body as string);
 		expect(body.prompt).toContain("one concise study takeaway sentence");
 		expect(body.prompt).toContain("learningObjective");
+	});
+});
+
+describe("OllamaProvider.generateNoteBrief", () => {
+	it("returns a validated note brief", async () => {
+		const good = JSON.stringify(noteBrief);
+		const spy = vi.fn(generateClient([good]));
+		const p = new OllamaProvider(baseOpts(spy));
+		const out = await p.generateNoteBrief({
+			noteTitle: "Note",
+			fullText: "text",
+			sections: [
+				{
+					heading: "Main",
+					question: "What matters?",
+					keywords: ["main", "claim"],
+				},
+			],
+		});
+		expect(out.overview).toBe("This note explains the main study idea.");
+		const body = JSON.parse(spy.mock.calls[0][0].body as string);
+		expect(body.prompt).toContain("Note Brief");
+		expect(body.prompt).toContain("What matters?");
 	});
 });

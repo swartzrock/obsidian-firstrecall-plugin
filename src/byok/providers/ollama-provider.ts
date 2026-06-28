@@ -1,5 +1,5 @@
-import type { CueOutput, SummaryOutput } from "../../schemas";
-import { validateCue, validateSummary } from "../../schemas";
+import type { CueOutput, NoteBriefOutput, SummaryOutput } from "../../schemas";
+import { validateCue, validateNoteBrief, validateSummary } from "../../schemas";
 import {
 	cueDensityGuidance,
 	keywordGuidance,
@@ -12,9 +12,13 @@ import {
 	HttpResponse,
 	ProviderError,
 	ProviderStatus,
+	NoteBriefInput,
 	SummaryInput,
 } from "./types";
-import { SECTION_LENS_PROMPT } from "./review-artifact-prompts";
+import {
+	buildNoteBriefPrompt,
+	SECTION_LENS_PROMPT,
+} from "./review-artifact-prompts";
 
 /** Pull Ollama's `{ "error": "..." }` body out of a failed response. */
 function extractServerError(res: HttpResponse): string {
@@ -156,6 +160,27 @@ export class OllamaProvider implements AiProvider {
 				`Reply again with ONLY the corrected JSON object.`;
 			const retry = await this.complete(repairPrompt);
 			result = validateSummary(retry);
+		}
+		if (!result.ok) {
+			throw new ProviderError(`Model output could not be validated: ${result.error}`);
+		}
+		return result.value;
+	}
+
+	async generateNoteBrief(
+		input: NoteBriefInput,
+		_signal?: AbortSignal
+	): Promise<NoteBriefOutput> {
+		const basePrompt = buildNoteBriefPrompt(input);
+		const raw = await this.complete(basePrompt);
+		let result = validateNoteBrief(raw);
+		if (!result.ok) {
+			const repairPrompt =
+				basePrompt +
+				`\nYour previous reply could not be validated (${result.error}).\n` +
+				`Reply again with ONLY the corrected JSON object.`;
+			const retry = await this.complete(repairPrompt);
+			result = validateNoteBrief(retry);
 		}
 		if (!result.ok) {
 			throw new ProviderError(`Model output could not be validated: ${result.error}`);

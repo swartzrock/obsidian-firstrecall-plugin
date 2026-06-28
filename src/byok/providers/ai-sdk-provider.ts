@@ -3,8 +3,10 @@ import { generateObject, zodSchema } from "ai";
 import type { LanguageModel, Schema } from "ai";
 import {
 	cueOutputSchema,
+	noteBriefOutputSchema,
 	summaryOutputSchema,
 	type CueOutput,
+	type NoteBriefOutput,
 	type SummaryOutput,
 } from "../../schemas";
 import {
@@ -18,9 +20,13 @@ import {
 	ProviderError,
 	ProviderRateLimitError,
 	ProviderStatus,
+	NoteBriefInput,
 	SummaryInput,
 } from "./types";
-import { SECTION_LENS_PROMPT } from "./review-artifact-prompts";
+import {
+	buildNoteBriefPrompt,
+	SECTION_LENS_PROMPT,
+} from "./review-artifact-prompts";
 
 const PRESET_GUIDANCE: Record<string, string> = {
 	conceptual: "Favor a single conceptual question that tests understanding, not trivia.",
@@ -72,6 +78,20 @@ const summaryGenSchema = z.object({
 		.string()
 		.nullable()
 		.describe("One short sentence stating what the reader should be able to do."),
+});
+
+const noteBriefCardGenSchema = z.object({
+	title: z.string().describe("Short, specific card title."),
+	detail: z.string().describe("One concise sentence explaining the card."),
+});
+
+const noteBriefGenSchema = z.object({
+	overview: z
+		.string()
+		.describe("One concise paragraph, 2 to 4 sentences, summarizing the note."),
+	whatMatters: noteBriefCardGenSchema.describe("Central claim or idea card."),
+	reviewFirst: noteBriefCardGenSchema.describe("Best first review target card."),
+	sayItBack: noteBriefCardGenSchema.describe("Active recall self-test card."),
 });
 
 /** Injectable structured-output call so the provider can be unit-tested. */
@@ -312,6 +332,30 @@ export class AiSdkProvider implements AiProvider {
 			throw new ProviderError(this.describeError(e));
 		}
 		const parsed = summaryOutputSchema.safeParse(raw);
+		if (!parsed.success) {
+			throw new ProviderError(
+				`Model output could not be validated: ${formatZodError(parsed.error)}`
+			);
+		}
+		return parsed.data;
+	}
+
+	async generateNoteBrief(
+		input: NoteBriefInput,
+		signal?: AbortSignal
+	): Promise<NoteBriefOutput> {
+		let raw;
+		try {
+			raw = await this.generateWithRetry({
+				schema: noteBriefGenSchema,
+				prompt: buildNoteBriefPrompt(input),
+				signal,
+			});
+		} catch (e) {
+			if (e instanceof ProviderRateLimitError) throw e;
+			throw new ProviderError(this.describeError(e));
+		}
+		const parsed = noteBriefOutputSchema.safeParse(raw);
 		if (!parsed.success) {
 			throw new ProviderError(
 				`Model output could not be validated: ${formatZodError(parsed.error)}`

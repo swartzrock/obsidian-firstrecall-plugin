@@ -72,6 +72,22 @@ export interface GenerateNoteParams {
 	onProgress?: (done: number, total: number) => void;
 }
 
+export interface NoteBriefSectionSource {
+	heading: string;
+	question: string | null;
+	keywords: string[] | null;
+	error: string | null;
+}
+
+export interface GenerateNoteBriefParams {
+	noteTitle: string;
+	markdown: string;
+	provider: ByokProviderRuntime;
+	sections: readonly NoteBriefSectionSource[];
+	maxContextChars?: number;
+	signal?: AbortSignal;
+}
+
 /** Default budget for note text injected into a single prompt. */
 export const DEFAULT_MAX_CONTEXT_CHARS = 8000;
 export const DEFAULT_SECTION_CONCURRENCY = 5;
@@ -225,6 +241,42 @@ export async function generateSectionCueBatch(
 	return results;
 }
 
+export async function generateNoteBriefForSections(
+	params: GenerateNoteBriefParams
+): Promise<NoteBriefOutput | null> {
+	const generateNoteBrief = params.provider.generateNoteBrief?.bind(params.provider);
+	if (!generateNoteBrief) return null;
+	const sections = params.sections
+		.filter((section) => !section.error && section.question)
+		.map((section) => ({
+			heading: section.heading,
+			question: section.question as string,
+			keywords: section.keywords ?? [],
+		}));
+	if (!sections.length || params.signal?.aborted) return null;
+	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
+	const t0 = Date.now();
+	try {
+		const noteBrief = await generateNoteBrief(
+			{
+				noteTitle: params.noteTitle,
+				fullText: clampText(params.markdown, maxContextChars),
+				sections,
+			},
+			params.signal
+		);
+		console.debug(
+			`CueCraft note brief done (${((Date.now() - t0) / 1000).toFixed(1)}s)`
+		);
+		return noteBrief;
+	} catch {
+		console.debug(
+			`CueCraft note brief failed (${((Date.now() - t0) / 1000).toFixed(1)}s)`
+		);
+		return null;
+	}
+}
+
 /**
  * Generate cues for every section in bounded parallel batches, then the whole-note summary
  * last. Per-section failures are isolated (recorded as `error`, never thrown).
@@ -323,13 +375,14 @@ export async function generateNote(
 		};
 	}
 
+	const questions = completedResults
+		.map((r) => r.question)
+		.filter((q): q is string => Boolean(q));
+	if (!questions.length) {
+		return { sections: completedResults, summary, learningObjective, noteBrief, canceled };
+	}
+
 	if (options.autoSummary && completedResults.length) {
-		const questions = completedResults
-			.map((r) => r.question)
-			.filter((q): q is string => Boolean(q));
-		if (!questions.length) {
-			return { sections: completedResults, summary, learningObjective, noteBrief, canceled };
-		}
 		const t0 = Date.now();
 		try {
 			const sum = await provider.generateSummary(
@@ -348,6 +401,17 @@ export async function generateNote(
 			summary = null;
 		}
 	}
+	if (!signal?.aborted) {
+		noteBrief = await generateNoteBriefForSections({
+			noteTitle,
+			markdown,
+			provider,
+			sections: completedResults,
+			maxContextChars,
+			signal,
+		});
+	}
+	if (signal?.aborted) canceled = true;
 
 	return { sections: completedResults, summary, learningObjective, noteBrief, canceled };
 }
