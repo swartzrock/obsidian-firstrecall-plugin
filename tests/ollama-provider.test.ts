@@ -25,6 +25,12 @@ const baseOpts = (http: HttpClient) => ({
 	http,
 });
 
+const sectionLens = {
+	takeaway: "X is the main idea to review.",
+	keyPhrase: "main idea",
+	explanation: "This phrase anchors the section for recall.",
+};
+
 describe("OllamaProvider.testConnection", () => {
 	it("lists locally installed model ids", async () => {
 		const p = new OllamaProvider(baseOpts(generateClient([])));
@@ -64,12 +70,14 @@ describe("OllamaProvider.generateCue", () => {
 			question: "What is X?",
 			keywords: ["a", "b"],
 			confidence: "high",
+			sectionLens,
 		});
 		const http = generateClient([good]);
 		const spy = vi.fn(http);
 		const p = new OllamaProvider(baseOpts(spy));
 		const cue = await p.generateCue({ heading: "H", content: "c", preset: "conceptual" });
 		expect(cue.question).toBe("What is X?");
+		expect(cue.sectionLens?.takeaway).toBe("X is the main idea to review.");
 		expect(spy).toHaveBeenCalledTimes(1);
 	});
 
@@ -80,6 +88,7 @@ describe("OllamaProvider.generateCue", () => {
 		await p.generateCue({ heading: "H", content: "c", preset: "simpler" });
 		const body = JSON.parse(spy.mock.calls[0][0].body as string);
 		expect(body.prompt).toContain("simple, accessible");
+		expect(body.prompt).toContain("sectionLens");
 	});
 
 	it("includes generation option guidance in the prompt", async () => {

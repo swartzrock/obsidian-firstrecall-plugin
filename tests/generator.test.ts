@@ -67,6 +67,11 @@ function mockProvider(opts: MockOptions = {}): ByokProviderRuntime & {
 				keywords: ["k1", "k2"],
 				confidence: "high",
 				rationale: input.heading === "Terms" ? "clear section" : undefined,
+				sectionLens: {
+					takeaway: `${input.heading} carries the main review idea.`,
+					keyPhrase: input.heading || "section",
+					explanation: "This phrase anchors recall for the section.",
+				},
 			};
 		},
 		async generateSummary(input: ByokSummaryInput): Promise<ByokSummaryOutput> {
@@ -94,6 +99,11 @@ function mockProvider(opts: MockOptions = {}): ByokProviderRuntime & {
 						keywords: ["k1", "k2"],
 						confidence: "high",
 						rationale: input.heading === "Terms" ? "clear section" : undefined,
+						sectionLens: {
+							takeaway: `${input.heading} carries the main review idea.`,
+							keyPhrase: input.heading || "section",
+							explanation: "This phrase anchors recall for the section.",
+						},
 					},
 				};
 			});
@@ -126,6 +136,7 @@ describe("generateNote", () => {
 		]);
 		expect(provider.summaryCalls).toBe(1);
 		expect(result.summary).toBe("the summary");
+		expect(result.sections[0].sectionLens?.keyPhrase).toBe("A");
 		// Summary receives the per-section questions.
 		expect(provider.lastSummaryInput?.sectionQuestions).toEqual([
 			"Q:A",
@@ -429,6 +440,7 @@ describe("generateSectionCue", () => {
 		expect(result.keywords).toEqual(["k1", "k2"]);
 		expect(result.confidence).toBe("high");
 		expect(result.rationale).toBe("clear section");
+		expect(result.sectionLens?.keyPhrase).toBe("Terms");
 		expect(result.error).toBeNull();
 		expect(result.contentHash).toBe("abc123");
 	});
