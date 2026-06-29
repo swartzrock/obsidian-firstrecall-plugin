@@ -47,7 +47,8 @@ const cue = await provider.generateCue({
 
 ## CueCraft-Owned Responsibilities
 
-- Persist API keys, hosts, commands, selected models, fetched model caches, and verification snapshots.
+- Persist host URLs, commands, selected models, fetched model caches, and verification snapshots.
+- Store cloud API keys through app-owned secure storage before passing them to BYOK runtime configs.
 - Render Obsidian settings UI and notices.
 - Adapt Obsidian `requestUrl` into BYOK transport dependencies.
 - Parse notes and decide which sections need generation.
@@ -55,6 +56,14 @@ const cue = await provider.generateCue({
 - Preserve Obsidian-specific user experience: settings copy, model refresh notices, setup status text, and note-cache metadata.
 
 `src/byok-cuecraft-adapter.ts` is deliberately outside `src/byok/**`. A future non-Obsidian project should write its own adapter for storage, UI, and transport wiring instead of importing CueCraft settings types.
+
+## CueCraft Credential Storage
+
+CueCraft stores non-secret BYOK settings in Obsidian plugin data, but cloud provider API keys are not part of that JSON shape. Anthropic, OpenAI, Google, xAI, and OpenRouter keys are encrypted with Electron `safeStorage` into a separate `credentials.json` file in the plugin directory. `data.json` keeps only provider/model/cache state and non-secret credential metadata such as saved-key presence and a change token for verification freshness.
+
+The secure-storage boundary stays in CueCraft. BYOK receives plain `apiKey` values only after CueCraft resolves a key at runtime for provider creation, model refresh, connection testing, or generation. BYOK must not import Electron, Obsidian, filesystem adapters, or CueCraft settings types.
+
+On Linux, CueCraft treats Electron's `basic_text` backend as unavailable for cloud secrets. Cloud providers fail closed in that state; Ollama host and local CLI command providers remain regular non-secret settings.
 
 ## Package Dependency Expectations
 

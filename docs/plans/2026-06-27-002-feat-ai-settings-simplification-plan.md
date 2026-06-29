@@ -21,6 +21,8 @@ The ideation deck selects Option A: a rounded, three-across provider button grid
 
 The provider metadata boundary should also move forward. Today CueCraft settings code still has provider-specific names, credential copy, and field branching. The redesigned UI should consume BYOK definitions so future providers can be added in BYOK without scattering names such as Claude, ChatGPT, OpenRouter, or Codex CLI through the rest of the app.
 
+Storage note, superseded 2026-06-29: `docs/plans/2026-06-29-001-feat-secure-byok-credential-storage-plan.md` replaces this plan's cloud API-key storage assumption. CueCraft still persists non-secret BYOK settings in `data.json`, but cloud API keys now belong in CueCraft-owned secure credential storage outside `data.json`.
+
 ---
 
 ## Requirements

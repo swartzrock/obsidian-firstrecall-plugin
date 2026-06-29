@@ -76,6 +76,7 @@ import {
 	sortFetchedModelIds,
 	type ByokProviderDefinition,
 	type ByokProviderId,
+	type ByokProviderRuntime,
 	type ByokStoredSettings,
 	type ModelOption,
 	type ModelOptionSource,
@@ -100,6 +101,7 @@ import {
 	setCueCraftSelectedProvider,
 	type CueCraftFetchedModelProvider,
 } from "./byok-cuecraft-adapter";
+import { isCueCraftCloudCredentialProvider } from "./secure-credential-store";
 import { resolveModelRefreshDescription } from "./model-refresh";
 import {
 	buildModelComboboxOptions,
@@ -117,6 +119,7 @@ import {
 	type StudyAreaGenerationPlan,
 } from "./study-area";
 import { formatCueCraftNotice } from "./notice";
+import { cloudCredentialDisplayState } from "./cloud-credential-settings";
 import {
 	AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS,
 	DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
@@ -1464,48 +1467,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private renderAnthropicCredentialSettings(containerEl: HTMLElement): void {
-		const s = this.plugin.settings;
 		const field = byokProviderDefinition("anthropic").credentialField;
-
-		const setting = new Setting(containerEl)
-			.setName(field.label)
-			.setDesc(field.description)
-			.addText((text) => {
-				text.inputEl.addClass("cuecraft-api-key-input");
-				text
-					.setPlaceholder(field.placeholder)
-					.setValue(cueCraftProviderCredential(s, "anthropic"))
-					.onChange(async (value) => {
-						setCueCraftProviderCredential(s, "anthropic", value.trim());
-						resetCueCraftFetchedModels(
-							s,
-							"anthropic",
-							field.resetModelsMessage ?? field.missingMessage
-						);
-						this.syncAnthropicModelSelection();
-						await this.plugin.saveSettings();
-					});
-				text.inputEl.type = "password";
-
-				const eye = text.inputEl.insertAdjacentElement(
-					"afterend",
-					createEl("button", {
-						cls: "cuecraft-key-eye",
-						attr: { type: "button", "aria-label": "Show API key" },
-					})
-				) as HTMLButtonElement;
-				setIcon(eye, "eye");
-				this.plugin.registerDomEvent(eye, "click", () => {
-					const masked = text.inputEl.type === "password";
-					text.inputEl.type = masked ? "text" : "password";
-					setIcon(eye, masked ? "eye-off" : "eye");
-					eye.setAttr(
-						"aria-label",
-						masked ? "Hide API key" : "Show API key"
-					);
-				});
-			});
-		setting.settingEl.addClass("cuecraft-api-key-setting");
+		this.renderCloudCredentialSettings(containerEl, {
+			provider: "anthropic",
+			field,
+			onSaved: () => this.syncAnthropicModelSelection(),
+		});
 	}
 
 	private renderAnthropicModelSettings(containerEl: HTMLElement): void {
@@ -1528,7 +1495,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			storedModels
 		);
 		const modelOptions = buildAnthropicModelOptions(storedModels);
-		const hasApiKey = cueCraftProviderCredential(s, "anthropic").trim().length > 0;
+		const hasApiKey = this.plugin.isProviderCredentialSaved("anthropic");
 
 		const modelSetting = new Setting(containerEl)
 			.setName(field.label)
@@ -1604,11 +1571,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private async refreshAnthropicModels(): Promise<void> {
 		const s = this.plugin.settings;
-		if (!cueCraftProviderCredential(s, "anthropic").trim()) {
+		if (!this.plugin.isProviderCredentialSaved("anthropic")) {
 			new Notice("CueCraft: enter your Anthropic API key first.");
 			return;
 		}
-		const provider = this.plugin.makeProvider();
+		let provider: ByokProviderRuntime;
+		try {
+			provider = await this.plugin.makeProvider();
+		} catch (error) {
+			new Notice(formatCueCraftNotice(error instanceof Error ? error.message : String(error)));
+			return;
+		}
 		const stored = cueCraftProviderSettings(s, "anthropic");
 		stored.hasFetchedModels = true;
 		if (provider.id !== "anthropic" || !provider.listModels) {
@@ -1649,13 +1622,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				return;
 			case "openai": {
 				const definition = byokProviderDefinition("openai");
-					this.renderCloudCredentialSettings(containerEl, {
-						field: definition.credentialField,
-						getKey: () => cueCraftProviderCredential(s, "openai"),
-						setKey: (v) => {
-							setCueCraftProviderCredential(s, "openai", v);
-							resetCueCraftFetchedModels(
-								s,
+				this.renderCloudCredentialSettings(containerEl, {
+					provider: "openai",
+					field: definition.credentialField,
+					onSaved: () => {
+						resetCueCraftFetchedModels(
+							s,
 							"openai",
 							definition.credentialField.resetModelsMessage ??
 								definition.credentialField.missingMessage
@@ -1666,13 +1638,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			}
 			case "google": {
 				const definition = byokProviderDefinition("google");
-					this.renderCloudCredentialSettings(containerEl, {
-						field: definition.credentialField,
-						getKey: () => cueCraftProviderCredential(s, "google"),
-						setKey: (v) => {
-							setCueCraftProviderCredential(s, "google", v);
-							resetCueCraftFetchedModels(
-								s,
+				this.renderCloudCredentialSettings(containerEl, {
+					provider: "google",
+					field: definition.credentialField,
+					onSaved: () => {
+						resetCueCraftFetchedModels(
+							s,
 							"google",
 							definition.credentialField.resetModelsMessage ??
 								definition.credentialField.missingMessage
@@ -1683,13 +1654,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			}
 			case "xai": {
 				const definition = byokProviderDefinition("xai");
-					this.renderCloudCredentialSettings(containerEl, {
-						field: definition.credentialField,
-						getKey: () => cueCraftProviderCredential(s, "xai"),
-						setKey: (v) => {
-							setCueCraftProviderCredential(s, "xai", v);
-							resetCueCraftFetchedModels(
-								s,
+				this.renderCloudCredentialSettings(containerEl, {
+					provider: "xai",
+					field: definition.credentialField,
+					onSaved: () => {
+						resetCueCraftFetchedModels(
+							s,
 							"xai",
 							definition.credentialField.resetModelsMessage ??
 								definition.credentialField.missingMessage
@@ -1700,13 +1670,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			}
 			case "openrouter": {
 				const definition = byokProviderDefinition("openrouter");
-					this.renderCloudCredentialSettings(containerEl, {
-						field: definition.credentialField,
-						getKey: () => cueCraftProviderCredential(s, "openrouter"),
-						setKey: (v) => {
-							setCueCraftProviderCredential(s, "openrouter", v);
-							resetCueCraftFetchedModels(
-								s,
+				this.renderCloudCredentialSettings(containerEl, {
+					provider: "openrouter",
+					field: definition.credentialField,
+					onSaved: () => {
+						resetCueCraftFetchedModels(
+							s,
 							"openrouter",
 							definition.credentialField.resetModelsMessage ??
 								definition.credentialField.missingMessage
@@ -1718,25 +1687,25 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			case "codex-cli": {
 				const definition = byokProviderDefinition("codex-cli");
 				this.renderCliCredentialSettings(containerEl, {
-						label: definition.credentialField.label,
-						description: definition.credentialField.description,
-						commandPlaceholder: definition.credentialField.placeholder,
-						getCommand: () => cueCraftProviderCredential(s, "codex-cli"),
-						setCommand: (value) =>
-							setCueCraftProviderCredential(s, "codex-cli", value),
-					});
-					return;
+					label: definition.credentialField.label,
+					description: definition.credentialField.description,
+					commandPlaceholder: definition.credentialField.placeholder,
+					getCommand: () => cueCraftProviderCredential(s, "codex-cli"),
+					setCommand: (value) =>
+						setCueCraftProviderCredential(s, "codex-cli", value),
+				});
+				return;
 			}
 			case "claude-cli": {
 				const definition = byokProviderDefinition("claude-cli");
 				this.renderCliCredentialSettings(containerEl, {
-						label: definition.credentialField.label,
-						description: definition.credentialField.description,
-						commandPlaceholder: definition.credentialField.placeholder,
-						getCommand: () => cueCraftProviderCredential(s, "claude-cli"),
-						setCommand: (value) =>
-							setCueCraftProviderCredential(s, "claude-cli", value),
-					});
+					label: definition.credentialField.label,
+					description: definition.credentialField.description,
+					commandPlaceholder: definition.credentialField.placeholder,
+					getCommand: () => cueCraftProviderCredential(s, "claude-cli"),
+					setCommand: (value) =>
+						setCueCraftProviderCredential(s, "claude-cli", value),
+				});
 				return;
 			}
 		}
@@ -1758,7 +1727,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					definition,
 					getModel: () => cueCraftProviderModel(s, "openai"),
 					setModel: (v) => setCueCraftProviderModel(s, "openai", v),
-					getApiKey: () => cueCraftProviderCredential(s, "openai"),
+					hasApiKey: () => this.plugin.isProviderCredentialSaved("openai"),
 					getAvailableModels: () =>
 						cueCraftProviderSettings(s, "openai").availableModels,
 					getHasFetchedModels: () =>
@@ -1775,7 +1744,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					definition,
 					getModel: () => cueCraftProviderModel(s, "google"),
 					setModel: (v) => setCueCraftProviderModel(s, "google", v),
-					getApiKey: () => cueCraftProviderCredential(s, "google"),
+					hasApiKey: () => this.plugin.isProviderCredentialSaved("google"),
 					getAvailableModels: () =>
 						cueCraftProviderSettings(s, "google").availableModels,
 					getHasFetchedModels: () =>
@@ -1792,7 +1761,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					definition,
 					getModel: () => cueCraftProviderModel(s, "xai"),
 					setModel: (v) => setCueCraftProviderModel(s, "xai", v),
-					getApiKey: () => cueCraftProviderCredential(s, "xai"),
+					hasApiKey: () => this.plugin.isProviderCredentialSaved("xai"),
 					getAvailableModels: () =>
 						cueCraftProviderSettings(s, "xai").availableModels,
 					getHasFetchedModels: () =>
@@ -1809,7 +1778,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					definition,
 					getModel: () => cueCraftProviderModel(s, "openrouter"),
 					setModel: (v) => setCueCraftProviderModel(s, "openrouter", v),
-					getApiKey: () => cueCraftProviderCredential(s, "openrouter"),
+					hasApiKey: () => this.plugin.isProviderCredentialSaved("openrouter"),
 					getAvailableModels: () =>
 						cueCraftProviderSettings(s, "openrouter").availableModels,
 					getModelOptions: () =>
@@ -1824,25 +1793,25 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			case "codex-cli": {
 				const definition = byokProviderDefinition("codex-cli");
 				this.renderCliModelSettings(containerEl, {
-						label: definition.modelField.label,
-						description: definition.modelField.description,
-						modelPlaceholder: definition.modelField.placeholder,
-						getModel: () => cueCraftProviderModel(s, "codex-cli"),
-						setModel: (value) =>
-							setCueCraftProviderModel(s, "codex-cli", value),
-					});
+					label: definition.modelField.label,
+					description: definition.modelField.description,
+					modelPlaceholder: definition.modelField.placeholder,
+					getModel: () => cueCraftProviderModel(s, "codex-cli"),
+					setModel: (value) =>
+						setCueCraftProviderModel(s, "codex-cli", value),
+				});
 				return;
 			}
 			case "claude-cli": {
 				const definition = byokProviderDefinition("claude-cli");
 				this.renderCliModelSettings(containerEl, {
-						label: definition.modelField.label,
-						description: definition.modelField.description,
-						modelPlaceholder: definition.modelField.placeholder,
-						getModel: () => cueCraftProviderModel(s, "claude-cli"),
-						setModel: (value) =>
-							setCueCraftProviderModel(s, "claude-cli", value),
-					});
+					label: definition.modelField.label,
+					description: definition.modelField.description,
+					modelPlaceholder: definition.modelField.placeholder,
+					getModel: () => cueCraftProviderModel(s, "claude-cli"),
+					setModel: (value) =>
+						setCueCraftProviderModel(s, "claude-cli", value),
+				});
 				return;
 			}
 		}
@@ -1851,22 +1820,31 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private renderCloudCredentialSettings(
 		containerEl: HTMLElement,
 		opts: {
+			provider: ByokProviderId;
 			field: ByokProviderDefinition["credentialField"];
-			getKey: () => string;
-			setKey: (v: string) => void;
+			onSaved: () => void;
 		}
 	): void {
+		const storageStatus = this.plugin.secureCredentialStorageStatus();
+		const saved = this.plugin.isProviderCredentialSaved(opts.provider);
+		const displayState = cloudCredentialDisplayState({
+			fieldDescription: opts.field.description,
+			fieldPlaceholder: opts.field.placeholder,
+			saved,
+			storageStatus,
+		});
+		let pendingKey = "";
 		const setting = new Setting(containerEl)
 			.setName(opts.field.label)
-			.setDesc(opts.field.description)
+			.setDesc(displayState.description)
 			.addText((text) => {
 				text.inputEl.addClass("cuecraft-api-key-input");
 				text
-					.setPlaceholder(opts.field.placeholder)
-					.setValue(opts.getKey())
-					.onChange(async (value) => {
-						opts.setKey(value.trim());
-						await this.plugin.saveSettings();
+					.setPlaceholder(displayState.placeholder)
+					.setValue(displayState.inputValue)
+					.setDisabled(!displayState.canEdit)
+					.onChange((value) => {
+						pendingKey = value.trim();
 					});
 				text.inputEl.type = "password";
 
@@ -1888,6 +1866,55 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					);
 				});
 			});
+		setting.addButton((button) =>
+			button
+				.setButtonText(displayState.saveButtonLabel)
+				.setDisabled(!displayState.canEdit)
+				.onClick(async () => {
+					if (!isCueCraftCloudCredentialProvider(opts.provider)) return;
+					if (!pendingKey) {
+						new Notice(`CueCraft: enter your ${opts.field.label} first.`);
+						return;
+					}
+					const result = await this.plugin.saveCloudProviderCredential(
+						opts.provider,
+						pendingKey
+					);
+					if (!result.ok) {
+						new Notice(
+							`CueCraft: could not save API key (${result.message ?? "secure storage unavailable"}).`
+						);
+						return;
+					}
+					opts.onSaved();
+					await this.plugin.saveSettings();
+					this.display();
+					new Notice("CueCraft: API key saved securely.");
+				})
+		);
+		if (saved) {
+			setting.addButton((button) =>
+				button
+					.setButtonText("Clear key")
+					.setDisabled(!displayState.canEdit)
+					.onClick(async () => {
+						if (!isCueCraftCloudCredentialProvider(opts.provider)) return;
+						const result = await this.plugin.clearCloudProviderCredential(
+							opts.provider
+						);
+						if (!result.ok) {
+							new Notice(
+								`CueCraft: could not clear API key (${result.message ?? "secure storage unavailable"}).`
+							);
+							return;
+						}
+						opts.onSaved();
+						await this.plugin.saveSettings();
+						this.display();
+						new Notice("CueCraft: API key cleared.");
+					})
+			);
+		}
 		setting.settingEl.addClass("cuecraft-api-key-setting");
 	}
 
@@ -1958,7 +1985,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			definition: ByokProviderDefinition;
 			getModel: () => string;
 			setModel: (v: string) => void;
-			getApiKey: () => string;
+			hasApiKey: () => boolean;
 			getAvailableModels: () => string[];
 			getModelOptions?: () => ModelOption[];
 			getHasFetchedModels: () => boolean;
@@ -1982,7 +2009,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.addModelRefreshButton(modelSetting, {
 			definition: opts.definition,
 			hasFetchedModels: opts.getHasFetchedModels(),
-			disabled: !opts.getApiKey().trim(),
+			disabled: !opts.hasApiKey(),
 			onClick: () =>
 				void this.refreshProviderModels({
 					provider: opts.provider,
@@ -2027,7 +2054,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		providerName: string;
 		emptyMessage: string;
 	}): Promise<void> {
-		const provider = this.plugin.makeProvider();
+		if (!this.plugin.isProviderCredentialSaved(opts.provider)) {
+			new Notice(`CueCraft: enter your ${opts.providerName} API key first.`);
+			return;
+		}
+		let provider: ByokProviderRuntime;
+		try {
+			provider = await this.plugin.makeProvider();
+		} catch (error) {
+			new Notice(formatCueCraftNotice(error instanceof Error ? error.message : String(error)));
+			return;
+		}
 		if (!provider.listModels) {
 			applyCueCraftModelRefreshFailure(
 				this.plugin.settings,
@@ -2120,7 +2157,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Notice(`CueCraft: enter your ${providerName} command first.`);
 			return;
 		}
-		const provider = this.plugin.makeProvider();
+		const provider = await this.plugin.makeProvider();
 		const status = await provider.testConnection();
 		if (status.ok) {
 			recordCueCraftProviderConnectionSuccess(this.plugin.settings);
@@ -2131,11 +2168,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private async testCloudProvider(): Promise<void> {
-		const provider = this.plugin.makeProvider();
-		const apiKey = cueCraftProviderCredential(this.plugin.settings, provider.id);
-		if (!apiKey.trim()) {
-			const providerName = cueCraftProviderLabel(provider.id);
+		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		if (!this.plugin.isProviderCredentialSaved(selectedProvider)) {
+			const providerName = cueCraftProviderLabel(selectedProvider);
 			new Notice(`CueCraft: enter your ${providerName} API key first.`);
+			return;
+		}
+		let provider: ByokProviderRuntime;
+		try {
+			provider = await this.plugin.makeProvider();
+		} catch (error) {
+			new Notice(formatCueCraftNotice(error instanceof Error ? error.message : String(error)));
 			return;
 		}
 		const selectedModel = cueCraftProviderModel(
