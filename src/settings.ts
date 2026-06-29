@@ -74,6 +74,7 @@ import {
 	normalizeModelIds,
 	sortFetchedModelIds,
 	type ByokProviderDefinition,
+	type ByokProviderId,
 	type ByokStoredSettings,
 	type ModelOption,
 	type ModelOptionSource,
@@ -82,6 +83,8 @@ import { formatParallelRequestsDescription } from "./parallel-requests-guidance"
 import {
 	applyCueCraftListedModels,
 	applyCueCraftModelRefreshFailure,
+	cueCraftFetchedModelCount,
+	cueCraftModelRefreshMessage,
 	cueCraftProviderCredential,
 	cueCraftProviderLabel,
 	cueCraftProviderModel,
@@ -109,7 +112,6 @@ import {
 	type StudyAreaGenerationPlan,
 } from "./study-area";
 import { formatCueCraftNotice } from "./notice";
-import type { ProviderId } from "./provider-id";
 import {
 	AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS,
 	DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
@@ -141,7 +143,7 @@ const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 ]);
 
 export interface CueCraftSettings {
-	provider: ProviderId;
+	provider: ByokProviderId;
 	ollamaHost: string;
 	ollamaModel: string;
 	anthropicApiKey: string;
@@ -532,39 +534,26 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		return /\bvault$/i.test(vaultName) ? vaultName : `${vaultName} Vault`;
 	}
 
-	private providerDisplayName(provider: ProviderId): string {
+	private providerDisplayName(provider: ByokProviderId): string {
 		return byokProviderDefinition(provider).shortLabel;
 	}
 
 	private selectedModelLabel(): string {
 		const settings = this.plugin.settings;
-		switch (settings.provider) {
-			case "anthropic": {
-				const modelId = settings.anthropicModel.trim();
-				if (!modelId) return "";
-				const described = describeAnthropicModel(
-					modelId,
-					settings.anthropicAvailableModels
-				);
-				return described.label === "Custom model ID"
-					? described.rawId || described.label
-					: described.label;
-			}
-			case "openai":
-				return settings.openaiModel.trim();
-			case "google":
-				return settings.googleModel.trim();
-			case "xai":
-				return settings.xaiModel.trim();
-			case "openrouter":
-				return settings.openrouterModel.trim();
-			case "codex-cli":
-				return settings.codexCliModel.trim() || "CLI default";
-			case "claude-cli":
-				return settings.claudeCliModel.trim() || "CLI default";
-			case "ollama":
-				return settings.ollamaModel.trim();
+		const modelId = cueCraftProviderModel(settings).trim();
+		if (settings.provider === "anthropic") {
+			if (!modelId) return "";
+			const described = describeAnthropicModel(
+				modelId,
+				settings.anthropicAvailableModels
+			);
+			return described.label === "Custom model ID"
+				? described.rawId || described.label
+				: described.label;
 		}
+		return byokProviderDefinition(settings.provider).modelBehavior === "optional"
+			? modelId || "CLI default"
+			: modelId;
 	}
 
 	// ── AI model ──────────────────────────────────────────────────────────
@@ -704,7 +693,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private async selectProvider(provider: string): Promise<void> {
 		if (!isByokProviderId(provider)) return;
 		if (provider === this.plugin.settings.provider) return;
-		this.plugin.settings.provider = provider as ProviderId;
+		this.plugin.settings.provider = provider;
 		await this.plugin.saveSettings();
 		this.display();
 	}
@@ -1468,7 +1457,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			definition,
 			hasFetchedModels: s.ollamaHasFetchedModels,
 			disabled: !s.ollamaHost.trim(),
-			onClick: () => void this.refreshOllamaModels(),
+			onClick: () =>
+				void this.refreshProviderModels({
+					provider: "ollama",
+					providerName: definition.shortLabel,
+					emptyMessage:
+						definition.modelField.emptyListMessage ??
+						`No ${definition.shortLabel} models were returned.`,
+				}),
 		});
 	}
 
@@ -2012,9 +2008,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			hasFetchedModels: opts.getHasFetchedModels(),
 			disabled: !opts.getApiKey().trim(),
 			onClick: () =>
-				void this.refreshCloudModels({
+				void this.refreshProviderModels({
 					provider: opts.provider,
 					providerName: opts.definition.shortLabel,
+					emptyMessage:
+						opts.definition.modelField.emptyListMessage ??
+						`No ${opts.definition.shortLabel} models were returned for this account.`,
 				}),
 		});
 	}
@@ -2047,41 +2046,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		return resolveModelRefreshDescription(refreshMessage, defaultDescription);
 	}
 
-	private modelRefreshCount(provider: CueCraftFetchedModelProvider): number {
-		const s = this.plugin.settings;
-		switch (provider) {
-			case "ollama":
-				return s.ollamaAvailableModels.length;
-			case "openai":
-				return s.openaiAvailableModels.length;
-			case "google":
-				return s.googleAvailableModels.length;
-			case "xai":
-				return s.xaiAvailableModels.length;
-			case "openrouter":
-				return s.openrouterAvailableModels.length;
-		}
-	}
-
-	private modelRefreshMessage(provider: CueCraftFetchedModelProvider): string {
-		const s = this.plugin.settings;
-		switch (provider) {
-			case "ollama":
-				return s.ollamaModelRefreshMessage;
-			case "openai":
-				return s.openaiModelRefreshMessage;
-			case "google":
-				return s.googleModelRefreshMessage;
-			case "xai":
-				return s.xaiModelRefreshMessage;
-			case "openrouter":
-				return s.openrouterModelRefreshMessage;
-		}
-	}
-
-	private async refreshCloudModels(opts: {
+	private async refreshProviderModels(opts: {
 		provider: CueCraftFetchedModelProvider;
 		providerName: string;
+		emptyMessage: string;
 	}): Promise<void> {
 		const provider = this.plugin.makeProvider();
 		if (!provider.listModels) {
@@ -2100,7 +2068,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.plugin.settings,
 				opts.provider,
 				raw,
-				`No ${opts.providerName} models were returned for this account.`
+				opts.emptyMessage
 			);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
@@ -2114,8 +2082,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 		await this.plugin.saveSettings();
 		this.display();
-		const successCount = this.modelRefreshCount(opts.provider);
-		const refreshMessage = this.modelRefreshMessage(opts.provider);
+		const successCount = cueCraftFetchedModelCount(
+			this.plugin.settings,
+			opts.provider
+		);
+		const refreshMessage = cueCraftModelRefreshMessage(
+			this.plugin.settings,
+			opts.provider
+		);
 		new Notice(
 			successCount > 0
 				? `CueCraft: Fetched ${successCount} ${opts.providerName} model${successCount === 1 ? "" : "s"}.`
@@ -2123,52 +2097,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		);
 	}
 
-	private async refreshOllamaModels(): Promise<void> {
-		const s = this.plugin.settings;
-		const provider = this.plugin.makeProvider();
-		if (provider.id !== "ollama" || !provider.listModels) {
-			applyCueCraftModelRefreshFailure(
-				s,
-				"ollama",
-				"CueCraft: Ollama model fetch is unavailable."
-			);
-			await this.plugin.saveSettings();
-			this.display();
-			return;
-		}
-		try {
-			applyCueCraftListedModels(
-				s,
-				"ollama",
-				await provider.listModels(),
-				"No Ollama models were returned by the configured host."
-			);
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			applyCueCraftModelRefreshFailure(
-				s,
-				"ollama",
-				message
-					? `Could not fetch Ollama models (${message}).`
-					: "Could not fetch Ollama models."
-			);
-		}
-		await this.plugin.saveSettings();
-		this.display();
-		new Notice(
-			s.ollamaAvailableModels.length > 0
-				? `CueCraft: Fetched ${s.ollamaAvailableModels.length} Ollama model${s.ollamaAvailableModels.length === 1 ? "" : "s"}.`
-				: `CueCraft: ${s.ollamaModelRefreshMessage}`
-		);
-	}
-
 	/** Verify the selected provider is reachable and reports a readable result. */
 	private async testConnection(): Promise<void> {
-		if (isCueCraftLocalCliProvider(this.plugin.settings.provider)) {
+		const definition = byokProviderDefinition(this.plugin.settings.provider);
+		if (definition.credentialKind === "command") {
 			await this.testLocalCliProvider();
 			return;
 		}
-		if (this.plugin.settings.provider !== "ollama") {
+		if (definition.credentialKind === "api-key") {
 			await this.testCloudProvider();
 			return;
 		}
@@ -2197,13 +2133,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private async testLocalCliProvider(): Promise<void> {
-		const command =
-			this.plugin.settings.provider === "codex-cli"
-				? this.plugin.settings.codexCliCommand
-				: this.plugin.settings.claudeCliCommand;
+		const command = cueCraftProviderCredential(this.plugin.settings);
 		if (!command.trim()) {
-			const providerName =
-				this.plugin.settings.provider === "codex-cli" ? "Codex CLI" : "Claude CLI";
+			const providerName = cueCraftProviderLabel(this.plugin.settings.provider);
 			new Notice(`CueCraft: enter your ${providerName} command first.`);
 			return;
 		}
@@ -2221,7 +2153,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private async testCloudProvider(): Promise<void> {
 		const provider = this.plugin.makeProvider();
 		const apiKey = cueCraftProviderCredential(this.plugin.settings, provider.id);
-		if (provider.id !== "ollama" && !apiKey.trim()) {
+		if (!apiKey.trim()) {
 			const providerName = cueCraftProviderLabel(provider.id);
 			new Notice(`CueCraft: enter your ${providerName} API key first.`);
 			return;
@@ -2237,8 +2169,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					recordCueCraftProviderConnectionSuccess(this.plugin.settings);
 				await this.plugin.saveSettings();
 				this.display();
-				const providerName =
-					provider.id === "anthropic" ? "Anthropic" : provider.label;
+				const providerName = byokProviderDefinition(provider.id).shortLabel;
 				new Notice(
 					`CueCraft: Connected to ${providerName} (${models.length} model${models.length === 1 ? "" : "s"} available). Choose a model and test again to verify generation with that model.`
 				);

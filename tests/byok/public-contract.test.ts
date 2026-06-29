@@ -139,6 +139,7 @@ describe("BYOK public contract", () => {
 	it("keeps provider ID guards in the public barrel", () => {
 		expect(byok.isByokProviderId("anthropic")).toBe(true);
 		expect(byok.isByokProviderId("claude")).toBe(false);
+		expect(byok.normalizeProviderId("claude")).toBe("claude-cli");
 		expect(byok.byokProviderDefinition("google").label).toBe("Google (Gemini)");
 		expect(Object.keys(byok)).toEqual(
 			expect.arrayContaining([
@@ -149,6 +150,7 @@ describe("BYOK public contract", () => {
 				"byokProviderDefinition",
 				"byokProviderDefinitions",
 				"isByokProviderId",
+				"normalizeProviderId",
 			])
 		);
 	});

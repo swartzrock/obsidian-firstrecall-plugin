@@ -21,16 +21,17 @@ import {
 	normalizeAutoGenerationSettleDelaySeconds,
 	scheduleAutoGenerationTimer,
 } from "./auto-generation-delay";
-import { normalizeProviderId } from "./provider-id";
 import {
-	normalizeAnthropicModelSelection,
 	type ByokProviderRuntime,
 	type ByokHttpClient,
+	byokProviderDefinition,
 } from "./byok";
-import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
 import {
 	cueCraftByokSettingsFromCueCraftSettings,
+	cueCraftProviderCredential,
+	cueCraftProviderModel,
+	normalizeCueCraftProviderSettings,
 	makeCueCraftByokProvider,
 } from "./byok-cuecraft-adapter";
 import { parseSections, type Section } from "./parser";
@@ -232,22 +233,7 @@ export default class CueCraftPlugin extends Plugin {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
 		const rawSettings = loaded?.settings ?? loaded ?? {};
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
-		settings.provider = normalizeProviderId(
-			(settings as { provider?: unknown }).provider
-		);
-		for (const key of [
-			"codexCliCommand",
-			"codexCliModel",
-			"claudeCliCommand",
-			"claudeCliModel",
-		] as const) {
-			if (
-				typeof (settings as unknown as Record<string, unknown>)[key] !==
-				"string"
-			) {
-				settings[key] = DEFAULT_SETTINGS[key];
-			}
-		}
+		normalizeCueCraftProviderSettings(settings, DEFAULT_SETTINGS);
 		settings.studyAreas = loadStudyAreas(
 			(settings as { studyAreas?: unknown }).studyAreas
 		);
@@ -273,39 +259,6 @@ export default class CueCraftPlugin extends Plugin {
 		) {
 			settings.cornellDisplayMode = DEFAULT_CORNELL_DISPLAY_MODE;
 		}
-		const legacyAvailableModelIds = (settings as unknown as {
-			anthropicAvailableModelIds?: string[];
-		}).anthropicAvailableModelIds;
-		const hasAvailableModels = Boolean(
-			(settings as { anthropicAvailableModels?: ModelInfo[] }).anthropicAvailableModels
-		);
-		if (Array.isArray(legacyAvailableModelIds) && !hasAvailableModels) {
-			(settings as { anthropicAvailableModels?: ModelInfo[] }).anthropicAvailableModels =
-				legacyAvailableModelIds.map((id) => ({
-					id,
-					display_name: id,
-					type: "model",
-					created_at: new Date(0).toISOString(),
-					max_input_tokens: null,
-					max_tokens: null,
-					capabilities: null,
-				} as ModelInfo));
-		}
-		if (
-			!("anthropicHasFetchedModels" in settings) &&
-			Array.isArray(
-				(settings as { anthropicAvailableModels?: ModelInfo[] }).anthropicAvailableModels
-			)
-		) {
-			(settings as { anthropicHasFetchedModels?: boolean }).anthropicHasFetchedModels =
-				((settings as { anthropicAvailableModels?: ModelInfo[] }).anthropicAvailableModels
-					?.length ?? 0) > 0;
-		}
-		normalizeAnthropicModelSelection(settings as {
-			anthropicModel: string;
-			anthropicModelSelection?: string;
-			anthropicAvailableModels?: ModelInfo[];
-		});
 		settings.byok = cueCraftByokSettingsFromCueCraftSettings(settings);
 		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
 		const caches: Record<string, NoteCache> = {};
@@ -446,25 +399,13 @@ export default class CueCraftPlugin extends Plugin {
 
 	/** True once the selected provider has its required fields set. */
 	private isConfigured(): boolean {
-		const s = this.settings;
-		switch (s.provider) {
-			case "anthropic":
-				return Boolean(s.anthropicApiKey && s.anthropicModel);
-			case "openai":
-				return Boolean(s.openaiApiKey && s.openaiModel);
-			case "google":
-				return Boolean(s.googleApiKey && s.googleModel);
-			case "xai":
-				return Boolean(s.xaiApiKey && s.xaiModel);
-			case "openrouter":
-				return Boolean(s.openrouterApiKey && s.openrouterModel);
-			case "codex-cli":
-				return Boolean(s.codexCliCommand);
-			case "claude-cli":
-				return Boolean(s.claudeCliCommand);
-			default:
-				return Boolean(s.ollamaHost && s.ollamaModel);
-		}
+		const definition = byokProviderDefinition(this.settings.provider);
+		const hasCredential =
+			cueCraftProviderCredential(this.settings).trim().length > 0;
+		const hasModel =
+			definition.modelBehavior === "optional" ||
+			cueCraftProviderModel(this.settings).trim().length > 0;
+		return hasCredential && hasModel;
 	}
 
 	/** Public view of {@link isConfigured} for the settings tab. */
@@ -977,25 +918,11 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private selectedModelName(): string {
-		const s = this.settings;
-		switch (s.provider) {
-			case "anthropic":
-				return s.anthropicModel;
-			case "openai":
-				return s.openaiModel;
-			case "google":
-				return s.googleModel;
-			case "xai":
-				return s.xaiModel;
-			case "openrouter":
-				return s.openrouterModel;
-			case "codex-cli":
-				return s.codexCliModel || "CLI default";
-			case "claude-cli":
-				return s.claudeCliModel || "CLI default";
-			default:
-				return s.ollamaModel;
-		}
+		const model = cueCraftProviderModel(this.settings).trim();
+		return byokProviderDefinition(this.settings.provider).modelBehavior ===
+			"optional"
+			? model || "CLI default"
+			: model;
 	}
 
 	private scheduleAutoGenerate(file: TFile): void {
