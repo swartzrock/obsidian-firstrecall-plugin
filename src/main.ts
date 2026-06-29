@@ -31,6 +31,7 @@ import {
 	cueCraftByokSettingsFromCueCraftSettings,
 	cueCraftProviderCredential,
 	cueCraftProviderModel,
+	cueCraftSelectedProvider,
 	normalizeCueCraftProviderSettings,
 	makeCueCraftByokProvider,
 } from "./byok-cuecraft-adapter";
@@ -272,9 +273,6 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	async saveSettings(): Promise<void> {
-		this.settings.byok = cueCraftByokSettingsFromCueCraftSettings(
-			this.settings
-		);
 		this.data.settings = this.settings;
 		await this.saveData(this.data);
 		this.updateRibbonLabel();
@@ -399,7 +397,9 @@ export default class CueCraftPlugin extends Plugin {
 
 	/** True once the selected provider has its required fields set. */
 	private isConfigured(): boolean {
-		const definition = byokProviderDefinition(this.settings.provider);
+		const definition = byokProviderDefinition(
+			cueCraftSelectedProvider(this.settings)
+		);
 		const hasCredential =
 			cueCraftProviderCredential(this.settings).trim().length > 0;
 		const hasModel =
@@ -919,8 +919,9 @@ export default class CueCraftPlugin extends Plugin {
 
 	private selectedModelName(): string {
 		const model = cueCraftProviderModel(this.settings).trim();
-		return byokProviderDefinition(this.settings.provider).modelBehavior ===
-			"optional"
+		return byokProviderDefinition(
+			cueCraftSelectedProvider(this.settings)
+		).modelBehavior === "optional"
 			? model || "CLI default"
 			: model;
 	}

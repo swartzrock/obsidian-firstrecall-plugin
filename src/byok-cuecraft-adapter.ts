@@ -121,46 +121,110 @@ function emptyStoredProviderSettings(): ByokProviderStoredSettings {
 	};
 }
 
+function legacyStringArray(value: unknown): string[] {
+	return Array.isArray(value)
+		? value.filter((item): item is string => typeof item === "string")
+		: [];
+}
+
+function legacyBoolean(value: unknown): boolean {
+	return typeof value === "boolean" ? value : false;
+}
+
+function legacyString(value: unknown): string {
+	return typeof value === "string" ? value : "";
+}
+
+function legacyProviderCredential(
+	settings: CueCraftSettings,
+	provider: ByokProviderId
+): string {
+	switch (provider) {
+		case "ollama":
+			return settings.ollamaHost;
+		case "anthropic":
+			return settings.anthropicApiKey;
+		case "openai":
+			return settings.openaiApiKey;
+		case "google":
+			return settings.googleApiKey;
+		case "xai":
+			return settings.xaiApiKey;
+		case "openrouter":
+			return settings.openrouterApiKey;
+		case "codex-cli":
+			return settings.codexCliCommand;
+		case "claude-cli":
+			return settings.claudeCliCommand;
+	}
+}
+
+function legacyProviderModel(
+	settings: CueCraftSettings,
+	provider: ByokProviderId
+): string {
+	switch (provider) {
+		case "ollama":
+			return settings.ollamaModel;
+		case "anthropic":
+			return settings.anthropicModel;
+		case "openai":
+			return settings.openaiModel;
+		case "google":
+			return settings.googleModel;
+		case "xai":
+			return settings.xaiModel;
+		case "openrouter":
+			return settings.openrouterModel;
+		case "codex-cli":
+			return settings.codexCliModel;
+		case "claude-cli":
+			return settings.claudeCliModel;
+	}
+}
+
 function storedProviderSettingsFromCueCraftSettings(
 	settings: CueCraftSettings,
 	provider: ByokProviderId
 ): ByokProviderStoredSettings {
 	const stored = emptyStoredProviderSettings();
-	stored.credential = cueCraftProviderCredential(settings, provider);
-	stored.model = cueCraftProviderModel(settings, provider);
+	stored.credential = legacyProviderCredential(settings, provider);
+	stored.model = legacyProviderModel(settings, provider);
 	switch (provider) {
 		case "ollama":
-			stored.availableModels = [...settings.ollamaAvailableModels];
-			stored.hasFetchedModels = settings.ollamaHasFetchedModels;
-			stored.modelRefreshMessage = settings.ollamaModelRefreshMessage;
+			stored.availableModels = legacyStringArray(settings.ollamaAvailableModels);
+			stored.hasFetchedModels = legacyBoolean(settings.ollamaHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(settings.ollamaModelRefreshMessage);
 			break;
 		case "anthropic":
-			stored.availableModels = settings.anthropicAvailableModels.map(
+			stored.availableModels = (settings.anthropicAvailableModels ?? []).map(
 				(model) => model.id
 			);
-			stored.hasFetchedModels = settings.anthropicHasFetchedModels;
-			stored.modelRefreshMessage = settings.anthropicModelRefreshMessage;
+			stored.hasFetchedModels = legacyBoolean(settings.anthropicHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(settings.anthropicModelRefreshMessage);
 			break;
 		case "openai":
-			stored.availableModels = [...settings.openaiAvailableModels];
-			stored.hasFetchedModels = settings.openaiHasFetchedModels;
-			stored.modelRefreshMessage = settings.openaiModelRefreshMessage;
+			stored.availableModels = legacyStringArray(settings.openaiAvailableModels);
+			stored.hasFetchedModels = legacyBoolean(settings.openaiHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(settings.openaiModelRefreshMessage);
 			break;
 		case "google":
-			stored.availableModels = [...settings.googleAvailableModels];
-			stored.hasFetchedModels = settings.googleHasFetchedModels;
-			stored.modelRefreshMessage = settings.googleModelRefreshMessage;
+			stored.availableModels = legacyStringArray(settings.googleAvailableModels);
+			stored.hasFetchedModels = legacyBoolean(settings.googleHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(settings.googleModelRefreshMessage);
 			break;
 		case "xai":
-			stored.availableModels = [...settings.xaiAvailableModels];
-			stored.hasFetchedModels = settings.xaiHasFetchedModels;
-			stored.modelRefreshMessage = settings.xaiModelRefreshMessage;
+			stored.availableModels = legacyStringArray(settings.xaiAvailableModels);
+			stored.hasFetchedModels = legacyBoolean(settings.xaiHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(settings.xaiModelRefreshMessage);
 			break;
 		case "openrouter":
-			stored.availableModels = [...settings.openrouterAvailableModels];
-			stored.modelOptions = [...settings.openrouterModelOptions];
-			stored.hasFetchedModels = settings.openrouterHasFetchedModels;
-			stored.modelRefreshMessage = settings.openrouterModelRefreshMessage;
+			stored.availableModels = legacyStringArray(settings.openrouterAvailableModels);
+			stored.modelOptions = Array.isArray(settings.openrouterModelOptions)
+				? [...settings.openrouterModelOptions]
+				: [];
+			stored.hasFetchedModels = legacyBoolean(settings.openrouterHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(settings.openrouterModelRefreshMessage);
 			break;
 		case "codex-cli":
 		case "claude-cli":
@@ -186,57 +250,200 @@ export function cueCraftByokSettingsFromCueCraftSettings(
 	};
 }
 
+export function cueCraftSelectedProvider(
+	settings: CueCraftSettings
+): ByokProviderId {
+	return normalizeProviderId(
+		(settings.byok as { selectedProvider?: unknown } | undefined)
+			?.selectedProvider ?? (settings as { provider?: unknown }).provider
+	);
+}
+
+export function setCueCraftSelectedProvider(
+	settings: CueCraftSettings,
+	provider: ByokProviderId
+): void {
+	settings.provider = provider;
+	ensureCueCraftByokSettings(settings).selectedProvider = provider;
+}
+
+function ensureCueCraftByokSettings(settings: CueCraftSettings): ByokStoredSettings {
+	const maybeSettings = settings as CueCraftSettings & {
+		byok?: ByokStoredSettings;
+	};
+	if (!maybeSettings.byok?.providers) {
+		maybeSettings.byok = cueCraftByokSettingsFromCueCraftSettings(settings);
+		return maybeSettings.byok;
+	}
+	if (!maybeSettings.byok.verification) {
+		maybeSettings.byok.verification = {};
+	}
+	if (!maybeSettings.byok.selectedProvider) {
+		maybeSettings.byok.selectedProvider = cueCraftSelectedProvider(settings);
+	}
+	return maybeSettings.byok;
+}
+
+export function cueCraftProviderSettings(
+	settings: CueCraftSettings,
+	provider: ByokProviderId = cueCraftSelectedProvider(settings)
+): ByokProviderStoredSettings {
+	const providers = ensureCueCraftByokSettings(settings).providers;
+	const stored = {
+		...emptyStoredProviderSettings(),
+		...(providers[provider] ?? {}),
+	};
+	if (!Array.isArray(stored.availableModels)) stored.availableModels = [];
+	if (!Array.isArray(stored.modelOptions)) stored.modelOptions = [];
+	if (typeof stored.credential !== "string") stored.credential = "";
+	if (typeof stored.model !== "string") stored.model = "";
+	if (typeof stored.hasFetchedModels !== "boolean") {
+		stored.hasFetchedModels = false;
+	}
+	if (typeof stored.modelRefreshMessage !== "string") {
+		stored.modelRefreshMessage = "";
+	}
+	providers[provider] = stored;
+	return stored;
+}
+
+function mirrorLegacyProviderCredential(
+	settings: CueCraftSettings,
+	provider: ByokProviderId,
+	value: string
+): void {
+	switch (provider) {
+		case "ollama":
+			settings.ollamaHost = value;
+			return;
+		case "anthropic":
+			settings.anthropicApiKey = value;
+			return;
+		case "openai":
+			settings.openaiApiKey = value;
+			return;
+		case "google":
+			settings.googleApiKey = value;
+			return;
+		case "xai":
+			settings.xaiApiKey = value;
+			return;
+		case "openrouter":
+			settings.openrouterApiKey = value;
+			return;
+		case "codex-cli":
+			settings.codexCliCommand = value;
+			return;
+		case "claude-cli":
+			settings.claudeCliCommand = value;
+			return;
+	}
+}
+
+function mirrorLegacyProviderModel(
+	settings: CueCraftSettings,
+	provider: ByokProviderId,
+	value: string
+): void {
+	switch (provider) {
+		case "ollama":
+			settings.ollamaModel = value;
+			return;
+		case "anthropic":
+			settings.anthropicModel = value;
+			return;
+		case "openai":
+			settings.openaiModel = value;
+			return;
+		case "google":
+			settings.googleModel = value;
+			return;
+		case "xai":
+			settings.xaiModel = value;
+			return;
+		case "openrouter":
+			settings.openrouterModel = value;
+			return;
+		case "codex-cli":
+			settings.codexCliModel = value;
+			return;
+		case "claude-cli":
+			settings.claudeCliModel = value;
+			return;
+	}
+}
+
+export function setCueCraftProviderCredential(
+	settings: CueCraftSettings,
+	provider: ByokProviderId,
+	value: string
+): void {
+	cueCraftProviderSettings(settings, provider).credential = value;
+	mirrorLegacyProviderCredential(settings, provider, value);
+}
+
+export function setCueCraftProviderModel(
+	settings: CueCraftSettings,
+	provider: ByokProviderId,
+	value: string
+): void {
+	cueCraftProviderSettings(settings, provider).model = value;
+	mirrorLegacyProviderModel(settings, provider, value);
+}
+
 export function cueCraftProviderConfigFromSettings(
 	settings: CueCraftSettings
 ): ByokProviderConfig {
-	switch (settings.provider) {
+	const provider = cueCraftSelectedProvider(settings);
+	const stored = cueCraftProviderSettings(settings, provider);
+	switch (provider) {
 		case "anthropic":
 			return {
 				provider: "anthropic",
-				apiKey: settings.anthropicApiKey,
-				model: settings.anthropicModel,
+				apiKey: stored.credential,
+				model: stored.model,
 			};
 		case "openai":
 			return {
 				provider: "openai",
-				apiKey: settings.openaiApiKey,
-				model: settings.openaiModel,
+				apiKey: stored.credential,
+				model: stored.model,
 			};
 		case "google":
 			return {
 				provider: "google",
-				apiKey: settings.googleApiKey,
-				model: settings.googleModel,
+				apiKey: stored.credential,
+				model: stored.model,
 			};
 		case "xai":
 			return {
 				provider: "xai",
-				apiKey: settings.xaiApiKey,
-				model: settings.xaiModel,
+				apiKey: stored.credential,
+				model: stored.model,
 			};
 		case "openrouter":
 			return {
 				provider: "openrouter",
-				apiKey: settings.openrouterApiKey,
-				model: settings.openrouterModel,
+				apiKey: stored.credential,
+				model: stored.model,
 			};
 		case "codex-cli":
 			return {
 				provider: "codex-cli",
-				command: settings.codexCliCommand,
-				model: settings.codexCliModel,
+				command: stored.credential,
+				model: stored.model,
 			};
 		case "claude-cli":
 			return {
 				provider: "claude-cli",
-				command: settings.claudeCliCommand,
-				model: settings.claudeCliModel,
+				command: stored.credential,
+				model: stored.model,
 			};
 		case "ollama":
 			return {
 				provider: "ollama",
-				host: settings.ollamaHost,
-				model: settings.ollamaModel,
+				host: stored.credential,
+				model: stored.model,
 			};
 	}
 }
@@ -258,68 +465,84 @@ export function cueCraftProviderLabel(provider: ByokProviderId): string {
 
 export function cueCraftProviderCredential(
 	settings: CueCraftSettings,
-	provider: ByokProviderId = settings.provider
+	provider: ByokProviderId = cueCraftSelectedProvider(settings)
 ): string {
-	switch (provider) {
-		case "ollama":
-			return settings.ollamaHost;
-		case "anthropic":
-			return settings.anthropicApiKey;
-		case "openai":
-			return settings.openaiApiKey;
-		case "google":
-			return settings.googleApiKey;
-		case "xai":
-			return settings.xaiApiKey;
-		case "openrouter":
-			return settings.openrouterApiKey;
-		case "codex-cli":
-			return settings.codexCliCommand;
-		case "claude-cli":
-			return settings.claudeCliCommand;
-	}
+	return cueCraftProviderSettings(settings, provider).credential;
 }
 
 export function cueCraftProviderModel(
 	settings: CueCraftSettings,
-	provider: ByokProviderId = settings.provider
+	provider: ByokProviderId = cueCraftSelectedProvider(settings)
 ): string {
-	switch (provider) {
-		case "ollama":
-			return settings.ollamaModel;
-		case "anthropic":
-			return settings.anthropicModel;
-		case "openai":
-			return settings.openaiModel;
-		case "google":
-			return settings.googleModel;
-		case "xai":
-			return settings.xaiModel;
-		case "openrouter":
-			return settings.openrouterModel;
-		case "codex-cli":
-			return settings.codexCliModel;
-		case "claude-cli":
-			return settings.claudeCliModel;
-	}
+	return cueCraftProviderSettings(settings, provider).model;
 }
 
 export function deriveCueCraftProviderSetupStatus(
 	settings: CueCraftSettings
 ): ByokSetupStatus {
-	return deriveProviderSetupStatus({
-		byok: cueCraftByokSettingsFromCueCraftSettings(settings),
-	});
+	return deriveProviderSetupStatus({ byok: ensureCueCraftByokSettings(settings) });
 }
 
 export function recordCueCraftProviderConnectionSuccess(
 	settings: CueCraftSettings,
 	testedAt?: string
 ): CueCraftProviderConnectionStatusMap {
-	return recordProviderConnectionSuccess(
-		{ byok: cueCraftByokSettingsFromCueCraftSettings(settings) },
+	const byok = ensureCueCraftByokSettings(settings);
+	const verification = recordProviderConnectionSuccess(
+		{ byok },
 		testedAt
 	);
+	byok.verification = verification;
+	settings.providerConnectionStatus = verification;
+	return verification;
+}
+
+function mirrorLegacyFetchedModelSettings(
+	settings: CueCraftSettings,
+	provider: CueCraftFetchedModelProvider | "anthropic",
+	stored: ByokProviderStoredSettings
+): void {
+	switch (provider) {
+		case "anthropic":
+			settings.anthropicAvailableModels = stored.availableModels.map((id) => ({
+				id,
+				display_name: id,
+				type: "model",
+				created_at: new Date(0).toISOString(),
+				max_input_tokens: null,
+				max_tokens: null,
+				capabilities: null,
+			} as ModelInfo));
+			settings.anthropicHasFetchedModels = stored.hasFetchedModels;
+			settings.anthropicModelRefreshMessage = stored.modelRefreshMessage;
+			return;
+		case "ollama":
+			settings.ollamaAvailableModels = [...stored.availableModels];
+			settings.ollamaHasFetchedModels = stored.hasFetchedModels;
+			settings.ollamaModelRefreshMessage = stored.modelRefreshMessage;
+			return;
+		case "openai":
+			settings.openaiAvailableModels = [...stored.availableModels];
+			settings.openaiHasFetchedModels = stored.hasFetchedModels;
+			settings.openaiModelRefreshMessage = stored.modelRefreshMessage;
+			return;
+		case "google":
+			settings.googleAvailableModels = [...stored.availableModels];
+			settings.googleHasFetchedModels = stored.hasFetchedModels;
+			settings.googleModelRefreshMessage = stored.modelRefreshMessage;
+			return;
+		case "xai":
+			settings.xaiAvailableModels = [...stored.availableModels];
+			settings.xaiHasFetchedModels = stored.hasFetchedModels;
+			settings.xaiModelRefreshMessage = stored.modelRefreshMessage;
+			return;
+		case "openrouter":
+			settings.openrouterAvailableModels = [...stored.availableModels];
+			settings.openrouterModelOptions = [...stored.modelOptions];
+			settings.openrouterHasFetchedModels = stored.hasFetchedModels;
+			settings.openrouterModelRefreshMessage = stored.modelRefreshMessage;
+			return;
+	}
 }
 
 export function resetCueCraftFetchedModels(
@@ -327,39 +550,12 @@ export function resetCueCraftFetchedModels(
 	provider: CueCraftFetchedModelProvider | "anthropic",
 	message: string
 ): void {
-	switch (provider) {
-		case "anthropic":
-			settings.anthropicAvailableModels = [];
-			settings.anthropicHasFetchedModels = false;
-			settings.anthropicModelRefreshMessage = message;
-			return;
-		case "ollama":
-			settings.ollamaAvailableModels = [];
-			settings.ollamaHasFetchedModels = false;
-			settings.ollamaModelRefreshMessage = message;
-			return;
-		case "openai":
-			settings.openaiAvailableModels = [];
-			settings.openaiHasFetchedModels = false;
-			settings.openaiModelRefreshMessage = message;
-			return;
-		case "google":
-			settings.googleAvailableModels = [];
-			settings.googleHasFetchedModels = false;
-			settings.googleModelRefreshMessage = message;
-			return;
-		case "xai":
-			settings.xaiAvailableModels = [];
-			settings.xaiHasFetchedModels = false;
-			settings.xaiModelRefreshMessage = message;
-			return;
-		case "openrouter":
-			settings.openrouterAvailableModels = [];
-			settings.openrouterModelOptions = [];
-			settings.openrouterHasFetchedModels = false;
-			settings.openrouterModelRefreshMessage = message;
-			return;
-	}
+	const stored = cueCraftProviderSettings(settings, provider);
+	stored.availableModels = [];
+	stored.modelOptions = [];
+	stored.hasFetchedModels = false;
+	stored.modelRefreshMessage = message;
+	mirrorLegacyFetchedModelSettings(settings, provider, stored);
 }
 
 export function applyCueCraftListedModels(
@@ -378,35 +574,12 @@ export function applyCueCraftListedModels(
 			: (listedModels as string[]);
 	const models = sortFetchedModelIds(ids);
 	const message = models.length > 0 ? "" : emptyMessage;
-
-	switch (provider) {
-		case "ollama":
-			settings.ollamaAvailableModels = models;
-			settings.ollamaHasFetchedModels = true;
-			settings.ollamaModelRefreshMessage = message;
-			break;
-		case "openai":
-			settings.openaiAvailableModels = models;
-			settings.openaiHasFetchedModels = true;
-			settings.openaiModelRefreshMessage = message;
-			break;
-		case "google":
-			settings.googleAvailableModels = models;
-			settings.googleHasFetchedModels = true;
-			settings.googleModelRefreshMessage = message;
-			break;
-		case "xai":
-			settings.xaiAvailableModels = models;
-			settings.xaiHasFetchedModels = true;
-			settings.xaiModelRefreshMessage = message;
-			break;
-		case "openrouter":
-			settings.openrouterAvailableModels = models;
-			settings.openrouterModelOptions = options;
-			settings.openrouterHasFetchedModels = true;
-			settings.openrouterModelRefreshMessage = message;
-			break;
-	}
+	const stored = cueCraftProviderSettings(settings, provider);
+	stored.availableModels = models;
+	stored.modelOptions = options;
+	stored.hasFetchedModels = true;
+	stored.modelRefreshMessage = message;
+	mirrorLegacyFetchedModelSettings(settings, provider, stored);
 
 	return { models, options, message };
 }
@@ -416,68 +589,24 @@ export function applyCueCraftModelRefreshFailure(
 	provider: CueCraftFetchedModelProvider,
 	message: string
 ): void {
-	switch (provider) {
-		case "ollama":
-			settings.ollamaAvailableModels = [];
-			settings.ollamaHasFetchedModels = true;
-			settings.ollamaModelRefreshMessage = message;
-			return;
-		case "openai":
-			settings.openaiAvailableModels = [];
-			settings.openaiHasFetchedModels = true;
-			settings.openaiModelRefreshMessage = message;
-			return;
-		case "google":
-			settings.googleAvailableModels = [];
-			settings.googleHasFetchedModels = true;
-			settings.googleModelRefreshMessage = message;
-			return;
-		case "xai":
-			settings.xaiAvailableModels = [];
-			settings.xaiHasFetchedModels = true;
-			settings.xaiModelRefreshMessage = message;
-			return;
-		case "openrouter":
-			settings.openrouterAvailableModels = [];
-			settings.openrouterModelOptions = [];
-			settings.openrouterHasFetchedModels = true;
-			settings.openrouterModelRefreshMessage = message;
-			return;
-	}
+	const stored = cueCraftProviderSettings(settings, provider);
+	stored.availableModels = [];
+	stored.modelOptions = [];
+	stored.hasFetchedModels = true;
+	stored.modelRefreshMessage = message;
+	mirrorLegacyFetchedModelSettings(settings, provider, stored);
 }
 
 export function cueCraftFetchedModelCount(
 	settings: CueCraftSettings,
 	provider: CueCraftFetchedModelProvider
 ): number {
-	switch (provider) {
-		case "ollama":
-			return settings.ollamaAvailableModels.length;
-		case "openai":
-			return settings.openaiAvailableModels.length;
-		case "google":
-			return settings.googleAvailableModels.length;
-		case "xai":
-			return settings.xaiAvailableModels.length;
-		case "openrouter":
-			return settings.openrouterAvailableModels.length;
-	}
+	return cueCraftProviderSettings(settings, provider).availableModels.length;
 }
 
 export function cueCraftModelRefreshMessage(
 	settings: CueCraftSettings,
 	provider: CueCraftFetchedModelProvider
 ): string {
-	switch (provider) {
-		case "ollama":
-			return settings.ollamaModelRefreshMessage;
-		case "openai":
-			return settings.openaiModelRefreshMessage;
-		case "google":
-			return settings.googleModelRefreshMessage;
-		case "xai":
-			return settings.xaiModelRefreshMessage;
-		case "openrouter":
-			return settings.openrouterModelRefreshMessage;
-	}
+	return cueCraftProviderSettings(settings, provider).modelRefreshMessage;
 }
