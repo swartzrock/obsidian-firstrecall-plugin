@@ -1,4 +1,5 @@
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
+import { byokProviderDefinition, isByokProviderId } from "./registry";
 import type {
 	ByokProviderId,
 	ByokSetupStatus,
@@ -43,7 +44,10 @@ function trimValue(value: unknown): string {
 }
 
 function isCliProvider(provider: unknown): boolean {
-	return provider === "codex-cli" || provider === "claude-cli";
+	return (
+		isByokProviderId(provider) &&
+		byokProviderDefinition(provider).credentialKind === "command"
+	);
 }
 
 function currentCredentialValue(settings: ProviderSetupStatusSettings): string {

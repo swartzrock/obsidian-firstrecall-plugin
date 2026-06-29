@@ -1,3 +1,5 @@
+import { byokProviderDefinition, isByokProviderId } from "./byok";
+
 export interface ParallelRequestsGuidanceSettings {
 	sectionConcurrency: number;
 	provider?: string;
@@ -9,7 +11,9 @@ const CLI_REQUESTS_HINT =
 	"Local CLI providers run one CLI process at a time to avoid multiple agent processes and interactive prompts.";
 
 function isCliProvider(provider: string | undefined): boolean {
-	return provider === "codex-cli" || provider === "claude-cli";
+	return isByokProviderId(provider)
+		? byokProviderDefinition(provider).credentialKind === "command"
+		: false;
 }
 
 export function effectiveParallelRequestCount(

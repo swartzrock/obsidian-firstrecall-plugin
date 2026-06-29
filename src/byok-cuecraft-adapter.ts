@@ -4,6 +4,8 @@ import {
 	createByokProvider,
 	deriveProviderSetupStatus,
 	isModelOption,
+	normalizeAnthropicModelSelection,
+	normalizeProviderId,
 	recordProviderConnectionSuccess,
 	sortFetchedModelIds,
 	type ByokHttpClient,
@@ -18,6 +20,7 @@ import {
 	type ByokStoredSettings,
 	type ByokVerificationSnapshotMap,
 } from "./byok";
+import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { CueCraftSettings } from "./settings";
 
 export type CueCraftByokRuntime = ByokProviderRuntime;
@@ -39,6 +42,72 @@ export interface CueCraftAppliedModelRefresh {
 	models: string[];
 	options: ByokModelOption[];
 	message: string;
+}
+
+type ProviderSettingsDefaults = Pick<
+	CueCraftSettings,
+	"codexCliCommand" | "codexCliModel" | "claudeCliCommand" | "claudeCliModel"
+>;
+
+export function normalizeCueCraftProviderSettings(
+	settings: CueCraftSettings,
+	defaults: ProviderSettingsDefaults
+): void {
+	settings.provider = normalizeProviderId(
+		(settings as { provider?: unknown }).provider
+	);
+	for (const key of [
+		"codexCliCommand",
+		"codexCliModel",
+		"claudeCliCommand",
+		"claudeCliModel",
+	] as const) {
+		if (
+			typeof (settings as unknown as Record<string, unknown>)[key] !==
+			"string"
+		) {
+			settings[key] = defaults[key];
+		}
+	}
+	normalizeCueCraftAnthropicSettings(settings);
+}
+
+function normalizeCueCraftAnthropicSettings(settings: CueCraftSettings): void {
+	const legacyAvailableModelIds = (settings as unknown as {
+		anthropicAvailableModelIds?: string[];
+	}).anthropicAvailableModelIds;
+	const hasAvailableModels = Boolean(
+		(settings as { anthropicAvailableModels?: ModelInfo[] })
+			.anthropicAvailableModels
+	);
+	if (Array.isArray(legacyAvailableModelIds) && !hasAvailableModels) {
+		(settings as { anthropicAvailableModels?: ModelInfo[] }).anthropicAvailableModels =
+			legacyAvailableModelIds.map((id) => ({
+				id,
+				display_name: id,
+				type: "model",
+				created_at: new Date(0).toISOString(),
+				max_input_tokens: null,
+				max_tokens: null,
+				capabilities: null,
+			} as ModelInfo));
+	}
+	if (
+		!("anthropicHasFetchedModels" in settings) &&
+		Array.isArray(
+			(settings as { anthropicAvailableModels?: ModelInfo[] })
+				.anthropicAvailableModels
+		)
+	) {
+		(settings as { anthropicHasFetchedModels?: boolean }).anthropicHasFetchedModels =
+			((settings as { anthropicAvailableModels?: ModelInfo[] })
+				.anthropicAvailableModels?.length ?? 0) > 0;
+	}
+	normalizeAnthropicModelSelection(settings as {
+		anthropicModel: string;
+		anthropicModelSelection?: string;
+		anthropicAvailableModels?: ModelInfo[];
+	});
 }
 
 function emptyStoredProviderSettings(): ByokProviderStoredSettings {
@@ -180,7 +249,7 @@ export function makeCueCraftByokProvider(
 }
 
 export function isCueCraftLocalCliProvider(provider: ByokProviderId): boolean {
-	return provider === "codex-cli" || provider === "claude-cli";
+	return byokProviderDefinition(provider).credentialKind === "command";
 }
 
 export function cueCraftProviderLabel(provider: ByokProviderId): string {
@@ -369,5 +438,41 @@ export function applyCueCraftModelRefreshFailure(
 			settings.openrouterHasFetchedModels = true;
 			settings.openrouterModelRefreshMessage = message;
 			return;
+	}
+}
+
+export function cueCraftFetchedModelCount(
+	settings: CueCraftSettings,
+	provider: CueCraftFetchedModelProvider
+): number {
+	switch (provider) {
+		case "ollama":
+			return settings.ollamaAvailableModels.length;
+		case "openai":
+			return settings.openaiAvailableModels.length;
+		case "google":
+			return settings.googleAvailableModels.length;
+		case "xai":
+			return settings.xaiAvailableModels.length;
+		case "openrouter":
+			return settings.openrouterAvailableModels.length;
+	}
+}
+
+export function cueCraftModelRefreshMessage(
+	settings: CueCraftSettings,
+	provider: CueCraftFetchedModelProvider
+): string {
+	switch (provider) {
+		case "ollama":
+			return settings.ollamaModelRefreshMessage;
+		case "openai":
+			return settings.openaiModelRefreshMessage;
+		case "google":
+			return settings.googleModelRefreshMessage;
+		case "xai":
+			return settings.xaiModelRefreshMessage;
+		case "openrouter":
+			return settings.openrouterModelRefreshMessage;
 	}
 }

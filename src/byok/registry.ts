@@ -263,6 +263,13 @@ export function isByokProviderId(value: unknown): value is ByokProviderId {
 	);
 }
 
+export function normalizeProviderId(value: unknown): ByokProviderId {
+	if (isByokProviderId(value)) return value;
+	if (value === "codex") return "codex-cli";
+	if (value === "claude") return "claude-cli";
+	return "ollama";
+}
+
 export function byokProviderDefinition(
 	id: ByokProviderId
 ): ByokProviderDefinition {

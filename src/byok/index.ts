@@ -4,6 +4,7 @@ export {
 	byokProviderDefinition,
 	byokProviderDefinitions,
 	isByokProviderId,
+	normalizeProviderId,
 } from "./registry";
 export * from "./models/anthropic-models";
 export * from "./models/fetched-model-sorting";

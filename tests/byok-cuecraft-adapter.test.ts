@@ -3,9 +3,12 @@ import {
 	applyCueCraftListedModels,
 	applyCueCraftModelRefreshFailure,
 	cueCraftByokSettingsFromCueCraftSettings,
+	cueCraftFetchedModelCount,
+	cueCraftModelRefreshMessage,
 	cueCraftProviderConfigFromSettings,
 	deriveCueCraftProviderSetupStatus,
 	makeCueCraftByokProvider,
+	normalizeCueCraftProviderSettings,
 	recordCueCraftProviderConnectionSuccess,
 	resetCueCraftFetchedModels,
 } from "../src/byok-cuecraft-adapter";
@@ -132,6 +135,32 @@ describe("cueCraftProviderConfigFromSettings", () => {
 	});
 });
 
+describe("CueCraft provider settings normalization", () => {
+	it("normalizes provider ids, CLI defaults, and legacy Anthropic model data", () => {
+		const s = settings({
+			provider: "claude" as never,
+			codexCliCommand: undefined as never,
+			claudeCliModel: 123 as never,
+			anthropicModel: "claude-account-123",
+			anthropicAvailableModels: undefined as never,
+		}) as CueCraftSettings & { anthropicAvailableModelIds?: string[] };
+		s.anthropicAvailableModelIds = ["claude-account-123"];
+		delete (s as Partial<CueCraftSettings>).anthropicHasFetchedModels;
+		delete (s as Partial<CueCraftSettings>).anthropicModelSelection;
+
+		normalizeCueCraftProviderSettings(s, settings());
+
+		expect(s.provider).toBe("claude-cli");
+		expect(s.codexCliCommand).toBe("codex");
+		expect(s.claudeCliModel).toBe("sonnet");
+		expect(s.anthropicAvailableModels.map((model) => model.id)).toEqual([
+			"claude-account-123",
+		]);
+		expect(s.anthropicHasFetchedModels).toBe(true);
+		expect(s.anthropicModelSelection).toBe("claude-account-123");
+	});
+});
+
 describe("CueCraft fetched model adapters", () => {
 	it("resets provider-specific fetched model state when credentials change", () => {
 		const s = settings({
@@ -172,6 +201,8 @@ describe("CueCraft fetched model adapters", () => {
 			"anthropic/claude-sonnet-4",
 		]);
 		expect(s.openrouterModelOptions).toEqual([openrouterOption]);
+		expect(cueCraftFetchedModelCount(s, "openrouter")).toBe(1);
+		expect(cueCraftModelRefreshMessage(s, "openrouter")).toBe("");
 	});
 
 	it("persists model refresh failures as fetched-but-empty state", () => {
