@@ -8,12 +8,10 @@ type ElectronLike = {
 	safeStorage?: SafeStorageAdapter;
 };
 
-export function loadElectronSafeStorage(): SafeStorageAdapter | null {
+export async function loadElectronSafeStorage(): Promise<SafeStorageAdapter | null> {
 	try {
-		const requireElectron = Function("return require")() as (
-			id: string
-		) => ElectronLike;
-		return requireElectron("electron").safeStorage ?? null;
+		const electron = await import("electron") as ElectronLike;
+		return electron.safeStorage ?? null;
 	} catch {
 		return null;
 	}
