@@ -117,6 +117,7 @@ export type ByokConnectionState = "untested" | "verified" | "stale";
 
 export interface ByokVerificationSnapshot {
 	credentialFingerprint: string;
+	credentialToken?: string;
 	modelId: string;
 	testedAt: string;
 }
@@ -153,6 +154,8 @@ export interface ByokModelOption {
 
 export interface ByokProviderStoredSettings {
 	credential: string;
+	credentialSaved?: boolean;
+	credentialUpdatedAt?: string;
 	model: string;
 	modelSelection?: string;
 	availableModels: string[];

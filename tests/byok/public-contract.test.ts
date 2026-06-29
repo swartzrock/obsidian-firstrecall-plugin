@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import * as byok from "../../src/byok";
 import type {
@@ -8,6 +9,16 @@ import type {
 } from "../../src/byok";
 
 describe("BYOK public contract", () => {
+	it("keeps BYOK free of app and storage imports", () => {
+		const files = walkFiles("src/byok").filter((path) => path.endsWith(".ts"));
+		for (const file of files) {
+			const source = readFileSync(file, "utf8");
+			expect(source, file).not.toMatch(/from\s+["'](?:obsidian|electron)["']/);
+			expect(source, file).not.toContain("secure-credential-store");
+			expect(source, file).not.toContain("CueCraftSettings");
+		}
+	});
+
 	it("documents examples against the public barrel", () => {
 		const doc = readFileSync("docs/byok-extraction.md", "utf8");
 		const codeExamples = [...doc.matchAll(/```(?:ts|typescript)\n([\s\S]*?)```/g)]
@@ -155,3 +166,10 @@ describe("BYOK public contract", () => {
 		);
 	});
 });
+
+function walkFiles(dir: string): string[] {
+	return readdirSync(dir).flatMap((entry) => {
+		const path = join(dir, entry);
+		return statSync(path).isDirectory() ? walkFiles(path) : [path];
+	});
+}

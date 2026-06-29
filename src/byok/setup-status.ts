@@ -32,6 +32,13 @@ function isCliProvider(provider: unknown): boolean {
 	);
 }
 
+function isCloudProvider(provider: unknown): boolean {
+	return (
+		isByokProviderId(provider) &&
+		byokProviderDefinition(provider).credentialKind === "api-key"
+	);
+}
+
 function selectedProvider(
 	settings: ProviderSetupStatusSettings
 ): ProviderSetupStatusId | null {
@@ -44,6 +51,15 @@ function currentCredentialValue(settings: ProviderSetupStatusSettings): string {
 	return provider
 		? trimValue(settings.byok.providers?.[provider]?.credential)
 		: "";
+}
+
+function currentCredentialSaved(settings: ProviderSetupStatusSettings): boolean {
+	const provider = selectedProvider(settings);
+	if (!provider) return false;
+	const stored = settings.byok.providers?.[provider];
+	return isCloudProvider(provider)
+		? Boolean(stored?.credentialSaved) || currentCredentialValue(settings).length > 0
+		: currentCredentialValue(settings).length > 0;
 }
 
 function currentModelValue(settings: ProviderSetupStatusSettings): string {
@@ -72,6 +88,13 @@ function djb2Hash(value: string): string {
 export function providerCredentialFingerprint(
 	settings: ProviderSetupStatusSettings
 ): string {
+	const provider = selectedProvider(settings);
+	if (provider && isCloudProvider(provider)) {
+		const stored = settings.byok.providers?.[provider];
+		if (stored?.credentialSaved) {
+			return stored.credentialUpdatedAt || "saved";
+		}
+	}
 	const value = currentCredentialValue(settings);
 	return value ? djb2Hash(value) : "";
 }
@@ -86,6 +109,7 @@ export function recordProviderConnectionSuccess(
 		...(settings.byok?.verification ?? {}),
 		[provider]: {
 			credentialFingerprint: providerCredentialFingerprint(settings),
+			credentialToken: providerCredentialFingerprint(settings),
 			modelId: currentConnectionVerificationModelValue(settings),
 			testedAt,
 		},
@@ -99,7 +123,7 @@ export function deriveProviderSetupStatus(
 	if (!provider) {
 		return { keySaved: false, modelSelected: false, connection: "untested" };
 	}
-	const keySaved = currentCredentialValue(settings).length > 0;
+	const keySaved = currentCredentialSaved(settings);
 	const modelSelected =
 		isCliProvider(provider) || currentModelValue(settings).length > 0;
 	const snapshot = settings.byok.verification?.[provider];
@@ -107,7 +131,8 @@ export function deriveProviderSetupStatus(
 		return { keySaved, modelSelected, connection: "untested" };
 	}
 	const isFresh =
-		snapshot.credentialFingerprint === providerCredentialFingerprint(settings) &&
+		(snapshot.credentialToken ?? snapshot.credentialFingerprint) ===
+			providerCredentialFingerprint(settings) &&
 		snapshot.modelId === currentConnectionVerificationModelValue(settings);
 	return {
 		keySaved,
