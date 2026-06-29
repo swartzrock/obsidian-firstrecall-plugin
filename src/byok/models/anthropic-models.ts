@@ -1,4 +1,5 @@
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
+import type { ByokModelOption } from "../types";
 
 export interface AnthropicModelOption {
 	id: string;
@@ -26,6 +27,8 @@ export interface AnthropicModelRefreshResult {
 }
 
 export const ANTHROPIC_CUSTOM_MODEL_ID = "__custom__";
+
+type AnthropicStoredModel = ModelInfo | ByokModelOption;
 
 const GENERIC_ANTHROPIC_MODEL_HINT: AnthropicModelHint = {
 	quality: "Varies",
@@ -78,23 +81,47 @@ function parseAnthropicDiscoveredModelSortKey(label: string): {
 	};
 }
 
+function storedModelId(model: AnthropicStoredModel): string {
+	return model.id;
+}
+
+function storedModelLabel(model: AnthropicStoredModel): string {
+	return "display_name" in model ? model.display_name : model.label;
+}
+
+export function anthropicModelInfoToByokModelOption(
+	model: ModelInfo
+): ByokModelOption {
+	return {
+		id: model.id,
+		label: model.display_name,
+		provider: "Anthropic",
+		contextLength: null,
+		pricing: null,
+		supportedParameters: null,
+		source: "anthropic",
+	};
+}
+
 export function buildAnthropicModelOptions(
-	availableModels: ModelInfo[] = []
+	availableModels: AnthropicStoredModel[] = []
 ): AnthropicModelOption[] {
 	const knownIds = new Set<string>();
 	const seenLabels = new Set<string>();
 	const discoveredOptions: AnthropicModelOption[] = [];
 	for (const model of availableModels) {
-		if (knownIds.has(model.id)) continue;
-		const normalizedLabel = normalizeAnthropicModelLabel(model.display_name);
+		const id = storedModelId(model);
+		const label = storedModelLabel(model);
+		if (knownIds.has(id)) continue;
+		const normalizedLabel = normalizeAnthropicModelLabel(label);
 		if (seenLabels.has(normalizedLabel)) continue;
 		discoveredOptions.push({
-			id: model.id,
-			label: model.display_name,
+			id,
+			label,
 			description: "Available from your Anthropic account.",
 			hint: GENERIC_ANTHROPIC_MODEL_HINT,
 		});
-		knownIds.add(model.id);
+		knownIds.add(id);
 		seenLabels.add(normalizedLabel);
 	}
 	discoveredOptions.sort((left, right) => {
@@ -115,7 +142,7 @@ export function buildAnthropicModelOptions(
 
 function resolveAnthropicModelOption(
 	modelId: string,
-	availableModels: ModelInfo[] = []
+	availableModels: AnthropicStoredModel[] = []
 ): AnthropicModelOption | null {
 	return (
 		buildAnthropicModelOptions(availableModels).find((model) => model.id === modelId) ??
@@ -126,7 +153,7 @@ function resolveAnthropicModelOption(
 export function isAnthropicCustomModelSelection(settings: {
 	anthropicModel: string;
 	anthropicModelSelection?: string;
-	anthropicAvailableModels?: ModelInfo[];
+	anthropicAvailableModels?: AnthropicStoredModel[];
 }): boolean {
 	return (
 		settings.anthropicModelSelection === ANTHROPIC_CUSTOM_MODEL_ID ||
@@ -137,7 +164,7 @@ export function isAnthropicCustomModelSelection(settings: {
 export function normalizeAnthropicModelSelection(settings: {
 	anthropicModel: string;
 	anthropicModelSelection?: string;
-	anthropicAvailableModels?: ModelInfo[];
+	anthropicAvailableModels?: AnthropicStoredModel[];
 }): void {
 	if (settings.anthropicModelSelection) return;
 	settings.anthropicModelSelection = resolveAnthropicModelOption(
@@ -150,7 +177,7 @@ export function normalizeAnthropicModelSelection(settings: {
 
 export function describeAnthropicModel(
 	modelId: string,
-	availableModels: ModelInfo[] = []
+	availableModels: AnthropicStoredModel[] = []
 ): {
 	label: string;
 	rawId: string;
@@ -164,7 +191,7 @@ export function describeAnthropicModel(
 
 export function describeAnthropicModelDetails(
 	modelId: string,
-	availableModels: ModelInfo[] = []
+	availableModels: AnthropicStoredModel[] = []
 ): {
 	label: string;
 	rawId: string;
@@ -183,7 +210,7 @@ export function describeAnthropicModelDetails(
 
 export function formatAnthropicUnavailableModelMessage(
 	modelId: string,
-	availableModels: ModelInfo[] = []
+	availableModels: AnthropicStoredModel[] = []
 ): string {
 	const model = describeAnthropicModel(modelId, availableModels);
 	return `CueCraft: This key cannot access ${model.label} (${model.rawId}). Pick another model or check your Anthropic account.`;
@@ -191,7 +218,7 @@ export function formatAnthropicUnavailableModelMessage(
 
 export function formatAnthropicModelHint(
 	modelId: string,
-	availableModels: ModelInfo[] = []
+	availableModels: AnthropicStoredModel[] = []
 ): string {
 	if (!modelId.trim() && availableModels.length === 0) return EMPTY_ANTHROPIC_MODEL_HINT;
 	return "";

@@ -60,6 +60,7 @@ import {
 } from "./editor-cue-display";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
+	anthropicModelInfoToByokModelOption,
 	buildAnthropicModelOptions,
 	byokProviderDefinition,
 	byokProviderDefinitions,
@@ -98,7 +99,6 @@ import {
 	setCueCraftProviderModel,
 	setCueCraftSelectedProvider,
 	type CueCraftFetchedModelProvider,
-	type CueCraftProviderConnectionStatusMap,
 } from "./byok-cuecraft-adapter";
 import { resolveModelRefreshDescription } from "./model-refresh";
 import {
@@ -148,44 +148,6 @@ const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 ]);
 
 export interface CueCraftSettings {
-	provider: ByokProviderId;
-	ollamaHost: string;
-	ollamaModel: string;
-	anthropicApiKey: string;
-	anthropicModel: string;
-	anthropicModelSelection: string;
-	anthropicAvailableModels: ModelInfo[];
-	anthropicHasFetchedModels: boolean;
-	anthropicModelRefreshMessage: string;
-	openaiApiKey: string;
-	openaiModel: string;
-	openaiAvailableModels: string[];
-	openaiHasFetchedModels: boolean;
-	openaiModelRefreshMessage: string;
-	googleApiKey: string;
-	googleModel: string;
-	googleAvailableModels: string[];
-	googleHasFetchedModels: boolean;
-	googleModelRefreshMessage: string;
-	xaiApiKey: string;
-	xaiModel: string;
-	xaiAvailableModels: string[];
-	xaiHasFetchedModels: boolean;
-	xaiModelRefreshMessage: string;
-	openrouterApiKey: string;
-	openrouterModel: string;
-	openrouterAvailableModels: string[];
-	openrouterModelOptions: ModelOption[];
-	openrouterHasFetchedModels: boolean;
-	openrouterModelRefreshMessage: string;
-	codexCliCommand: string;
-	codexCliModel: string;
-	claudeCliCommand: string;
-	claudeCliModel: string;
-	ollamaAvailableModels: string[];
-	ollamaHasFetchedModels: boolean;
-	ollamaModelRefreshMessage: string;
-	providerConnectionStatus: CueCraftProviderConnectionStatusMap;
 	byok: ByokStoredSettings;
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
@@ -211,68 +173,33 @@ export interface CueCraftSettings {
 }
 
 export const DEFAULT_SETTINGS: CueCraftSettings = {
-	provider: "ollama",
-	ollamaHost: "http://localhost:11434",
-	ollamaModel: "llama3.1:8b",
-	anthropicApiKey: "",
-	anthropicModel: "",
-	anthropicModelSelection: "",
-	anthropicAvailableModels: [],
-	anthropicHasFetchedModels: false,
-	anthropicModelRefreshMessage: "",
-	openaiApiKey: "",
-	openaiModel: "",
-	openaiAvailableModels: [],
-	openaiHasFetchedModels: false,
-	openaiModelRefreshMessage: "",
-	googleApiKey: "",
-	googleModel: "",
-	googleAvailableModels: [],
-	googleHasFetchedModels: false,
-	googleModelRefreshMessage: "",
-	xaiApiKey: "",
-	xaiModel: "",
-	xaiAvailableModels: [],
-	xaiHasFetchedModels: false,
-	xaiModelRefreshMessage: "",
-	openrouterApiKey: "",
-	openrouterModel: "",
-	openrouterAvailableModels: [],
-	openrouterModelOptions: [],
-	openrouterHasFetchedModels: false,
-	openrouterModelRefreshMessage: "",
-	codexCliCommand: "codex",
-	codexCliModel: "",
-	claudeCliCommand: "claude",
-	claudeCliModel: "",
-	ollamaAvailableModels: [],
-	ollamaHasFetchedModels: false,
-	ollamaModelRefreshMessage: "",
-	providerConnectionStatus: {},
 	byok: {
 		selectedProvider: "ollama",
 		providers: {
-			ollama: {
-				credential: "http://localhost:11434",
-				model: "llama3.1:8b",
-				availableModels: [],
-				modelOptions: [],
-				hasFetchedModels: false,
+				ollama: {
+					credential: "http://localhost:11434",
+					model: "llama3.1:8b",
+					modelSelection: "",
+					availableModels: [],
+					modelOptions: [],
+					hasFetchedModels: false,
 				modelRefreshMessage: "",
 			},
-			"codex-cli": {
-				credential: "codex",
-				model: "",
-				availableModels: [],
-				modelOptions: [],
-				hasFetchedModels: false,
+				"codex-cli": {
+					credential: "codex",
+					model: "",
+					modelSelection: "",
+					availableModels: [],
+					modelOptions: [],
+					hasFetchedModels: false,
 				modelRefreshMessage: "",
 			},
-			"claude-cli": {
-				credential: "claude",
-				model: "",
-				availableModels: [],
-				modelOptions: [],
+				"claude-cli": {
+					credential: "claude",
+					model: "",
+					modelSelection: "",
+					availableModels: [],
+					modelOptions: [],
 				hasFetchedModels: false,
 				modelRefreshMessage: "",
 			},
@@ -551,9 +478,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const modelId = cueCraftProviderModel(settings).trim();
 		if (provider === "anthropic") {
 			if (!modelId) return "";
+			const stored = cueCraftProviderSettings(settings, "anthropic");
 			const described = describeAnthropicModel(
 				modelId,
-				settings.anthropicAvailableModels
+				stored.modelOptions
 			);
 			return described.label === "Custom model ID"
 				? described.rawId || described.label
@@ -1585,14 +1513,21 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const stored = cueCraftProviderSettings(s, "anthropic");
 		const definition = byokProviderDefinition("anthropic");
 		const field = definition.modelField;
-		const isCustomSelection = isAnthropicCustomModelSelection(s);
+		const model = cueCraftProviderModel(s, "anthropic");
+		const storedModels =
+			stored.modelOptions.length > 0
+				? stored.modelOptions
+				: normalizeModelIds(stored.availableModels, "anthropic");
+		const isCustomSelection = isAnthropicCustomModelSelection({
+			anthropicModel: model,
+			anthropicModelSelection: stored.modelSelection,
+			anthropicAvailableModels: storedModels,
+		});
 		const modelHint = formatAnthropicModelHint(
-			cueCraftProviderModel(s, "anthropic"),
-			s.anthropicAvailableModels
+			model,
+			storedModels
 		);
-		const modelOptions = buildAnthropicModelOptions(
-			s.anthropicAvailableModels
-		);
+		const modelOptions = buildAnthropicModelOptions(storedModels);
 		const hasApiKey = cueCraftProviderCredential(s, "anthropic").trim().length > 0;
 
 		const modelSetting = new Setting(containerEl)
@@ -1617,12 +1552,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				)
 				.onChange(async (value) => {
 					if (value === ANTHROPIC_CUSTOM_MODEL_ID) {
-						s.anthropicModelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
+						stored.modelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
 						await this.plugin.saveSettings();
 						this.display();
 						return;
 					}
-					s.anthropicModelSelection = value;
+					stored.modelSelection = value;
 					setCueCraftProviderModel(s, "anthropic", value);
 					await this.plugin.saveSettings();
 					this.display();
@@ -1630,7 +1565,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		this.addModelRefreshButton(modelSetting, {
 			definition,
-			hasFetchedModels: s.anthropicHasFetchedModels,
+			hasFetchedModels: stored.hasFetchedModels,
 			disabled: !hasApiKey,
 			onClick: () => void this.refreshAnthropicModels(),
 		});
@@ -1645,7 +1580,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						.setValue(cueCraftProviderModel(s, "anthropic"))
 						.onChange(async (value) => {
 							setCueCraftProviderModel(s, "anthropic", value.trim());
-							s.anthropicModelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
+							stored.modelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
 							await this.plugin.saveSettings();
 						})
 				);
@@ -1655,13 +1590,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private syncAnthropicModelSelection(): void {
 		const s = this.plugin.settings;
+		const stored = cueCraftProviderSettings(s, "anthropic");
 		const knownIds = new Set(
-			buildAnthropicModelOptions(s.anthropicAvailableModels).map(
+			buildAnthropicModelOptions(stored.modelOptions).map(
 				(model) => model.id
 			)
 		);
 		const model = cueCraftProviderModel(s, "anthropic");
-		s.anthropicModelSelection = knownIds.has(model)
+		stored.modelSelection = knownIds.has(model)
 			? model
 			: ANTHROPIC_CUSTOM_MODEL_ID;
 	}
@@ -1675,14 +1611,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const provider = this.plugin.makeProvider();
 		const stored = cueCraftProviderSettings(s, "anthropic");
 		stored.hasFetchedModels = true;
-		s.anthropicHasFetchedModels = true;
 		if (provider.id !== "anthropic" || !provider.listModels) {
 			stored.availableModels = [];
 			stored.modelOptions = [];
 			stored.modelRefreshMessage =
 				"CueCraft: Anthropic model fetch is unavailable. You can still enter a custom model ID.";
-			s.anthropicAvailableModels = [];
-			s.anthropicModelRefreshMessage = stored.modelRefreshMessage;
 			this.syncAnthropicModelSelection();
 			await this.plugin.saveSettings();
 			this.display();
@@ -1693,11 +1626,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				(await provider.listModels?.()) as unknown as ModelInfo[],
 		});
 		stored.availableModels = result.availableModels.map((model) => model.id);
+		stored.modelOptions = result.availableModels.map(
+			anthropicModelInfoToByokModelOption
+		);
 		stored.hasFetchedModels = true;
 		stored.modelRefreshMessage =
 			result.availableModels.length > 0 ? "" : result.message;
-		s.anthropicAvailableModels = result.availableModels;
-		s.anthropicModelRefreshMessage = stored.modelRefreshMessage;
 		this.syncAnthropicModelSelection();
 		await this.plugin.saveSettings();
 		this.display();
@@ -2167,8 +2101,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				);
 				return;
 			}
-			this.plugin.settings.providerConnectionStatus =
-				recordCueCraftProviderConnectionSuccess(this.plugin.settings);
+			recordCueCraftProviderConnectionSuccess(this.plugin.settings);
 			await this.plugin.saveSettings();
 			this.display();
 			new Notice(`CueCraft: connected to Ollama (${models.length} model(s) available).`);
@@ -2190,8 +2123,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const provider = this.plugin.makeProvider();
 		const status = await provider.testConnection();
 		if (status.ok) {
-			this.plugin.settings.providerConnectionStatus =
-				recordCueCraftProviderConnectionSuccess(this.plugin.settings);
+			recordCueCraftProviderConnectionSuccess(this.plugin.settings);
 			await this.plugin.saveSettings();
 			this.display();
 		}
@@ -2213,8 +2145,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (!selectedModel && provider.listModels) {
 			try {
 				const models = await provider.listModels();
-				this.plugin.settings.providerConnectionStatus =
-					recordCueCraftProviderConnectionSuccess(this.plugin.settings);
+				recordCueCraftProviderConnectionSuccess(this.plugin.settings);
 				await this.plugin.saveSettings();
 				this.display();
 				const providerName = byokProviderDefinition(provider.id).shortLabel;
@@ -2230,15 +2161,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 		const status = await provider.testConnection();
 		if (status.ok) {
-			this.plugin.settings.providerConnectionStatus =
-				recordCueCraftProviderConnectionSuccess(this.plugin.settings);
+			recordCueCraftProviderConnectionSuccess(this.plugin.settings);
 			await this.plugin.saveSettings();
 			this.display();
 		}
 		if (status.ok && provider.id === "anthropic") {
+			const stored = cueCraftProviderSettings(this.plugin.settings, "anthropic");
 			const model = describeAnthropicModel(
 				cueCraftProviderModel(this.plugin.settings, "anthropic"),
-				this.plugin.settings.anthropicAvailableModels
+				stored.modelOptions
 			);
 			new Notice(
 				`CueCraft: Connected to Anthropic with ${model.label} (${model.rawId}).`
@@ -2255,10 +2186,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				status.message
 			)
 		) {
+			const stored = cueCraftProviderSettings(this.plugin.settings, "anthropic");
 			new Notice(
 				formatAnthropicUnavailableModelMessage(
 					cueCraftProviderModel(this.plugin.settings, "anthropic"),
-					this.plugin.settings.anthropicAvailableModels
+					stored.modelOptions
 				)
 			);
 			return;
