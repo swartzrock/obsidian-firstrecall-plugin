@@ -3,35 +3,56 @@ import {
 	CLI_DEFAULT_MODEL_SENTINEL,
 	deriveProviderSetupStatus,
 	recordProviderConnectionSuccess,
+	type ByokProviderId,
+	type ByokProviderStoredSettings,
 	type ProviderSetupStatusSettings,
 } from "../src/byok";
 
+function providerSettings(
+	credential: string,
+	model: string
+): ByokProviderStoredSettings {
+	return {
+		credential,
+		model,
+		availableModels: [],
+		modelOptions: [],
+		hasFetchedModels: false,
+		modelRefreshMessage: "",
+	};
+}
+
 function baseSettings(
-	overrides: Partial<ProviderSetupStatusSettings> = {}
+	overrides: Partial<ProviderSetupStatusSettings["byok"]> = {}
 ): ProviderSetupStatusSettings {
 	return {
-		provider: "anthropic",
-		ollamaHost: "http://localhost:11434",
-		ollamaModel: "llama3.1:8b",
-		anthropicApiKey: "sk-ant-test",
-		anthropicModel: "claude-sonnet-4-6",
-		anthropicAvailableModels: [],
-		openaiApiKey: "",
-		openaiModel: "",
-		googleApiKey: "",
-		googleModel: "",
-		xaiApiKey: "",
-		xaiModel: "",
-		openrouterApiKey: "",
-		openrouterModel: "",
-		codexCliCommand: "codex",
-		codexCliModel: "",
-		claudeCliCommand: "claude",
-		claudeCliModel: "",
-		providerConnectionStatus: {},
-		...overrides,
+		byok: {
+			selectedProvider: "anthropic",
+			providers: {
+				ollama: providerSettings("http://localhost:11434", "llama3.1:8b"),
+				anthropic: providerSettings("sk-ant-test", "claude-sonnet-4-6"),
+				openai: providerSettings("", ""),
+				google: providerSettings("", ""),
+				xai: providerSettings("", ""),
+				openrouter: providerSettings("", ""),
+				"codex-cli": providerSettings("codex", ""),
+				"claude-cli": providerSettings("claude", ""),
+			},
+			verification: {},
+			...overrides,
+		},
 	};
-	}
+}
+
+function selectProvider(
+	settings: ProviderSetupStatusSettings,
+	provider: ByokProviderId,
+	credential: string,
+	model: string
+): void {
+	settings.byok.selectedProvider = provider;
+	settings.byok.providers[provider] = providerSettings(credential, model);
+}
 
 describe("deriveProviderSetupStatus", () => {
 	it("shows saved key and model before any connection test", () => {
@@ -44,7 +65,7 @@ describe("deriveProviderSetupStatus", () => {
 
 	it("marks a provider connection as verified when the saved key and model still match", () => {
 		const settings = baseSettings();
-		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+		settings.byok.verification = recordProviderConnectionSuccess(
 			settings,
 			"2026-06-11T00:00:00.000Z"
 		);
@@ -58,11 +79,14 @@ describe("deriveProviderSetupStatus", () => {
 
 	it("marks cloud connection stale when the selected model changes", () => {
 		const settings = baseSettings();
-		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+		settings.byok.verification = recordProviderConnectionSuccess(
 			settings,
 			"2026-06-11T00:00:00.000Z"
 		);
-		settings.anthropicModel = "claude-haiku-4-5";
+		settings.byok.providers.anthropic = providerSettings(
+			"sk-ant-test",
+			"claude-haiku-4-5"
+		);
 		expect(deriveProviderSetupStatus(settings)).toEqual({
 			keySaved: true,
 			modelSelected: true,
@@ -72,16 +96,21 @@ describe("deriveProviderSetupStatus", () => {
 	});
 
 	it("marks OpenRouter connection stale when its selected model changes", () => {
-		const settings = baseSettings({
-			provider: "openrouter",
-			openrouterApiKey: "sk-or-test",
-			openrouterModel: "anthropic/claude-sonnet-4",
-		});
-		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+		const settings = baseSettings();
+		selectProvider(
+			settings,
+			"openrouter",
+			"sk-or-test",
+			"anthropic/claude-sonnet-4"
+		);
+		settings.byok.verification = recordProviderConnectionSuccess(
 			settings,
 			"2026-06-11T00:00:00.000Z"
 		);
-		settings.openrouterModel = "openai/gpt-4o";
+		settings.byok.providers.openrouter = providerSettings(
+			"sk-or-test",
+			"openai/gpt-4o"
+		);
 		expect(deriveProviderSetupStatus(settings)).toEqual({
 			keySaved: true,
 			modelSelected: true,
@@ -91,16 +120,16 @@ describe("deriveProviderSetupStatus", () => {
 	});
 
 	it("marks Ollama connection stale when the model changes after a successful test", () => {
-		const settings = baseSettings({
-			provider: "ollama",
-			ollamaHost: "http://localhost:11434",
-			ollamaModel: "llama3.1:8b",
-		});
-		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+		const settings = baseSettings();
+		selectProvider(settings, "ollama", "http://localhost:11434", "llama3.1:8b");
+		settings.byok.verification = recordProviderConnectionSuccess(
 			settings,
 			"2026-06-11T00:00:00.000Z"
 		);
-		settings.ollamaModel = "llama3.2:latest";
+		settings.byok.providers.ollama = providerSettings(
+			"http://localhost:11434",
+			"llama3.2:latest"
+		);
 		expect(deriveProviderSetupStatus(settings)).toEqual({
 			keySaved: true,
 			modelSelected: true,
@@ -111,26 +140,31 @@ describe("deriveProviderSetupStatus", () => {
 
 	it("marks the connection stale when the key changes after a successful test", () => {
 		const settings = baseSettings();
-		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+		settings.byok.verification = recordProviderConnectionSuccess(
 			settings,
 			"2026-06-11T00:00:00.000Z"
 		);
-		settings.anthropicApiKey = "sk-ant-new";
+		settings.byok.providers.anthropic = providerSettings(
+			"sk-ant-new",
+			"claude-sonnet-4-6"
+		);
 		expect(deriveProviderSetupStatus(settings).connection).toBe("stale");
 	});
 
 	it("derives provider-specific status independently for other saved providers", () => {
 		const anthropic = baseSettings();
-		anthropic.providerConnectionStatus = recordProviderConnectionSuccess(
+		anthropic.byok.verification = recordProviderConnectionSuccess(
 			anthropic,
 			"2026-06-11T00:00:00.000Z"
 		);
-		const openai = {
-			...anthropic,
-			provider: "openai" as const,
-			openaiApiKey: "sk-openai-test",
-			openaiModel: "gpt-4o-mini",
-		};
+		const openai = baseSettings({
+			...anthropic.byok,
+			selectedProvider: "openai",
+			providers: {
+				...anthropic.byok.providers,
+				openai: providerSettings("sk-openai-test", "gpt-4o-mini"),
+			},
+		});
 		expect(deriveProviderSetupStatus(openai)).toEqual({
 			keySaved: true,
 			modelSelected: true,
@@ -139,15 +173,9 @@ describe("deriveProviderSetupStatus", () => {
 	});
 
 	it("treats Codex CLI default model as selected setup state", () => {
-		expect(
-			deriveProviderSetupStatus(
-				baseSettings({
-					provider: "codex-cli",
-					codexCliCommand: "codex",
-					codexCliModel: "",
-				})
-			)
-		).toEqual({
+		const settings = baseSettings();
+		selectProvider(settings, "codex-cli", "codex", "");
+		expect(deriveProviderSetupStatus(settings)).toEqual({
 			keySaved: true,
 			modelSelected: true,
 			connection: "untested",
@@ -155,16 +183,13 @@ describe("deriveProviderSetupStatus", () => {
 	});
 
 	it("records the CLI default sentinel when no CLI model override is configured", () => {
-		const settings = baseSettings({
-			provider: "codex-cli",
-			codexCliCommand: "codex",
-			codexCliModel: "",
-		});
-		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+		const settings = baseSettings();
+		selectProvider(settings, "codex-cli", "codex", "");
+		settings.byok.verification = recordProviderConnectionSuccess(
 			settings,
 			"2026-06-11T00:00:00.000Z"
 		);
-		expect(settings.providerConnectionStatus["codex-cli"]?.modelId).toBe(
+		expect(settings.byok.verification["codex-cli"]?.modelId).toBe(
 			CLI_DEFAULT_MODEL_SENTINEL
 		);
 		expect(deriveProviderSetupStatus(settings)).toEqual({
@@ -176,16 +201,16 @@ describe("deriveProviderSetupStatus", () => {
 	});
 
 	it("marks a verified Codex CLI connection stale when its command changes", () => {
-		const settings = baseSettings({
-			provider: "codex-cli",
-			codexCliCommand: "codex",
-			codexCliModel: "",
-		});
-		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+		const settings = baseSettings();
+		selectProvider(settings, "codex-cli", "codex", "");
+		settings.byok.verification = recordProviderConnectionSuccess(
 			settings,
 			"2026-06-11T00:00:00.000Z"
 		);
-		settings.codexCliCommand = "/opt/homebrew/bin/codex";
+		settings.byok.providers["codex-cli"] = providerSettings(
+			"/opt/homebrew/bin/codex",
+			""
+		);
 		expect(deriveProviderSetupStatus(settings)).toEqual({
 			keySaved: true,
 			modelSelected: true,
@@ -195,16 +220,13 @@ describe("deriveProviderSetupStatus", () => {
 	});
 
 	it("marks a verified Claude CLI connection stale when its model override changes", () => {
-		const settings = baseSettings({
-			provider: "claude-cli",
-			claudeCliCommand: "claude",
-			claudeCliModel: "",
-		});
-		settings.providerConnectionStatus = recordProviderConnectionSuccess(
+		const settings = baseSettings();
+		selectProvider(settings, "claude-cli", "claude", "");
+		settings.byok.verification = recordProviderConnectionSuccess(
 			settings,
 			"2026-06-11T00:00:00.000Z"
 		);
-		settings.claudeCliModel = "sonnet";
+		settings.byok.providers["claude-cli"] = providerSettings("claude", "sonnet");
 		expect(deriveProviderSetupStatus(settings)).toEqual({
 			keySaved: true,
 			modelSelected: true,
@@ -214,15 +236,11 @@ describe("deriveProviderSetupStatus", () => {
 	});
 
 	it("does not crash when a saved CLI provider is missing new CLI fields", () => {
-		const settings = baseSettings({
-			provider: "claude-cli",
-		}) as Partial<ProviderSetupStatusSettings>;
-		delete settings.claudeCliCommand;
-		delete settings.claudeCliModel;
+		const settings = baseSettings();
+		settings.byok.selectedProvider = "claude-cli";
+		delete settings.byok.providers["claude-cli"];
 
-		expect(
-			deriveProviderSetupStatus(settings as ProviderSetupStatusSettings)
-		).toEqual({
+		expect(deriveProviderSetupStatus(settings)).toEqual({
 			keySaved: false,
 			modelSelected: true,
 			connection: "untested",
@@ -230,10 +248,9 @@ describe("deriveProviderSetupStatus", () => {
 	});
 
 	it("does not crash when a saved provider id is unknown", () => {
-		const settings = {
-			...baseSettings(),
-			provider: "claude",
-		} as unknown as ProviderSetupStatusSettings;
+		const settings = baseSettings({
+			selectedProvider: "claude" as never,
+		});
 
 		expect(deriveProviderSetupStatus(settings)).toEqual({
 			keySaved: false,
