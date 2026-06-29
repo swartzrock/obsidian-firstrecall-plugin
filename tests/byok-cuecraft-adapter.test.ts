@@ -11,6 +11,7 @@ import {
 	normalizeCueCraftProviderSettings,
 	recordCueCraftProviderConnectionSuccess,
 	resetCueCraftFetchedModels,
+	setCueCraftProviderModel,
 } from "../src/byok-cuecraft-adapter";
 import type { ByokHttpClient, ByokModelOption } from "../src/byok";
 import {
@@ -245,7 +246,7 @@ describe("CueCraft provider connection adapters", () => {
 			testedAt: "2026-06-27T00:00:00.000Z",
 		});
 
-		s.openaiModel = "gpt-4o";
+		setCueCraftProviderModel(s, "openai", "gpt-4o");
 		expect(deriveCueCraftProviderSetupStatus(s).connection).toBe("stale");
 	});
 });
