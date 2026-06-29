@@ -53,7 +53,7 @@
       "source": "everyinc/compound-engineering-plugin",
       "sourceType": "github",
       "skillPath": "skills/ce-ideate/SKILL.md",
-      "computedHash": "2552bdb74ce5db6367ec2d54ab6630ff3adc5c3d95d4b81196bf7377eff757c7"
+      "computedHash": "d5caf123a92c63c0579c0b90cad2d18298d081f5f41a99cadf4f565c5272267d"
     },
     "ce-optimize": {
       "source": "everyinc/compound-engineering-plugin",
@@ -185,7 +185,7 @@
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/engineering/prototype/SKILL.md",
-      "computedHash": "40ff56e36bb13b5a9a16903efd6c78a02690ba430e10a8d1a65559100b77f475"
+      "computedHash": "e70c8933d30153a4da47865829d356824b2a830367275e3b00c7b431a1544a79"
     },
     "setup-matt-pocock-skills": {
       "source": "mattpocock/skills",
