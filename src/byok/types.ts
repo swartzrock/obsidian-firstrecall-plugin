@@ -154,6 +154,7 @@ export interface ByokModelOption {
 export interface ByokProviderStoredSettings {
 	credential: string;
 	model: string;
+	modelSelection?: string;
 	availableModels: string[];
 	modelOptions: ByokModelOption[];
 	hasFetchedModels: boolean;

@@ -6,6 +6,7 @@ import {
 	cueCraftFetchedModelCount,
 	cueCraftModelRefreshMessage,
 	cueCraftProviderConfigFromSettings,
+	cueCraftProviderSettings,
 	deriveCueCraftProviderSetupStatus,
 	makeCueCraftByokProvider,
 	normalizeCueCraftProviderSettings,
@@ -151,14 +152,16 @@ describe("CueCraft provider settings normalization", () => {
 
 		normalizeCueCraftProviderSettings(s, settings());
 
-		expect(s.provider).toBe("claude-cli");
-		expect(s.codexCliCommand).toBe("codex");
-		expect(s.claudeCliModel).toBe("sonnet");
-		expect(s.anthropicAvailableModels.map((model) => model.id)).toEqual([
+		expect(s.byok.selectedProvider).toBe("claude-cli");
+		expect(cueCraftProviderSettings(s, "codex-cli").credential).toBe("codex");
+		expect(cueCraftProviderSettings(s, "claude-cli").model).toBe("sonnet");
+		expect(cueCraftProviderSettings(s, "anthropic").availableModels).toEqual([
 			"claude-account-123",
 		]);
-		expect(s.anthropicHasFetchedModels).toBe(true);
-		expect(s.anthropicModelSelection).toBe("claude-account-123");
+		expect(cueCraftProviderSettings(s, "anthropic").hasFetchedModels).toBe(true);
+		expect(cueCraftProviderSettings(s, "anthropic").modelSelection).toBe(
+			"claude-account-123"
+		);
 	});
 });
 
@@ -172,10 +175,11 @@ describe("CueCraft fetched model adapters", () => {
 
 		resetCueCraftFetchedModels(s, "openrouter", "Enter an OpenRouter key.");
 
-		expect(s.openrouterAvailableModels).toEqual([]);
-		expect(s.openrouterModelOptions).toEqual([]);
-		expect(s.openrouterHasFetchedModels).toBe(false);
-		expect(s.openrouterModelRefreshMessage).toBe("Enter an OpenRouter key.");
+		const stored = cueCraftProviderSettings(s, "openrouter");
+		expect(stored.availableModels).toEqual([]);
+		expect(stored.modelOptions).toEqual([]);
+		expect(stored.hasFetchedModels).toBe(false);
+		expect(stored.modelRefreshMessage).toBe("Enter an OpenRouter key.");
 	});
 
 	it("persists listed string models and rich OpenRouter model options", () => {
@@ -188,8 +192,10 @@ describe("CueCraft fetched model adapters", () => {
 			options: [],
 			message: "",
 		});
-		expect(s.openaiAvailableModels).toEqual(["gpt-4o-mini"]);
-		expect(s.openaiHasFetchedModels).toBe(true);
+		expect(cueCraftProviderSettings(s, "openai").availableModels).toEqual([
+			"gpt-4o-mini",
+		]);
+		expect(cueCraftProviderSettings(s, "openai").hasFetchedModels).toBe(true);
 
 		expect(
 			applyCueCraftListedModels(s, "openrouter", [openrouterOption], "No models.")
@@ -198,10 +204,12 @@ describe("CueCraft fetched model adapters", () => {
 			options: [openrouterOption],
 			message: "",
 		});
-		expect(s.openrouterAvailableModels).toEqual([
+		expect(cueCraftProviderSettings(s, "openrouter").availableModels).toEqual([
 			"anthropic/claude-sonnet-4",
 		]);
-		expect(s.openrouterModelOptions).toEqual([openrouterOption]);
+		expect(cueCraftProviderSettings(s, "openrouter").modelOptions).toEqual([
+			openrouterOption,
+		]);
 		expect(cueCraftFetchedModelCount(s, "openrouter")).toBe(1);
 		expect(cueCraftModelRefreshMessage(s, "openrouter")).toBe("");
 	});
@@ -218,9 +226,10 @@ describe("CueCraft fetched model adapters", () => {
 			"Could not fetch Ollama models."
 		);
 
-		expect(s.ollamaAvailableModels).toEqual([]);
-		expect(s.ollamaHasFetchedModels).toBe(true);
-		expect(s.ollamaModelRefreshMessage).toBe(
+		const stored = cueCraftProviderSettings(s, "ollama");
+		expect(stored.availableModels).toEqual([]);
+		expect(stored.hasFetchedModels).toBe(true);
+		expect(stored.modelRefreshMessage).toBe(
 			"Could not fetch Ollama models."
 		);
 	});
@@ -234,7 +243,7 @@ describe("CueCraft provider connection adapters", () => {
 			openaiModel: "gpt-4o-mini",
 		});
 
-		s.providerConnectionStatus = recordCueCraftProviderConnectionSuccess(
+		recordCueCraftProviderConnectionSuccess(
 			s,
 			"2026-06-27T00:00:00.000Z"
 		);
@@ -262,12 +271,12 @@ describe("CueCraft BYOK settings migration", () => {
 			openrouterHasFetchedModels: true,
 			openrouterModelRefreshMessage: "",
 		});
-		s.providerConnectionStatus = recordCueCraftProviderConnectionSuccess(
+		recordCueCraftProviderConnectionSuccess(
 			s,
 			"2026-06-27T00:00:00.000Z"
 		);
 
-		expect(cueCraftByokSettingsFromCueCraftSettings(s)).toMatchObject({
+		expect(s.byok).toMatchObject({
 			selectedProvider: "openrouter",
 			providers: {
 				openrouter: {

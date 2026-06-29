@@ -46,64 +46,91 @@ export interface CueCraftAppliedModelRefresh {
 
 type ProviderSettingsDefaults = Pick<
 	CueCraftSettings,
-	"codexCliCommand" | "codexCliModel" | "claudeCliCommand" | "claudeCliModel"
+	"byok"
 >;
+
+type LegacyCueCraftProviderSettings = Partial<{
+	provider: unknown;
+	ollamaHost: string;
+	ollamaModel: string;
+	ollamaAvailableModels: string[];
+	ollamaHasFetchedModels: boolean;
+	ollamaModelRefreshMessage: string;
+	anthropicApiKey: string;
+	anthropicModel: string;
+	anthropicModelSelection: string;
+	anthropicAvailableModels: ModelInfo[];
+	anthropicAvailableModelIds: string[];
+	anthropicHasFetchedModels: boolean;
+	anthropicModelRefreshMessage: string;
+	openaiApiKey: string;
+	openaiModel: string;
+	openaiAvailableModels: string[];
+	openaiHasFetchedModels: boolean;
+	openaiModelRefreshMessage: string;
+	googleApiKey: string;
+	googleModel: string;
+	googleAvailableModels: string[];
+	googleHasFetchedModels: boolean;
+	googleModelRefreshMessage: string;
+	xaiApiKey: string;
+	xaiModel: string;
+	xaiAvailableModels: string[];
+	xaiHasFetchedModels: boolean;
+	xaiModelRefreshMessage: string;
+	openrouterApiKey: string;
+	openrouterModel: string;
+	openrouterAvailableModels: string[];
+	openrouterModelOptions: ByokModelOption[];
+	openrouterHasFetchedModels: boolean;
+	openrouterModelRefreshMessage: string;
+	codexCliCommand: string;
+	codexCliModel: string;
+	claudeCliCommand: string;
+	claudeCliModel: string;
+	providerConnectionStatus: CueCraftProviderConnectionStatusMap;
+}>;
 
 export function normalizeCueCraftProviderSettings(
 	settings: CueCraftSettings,
-	defaults: ProviderSettingsDefaults
+	defaults: ProviderSettingsDefaults,
+	rawSettings: unknown = settings
 ): void {
-	settings.provider = normalizeProviderId(
-		(settings as { provider?: unknown }).provider
-	);
-	for (const key of [
-		"codexCliCommand",
-		"codexCliModel",
-		"claudeCliCommand",
-		"claudeCliModel",
-	] as const) {
-		if (
-			typeof (settings as unknown as Record<string, unknown>)[key] !==
-			"string"
-		) {
-			settings[key] = defaults[key];
-		}
-	}
 	normalizeCueCraftAnthropicSettings(settings);
+	const defaultByok =
+		defaults.byok ?? cueCraftByokSettingsFromCueCraftSettings(defaults as CueCraftSettings);
+	settings.byok = normalizeCueCraftByokSettings(
+		settings,
+		defaultByok,
+		rawSettings
+	);
 }
 
 function normalizeCueCraftAnthropicSettings(settings: CueCraftSettings): void {
-	const legacyAvailableModelIds = (settings as unknown as {
-		anthropicAvailableModelIds?: string[];
-	}).anthropicAvailableModelIds;
+	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
+	const legacyAvailableModelIds = legacy.anthropicAvailableModelIds;
 	const hasAvailableModels = Boolean(
-		(settings as { anthropicAvailableModels?: ModelInfo[] })
-			.anthropicAvailableModels
+		legacy.anthropicAvailableModels
 	);
 	if (Array.isArray(legacyAvailableModelIds) && !hasAvailableModels) {
-		(settings as { anthropicAvailableModels?: ModelInfo[] }).anthropicAvailableModels =
-			legacyAvailableModelIds.map((id) => ({
-				id,
-				display_name: id,
-				type: "model",
-				created_at: new Date(0).toISOString(),
-				max_input_tokens: null,
-				max_tokens: null,
-				capabilities: null,
-			} as ModelInfo));
+		legacy.anthropicAvailableModels = legacyAvailableModelIds.map((id) => ({
+			id,
+			display_name: id,
+			type: "model",
+			created_at: new Date(0).toISOString(),
+			max_input_tokens: null,
+			max_tokens: null,
+			capabilities: null,
+		} as ModelInfo));
 	}
 	if (
-		!("anthropicHasFetchedModels" in settings) &&
-		Array.isArray(
-			(settings as { anthropicAvailableModels?: ModelInfo[] })
-				.anthropicAvailableModels
-		)
+		!("anthropicHasFetchedModels" in legacy) &&
+		Array.isArray(legacy.anthropicAvailableModels)
 	) {
-		(settings as { anthropicHasFetchedModels?: boolean }).anthropicHasFetchedModels =
-			((settings as { anthropicAvailableModels?: ModelInfo[] })
-				.anthropicAvailableModels?.length ?? 0) > 0;
+		legacy.anthropicHasFetchedModels =
+			(legacy.anthropicAvailableModels?.length ?? 0) > 0;
 	}
-	normalizeAnthropicModelSelection(settings as {
+	normalizeAnthropicModelSelection(legacy as {
 		anthropicModel: string;
 		anthropicModelSelection?: string;
 		anthropicAvailableModels?: ModelInfo[];
@@ -114,6 +141,7 @@ function emptyStoredProviderSettings(): ByokProviderStoredSettings {
 	return {
 		credential: "",
 		model: "",
+		modelSelection: "",
 		availableModels: [],
 		modelOptions: [],
 		hasFetchedModels: false,
@@ -139,23 +167,24 @@ function legacyProviderCredential(
 	settings: CueCraftSettings,
 	provider: ByokProviderId
 ): string {
+	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
 	switch (provider) {
 		case "ollama":
-			return settings.ollamaHost;
+			return legacy.ollamaHost ?? "";
 		case "anthropic":
-			return settings.anthropicApiKey;
+			return legacy.anthropicApiKey ?? "";
 		case "openai":
-			return settings.openaiApiKey;
+			return legacy.openaiApiKey ?? "";
 		case "google":
-			return settings.googleApiKey;
+			return legacy.googleApiKey ?? "";
 		case "xai":
-			return settings.xaiApiKey;
+			return legacy.xaiApiKey ?? "";
 		case "openrouter":
-			return settings.openrouterApiKey;
+			return legacy.openrouterApiKey ?? "";
 		case "codex-cli":
-			return settings.codexCliCommand;
+			return legacy.codexCliCommand ?? "";
 		case "claude-cli":
-			return settings.claudeCliCommand;
+			return legacy.claudeCliCommand ?? "";
 	}
 }
 
@@ -163,23 +192,24 @@ function legacyProviderModel(
 	settings: CueCraftSettings,
 	provider: ByokProviderId
 ): string {
+	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
 	switch (provider) {
 		case "ollama":
-			return settings.ollamaModel;
+			return legacy.ollamaModel ?? "";
 		case "anthropic":
-			return settings.anthropicModel;
+			return legacy.anthropicModel ?? "";
 		case "openai":
-			return settings.openaiModel;
+			return legacy.openaiModel ?? "";
 		case "google":
-			return settings.googleModel;
+			return legacy.googleModel ?? "";
 		case "xai":
-			return settings.xaiModel;
+			return legacy.xaiModel ?? "";
 		case "openrouter":
-			return settings.openrouterModel;
+			return legacy.openrouterModel ?? "";
 		case "codex-cli":
-			return settings.codexCliModel;
+			return legacy.codexCliModel ?? "";
 		case "claude-cli":
-			return settings.claudeCliModel;
+			return legacy.claudeCliModel ?? "";
 	}
 }
 
@@ -187,44 +217,46 @@ function storedProviderSettingsFromCueCraftSettings(
 	settings: CueCraftSettings,
 	provider: ByokProviderId
 ): ByokProviderStoredSettings {
+	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
 	const stored = emptyStoredProviderSettings();
 	stored.credential = legacyProviderCredential(settings, provider);
 	stored.model = legacyProviderModel(settings, provider);
 	switch (provider) {
 		case "ollama":
-			stored.availableModels = legacyStringArray(settings.ollamaAvailableModels);
-			stored.hasFetchedModels = legacyBoolean(settings.ollamaHasFetchedModels);
-			stored.modelRefreshMessage = legacyString(settings.ollamaModelRefreshMessage);
+			stored.availableModels = legacyStringArray(legacy.ollamaAvailableModels);
+			stored.hasFetchedModels = legacyBoolean(legacy.ollamaHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(legacy.ollamaModelRefreshMessage);
 			break;
 		case "anthropic":
-			stored.availableModels = (settings.anthropicAvailableModels ?? []).map(
+			stored.availableModels = (legacy.anthropicAvailableModels ?? []).map(
 				(model) => model.id
 			);
-			stored.hasFetchedModels = legacyBoolean(settings.anthropicHasFetchedModels);
-			stored.modelRefreshMessage = legacyString(settings.anthropicModelRefreshMessage);
+			stored.modelSelection = legacyString(legacy.anthropicModelSelection);
+			stored.hasFetchedModels = legacyBoolean(legacy.anthropicHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(legacy.anthropicModelRefreshMessage);
 			break;
 		case "openai":
-			stored.availableModels = legacyStringArray(settings.openaiAvailableModels);
-			stored.hasFetchedModels = legacyBoolean(settings.openaiHasFetchedModels);
-			stored.modelRefreshMessage = legacyString(settings.openaiModelRefreshMessage);
+			stored.availableModels = legacyStringArray(legacy.openaiAvailableModels);
+			stored.hasFetchedModels = legacyBoolean(legacy.openaiHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(legacy.openaiModelRefreshMessage);
 			break;
 		case "google":
-			stored.availableModels = legacyStringArray(settings.googleAvailableModels);
-			stored.hasFetchedModels = legacyBoolean(settings.googleHasFetchedModels);
-			stored.modelRefreshMessage = legacyString(settings.googleModelRefreshMessage);
+			stored.availableModels = legacyStringArray(legacy.googleAvailableModels);
+			stored.hasFetchedModels = legacyBoolean(legacy.googleHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(legacy.googleModelRefreshMessage);
 			break;
 		case "xai":
-			stored.availableModels = legacyStringArray(settings.xaiAvailableModels);
-			stored.hasFetchedModels = legacyBoolean(settings.xaiHasFetchedModels);
-			stored.modelRefreshMessage = legacyString(settings.xaiModelRefreshMessage);
+			stored.availableModels = legacyStringArray(legacy.xaiAvailableModels);
+			stored.hasFetchedModels = legacyBoolean(legacy.xaiHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(legacy.xaiModelRefreshMessage);
 			break;
 		case "openrouter":
-			stored.availableModels = legacyStringArray(settings.openrouterAvailableModels);
-			stored.modelOptions = Array.isArray(settings.openrouterModelOptions)
-				? [...settings.openrouterModelOptions]
+			stored.availableModels = legacyStringArray(legacy.openrouterAvailableModels);
+			stored.modelOptions = Array.isArray(legacy.openrouterModelOptions)
+				? [...legacy.openrouterModelOptions]
 				: [];
-			stored.hasFetchedModels = legacyBoolean(settings.openrouterHasFetchedModels);
-			stored.modelRefreshMessage = legacyString(settings.openrouterModelRefreshMessage);
+			stored.hasFetchedModels = legacyBoolean(legacy.openrouterHasFetchedModels);
+			stored.modelRefreshMessage = legacyString(legacy.openrouterModelRefreshMessage);
 			break;
 		case "codex-cli":
 		case "claude-cli":
@@ -236,6 +268,7 @@ function storedProviderSettingsFromCueCraftSettings(
 export function cueCraftByokSettingsFromCueCraftSettings(
 	settings: CueCraftSettings
 ): ByokStoredSettings {
+	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
 	const providers: ByokStoredSettings["providers"] = {};
 	for (const provider of BYOK_PROVIDER_IDS) {
 		providers[provider] = storedProviderSettingsFromCueCraftSettings(
@@ -244,9 +277,73 @@ export function cueCraftByokSettingsFromCueCraftSettings(
 		);
 	}
 	return {
-		selectedProvider: settings.provider,
+		selectedProvider: normalizeProviderId(legacy.provider),
 		providers,
-		verification: { ...settings.providerConnectionStatus },
+		verification: { ...(legacy.providerConnectionStatus ?? {}) },
+	};
+}
+
+function normalizeStoredProviderSettings(
+	value: unknown
+): ByokProviderStoredSettings {
+	const stored = {
+		...emptyStoredProviderSettings(),
+		...((value && typeof value === "object")
+			? (value as Partial<ByokProviderStoredSettings>)
+			: {}),
+	};
+	if (typeof stored.credential !== "string") stored.credential = "";
+	if (typeof stored.model !== "string") stored.model = "";
+	if (typeof stored.modelSelection !== "string") stored.modelSelection = "";
+	if (!Array.isArray(stored.availableModels)) stored.availableModels = [];
+	if (!Array.isArray(stored.modelOptions)) stored.modelOptions = [];
+	if (typeof stored.hasFetchedModels !== "boolean") {
+		stored.hasFetchedModels = false;
+	}
+	if (typeof stored.modelRefreshMessage !== "string") {
+		stored.modelRefreshMessage = "";
+	}
+	return stored;
+}
+
+function normalizeCueCraftByokSettings(
+	settings: CueCraftSettings,
+	defaults: ByokStoredSettings,
+	rawSettings: unknown
+): ByokStoredSettings {
+	const rawByok = (rawSettings as { byok?: unknown } | null | undefined)?.byok;
+	const hasRawByok = Boolean(
+		rawByok &&
+			typeof rawByok === "object" &&
+			"providers" in rawByok
+	);
+	const existing = hasRawByok ? (rawByok as Partial<ByokStoredSettings>) : {};
+	const legacy = cueCraftByokSettingsFromCueCraftSettings(settings);
+	const providers: ByokStoredSettings["providers"] = {};
+	for (const provider of BYOK_PROVIDER_IDS) {
+		const source = hasRawByok
+			? existing.providers?.[provider] ?? legacy.providers[provider]
+			: legacy.providers[provider] ?? defaults.providers[provider];
+		const stored = normalizeStoredProviderSettings(source);
+		if (
+			!hasRawByok &&
+			byokProviderDefinition(provider).credentialKind === "command"
+		) {
+			const fallback = normalizeStoredProviderSettings(defaults.providers[provider]);
+			if (!stored.credential) stored.credential = fallback.credential;
+			if (!stored.model) stored.model = fallback.model;
+		}
+		providers[provider] = stored;
+	}
+	return {
+		selectedProvider: normalizeProviderId(
+			existing.selectedProvider ?? legacy.selectedProvider ?? defaults.selectedProvider
+		),
+		providers,
+		verification: {
+			...(hasRawByok ? {} : legacy.verification),
+			...(existing.verification ?? {}),
+		},
 	};
 }
 
@@ -263,7 +360,6 @@ export function setCueCraftSelectedProvider(
 	settings: CueCraftSettings,
 	provider: ByokProviderId
 ): void {
-	settings.provider = provider;
 	ensureCueCraftByokSettings(settings).selectedProvider = provider;
 }
 
@@ -307,79 +403,12 @@ export function cueCraftProviderSettings(
 	return stored;
 }
 
-function mirrorLegacyProviderCredential(
-	settings: CueCraftSettings,
-	provider: ByokProviderId,
-	value: string
-): void {
-	switch (provider) {
-		case "ollama":
-			settings.ollamaHost = value;
-			return;
-		case "anthropic":
-			settings.anthropicApiKey = value;
-			return;
-		case "openai":
-			settings.openaiApiKey = value;
-			return;
-		case "google":
-			settings.googleApiKey = value;
-			return;
-		case "xai":
-			settings.xaiApiKey = value;
-			return;
-		case "openrouter":
-			settings.openrouterApiKey = value;
-			return;
-		case "codex-cli":
-			settings.codexCliCommand = value;
-			return;
-		case "claude-cli":
-			settings.claudeCliCommand = value;
-			return;
-	}
-}
-
-function mirrorLegacyProviderModel(
-	settings: CueCraftSettings,
-	provider: ByokProviderId,
-	value: string
-): void {
-	switch (provider) {
-		case "ollama":
-			settings.ollamaModel = value;
-			return;
-		case "anthropic":
-			settings.anthropicModel = value;
-			return;
-		case "openai":
-			settings.openaiModel = value;
-			return;
-		case "google":
-			settings.googleModel = value;
-			return;
-		case "xai":
-			settings.xaiModel = value;
-			return;
-		case "openrouter":
-			settings.openrouterModel = value;
-			return;
-		case "codex-cli":
-			settings.codexCliModel = value;
-			return;
-		case "claude-cli":
-			settings.claudeCliModel = value;
-			return;
-	}
-}
-
 export function setCueCraftProviderCredential(
 	settings: CueCraftSettings,
 	provider: ByokProviderId,
 	value: string
 ): void {
 	cueCraftProviderSettings(settings, provider).credential = value;
-	mirrorLegacyProviderCredential(settings, provider, value);
 }
 
 export function setCueCraftProviderModel(
@@ -388,7 +417,6 @@ export function setCueCraftProviderModel(
 	value: string
 ): void {
 	cueCraftProviderSettings(settings, provider).model = value;
-	mirrorLegacyProviderModel(settings, provider, value);
 }
 
 export function cueCraftProviderConfigFromSettings(
@@ -493,56 +521,7 @@ export function recordCueCraftProviderConnectionSuccess(
 		testedAt
 	);
 	byok.verification = verification;
-	settings.providerConnectionStatus = verification;
 	return verification;
-}
-
-function mirrorLegacyFetchedModelSettings(
-	settings: CueCraftSettings,
-	provider: CueCraftFetchedModelProvider | "anthropic",
-	stored: ByokProviderStoredSettings
-): void {
-	switch (provider) {
-		case "anthropic":
-			settings.anthropicAvailableModels = stored.availableModels.map((id) => ({
-				id,
-				display_name: id,
-				type: "model",
-				created_at: new Date(0).toISOString(),
-				max_input_tokens: null,
-				max_tokens: null,
-				capabilities: null,
-			} as ModelInfo));
-			settings.anthropicHasFetchedModels = stored.hasFetchedModels;
-			settings.anthropicModelRefreshMessage = stored.modelRefreshMessage;
-			return;
-		case "ollama":
-			settings.ollamaAvailableModels = [...stored.availableModels];
-			settings.ollamaHasFetchedModels = stored.hasFetchedModels;
-			settings.ollamaModelRefreshMessage = stored.modelRefreshMessage;
-			return;
-		case "openai":
-			settings.openaiAvailableModels = [...stored.availableModels];
-			settings.openaiHasFetchedModels = stored.hasFetchedModels;
-			settings.openaiModelRefreshMessage = stored.modelRefreshMessage;
-			return;
-		case "google":
-			settings.googleAvailableModels = [...stored.availableModels];
-			settings.googleHasFetchedModels = stored.hasFetchedModels;
-			settings.googleModelRefreshMessage = stored.modelRefreshMessage;
-			return;
-		case "xai":
-			settings.xaiAvailableModels = [...stored.availableModels];
-			settings.xaiHasFetchedModels = stored.hasFetchedModels;
-			settings.xaiModelRefreshMessage = stored.modelRefreshMessage;
-			return;
-		case "openrouter":
-			settings.openrouterAvailableModels = [...stored.availableModels];
-			settings.openrouterModelOptions = [...stored.modelOptions];
-			settings.openrouterHasFetchedModels = stored.hasFetchedModels;
-			settings.openrouterModelRefreshMessage = stored.modelRefreshMessage;
-			return;
-	}
 }
 
 export function resetCueCraftFetchedModels(
@@ -555,7 +534,6 @@ export function resetCueCraftFetchedModels(
 	stored.modelOptions = [];
 	stored.hasFetchedModels = false;
 	stored.modelRefreshMessage = message;
-	mirrorLegacyFetchedModelSettings(settings, provider, stored);
 }
 
 export function applyCueCraftListedModels(
@@ -579,7 +557,6 @@ export function applyCueCraftListedModels(
 	stored.modelOptions = options;
 	stored.hasFetchedModels = true;
 	stored.modelRefreshMessage = message;
-	mirrorLegacyFetchedModelSettings(settings, provider, stored);
 
 	return { models, options, message };
 }
@@ -594,7 +571,6 @@ export function applyCueCraftModelRefreshFailure(
 	stored.modelOptions = [];
 	stored.hasFetchedModels = true;
 	stored.modelRefreshMessage = message;
-	mirrorLegacyFetchedModelSettings(settings, provider, stored);
 }
 
 export function cueCraftFetchedModelCount(

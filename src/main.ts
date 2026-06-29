@@ -28,7 +28,6 @@ import {
 } from "./byok";
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
 import {
-	cueCraftByokSettingsFromCueCraftSettings,
 	cueCraftProviderCredential,
 	cueCraftProviderModel,
 	cueCraftSelectedProvider,
@@ -234,7 +233,7 @@ export default class CueCraftPlugin extends Plugin {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
 		const rawSettings = loaded?.settings ?? loaded ?? {};
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
-		normalizeCueCraftProviderSettings(settings, DEFAULT_SETTINGS);
+		normalizeCueCraftProviderSettings(settings, DEFAULT_SETTINGS, rawSettings);
 		settings.studyAreas = loadStudyAreas(
 			(settings as { studyAreas?: unknown }).studyAreas
 		);
@@ -260,7 +259,6 @@ export default class CueCraftPlugin extends Plugin {
 		) {
 			settings.cornellDisplayMode = DEFAULT_CORNELL_DISPLAY_MODE;
 		}
-		settings.byok = cueCraftByokSettingsFromCueCraftSettings(settings);
 		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
 		const caches: Record<string, NoteCache> = {};
 		for (const [path, value] of Object.entries(rawCaches)) {
