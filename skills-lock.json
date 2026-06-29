@@ -7,108 +7,6 @@
       "skillPath": "skills/engineering/ask-matt/SKILL.md",
       "computedHash": "f3ac3351e2a242ce2591e4f8475424d58f62db3f5786332b78f330b15312d1e0"
     },
-    "ce-brainstorm": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-brainstorm/SKILL.md",
-      "computedHash": "342cf07aa782d58cf273fced75783d6b6f96ab23901b7f4ff9bc9d7faa05858e"
-    },
-    "ce-code-review": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-code-review/SKILL.md",
-      "computedHash": "4028b495a7be4ce5f8dbcb4111b4ca64fa84faac7d06d9570f56587293af1f70"
-    },
-    "ce-commit": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-commit/SKILL.md",
-      "computedHash": "810c15533aebc81e3e1d48c78959c537a4e6ef068998b597ac7fc54407893d1d"
-    },
-    "ce-commit-push-pr": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-commit-push-pr/SKILL.md",
-      "computedHash": "f653ce0a32be4f8f795aee761e1e3a1eff990e0c957b8f163715b170d93e2673"
-    },
-    "ce-debug": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-debug/SKILL.md",
-      "computedHash": "ce2b81f214fc6f71b4efc4e0690ce67acc299b5999ca724e6d3d1a0584ae7f87"
-    },
-    "ce-doc-review": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-doc-review/SKILL.md",
-      "computedHash": "a7bd80c8389c14b241377a784e72ce5daa9f54359399c67a5c5c934f9e8100a2"
-    },
-    "ce-frontend-design": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "plugins/compound-engineering/skills/ce-frontend-design/SKILL.md",
-      "computedHash": "d34b4eee7a3b375d2be014e2ac071fc832a871a6e350cfae332b14f37c04aeec"
-    },
-    "ce-ideate": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-ideate/SKILL.md",
-      "computedHash": "2552bdb74ce5db6367ec2d54ab6630ff3adc5c3d95d4b81196bf7377eff757c7"
-    },
-    "ce-optimize": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-optimize/SKILL.md",
-      "computedHash": "ad71ff2e0087a6560bcbb5ec34e7835995271dc57ba83d3b237b9b8c130186d5"
-    },
-    "ce-plan": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-plan/SKILL.md",
-      "computedHash": "4e488aee61298024563705755795935c13f5d7a14a200dcb934063281e11c6ad"
-    },
-    "ce-polish": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-polish/SKILL.md",
-      "computedHash": "26c0d5fac96b76834c323b8c51ead7a1845dc7a7e272808d57e99ee7e04e0c05"
-    },
-    "ce-resolve-pr-feedback": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-resolve-pr-feedback/SKILL.md",
-      "computedHash": "59dfed11c61bb251f8bb95d0337518544a3a5066ef4fd66cada7cfd042f0a85c"
-    },
-    "ce-setup": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-setup/SKILL.md",
-      "computedHash": "292846c44f978968bd8d58b6745216d938ae855860e5ab4b69b11b4022132ded"
-    },
-    "ce-simplify-code": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-simplify-code/SKILL.md",
-      "computedHash": "d4c986baca67414fc0ba155e9cc6b0f0df67dbca2bc87bc2f0e27031d38ea462"
-    },
-    "ce-strategy": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-strategy/SKILL.md",
-      "computedHash": "1d43174fc74fd894e49e83b43ea3f3d1b4c5a93dd2e34aa629175920e7348143"
-    },
-    "ce-update": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "plugins/compound-engineering/skills/ce-update/SKILL.md",
-      "computedHash": "e5331827859cff1bba8ee8cafd9388f61e5d11384cf85191709acdccc359970c"
-    },
-    "ce-work": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/ce-work/SKILL.md",
-      "computedHash": "cc94da79ca77a3319cfddd409b76f0a1a780a5a4053203b9b95391b84bc3b2f6"
-    },
     "codebase-design": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -168,12 +66,6 @@
       "sourceType": "github",
       "skillPath": "skills/karpathy-guidelines/SKILL.md",
       "computedHash": "41e8ca055bbde13d240776a14a076a59614057200340c243130a76ba4e64cac8"
-    },
-    "lfg": {
-      "source": "everyinc/compound-engineering-plugin",
-      "sourceType": "github",
-      "skillPath": "skills/lfg/SKILL.md",
-      "computedHash": "2f89033f1a48a05030091bfda0e433ac52915c76b7d98e3c815b25377aaa5476"
     },
     "obsidian-vault": {
       "source": "mattpocock/skills",
