@@ -32,24 +32,20 @@ describe("BYOK model metadata and setup status", () => {
 
 	it("derives CLI setup status with the default-model sentinel", () => {
 		const settings = {
-			provider: "codex-cli" as const,
-			ollamaHost: "http://localhost:11434",
-			ollamaModel: "llama3.1:8b",
-			anthropicApiKey: "",
-			anthropicModel: "",
-			openaiApiKey: "",
-			openaiModel: "",
-			googleApiKey: "",
-			googleModel: "",
-			xaiApiKey: "",
-			xaiModel: "",
-			openrouterApiKey: "",
-			openrouterModel: "",
-			codexCliCommand: "codex",
-			codexCliModel: "",
-			claudeCliCommand: "claude",
-			claudeCliModel: "",
-			providerConnectionStatus: {},
+			byok: {
+				selectedProvider: "codex-cli" as const,
+				providers: {
+					"codex-cli": {
+						credential: "codex",
+						model: "",
+						availableModels: [],
+						modelOptions: [],
+						hasFetchedModels: false,
+						modelRefreshMessage: "",
+					},
+				},
+				verification: {},
+			},
 		};
 
 		const providerConnectionStatus = recordProviderConnectionSuccess(
@@ -62,8 +58,10 @@ describe("BYOK model metadata and setup status", () => {
 		);
 		expect(
 			deriveProviderSetupStatus({
-				...settings,
-				providerConnectionStatus,
+				byok: {
+					...settings.byok,
+					verification: providerConnectionStatus,
+				},
 			})
 		).toEqual({
 			keySaved: true,

@@ -1,8 +1,8 @@
-import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import { byokProviderDefinition, isByokProviderId } from "./registry";
 import type {
 	ByokProviderId,
 	ByokSetupStatus,
+	ByokStoredSettings,
 	ByokVerificationSnapshot,
 	ByokVerificationSnapshotMap,
 } from "./types";
@@ -16,25 +16,7 @@ export type ProviderConnectionSnapshot = ByokVerificationSnapshot;
 export type ProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 
 export interface ProviderSetupStatusSettings {
-	provider: ProviderSetupStatusId;
-	ollamaHost: string;
-	ollamaModel: string;
-	anthropicApiKey: string;
-	anthropicModel: string;
-	anthropicAvailableModels?: ModelInfo[];
-	openaiApiKey: string;
-	openaiModel: string;
-	googleApiKey: string;
-	googleModel: string;
-	xaiApiKey: string;
-	xaiModel: string;
-	openrouterApiKey: string;
-	openrouterModel: string;
-	codexCliCommand: string;
-	codexCliModel: string;
-	claudeCliCommand: string;
-	claudeCliModel: string;
-	providerConnectionStatus?: ProviderConnectionStatusMap;
+	byok: ByokStoredSettings;
 }
 
 export type DerivedProviderSetupStatus = ByokSetupStatus;
@@ -50,57 +32,31 @@ function isCliProvider(provider: unknown): boolean {
 	);
 }
 
+function selectedProvider(
+	settings: ProviderSetupStatusSettings
+): ProviderSetupStatusId | null {
+	const provider = settings.byok?.selectedProvider;
+	return isByokProviderId(provider) ? provider : null;
+}
+
 function currentCredentialValue(settings: ProviderSetupStatusSettings): string {
-	switch (settings.provider) {
-		case "ollama":
-			return trimValue(settings.ollamaHost);
-		case "anthropic":
-			return trimValue(settings.anthropicApiKey);
-		case "openai":
-			return trimValue(settings.openaiApiKey);
-		case "google":
-			return trimValue(settings.googleApiKey);
-		case "xai":
-			return trimValue(settings.xaiApiKey);
-		case "openrouter":
-			return trimValue(settings.openrouterApiKey);
-		case "codex-cli":
-			return trimValue(settings.codexCliCommand);
-		case "claude-cli":
-			return trimValue(settings.claudeCliCommand);
-		default:
-			return "";
-	}
+	const provider = selectedProvider(settings);
+	return provider
+		? trimValue(settings.byok.providers?.[provider]?.credential)
+		: "";
 }
 
 function currentModelValue(settings: ProviderSetupStatusSettings): string {
-	switch (settings.provider) {
-		case "ollama":
-			return trimValue(settings.ollamaModel);
-		case "anthropic":
-			return trimValue(settings.anthropicModel);
-		case "openai":
-			return trimValue(settings.openaiModel);
-		case "google":
-			return trimValue(settings.googleModel);
-		case "xai":
-			return trimValue(settings.xaiModel);
-		case "openrouter":
-			return trimValue(settings.openrouterModel);
-		case "codex-cli":
-			return trimValue(settings.codexCliModel);
-		case "claude-cli":
-			return trimValue(settings.claudeCliModel);
-		default:
-			return "";
-	}
+	const provider = selectedProvider(settings);
+	return provider ? trimValue(settings.byok.providers?.[provider]?.model) : "";
 }
 
 function currentConnectionVerificationModelValue(
 	settings: ProviderSetupStatusSettings
 ): string {
+	const provider = selectedProvider(settings);
 	const model = currentModelValue(settings);
-	return isCliProvider(settings.provider) && !model
+	return isCliProvider(provider) && !model
 		? CLI_DEFAULT_MODEL_SENTINEL
 		: model;
 }
@@ -124,9 +80,11 @@ export function recordProviderConnectionSuccess(
 	settings: ProviderSetupStatusSettings,
 	testedAt: string = new Date().toISOString()
 ): ProviderConnectionStatusMap {
+	const provider = selectedProvider(settings);
+	if (!provider) return { ...(settings.byok?.verification ?? {}) };
 	return {
-		...(settings.providerConnectionStatus ?? {}),
-		[settings.provider]: {
+		...(settings.byok?.verification ?? {}),
+		[provider]: {
 			credentialFingerprint: providerCredentialFingerprint(settings),
 			modelId: currentConnectionVerificationModelValue(settings),
 			testedAt,
@@ -137,10 +95,14 @@ export function recordProviderConnectionSuccess(
 export function deriveProviderSetupStatus(
 	settings: ProviderSetupStatusSettings
 ): DerivedProviderSetupStatus {
+	const provider = selectedProvider(settings);
+	if (!provider) {
+		return { keySaved: false, modelSelected: false, connection: "untested" };
+	}
 	const keySaved = currentCredentialValue(settings).length > 0;
 	const modelSelected =
-		isCliProvider(settings.provider) || currentModelValue(settings).length > 0;
-	const snapshot = settings.providerConnectionStatus?.[settings.provider];
+		isCliProvider(provider) || currentModelValue(settings).length > 0;
+	const snapshot = settings.byok.verification?.[provider];
 	if (!snapshot) {
 		return { keySaved, modelSelected, connection: "untested" };
 	}

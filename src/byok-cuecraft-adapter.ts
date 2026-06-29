@@ -307,14 +307,19 @@ export function cueCraftProviderModel(
 export function deriveCueCraftProviderSetupStatus(
 	settings: CueCraftSettings
 ): ByokSetupStatus {
-	return deriveProviderSetupStatus(settings);
+	return deriveProviderSetupStatus({
+		byok: cueCraftByokSettingsFromCueCraftSettings(settings),
+	});
 }
 
 export function recordCueCraftProviderConnectionSuccess(
 	settings: CueCraftSettings,
 	testedAt?: string
 ): CueCraftProviderConnectionStatusMap {
-	return recordProviderConnectionSuccess(settings, testedAt);
+	return recordProviderConnectionSuccess(
+		{ byok: cueCraftByokSettingsFromCueCraftSettings(settings) },
+		testedAt
+	);
 }
 
 export function resetCueCraftFetchedModels(
