@@ -1853,6 +1853,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			.setDesc(displayState.description)
 			.addText((text) => {
 				text.inputEl.addClass("cuecraft-api-key-input");
+				const updateEyeVisibility = (eye: HTMLButtonElement): void => {
+					const hasTypedReplacement =
+						text.inputEl.value.trim().length > 0 &&
+						(!saved || text.inputEl.value !== savedMask);
+					eye.disabled = !hasTypedReplacement;
+					eye.style.visibility = hasTypedReplacement ? "visible" : "hidden";
+				};
 				text
 					.setPlaceholder(displayState.placeholder)
 					.setValue(displayState.inputValue)
@@ -1862,6 +1869,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 							saved && value === savedMask
 								? ""
 								: value.trim();
+						updateEyeVisibility(eye);
 					});
 				text.inputEl.type = "password";
 				this.plugin.registerDomEvent(text.inputEl, "focus", () => {
@@ -1869,29 +1877,33 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						text.inputEl.value = "";
 						pendingKey = "";
 					}
+					updateEyeVisibility(eye);
 				});
 				this.plugin.registerDomEvent(text.inputEl, "blur", () => {
 					if (saved && !text.inputEl.value.trim()) {
 						text.inputEl.value = savedMask;
 						pendingKey = "";
 					}
+					updateEyeVisibility(eye);
 				});
 
 				const eye = text.inputEl.insertAdjacentElement(
 					"afterend",
 					createEl("button", {
 						cls: "cuecraft-key-eye",
-						attr: { type: "button", "aria-label": "Show API key" },
+						attr: { type: "button", "aria-label": "Show typed API key" },
 					})
 				) as HTMLButtonElement;
 				setIcon(eye, "eye");
+				updateEyeVisibility(eye);
 				this.plugin.registerDomEvent(eye, "click", () => {
+					if (eye.disabled) return;
 					const masked = text.inputEl.type === "password";
 					text.inputEl.type = masked ? "text" : "password";
 					setIcon(eye, masked ? "eye-off" : "eye");
 					eye.setAttr(
 						"aria-label",
-						masked ? "Hide API key" : "Show API key"
+						masked ? "Hide typed API key" : "Show typed API key"
 					);
 				});
 			});
