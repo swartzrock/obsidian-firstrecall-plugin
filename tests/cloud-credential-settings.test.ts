@@ -21,7 +21,8 @@ describe("cloudCredentialDisplayState", () => {
 			saveButtonLabel: "Replace key",
 			canEdit: true,
 		});
-		expect(state.description).toContain("API key saved");
+		expect(state.description).toContain("Obsidian Secret Storage");
+		expect(state.description).toContain("Enter a new key");
 	});
 
 	it("uses the provider placeholder for an unsaved key", () => {
@@ -39,6 +40,15 @@ describe("cloudCredentialDisplayState", () => {
 			saveButtonLabel: "Save key",
 			canEdit: true,
 		});
+		expect(
+			cloudCredentialDisplayState({
+				fieldDescription: "OpenAI API key.",
+				fieldPlaceholder: "sk-...",
+				saved: false,
+				credentialLength: 0,
+				storageStatus: { ok: true },
+			}).description
+		).toContain("Obsidian Secret Storage");
 	});
 
 	it("disables editing when secure storage is unavailable", () => {
@@ -55,7 +65,7 @@ describe("cloudCredentialDisplayState", () => {
 		});
 
 		expect(state.canEdit).toBe(false);
-		expect(state.description).toContain("Secure storage unavailable");
+		expect(state.description).toContain("Obsidian Secret Storage unavailable");
 		expect(state.description).toContain("Obsidian secret storage requires");
 	});
 
