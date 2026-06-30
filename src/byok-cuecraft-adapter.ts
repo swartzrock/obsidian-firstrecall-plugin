@@ -140,6 +140,8 @@ function normalizeCueCraftAnthropicSettings(settings: CueCraftSettings): void {
 function emptyStoredProviderSettings(): ByokProviderStoredSettings {
 	return {
 		credential: "",
+		credentialSaved: false,
+		credentialUpdatedAt: "",
 		model: "",
 		modelSelection: "",
 		availableModels: [],
@@ -293,6 +295,12 @@ function normalizeStoredProviderSettings(
 			: {}),
 	};
 	if (typeof stored.credential !== "string") stored.credential = "";
+	if (typeof stored.credentialSaved !== "boolean") {
+		stored.credentialSaved = false;
+	}
+	if (typeof stored.credentialUpdatedAt !== "string") {
+		stored.credentialUpdatedAt = "";
+	}
 	if (typeof stored.model !== "string") stored.model = "";
 	if (typeof stored.modelSelection !== "string") stored.modelSelection = "";
 	if (!Array.isArray(stored.availableModels)) stored.availableModels = [];
@@ -392,6 +400,12 @@ export function cueCraftProviderSettings(
 	if (!Array.isArray(stored.availableModels)) stored.availableModels = [];
 	if (!Array.isArray(stored.modelOptions)) stored.modelOptions = [];
 	if (typeof stored.credential !== "string") stored.credential = "";
+	if (typeof stored.credentialSaved !== "boolean") {
+		stored.credentialSaved = false;
+	}
+	if (typeof stored.credentialUpdatedAt !== "string") {
+		stored.credentialUpdatedAt = "";
+	}
 	if (typeof stored.model !== "string") stored.model = "";
 	if (typeof stored.hasFetchedModels !== "boolean") {
 		stored.hasFetchedModels = false;
@@ -409,6 +423,26 @@ export function setCueCraftProviderCredential(
 	value: string
 ): void {
 	cueCraftProviderSettings(settings, provider).credential = value;
+}
+
+export function setCueCraftProviderCredentialMetadata(
+	settings: CueCraftSettings,
+	provider: ByokProviderId,
+	metadata: { saved: boolean; token: string }
+): void {
+	const stored = cueCraftProviderSettings(settings, provider);
+	stored.credentialSaved = metadata.saved;
+	stored.credentialUpdatedAt = metadata.token;
+}
+
+export function clearCueCraftProviderCredentialMetadata(
+	settings: CueCraftSettings,
+	provider: ByokProviderId
+): void {
+	setCueCraftProviderCredentialMetadata(settings, provider, {
+		saved: false,
+		token: "",
+	});
 }
 
 export function setCueCraftProviderModel(

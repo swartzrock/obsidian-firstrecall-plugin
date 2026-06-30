@@ -22,6 +22,22 @@ function providerSettings(
 	};
 }
 
+function savedCloudProviderSettings(
+	token: string,
+	model: string
+): ByokProviderStoredSettings {
+	return {
+		credential: "",
+		credentialSaved: true,
+		credentialUpdatedAt: token,
+		model,
+		availableModels: [],
+		modelOptions: [],
+		hasFetchedModels: false,
+		modelRefreshMessage: "",
+	};
+}
+
 function baseSettings(
 	overrides: Partial<ProviderSetupStatusSettings["byok"]> = {}
 ): ProviderSetupStatusSettings {
@@ -149,6 +165,51 @@ describe("deriveProviderSetupStatus", () => {
 			"claude-sonnet-4-6"
 		);
 		expect(deriveProviderSetupStatus(settings).connection).toBe("stale");
+	});
+
+	it("uses cloud credential metadata without requiring a plaintext key", () => {
+		const settings = baseSettings();
+		settings.byok.providers.anthropic = savedCloudProviderSettings(
+			"token-1",
+			"claude-sonnet-4-6"
+		);
+		settings.byok.verification = recordProviderConnectionSuccess(
+			settings,
+			"2026-06-11T00:00:00.000Z"
+		);
+
+		expect(settings.byok.verification.anthropic).toMatchObject({
+			credentialFingerprint: "token-1",
+			credentialToken: "token-1",
+		});
+		expect(deriveProviderSetupStatus(settings)).toEqual({
+			keySaved: true,
+			modelSelected: true,
+			connection: "verified",
+			testedAt: "2026-06-11T00:00:00.000Z",
+		});
+	});
+
+	it("marks cloud verification stale when the credential token changes", () => {
+		const settings = baseSettings();
+		settings.byok.providers.anthropic = savedCloudProviderSettings(
+			"token-1",
+			"claude-sonnet-4-6"
+		);
+		settings.byok.verification = recordProviderConnectionSuccess(
+			settings,
+			"2026-06-11T00:00:00.000Z"
+		);
+		settings.byok.providers.anthropic = savedCloudProviderSettings(
+			"token-2",
+			"claude-sonnet-4-6"
+		);
+
+		expect(deriveProviderSetupStatus(settings)).toMatchObject({
+			keySaved: true,
+			modelSelected: true,
+			connection: "stale",
+		});
 	});
 
 	it("derives provider-specific status independently for other saved providers", () => {

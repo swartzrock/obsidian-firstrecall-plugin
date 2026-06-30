@@ -6,11 +6,13 @@ import {
 	cueCraftModelRefreshMessage,
 	cueCraftProviderConfigFromSettings,
 	cueCraftProviderSettings,
+	clearCueCraftProviderCredentialMetadata,
 	deriveCueCraftProviderSetupStatus,
 	makeCueCraftByokProvider,
 	normalizeCueCraftProviderSettings,
 	recordCueCraftProviderConnectionSuccess,
 	resetCueCraftFetchedModels,
+	setCueCraftProviderCredentialMetadata,
 	setCueCraftProviderModel,
 } from "../src/byok-cuecraft-adapter";
 import type { ByokHttpClient, ByokModelOption } from "../src/byok";
@@ -161,6 +163,49 @@ describe("CueCraft provider settings normalization", () => {
 		expect(cueCraftProviderSettings(s, "anthropic").modelSelection).toBe(
 			"claude-account-123"
 		);
+	});
+
+	it("normalizes and mutates saved cloud credential metadata", () => {
+		const s = settings({
+			byok: {
+				selectedProvider: "openai",
+				providers: {
+					openai: {
+						credential: "",
+						credentialSaved: true,
+						credentialUpdatedAt: "token-1",
+						model: "gpt-4o-mini",
+						availableModels: [],
+						modelOptions: [],
+						hasFetchedModels: false,
+						modelRefreshMessage: "",
+					},
+				},
+				verification: {},
+			},
+		});
+
+		normalizeCueCraftProviderSettings(s, settings(), s);
+		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+			credential: "",
+			credentialSaved: true,
+			credentialUpdatedAt: "token-1",
+		});
+
+		setCueCraftProviderCredentialMetadata(s, "openai", {
+			saved: true,
+			token: "token-2",
+		});
+		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+			credentialSaved: true,
+			credentialUpdatedAt: "token-2",
+		});
+
+		clearCueCraftProviderCredentialMetadata(s, "openai");
+		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+			credentialSaved: false,
+			credentialUpdatedAt: "",
+		});
 	});
 });
 
