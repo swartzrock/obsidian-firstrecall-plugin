@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
 	createSecureCredentialStore,
 	type CredentialFileAdapter,
@@ -91,6 +91,7 @@ describe("createSecureCredentialStore", () => {
 	});
 
 	it("refuses to write when safeStorage is unavailable", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 		const file = memoryFile();
 		const store = createSecureCredentialStore({
 			safeStorage: fakeSafeStorage({
@@ -104,9 +105,20 @@ describe("createSecureCredentialStore", () => {
 			reason: "safe-storage-unavailable",
 		});
 		expect(file.value).toBeNull();
+		expect(warn).toHaveBeenCalledWith(
+			"CueCraft secure storage unavailable.",
+			expect.objectContaining({
+				reason: "safe-storage-unavailable",
+				hasSafeStorage: true,
+				isEncryptionAvailable: false,
+				selectedStorageBackend: "os_crypt",
+			})
+		);
+		warn.mockRestore();
 	});
 
 	it("refuses Electron basic_text backend", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 		const file = memoryFile();
 		const store = createSecureCredentialStore({
 			safeStorage: fakeSafeStorage({
@@ -120,6 +132,16 @@ describe("createSecureCredentialStore", () => {
 			reason: "basic-text",
 		});
 		expect(file.value).toBeNull();
+		expect(warn).toHaveBeenCalledWith(
+			"CueCraft secure storage unavailable.",
+			expect.objectContaining({
+				reason: "basic-text",
+				hasSafeStorage: true,
+				isEncryptionAvailable: true,
+				selectedStorageBackend: "basic_text",
+			})
+		);
+		warn.mockRestore();
 	});
 
 	it("fails closed for corrupt credential files", async () => {

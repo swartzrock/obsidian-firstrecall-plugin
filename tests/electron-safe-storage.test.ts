@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { DataAdapter } from "obsidian";
 import {
 	createObsidianCredentialFileAdapter,
@@ -40,7 +40,15 @@ function fakeDataAdapter(): FakeDataAdapter {
 
 describe("loadElectronSafeStorage", () => {
 	it("returns null when Electron is not available in the test runtime", async () => {
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 		await expect(loadElectronSafeStorage()).resolves.toBeNull();
+		expect(warn).toHaveBeenCalledWith(
+			"CueCraft secure storage: require(\"electron\") failed.",
+			expect.objectContaining({
+				message: expect.stringContaining("Cannot find module"),
+			})
+		);
+		warn.mockRestore();
 	});
 });
 

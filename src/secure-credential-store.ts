@@ -106,10 +106,12 @@ export function createSecureCredentialStore(opts: {
 	now?: () => Date;
 }): SecureCredentialStore {
 	const now = opts.now ?? (() => new Date());
+	let reportedUnavailable = false;
 
 	function availability(): CredentialStoreAvailability {
 		const safeStorage = opts.safeStorage;
 		if (!safeStorage?.isEncryptionAvailable()) {
+			reportUnavailableOnce("safe-storage-unavailable", safeStorage);
 			return {
 				ok: false,
 				reason: "safe-storage-unavailable",
@@ -117,6 +119,7 @@ export function createSecureCredentialStore(opts: {
 			};
 		}
 		if (safeStorage.getSelectedStorageBackend?.() === "basic_text") {
+			reportUnavailableOnce("basic-text", safeStorage);
 			return {
 				ok: false,
 				reason: "basic-text",
@@ -124,6 +127,30 @@ export function createSecureCredentialStore(opts: {
 			};
 		}
 		return { ok: true };
+	}
+
+	function reportUnavailableOnce(
+		reason: CredentialStoreUnavailableReason,
+		safeStorage: SafeStorageAdapter | null
+	): void {
+		if (reportedUnavailable) return;
+		reportedUnavailable = true;
+		console.warn("CueCraft secure storage unavailable.", {
+			reason,
+			hasSafeStorage: Boolean(safeStorage),
+			isEncryptionAvailable:
+				safeStorage?.isEncryptionAvailable?.() ?? null,
+			isAsyncEncryptionAvailable:
+				safeStorage?.isAsyncEncryptionAvailable?.() ?? null,
+			selectedStorageBackend:
+				safeStorage?.getSelectedStorageBackend?.() ?? null,
+			hasEncryptString: typeof safeStorage?.encryptString === "function",
+			hasDecryptString: typeof safeStorage?.decryptString === "function",
+			hasEncryptStringAsync:
+				typeof safeStorage?.encryptStringAsync === "function",
+			hasDecryptStringAsync:
+				typeof safeStorage?.decryptStringAsync === "function",
+		});
 	}
 
 	async function readFile(): Promise<CredentialFileContents | CredentialStoreReadResult> {
