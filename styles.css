@@ -261,7 +261,25 @@
 	flex: 1 1 520px;
 }
 
+.cuecraft-active-provider-fields .cuecraft-api-key-setting {
+	align-items: stretch;
+	flex-direction: column;
+	gap: 8px;
+	justify-content: flex-start;
+}
+
+.cuecraft-active-provider-fields .cuecraft-api-key-setting .setting-item-info,
+.cuecraft-active-provider-fields .cuecraft-api-key-setting .setting-item-control {
+	width: 100%;
+}
+
+.cuecraft-active-provider-fields .cuecraft-api-key-setting .setting-item-control {
+	flex: 0 1 auto;
+	justify-content: flex-start;
+}
+
 .cuecraft-active-provider-fields .cuecraft-api-key-input {
+	flex: 1 1 360px;
 	width: 360px;
 	max-width: 100%;
 }

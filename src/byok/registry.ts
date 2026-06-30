@@ -58,7 +58,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		credentialField: {
 			label: "Anthropic API key",
 			placeholder: "sk-ant-...",
-			description: "Anthropic API key stored locally in this vault.",
+			description: "Stored securely in Obsidian Secret Storage on this device.",
 			secret: true,
 			missingMessage: "Enter your Anthropic API key first.",
 			resetModelsMessage: "Enter your Anthropic API key first to fetch models.",
@@ -89,7 +89,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		credentialField: {
 			label: "OpenAI API key",
 			placeholder: "sk-...",
-			description: "OpenAI API key stored locally in this vault.",
+			description: "Stored securely in Obsidian Secret Storage on this device.",
 			secret: true,
 			missingMessage: "Enter your OpenAI API key first.",
 			resetModelsMessage: "Enter your OpenAI API key first to fetch models.",
@@ -120,7 +120,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		credentialField: {
 			label: "Google API key",
 			placeholder: "AIza...",
-			description: "Google AI API key stored locally in this vault.",
+			description: "Stored securely in Obsidian Secret Storage on this device.",
 			secret: true,
 			missingMessage: "Enter your Google API key first.",
 			resetModelsMessage: "Enter your Google API key first to fetch models.",
@@ -151,7 +151,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		credentialField: {
 			label: "xAI API key",
 			placeholder: "xai-...",
-			description: "xAI API key stored locally in this vault.",
+			description: "Stored securely in Obsidian Secret Storage on this device.",
 			secret: true,
 			missingMessage: "Enter your xAI API key first.",
 			resetModelsMessage: "Enter your xAI API key first to fetch models.",
@@ -182,7 +182,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		credentialField: {
 			label: "OpenRouter API key",
 			placeholder: "sk-or-...",
-			description: "OpenRouter API key stored locally in this vault.",
+			description: "Stored securely in Obsidian Secret Storage on this device.",
 			secret: true,
 			missingMessage: "Enter your OpenRouter API key first.",
 			resetModelsMessage: "Enter your OpenRouter API key first to fetch models.",

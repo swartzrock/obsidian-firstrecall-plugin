@@ -16,6 +16,8 @@ producing reliable validated structured cues), and provider breadth now covers a
 four direct frontier providers, OpenRouter, and local Codex / Claude CLI process providers. What
 remains is mostly **breadth and UX polish**, not core risk.
 
+Cloud BYOK keys are now treated as secrets owned by CueCraft's secure credential layer: they are stored in Obsidian `app.secretStorage`, while `data.json` keeps only non-secret provider/model metadata. BYOK remains persistence-free so the future standalone TypeScript library receives resolved runtime config from its host app.
+
 Rough completion against the full V1.0 → V2 vision: **~72%**, with 100% of the MVP core loop,
 all of V1.1 done, V1.2 (presets + typography/layout + in-view controls) effectively
 complete (an editor-only Left rail was tried and dropped as a poor fit for CodeMirror), and the V1.5

@@ -156,6 +156,7 @@ export interface ByokProviderStoredSettings {
 	credential: string;
 	credentialSaved?: boolean;
 	credentialUpdatedAt?: string;
+	credentialLength?: number;
 	model: string;
 	modelSelection?: string;
 	availableModels: string[];

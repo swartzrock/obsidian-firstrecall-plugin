@@ -29,11 +29,20 @@ import {
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
 import {
 	cueCraftProviderCredential,
+	cueCraftProviderCredentialSaved,
 	cueCraftProviderModel,
 	cueCraftSelectedProvider,
+	clearCueCraftStoredCloudCredential,
+	markCueCraftCloudCredentialSaved,
+	migrateCueCraftCloudCredentials,
 	normalizeCueCraftProviderSettings,
-	makeCueCraftByokProvider,
+	makeCueCraftByokProviderFromStore,
 } from "./byok-cuecraft-adapter";
+import {
+	createSecureCredentialStore,
+	type CueCraftCloudCredentialProvider,
+	type SecureCredentialStore,
+} from "./secure-credential-store";
 import { parseSections, type Section } from "./parser";
 import {
 	CacheStore,
@@ -84,6 +93,7 @@ import {
 import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
 import { statusLabel, type CueStatus } from "./status";
+import { formatCueCraftNotice } from "./notice";
 import {
 	findMaintainedStudyAreaForPath,
 	isDescendantPath,
@@ -126,8 +136,13 @@ export default class CueCraftPlugin extends Plugin {
 	private settingTab!: CueCraftSettingTab;
 	private cacheStore!: CacheStore;
 	private visibility!: VisibilityStore;
+	private credentialStore!: SecureCredentialStore;
+	private credentialMigrationWarnings: string[] = [];
 
 	async onload(): Promise<void> {
+		this.credentialStore = createSecureCredentialStore({
+			secretStorage: this.app.secretStorage,
+		});
 		await this.loadPluginData();
 
 		this.cacheStore = new CacheStore(this.data.caches, async (map) => {
@@ -234,6 +249,11 @@ export default class CueCraftPlugin extends Plugin {
 		const rawSettings = loaded?.settings ?? loaded ?? {};
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
 		normalizeCueCraftProviderSettings(settings, DEFAULT_SETTINGS, rawSettings);
+		const credentialMigration = await migrateCueCraftCloudCredentials(
+			settings,
+			this.credentialStore
+		);
+		this.credentialMigrationWarnings = credentialMigration.warnings;
 		settings.studyAreas = loadStudyAreas(
 			(settings as { studyAreas?: unknown }).studyAreas
 		);
@@ -268,6 +288,9 @@ export default class CueCraftPlugin extends Plugin {
 		const hidden = loadHiddenMap(loaded?.hidden);
 		this.data = { settings, caches, hidden };
 		this.settings = this.data.settings;
+		if (credentialMigration.settingsChanged) {
+			await this.saveData(this.data);
+		}
 	}
 
 	async saveSettings(): Promise<void> {
@@ -399,7 +422,10 @@ export default class CueCraftPlugin extends Plugin {
 			cueCraftSelectedProvider(this.settings)
 		);
 		const hasCredential =
-			cueCraftProviderCredential(this.settings).trim().length > 0;
+			definition.credentialKind === "api-key"
+				? this.credentialStore.availability().ok &&
+					cueCraftProviderCredentialSaved(this.settings)
+				: cueCraftProviderCredential(this.settings).trim().length > 0;
 		const hasModel =
 			definition.modelBehavior === "optional" ||
 			cueCraftProviderModel(this.settings).trim().length > 0;
@@ -409,6 +435,46 @@ export default class CueCraftPlugin extends Plugin {
 	/** Public view of {@link isConfigured} for the settings tab. */
 	isProviderConfigured(): boolean {
 		return this.isConfigured();
+	}
+
+	secureCredentialStorageStatus() {
+		return this.credentialStore.availability();
+	}
+
+	secureCredentialMigrationWarnings(): string[] {
+		return [...this.credentialMigrationWarnings];
+	}
+
+	isProviderCredentialSaved(provider = cueCraftSelectedProvider(this.settings)): boolean {
+		return cueCraftProviderCredentialSaved(this.settings, provider);
+	}
+
+	async saveCloudProviderCredential(
+		provider: CueCraftCloudCredentialProvider,
+		value: string
+	): Promise<{ ok: boolean; message?: string }> {
+		const result = await this.credentialStore.save(provider, value);
+		if (!result.ok || !result.metadata) {
+			return { ok: false, message: result.message ?? result.reason };
+		}
+		markCueCraftCloudCredentialSaved(
+			this.settings,
+			provider,
+			result.metadata.token,
+			result.metadata.length
+		);
+		return { ok: true };
+	}
+
+	async clearCloudProviderCredential(
+		provider: CueCraftCloudCredentialProvider
+	): Promise<{ ok: boolean; message?: string }> {
+		const result = await this.credentialStore.clear(provider);
+		if (!result.ok) {
+			return { ok: false, message: result.message ?? result.reason };
+		}
+		clearCueCraftStoredCloudCredential(this.settings, provider);
+		return { ok: true };
 	}
 
 	private setStatus(
@@ -898,11 +964,29 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
-	makeProvider(): ByokProviderRuntime {
-		return makeCueCraftByokProvider(this.settings, {
+	async makeProvider(): Promise<ByokProviderRuntime> {
+		return makeCueCraftByokProviderFromStore(this.settings, {
 			fetchImpl: this.makeFetch(),
 			http: this.makeHttpClient(),
-		});
+		}, this.credentialStore);
+	}
+
+	private async makeProviderForRun(
+		opts: { automatic?: boolean } = {}
+	): Promise<ByokProviderRuntime | null> {
+		try {
+			return await this.makeProvider();
+		} catch (error) {
+			console.error("CueCraft provider setup failed", error);
+			if (!opts.automatic) {
+				new Notice(
+					formatCueCraftNotice(
+						error instanceof Error ? error.message : String(error)
+					)
+				);
+			}
+			return null;
+		}
 	}
 
 	private generationOptions(): CueGenerationOptions {
@@ -1034,7 +1118,8 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 
-		const provider = this.makeProvider();
+		const provider = await this.makeProviderForRun();
+		if (!provider) return;
 
 		const controller = new AbortController();
 		this.currentRun = controller;
@@ -1120,7 +1205,8 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 
-		const provider = this.makeProvider();
+		const provider = await this.makeProviderForRun(opts);
+		if (!provider) return;
 		const byId = new Map(sections.map((s) => [s.id, s]));
 
 		const controller = new AbortController();
@@ -1306,9 +1392,10 @@ export default class CueCraftPlugin extends Plugin {
 			return summarizeStudyAreaRun(plan, {});
 		}
 
+		const provider = await this.makeProviderForRun(opts);
+		if (!provider) return null;
 		const controller = new AbortController();
 		this.currentRun = controller;
-		const provider = this.makeProvider();
 		const completed: string[] = [];
 		const failed: string[] = [];
 		const totalSections = plan.items.reduce(
@@ -1560,7 +1647,8 @@ export default class CueCraftPlugin extends Plugin {
 		}
 
 		const markdown = await this.app.vault.cachedRead(file);
-		const provider = this.makeProvider();
+		const provider = await this.makeProviderForRun(opts);
+		if (!provider) return;
 
 		const controller = new AbortController();
 		this.currentRun = controller;

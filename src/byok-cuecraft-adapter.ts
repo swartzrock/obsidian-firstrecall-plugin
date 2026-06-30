@@ -22,6 +22,11 @@ import {
 } from "./byok";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { CueCraftSettings } from "./settings";
+import {
+	isCueCraftCloudCredentialProvider,
+	type CueCraftCloudCredentialProvider,
+	type SecureCredentialStore,
+} from "./secure-credential-store";
 
 export type CueCraftByokRuntime = ByokProviderRuntime;
 export type CueCraftHttpClient = ByokHttpClient;
@@ -42,6 +47,23 @@ export interface CueCraftAppliedModelRefresh {
 	models: string[];
 	options: ByokModelOption[];
 	message: string;
+}
+
+export class CueCraftCredentialUnavailableError extends Error {
+	constructor(
+		readonly provider: CueCraftCloudCredentialProvider,
+		readonly reason: string,
+		message: string
+	) {
+		super(message);
+		this.name = "CueCraftCredentialUnavailableError";
+	}
+}
+
+export interface CueCraftCredentialMigrationResult {
+	settingsChanged: boolean;
+	warnings: string[];
+	migratedProviders: CueCraftCloudCredentialProvider[];
 }
 
 type ProviderSettingsDefaults = Pick<
@@ -142,6 +164,7 @@ function emptyStoredProviderSettings(): ByokProviderStoredSettings {
 		credential: "",
 		credentialSaved: false,
 		credentialUpdatedAt: "",
+		credentialLength: 0,
 		model: "",
 		modelSelection: "",
 		availableModels: [],
@@ -187,6 +210,35 @@ function legacyProviderCredential(
 			return legacy.codexCliCommand ?? "";
 		case "claude-cli":
 			return legacy.claudeCliCommand ?? "";
+	}
+}
+
+function deleteLegacyCloudProviderCredential(
+	settings: CueCraftSettings,
+	provider: CueCraftCloudCredentialProvider
+): boolean {
+	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
+	switch (provider) {
+		case "anthropic":
+			if (!("anthropicApiKey" in legacy)) return false;
+			delete legacy.anthropicApiKey;
+			return true;
+		case "openai":
+			if (!("openaiApiKey" in legacy)) return false;
+			delete legacy.openaiApiKey;
+			return true;
+		case "google":
+			if (!("googleApiKey" in legacy)) return false;
+			delete legacy.googleApiKey;
+			return true;
+		case "xai":
+			if (!("xaiApiKey" in legacy)) return false;
+			delete legacy.xaiApiKey;
+			return true;
+		case "openrouter":
+			if (!("openrouterApiKey" in legacy)) return false;
+			delete legacy.openrouterApiKey;
+			return true;
 	}
 }
 
@@ -301,6 +353,15 @@ function normalizeStoredProviderSettings(
 	if (typeof stored.credentialUpdatedAt !== "string") {
 		stored.credentialUpdatedAt = "";
 	}
+	if (
+		typeof stored.credentialLength !== "number" ||
+		!Number.isFinite(stored.credentialLength) ||
+		stored.credentialLength < 0
+	) {
+		stored.credentialLength = 0;
+	} else {
+		stored.credentialLength = Math.floor(stored.credentialLength);
+	}
 	if (typeof stored.model !== "string") stored.model = "";
 	if (typeof stored.modelSelection !== "string") stored.modelSelection = "";
 	if (!Array.isArray(stored.availableModels)) stored.availableModels = [];
@@ -406,6 +467,15 @@ export function cueCraftProviderSettings(
 	if (typeof stored.credentialUpdatedAt !== "string") {
 		stored.credentialUpdatedAt = "";
 	}
+	if (
+		typeof stored.credentialLength !== "number" ||
+		!Number.isFinite(stored.credentialLength) ||
+		stored.credentialLength < 0
+	) {
+		stored.credentialLength = 0;
+	} else {
+		stored.credentialLength = Math.floor(stored.credentialLength);
+	}
 	if (typeof stored.model !== "string") stored.model = "";
 	if (typeof stored.hasFetchedModels !== "boolean") {
 		stored.hasFetchedModels = false;
@@ -428,11 +498,12 @@ export function setCueCraftProviderCredential(
 export function setCueCraftProviderCredentialMetadata(
 	settings: CueCraftSettings,
 	provider: ByokProviderId,
-	metadata: { saved: boolean; token: string }
+	metadata: { saved: boolean; token: string; length: number }
 ): void {
 	const stored = cueCraftProviderSettings(settings, provider);
 	stored.credentialSaved = metadata.saved;
 	stored.credentialUpdatedAt = metadata.token;
+	stored.credentialLength = metadata.length;
 }
 
 export function clearCueCraftProviderCredentialMetadata(
@@ -442,7 +513,32 @@ export function clearCueCraftProviderCredentialMetadata(
 	setCueCraftProviderCredentialMetadata(settings, provider, {
 		saved: false,
 		token: "",
+		length: 0,
 	});
+}
+
+export function clearCueCraftStoredCloudCredential(
+	settings: CueCraftSettings,
+	provider: CueCraftCloudCredentialProvider
+): void {
+	cueCraftProviderSettings(settings, provider).credential = "";
+	clearCueCraftProviderCredentialMetadata(settings, provider);
+	deleteLegacyCloudProviderCredential(settings, provider);
+}
+
+export function markCueCraftCloudCredentialSaved(
+	settings: CueCraftSettings,
+	provider: CueCraftCloudCredentialProvider,
+	token: string,
+	length: number
+): void {
+	cueCraftProviderSettings(settings, provider).credential = "";
+	setCueCraftProviderCredentialMetadata(settings, provider, {
+		saved: true,
+		token,
+		length,
+	});
+	deleteLegacyCloudProviderCredential(settings, provider);
 }
 
 export function setCueCraftProviderModel(
@@ -454,7 +550,10 @@ export function setCueCraftProviderModel(
 }
 
 export function cueCraftProviderConfigFromSettings(
-	settings: CueCraftSettings
+	settings: CueCraftSettings,
+	opts: {
+		cloudCredentials?: Partial<Record<CueCraftCloudCredentialProvider, string>>;
+	} = {}
 ): ByokProviderConfig {
 	const provider = cueCraftSelectedProvider(settings);
 	const stored = cueCraftProviderSettings(settings, provider);
@@ -462,31 +561,31 @@ export function cueCraftProviderConfigFromSettings(
 		case "anthropic":
 			return {
 				provider: "anthropic",
-				apiKey: stored.credential,
+				apiKey: opts.cloudCredentials?.anthropic ?? stored.credential,
 				model: stored.model,
 			};
 		case "openai":
 			return {
 				provider: "openai",
-				apiKey: stored.credential,
+				apiKey: opts.cloudCredentials?.openai ?? stored.credential,
 				model: stored.model,
 			};
 		case "google":
 			return {
 				provider: "google",
-				apiKey: stored.credential,
+				apiKey: opts.cloudCredentials?.google ?? stored.credential,
 				model: stored.model,
 			};
 		case "xai":
 			return {
 				provider: "xai",
-				apiKey: stored.credential,
+				apiKey: opts.cloudCredentials?.xai ?? stored.credential,
 				model: stored.model,
 			};
 		case "openrouter":
 			return {
 				provider: "openrouter",
-				apiKey: stored.credential,
+				apiKey: opts.cloudCredentials?.openrouter ?? stored.credential,
 				model: stored.model,
 			};
 		case "codex-cli":
@@ -517,6 +616,40 @@ export function makeCueCraftByokProvider(
 	return createByokProvider(cueCraftProviderConfigFromSettings(settings), deps);
 }
 
+export async function resolveCueCraftProviderConfigFromStore(
+	settings: CueCraftSettings,
+	credentialStore: SecureCredentialStore
+): Promise<ByokProviderConfig> {
+	const provider = cueCraftSelectedProvider(settings);
+	if (!isCueCraftCloudCredentialProvider(provider)) {
+		return cueCraftProviderConfigFromSettings(settings);
+	}
+	const result = await credentialStore.read(provider);
+	if (!result.ok || !result.value) {
+		const providerName = cueCraftProviderLabel(provider);
+		throw new CueCraftCredentialUnavailableError(
+			provider,
+			result.reason ?? "missing-credential",
+			result.message ??
+				`CueCraft: ${providerName} API key is not available from secure storage.`
+		);
+	}
+	return cueCraftProviderConfigFromSettings(settings, {
+		cloudCredentials: { [provider]: result.value },
+	});
+}
+
+export async function makeCueCraftByokProviderFromStore(
+	settings: CueCraftSettings,
+	deps: CueCraftProviderFactoryDeps,
+	credentialStore: SecureCredentialStore
+): Promise<CueCraftByokRuntime> {
+	return createByokProvider(
+		await resolveCueCraftProviderConfigFromStore(settings, credentialStore),
+		deps
+	);
+}
+
 export function isCueCraftLocalCliProvider(provider: ByokProviderId): boolean {
 	return byokProviderDefinition(provider).credentialKind === "command";
 }
@@ -530,6 +663,91 @@ export function cueCraftProviderCredential(
 	provider: ByokProviderId = cueCraftSelectedProvider(settings)
 ): string {
 	return cueCraftProviderSettings(settings, provider).credential;
+}
+
+export function cueCraftProviderCredentialSaved(
+	settings: CueCraftSettings,
+	provider: ByokProviderId = cueCraftSelectedProvider(settings)
+): boolean {
+	const stored = cueCraftProviderSettings(settings, provider);
+	return isCueCraftCloudCredentialProvider(provider)
+		? Boolean(stored.credentialSaved) || stored.credential.trim().length > 0
+		: stored.credential.trim().length > 0;
+}
+
+export function cueCraftProviderCredentialLength(
+	settings: CueCraftSettings,
+	provider: ByokProviderId = cueCraftSelectedProvider(settings)
+): number {
+	const stored = cueCraftProviderSettings(settings, provider);
+	if (isCueCraftCloudCredentialProvider(provider)) {
+		return stored.credentialSaved
+			? stored.credentialLength ?? 0
+			: stored.credential.trim().length;
+	}
+	return stored.credential.trim().length;
+}
+
+export async function migrateCueCraftCloudCredentials(
+	settings: CueCraftSettings,
+	credentialStore: SecureCredentialStore
+): Promise<CueCraftCredentialMigrationResult> {
+	const result: CueCraftCredentialMigrationResult = {
+		settingsChanged: false,
+		warnings: [],
+		migratedProviders: [],
+	};
+	for (const provider of BYOK_PROVIDER_IDS) {
+		if (!isCueCraftCloudCredentialProvider(provider)) continue;
+		const stored = cueCraftProviderSettings(settings, provider);
+		const plaintext = stored.credential.trim();
+		if (plaintext) {
+			const saved = await credentialStore.save(provider, plaintext);
+			if (!saved.ok || !saved.metadata) {
+				result.warnings.push(
+					`${cueCraftProviderLabel(provider)} API key could not be moved to secure storage: ${saved.message ?? saved.reason ?? "unknown error"}`
+				);
+				continue;
+			}
+			markCueCraftCloudCredentialSaved(
+				settings,
+				provider,
+				saved.metadata.token,
+				saved.metadata.length
+			);
+			result.settingsChanged = true;
+			result.migratedProviders.push(provider);
+			continue;
+		}
+		if (stored.credentialSaved) {
+			const deletedLegacy =
+				deleteLegacyCloudProviderCredential(settings, provider);
+			const metadata = stored.credentialLength
+				? null
+				: await credentialStore.metadata(provider);
+			if (metadata?.ok && metadata.metadata) {
+				setCueCraftProviderCredentialMetadata(settings, provider, {
+					saved: true,
+					token: metadata.metadata.token,
+					length: metadata.metadata.length,
+				});
+				result.settingsChanged = true;
+			}
+			result.settingsChanged = deletedLegacy || result.settingsChanged;
+			continue;
+		}
+		const metadata = await credentialStore.metadata(provider);
+		if (metadata.ok && metadata.metadata) {
+			markCueCraftCloudCredentialSaved(
+				settings,
+				provider,
+				metadata.metadata.token,
+				metadata.metadata.length
+			);
+			result.settingsChanged = true;
+		}
+	}
+	return result;
 }
 
 export function cueCraftProviderModel(
