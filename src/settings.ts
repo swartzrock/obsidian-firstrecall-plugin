@@ -119,7 +119,10 @@ import {
 	type StudyAreaGenerationPlan,
 } from "./study-area";
 import { formatCueCraftNotice } from "./notice";
-import { cloudCredentialDisplayState } from "./cloud-credential-settings";
+import {
+	SAVED_CLOUD_CREDENTIAL_MASK,
+	cloudCredentialDisplayState,
+} from "./cloud-credential-settings";
 import {
 	AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS,
 	DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
@@ -1844,9 +1847,24 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.setValue(displayState.inputValue)
 					.setDisabled(!displayState.canEdit)
 					.onChange((value) => {
-						pendingKey = value.trim();
+						pendingKey =
+							saved && value === SAVED_CLOUD_CREDENTIAL_MASK
+								? ""
+								: value.trim();
 					});
 				text.inputEl.type = "password";
+				this.plugin.registerDomEvent(text.inputEl, "focus", () => {
+					if (saved && text.inputEl.value === SAVED_CLOUD_CREDENTIAL_MASK) {
+						text.inputEl.value = "";
+						pendingKey = "";
+					}
+				});
+				this.plugin.registerDomEvent(text.inputEl, "blur", () => {
+					if (saved && !text.inputEl.value.trim()) {
+						text.inputEl.value = SAVED_CLOUD_CREDENTIAL_MASK;
+						pendingKey = "";
+					}
+				});
 
 				const eye = text.inputEl.insertAdjacentElement(
 					"afterend",

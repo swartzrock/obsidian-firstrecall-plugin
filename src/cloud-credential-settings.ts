@@ -8,6 +8,8 @@ export interface CloudCredentialDisplayState {
 	canEdit: boolean;
 }
 
+export const SAVED_CLOUD_CREDENTIAL_MASK = "********";
+
 export function cloudCredentialDisplayState(opts: {
 	fieldDescription: string;
 	fieldPlaceholder: string;
@@ -24,7 +26,7 @@ export function cloudCredentialDisplayState(opts: {
 		placeholder: opts.saved
 			? "Saved - enter a new key to replace it"
 			: opts.fieldPlaceholder,
-		inputValue: "",
+		inputValue: opts.saved ? SAVED_CLOUD_CREDENTIAL_MASK : "",
 		saveButtonLabel: opts.saved ? "Replace key" : "Save key",
 		canEdit,
 	};

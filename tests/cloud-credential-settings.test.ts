@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cloudCredentialDisplayState } from "../src/cloud-credential-settings";
+import {
+	SAVED_CLOUD_CREDENTIAL_MASK,
+	cloudCredentialDisplayState,
+} from "../src/cloud-credential-settings";
 
 describe("cloudCredentialDisplayState", () => {
-	it("does not render a saved key into the input value", () => {
+	it("renders a non-secret mask for a saved key", () => {
 		const state = cloudCredentialDisplayState({
 			fieldDescription: "OpenAI API key.",
 			fieldPlaceholder: "sk-...",
@@ -11,7 +14,7 @@ describe("cloudCredentialDisplayState", () => {
 		});
 
 		expect(state).toMatchObject({
-			inputValue: "",
+			inputValue: SAVED_CLOUD_CREDENTIAL_MASK,
 			placeholder: "Saved - enter a new key to replace it",
 			saveButtonLabel: "Replace key",
 			canEdit: true,
