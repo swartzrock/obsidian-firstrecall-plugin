@@ -39,10 +39,6 @@ import {
 	makeCueCraftByokProviderFromStore,
 } from "./byok-cuecraft-adapter";
 import {
-	createObsidianCredentialFileAdapter,
-	loadElectronSafeStorage,
-} from "./electron-safe-storage";
-import {
 	createSecureCredentialStore,
 	type CueCraftCloudCredentialProvider,
 	type SecureCredentialStore,
@@ -145,11 +141,7 @@ export default class CueCraftPlugin extends Plugin {
 
 	async onload(): Promise<void> {
 		this.credentialStore = createSecureCredentialStore({
-			safeStorage: await loadElectronSafeStorage(),
-			file: createObsidianCredentialFileAdapter(
-				this.app.vault.adapter,
-				this.credentialStorePath()
-			),
+			secretStorage: this.app.secretStorage,
 		});
 		await this.loadPluginData();
 
@@ -320,13 +312,6 @@ export default class CueCraftPlugin extends Plugin {
 			"aria-label",
 			"CueCraft: Open active note in Cornell view"
 		);
-	}
-
-	private credentialStorePath(): string {
-		const pluginDir =
-			this.manifest.dir ??
-			`${this.app.vault.configDir}/plugins/${this.manifest.id}`;
-		return `${pluginDir}/credentials.json`;
 	}
 
 	/** Sets the idle status pill based on the active note's cache (ready/stale/setup). */

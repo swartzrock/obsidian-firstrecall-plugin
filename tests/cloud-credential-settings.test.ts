@@ -42,13 +42,13 @@ describe("cloudCredentialDisplayState", () => {
 			saved: false,
 			storageStatus: {
 				ok: false,
-				reason: "basic-text",
-				message: "Electron basic_text is unsafe.",
+				reason: "secret-storage-unavailable",
+				message: "Obsidian secret storage requires Obsidian 1.11.4 or newer.",
 			},
 		});
 
 		expect(state.canEdit).toBe(false);
 		expect(state.description).toContain("Secure storage unavailable");
-		expect(state.description).toContain("Electron basic_text is unsafe.");
+		expect(state.description).toContain("Obsidian secret storage requires");
 	});
 });
