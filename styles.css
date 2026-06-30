@@ -1101,6 +1101,70 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		);
 }
 
+.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"] {
+	border: 1px solid var(--cuecraft-hook-gradient-border);
+	background: linear-gradient(
+		135deg,
+		var(--cuecraft-hook-gradient-start),
+		var(--cuecraft-hook-gradient-end)
+	);
+	box-shadow: 0 8px 22px rgba(20, 24, 32, 0.12);
+}
+
+.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"][data-gradient="0"] {
+	--cuecraft-hook-gradient-start: color-mix(
+		in srgb,
+		var(--color-cyan) 10%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-end: color-mix(
+		in srgb,
+		var(--color-cyan) 22%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-border: color-mix(
+		in srgb,
+		var(--color-cyan) 40%,
+		var(--background-modifier-border)
+	);
+}
+
+.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"][data-gradient="1"] {
+	--cuecraft-hook-gradient-start: color-mix(
+		in srgb,
+		var(--color-yellow) 12%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-end: color-mix(
+		in srgb,
+		var(--color-orange) 18%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-border: color-mix(
+		in srgb,
+		var(--color-orange) 38%,
+		var(--background-modifier-border)
+	);
+}
+
+.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"][data-gradient="2"] {
+	--cuecraft-hook-gradient-start: color-mix(
+		in srgb,
+		var(--color-purple) 10%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-end: color-mix(
+		in srgb,
+		var(--color-purple) 20%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-border: color-mix(
+		in srgb,
+		var(--color-purple) 38%,
+		var(--background-modifier-border)
+	);
+}
+
 .cuecraft-editor-hook-heading {
 	margin-bottom: 0.35em;
 	overflow: hidden;
@@ -1143,6 +1207,12 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	z-index: 1;
 	color: color-mix(in srgb, var(--text-normal) 70%, transparent);
 	font-weight: var(--font-medium);
+}
+
+.cuecraft-editor-hook[data-question-visible="false"] .cuecraft-section-lens {
+	margin-top: 0;
+	padding-top: 0;
+	border-top: 0;
 }
 
 .cuecraft-editor-hook-failed {

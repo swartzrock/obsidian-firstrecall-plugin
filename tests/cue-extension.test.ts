@@ -262,6 +262,39 @@ describe("renderCueElement", () => {
 		});
 	});
 
+	it("hides rail questions and support terms when display settings are off", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 3,
+					heading: "Terms",
+					question: "How do agents differ from chatbots?",
+					keywords: ["agents", "tools"],
+					confidence: "medium",
+					sectionLens: SECTION_LENS,
+					error: null,
+				},
+				"anchored-card-rail",
+				4,
+				"upcoming",
+				{
+					showQuestion: false,
+					showSupportTerms: false,
+					cardStyle: "gradient",
+				}
+			);
+			expect(el.dataset.cardStyle).toBe("gradient");
+			expect(el.dataset.gradient).toBe("1");
+			expect(el.dataset.questionVisible).toBe("false");
+			expect(el.dataset.supportTermsVisible).toBe("false");
+			expect(el.querySelector(".cuecraft-editor-hook-title")).toBeNull();
+			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
+			expect(
+				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+		});
+	});
+
 	it("renders collapsed tab hook DOM", () => {
 		withDocument(() => {
 			const el = renderCueElement(

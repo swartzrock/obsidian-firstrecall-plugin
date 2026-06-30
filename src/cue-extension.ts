@@ -18,9 +18,14 @@ import type { NoteCache } from "./cache";
 import {
 	buildEditorHookCard,
 	type EditorHookCard,
+	type EditorHookCardOptions,
 	type EditorHookCardState,
 } from "./editor-hook-rail";
 import type { EditorCueDisplay } from "./editor-cue-display";
+import {
+	DEFAULT_EDITOR_HOOK_CARD_STYLE,
+	type EditorHookCardStyle,
+} from "./editor-hook-card-style";
 import { isCueEligibleSection, type Section } from "./parser";
 import type { NoteBriefOutput, SectionLens } from "./schemas";
 
@@ -48,6 +53,9 @@ export interface CueEditorRenderState {
 	cues: CueLineData[];
 	display: EditorCueDisplay;
 	noteBrief?: NoteBriefOutput | null;
+	showRailQuestions?: boolean;
+	showRailSupportTerms?: boolean;
+	editorHookCardStyle?: EditorHookCardStyle;
 }
 
 /**
@@ -94,7 +102,8 @@ class CueWidget extends WidgetType {
 	constructor(
 		private readonly cue: CueLineData,
 		private readonly display: EditorCueDisplay,
-		private readonly index: number
+		private readonly index: number,
+		private readonly options: EditorHookCardOptions = {}
 	) {
 		super();
 	}
@@ -103,6 +112,8 @@ class CueWidget extends WidgetType {
 		return (
 			other.display === this.display &&
 			other.index === this.index &&
+			editorHookCardOptionsKey(other.options) ===
+				editorHookCardOptionsKey(this.options) &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
@@ -112,7 +123,13 @@ class CueWidget extends WidgetType {
 	}
 
 	toDOM(): HTMLElement {
-		const element = renderCueElement(this.cue, this.display, this.index);
+		const element = renderCueElement(
+			this.cue,
+			this.display,
+			this.index,
+			"upcoming",
+			this.options
+		);
 		if (this.display !== "inline-cues") {
 			element.classList.add("cuecraft-editor-hook-inline-fallback");
 		}
@@ -143,7 +160,8 @@ class CueGutterMarker extends GutterMarker {
 		private readonly cue: CueLineData,
 		private readonly display: EditorCueDisplay,
 		private readonly index: number,
-		private readonly state: EditorHookCardState = "upcoming"
+		private readonly state: EditorHookCardState = "upcoming",
+		private readonly options: EditorHookCardOptions = {}
 	) {
 		super();
 	}
@@ -154,6 +172,8 @@ class CueGutterMarker extends GutterMarker {
 			other.display === this.display &&
 			other.index === this.index &&
 			other.state === this.state &&
+			editorHookCardOptionsKey(other.options) ===
+				editorHookCardOptionsKey(this.options) &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
@@ -163,7 +183,13 @@ class CueGutterMarker extends GutterMarker {
 	}
 
 	toDOM(): HTMLElement {
-		return renderCueElement(this.cue, this.display, this.index, this.state);
+		return renderCueElement(
+			this.cue,
+			this.display,
+			this.index,
+			this.state,
+			this.options
+		);
 	}
 }
 
@@ -171,10 +197,13 @@ export function renderCueElement(
 	cue: CueLineData,
 	display: EditorCueDisplay,
 	index = 0,
-	state: EditorHookCardState = "upcoming"
+	state: EditorHookCardState = "upcoming",
+	options: EditorHookCardOptions = {}
 ): HTMLElement {
 	if (display !== "inline-cues") {
-		return renderEditorHookElement(buildEditorHookCard(cue, display, index, state));
+		return renderEditorHookElement(
+			buildEditorHookCard(cue, display, index, state, options)
+		);
 	}
 	return renderInlineCueElement(cue);
 }
@@ -223,17 +252,24 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	root.dataset.state = card.state;
 	root.dataset.titleDensity = card.titleDensity;
 	root.dataset.tone = card.tone;
+	root.dataset.gradient = String(card.gradientIndex);
+	root.dataset.cardStyle = card.cardStyle;
+	root.dataset.questionVisible = String(card.showQuestion);
+	root.dataset.supportTermsVisible = String(card.showSupportTerms);
 	if (card.confidence) root.dataset.confidence = card.confidence;
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
-	const title = cueDocument().createElement("div");
-	title.className = "cuecraft-editor-hook-title";
-	title.textContent =
-		(card.display === "active-section-composer" && card.state === "current") ||
-		card.display === "hook-minimap"
-			? card.originalQuestion
-			: card.hookTitle;
-	root.appendChild(title);
+	if (card.showQuestion || card.kind === "failed") {
+		const title = cueDocument().createElement("div");
+		title.className = "cuecraft-editor-hook-title";
+		title.textContent =
+			(card.display === "active-section-composer" &&
+				card.state === "current") ||
+			card.display === "hook-minimap"
+				? card.originalQuestion
+				: card.hookTitle;
+		root.appendChild(title);
+	}
 
 	if (card.error) {
 		root.title = card.error;
@@ -246,7 +282,7 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 
 	appendSectionLens(root, card.sectionLens);
 
-	if (card.keywords.length) {
+	if (card.showSupportTerms && card.keywords.length) {
 		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
 		keywords.textContent = card.keywords.join(" · ");
@@ -409,6 +445,7 @@ export function buildCueGutterMarkers(
 	const doc = state.doc;
 	const activeLine = doc.lineAt(state.selection.main.head).number;
 	const currentCueLine = activeCueLine(payload.display, payload.cues, activeLine);
+	const options = editorHookCardOptionsFromPayload(payload);
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const headingLine = doc.line(cue.line);
@@ -416,10 +453,28 @@ export function buildCueGutterMarkers(
 		builder.add(
 			headingLine.from,
 			headingLine.from,
-			new CueGutterMarker(cue, payload.display, index, cardState)
+			new CueGutterMarker(cue, payload.display, index, cardState, options)
 		);
 	}
 	return builder.finish();
+}
+
+function editorHookCardOptionsFromPayload(
+	payload: CueEditorRenderState
+): EditorHookCardOptions {
+	return {
+		showQuestion: payload.showRailQuestions ?? true,
+		showSupportTerms: payload.showRailSupportTerms ?? true,
+		cardStyle: payload.editorHookCardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
+	};
+}
+
+function editorHookCardOptionsKey(options: EditorHookCardOptions): string {
+	return [
+		options.showQuestion ?? true,
+		options.showSupportTerms ?? true,
+		options.cardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
+	].join("\u0001");
 }
 
 function activeCueLine(
