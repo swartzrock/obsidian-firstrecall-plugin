@@ -1,48 +1,39 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	createSecureCredentialStore,
-	type CredentialFileAdapter,
-	type SafeStorageAdapter,
+	cueCraftCredentialSecretId,
+	type SecretStorageAdapter,
 } from "../src/secure-credential-store";
 
-function memoryFile(initial: string | null = null): CredentialFileAdapter & {
-	get value(): string | null;
-	failRead?: Error;
-	failWrite?: Error;
+function memorySecretStorage(initial: Record<string, string> = {}): SecretStorageAdapter & {
+	readonly secrets: Record<string, string>;
+	failGet?: Error;
+	failSet?: Error;
 } {
-	let value = initial;
+	const secrets = { ...initial };
 	return {
-		get value() {
-			return value;
+		get secrets() {
+			return secrets;
 		},
-		async read() {
-			if (this.failRead) throw this.failRead;
-			return value;
+		getSecret(id) {
+			if (this.failGet) throw this.failGet;
+			return secrets[id] ?? null;
 		},
-		async write(contents) {
-			if (this.failWrite) throw this.failWrite;
-			value = contents;
+		setSecret(id, secret) {
+			if (this.failSet) throw this.failSet;
+			secrets[id] = secret;
 		},
-	};
-}
-
-function fakeSafeStorage(overrides: Partial<SafeStorageAdapter> = {}): SafeStorageAdapter {
-	return {
-		isEncryptionAvailable: () => true,
-		getSelectedStorageBackend: () => "os_crypt",
-		encryptString: (value) => Buffer.from(`encrypted:${value}`, "utf8"),
-		decryptString: (encrypted) =>
-			encrypted.toString("utf8").replace(/^encrypted:/, ""),
-		...overrides,
+		listSecrets() {
+			return Object.keys(secrets);
+		},
 	};
 }
 
 describe("createSecureCredentialStore", () => {
-	it("encrypts saved credentials and decrypts them on read", async () => {
-		const file = memoryFile();
+	it("saves credentials to Obsidian secret storage and reads them back", async () => {
+		const secretStorage = memorySecretStorage();
 		const store = createSecureCredentialStore({
-			safeStorage: fakeSafeStorage(),
-			file,
+			secretStorage,
 			now: () => new Date("2026-06-29T12:00:00.000Z"),
 		});
 
@@ -54,7 +45,9 @@ describe("createSecureCredentialStore", () => {
 			},
 		});
 
-		expect(file.value).not.toContain("sk-openai-test");
+		expect(Object.keys(secretStorage.secrets)).toEqual([
+			"cuecraft-openai-api-key",
+		]);
 		await expect(store.read("openai")).resolves.toMatchObject({
 			ok: true,
 			value: "sk-openai-test",
@@ -65,11 +58,10 @@ describe("createSecureCredentialStore", () => {
 		});
 	});
 
-	it("removes only the cleared provider entry", async () => {
-		const file = memoryFile();
+	it("overwrites only the cleared provider entry with an empty secret", async () => {
+		const secretStorage = memorySecretStorage();
 		const store = createSecureCredentialStore({
-			safeStorage: fakeSafeStorage(),
-			file,
+			secretStorage,
 			now: () => new Date("2026-06-29T12:00:00.000Z"),
 		});
 
@@ -90,86 +82,52 @@ describe("createSecureCredentialStore", () => {
 		});
 	});
 
-	it("refuses to write when safeStorage is unavailable", async () => {
+	it("refuses to write when Obsidian secret storage is unavailable", async () => {
 		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-		const file = memoryFile();
-		const store = createSecureCredentialStore({
-			safeStorage: fakeSafeStorage({
-				isEncryptionAvailable: () => false,
-			}),
-			file,
-		});
+		const store = createSecureCredentialStore({ secretStorage: null });
 
 		await expect(store.save("openai", "sk-openai-test")).resolves.toMatchObject({
 			ok: false,
-			reason: "safe-storage-unavailable",
+			reason: "secret-storage-unavailable",
 		});
-		expect(file.value).toBeNull();
 		expect(warn).toHaveBeenCalledWith(
 			"CueCraft secure storage unavailable.",
 			expect.objectContaining({
-				reason: "safe-storage-unavailable",
-				hasSafeStorage: true,
-				isEncryptionAvailable: false,
-				selectedStorageBackend: "os_crypt",
+				reason: "secret-storage-unavailable",
+				hasSecretStorage: false,
+				hasGetSecret: false,
+				hasSetSecret: false,
 			})
 		);
 		warn.mockRestore();
 	});
 
-	it("refuses Electron basic_text backend", async () => {
-		const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-		const file = memoryFile();
+	it("fails closed for corrupt secret values", async () => {
 		const store = createSecureCredentialStore({
-			safeStorage: fakeSafeStorage({
-				getSelectedStorageBackend: () => "basic_text",
+			secretStorage: memorySecretStorage({
+				[cueCraftCredentialSecretId("openai")]: "{ nope",
 			}),
-			file,
-		});
-
-		await expect(store.save("openai", "sk-openai-test")).resolves.toMatchObject({
-			ok: false,
-			reason: "basic-text",
-		});
-		expect(file.value).toBeNull();
-		expect(warn).toHaveBeenCalledWith(
-			"CueCraft secure storage unavailable.",
-			expect.objectContaining({
-				reason: "basic-text",
-				hasSafeStorage: true,
-				isEncryptionAvailable: true,
-				selectedStorageBackend: "basic_text",
-			})
-		);
-		warn.mockRestore();
-	});
-
-	it("fails closed for corrupt credential files", async () => {
-		const store = createSecureCredentialStore({
-			safeStorage: fakeSafeStorage(),
-			file: memoryFile("{ nope"),
 		});
 
 		await expect(store.read("openai")).resolves.toMatchObject({
 			ok: false,
-			reason: "invalid-file",
+			reason: "invalid-secret",
 		});
 	});
 
-	it("preserves an existing file value when a write fails", async () => {
-		const file = memoryFile();
-		const store = createSecureCredentialStore({
-			safeStorage: fakeSafeStorage(),
-			file,
-		});
+	it("preserves an existing secret value when a write fails", async () => {
+		const secretStorage = memorySecretStorage();
+		const store = createSecureCredentialStore({ secretStorage });
 		await store.save("openai", "old-key");
-		const before = file.value;
-		file.failWrite = new Error("disk full");
+		const before = secretStorage.secrets[cueCraftCredentialSecretId("openai")];
+		secretStorage.failSet = new Error("secret service unavailable");
 
 		await expect(store.save("openai", "new-key")).resolves.toMatchObject({
 			ok: false,
 			reason: "write-failed",
 		});
-		expect(file.value).toBe(before);
+		expect(secretStorage.secrets[cueCraftCredentialSecretId("openai")]).toBe(
+			before
+		);
 	});
 });

@@ -5,31 +5,18 @@ export type CueCraftCloudCredentialProvider = Extract<
 	"anthropic" | "openai" | "google" | "xai" | "openrouter"
 >;
 
-export interface SafeStorageAdapter {
-	isEncryptionAvailable(): boolean;
-	getSelectedStorageBackend?(): string;
-	encryptString(value: string): Buffer;
-	decryptString(encrypted: Buffer): string;
-	isAsyncEncryptionAvailable?(): boolean;
-	encryptStringAsync?(value: string): Promise<Buffer>;
-	decryptStringAsync?(
-		encrypted: Buffer
-	): Promise<string | { plaintext: string; shouldReEncrypt?: boolean }>;
-}
-
-export interface CredentialFileAdapter {
-	read(): Promise<string | null>;
-	write(contents: string): Promise<void>;
+export interface SecretStorageAdapter {
+	setSecret(id: string, secret: string): void;
+	getSecret(id: string): string | null;
+	listSecrets?(): string[];
 }
 
 export type CredentialStoreUnavailableReason =
-	| "safe-storage-unavailable"
-	| "basic-text"
+	| "secret-storage-unavailable"
 	| "missing-credential"
-	| "invalid-file"
+	| "invalid-secret"
 	| "read-failed"
-	| "write-failed"
-	| "decrypt-failed";
+	| "write-failed";
 
 export interface CredentialStoreAvailability {
 	ok: boolean;
@@ -74,23 +61,20 @@ export interface SecureCredentialStore {
 	): Promise<CredentialStoreWriteResult>;
 }
 
-interface CredentialFileEntry {
-	ciphertext: string;
+interface StoredCredentialPayload {
+	version: 1;
+	value: string;
 	updatedAt: string;
 }
 
-interface CredentialFileContents {
-	version: 1;
-	providers: Partial<Record<CueCraftCloudCredentialProvider, CredentialFileEntry>>;
-}
+type StoredCredentialPayloadResult =
+	| { ok: true; payload: StoredCredentialPayload }
+	| CredentialStoreReadResult;
+
+export const CUECRAFT_SECRET_STORAGE_MIN_APP_VERSION = "1.11.4";
 
 export const CUECRAFT_CLOUD_CREDENTIAL_PROVIDERS: readonly CueCraftCloudCredentialProvider[] =
 	["anthropic", "openai", "google", "xai", "openrouter"] as const;
-
-const EMPTY_CREDENTIAL_FILE: CredentialFileContents = {
-	version: 1,
-	providers: {},
-};
 
 export function isCueCraftCloudCredentialProvider(
 	provider: ByokProviderId
@@ -100,185 +84,119 @@ export function isCueCraftCloudCredentialProvider(
 	);
 }
 
+export function cueCraftCredentialSecretId(
+	provider: CueCraftCloudCredentialProvider
+): string {
+	return `cuecraft-${provider}-api-key`;
+}
+
 export function createSecureCredentialStore(opts: {
-	safeStorage: SafeStorageAdapter | null;
-	file: CredentialFileAdapter;
+	secretStorage: SecretStorageAdapter | null | undefined;
 	now?: () => Date;
 }): SecureCredentialStore {
 	const now = opts.now ?? (() => new Date());
 	let reportedUnavailable = false;
 
 	function availability(): CredentialStoreAvailability {
-		const safeStorage = opts.safeStorage;
-		if (!safeStorage?.isEncryptionAvailable()) {
-			reportUnavailableOnce("safe-storage-unavailable", safeStorage);
+		if (!isUsableSecretStorage(opts.secretStorage)) {
+			reportUnavailableOnce("secret-storage-unavailable");
 			return {
 				ok: false,
-				reason: "safe-storage-unavailable",
-				message: "Secure credential storage is unavailable.",
-			};
-		}
-		if (safeStorage.getSelectedStorageBackend?.() === "basic_text") {
-			reportUnavailableOnce("basic-text", safeStorage);
-			return {
-				ok: false,
-				reason: "basic-text",
-				message: "Secure credential storage is using Electron basic_text.",
+				reason: "secret-storage-unavailable",
+				message: `Obsidian secret storage is unavailable. Update Obsidian to ${CUECRAFT_SECRET_STORAGE_MIN_APP_VERSION} or newer.`,
 			};
 		}
 		return { ok: true };
 	}
 
-	function reportUnavailableOnce(
-		reason: CredentialStoreUnavailableReason,
-		safeStorage: SafeStorageAdapter | null
-	): void {
+	function reportUnavailableOnce(reason: CredentialStoreUnavailableReason): void {
 		if (reportedUnavailable) return;
 		reportedUnavailable = true;
+		const secretStorage = opts.secretStorage;
 		console.warn("CueCraft secure storage unavailable.", {
 			reason,
-			hasSafeStorage: Boolean(safeStorage),
-			isEncryptionAvailable:
-				safeStorage?.isEncryptionAvailable?.() ?? null,
-			isAsyncEncryptionAvailable:
-				safeStorage?.isAsyncEncryptionAvailable?.() ?? null,
-			selectedStorageBackend:
-				safeStorage?.getSelectedStorageBackend?.() ?? null,
-			hasEncryptString: typeof safeStorage?.encryptString === "function",
-			hasDecryptString: typeof safeStorage?.decryptString === "function",
-			hasEncryptStringAsync:
-				typeof safeStorage?.encryptStringAsync === "function",
-			hasDecryptStringAsync:
-				typeof safeStorage?.decryptStringAsync === "function",
+			hasSecretStorage: Boolean(secretStorage),
+			hasGetSecret: typeof secretStorage?.getSecret === "function",
+			hasSetSecret: typeof secretStorage?.setSecret === "function",
+			hasListSecrets: typeof secretStorage?.listSecrets === "function",
+			minimumObsidianVersion: CUECRAFT_SECRET_STORAGE_MIN_APP_VERSION,
 		});
 	}
 
-	async function readFile(): Promise<CredentialFileContents | CredentialStoreReadResult> {
+	function readPayload(
+		provider: CueCraftCloudCredentialProvider
+	): StoredCredentialPayloadResult {
+		const available = availability();
+		if (!available.ok) return available;
+		const secretStorage = opts.secretStorage;
+		if (!isUsableSecretStorage(secretStorage)) return availability();
 		let raw: string | null;
 		try {
-			raw = await opts.file.read();
+			raw = secretStorage.getSecret(cueCraftCredentialSecretId(provider));
 		} catch (error) {
 			return failure("read-failed", error);
 		}
-		if (!raw) return { ...EMPTY_CREDENTIAL_FILE, providers: {} };
-		try {
-			const parsed = JSON.parse(raw) as Partial<CredentialFileContents>;
-			if (parsed.version !== 1 || !parsed.providers || typeof parsed.providers !== "object") {
-				return {
-					ok: false,
-					reason: "invalid-file",
-					message: "CueCraft credentials file has an unsupported format.",
-				};
-			}
-			return {
-				version: 1,
-				providers: { ...parsed.providers },
-			};
-		} catch (error) {
-			return failure("invalid-file", error);
-		}
-	}
-
-	async function writeFile(contents: CredentialFileContents): Promise<CredentialStoreWriteResult | null> {
-		try {
-			await opts.file.write(JSON.stringify(contents, null, 2));
-			return null;
-		} catch (error) {
-			return failure("write-failed", error);
-		}
-	}
-
-	async function encrypt(value: string): Promise<Buffer> {
-		const safeStorage = opts.safeStorage;
-		if (!safeStorage) throw new Error("safeStorage is unavailable.");
-		if (
-			safeStorage.isAsyncEncryptionAvailable?.() &&
-			safeStorage.encryptStringAsync
-		) {
-			return safeStorage.encryptStringAsync(value);
-		}
-		return safeStorage.encryptString(value);
-	}
-
-	async function decrypt(encrypted: Buffer): Promise<{
-		value: string;
-		shouldReEncrypt: boolean;
-	}> {
-		const safeStorage = opts.safeStorage;
-		if (!safeStorage) throw new Error("safeStorage is unavailable.");
-		if (
-			safeStorage.isAsyncEncryptionAvailable?.() &&
-			safeStorage.decryptStringAsync
-		) {
-			const result = await safeStorage.decryptStringAsync(encrypted);
-			return typeof result === "string"
-				? { value: result, shouldReEncrypt: false }
-				: {
-					value: result.plaintext,
-					shouldReEncrypt: Boolean(result.shouldReEncrypt),
-				};
-		}
-		return {
-			value: safeStorage.decryptString(encrypted),
-			shouldReEncrypt: false,
-		};
-	}
-
-	async function metadata(
-		provider: CueCraftCloudCredentialProvider
-	): Promise<CredentialStoreReadResult> {
-		const available = availability();
-		if (!available.ok) return available;
-		const file = await readFile();
-		if (isCredentialFailure(file)) return file;
-		const entry = file.providers[provider];
-		if (!entry) {
+		if (!raw) {
 			return {
 				ok: false,
 				reason: "missing-credential",
 				message: "No saved credential.",
 			};
 		}
+		try {
+			const parsed = JSON.parse(raw) as Partial<StoredCredentialPayload>;
+			if (
+				parsed.version !== 1 ||
+				typeof parsed.value !== "string" ||
+				typeof parsed.updatedAt !== "string"
+			) {
+				return {
+					ok: false,
+					reason: "invalid-secret",
+					message: "CueCraft credential has an unsupported format.",
+				};
+			}
+			if (!parsed.value) {
+				return {
+					ok: false,
+					reason: "missing-credential",
+					message: "No saved credential.",
+				};
+			}
+			return {
+				ok: true,
+				payload: {
+					version: 1,
+					value: parsed.value,
+					updatedAt: parsed.updatedAt,
+				},
+			};
+		} catch (error) {
+			return failure("invalid-secret", error);
+		}
+	}
+
+	async function metadata(
+		provider: CueCraftCloudCredentialProvider
+	): Promise<CredentialStoreReadResult> {
+		const result = readPayload(provider);
+		if (!("payload" in result)) return result;
 		return {
 			ok: true,
-			metadata: { saved: true, token: entry.updatedAt },
+			metadata: { saved: true, token: result.payload.updatedAt },
 		};
 	}
 
 	async function read(
 		provider: CueCraftCloudCredentialProvider
 	): Promise<CredentialStoreReadResult> {
-		const available = availability();
-		if (!available.ok) return available;
-		const file = await readFile();
-		if (isCredentialFailure(file)) return file;
-		const entry = file.providers[provider];
-		if (!entry) {
-			return {
-				ok: false,
-				reason: "missing-credential",
-				message: "No saved credential.",
-			};
-		}
-		try {
-			const encrypted = Buffer.from(entry.ciphertext, "base64");
-			const result = await decrypt(encrypted);
-			if (result.shouldReEncrypt) {
-				const reencrypted = await encrypt(result.value);
-				file.providers[provider] = {
-					ciphertext: reencrypted.toString("base64"),
-					updatedAt: entry.updatedAt,
-				};
-				await writeFile(file);
-			}
-			return {
-				ok: true,
-				value: result.value,
-				metadata: { saved: true, token: entry.updatedAt },
-			};
-		} catch (error) {
-			return failure("decrypt-failed", error);
-		}
+		const result = readPayload(provider);
+		if (!("payload" in result)) return result;
+		return {
+			ok: true,
+			value: result.payload.value,
+			metadata: { saved: true, token: result.payload.updatedAt },
+		};
 	}
 
 	async function save(
@@ -287,17 +205,18 @@ export function createSecureCredentialStore(opts: {
 	): Promise<CredentialStoreWriteResult> {
 		const available = availability();
 		if (!available.ok) return available;
-		const file = await readFile();
-		if (isCredentialFailure(file)) return file;
+		const secretStorage = opts.secretStorage;
+		if (!isUsableSecretStorage(secretStorage)) return availability();
+		const token = now().toISOString();
 		try {
-			const token = now().toISOString();
-			const encrypted = await encrypt(value);
-			file.providers[provider] = {
-				ciphertext: encrypted.toString("base64"),
-				updatedAt: token,
-			};
-			const writeFailure = await writeFile(file);
-			if (writeFailure) return writeFailure;
+			secretStorage.setSecret(
+				cueCraftCredentialSecretId(provider),
+				JSON.stringify({
+					version: 1,
+					value,
+					updatedAt: token,
+				} satisfies StoredCredentialPayload)
+			);
 			return {
 				ok: true,
 				metadata: { saved: true, token },
@@ -312,15 +231,33 @@ export function createSecureCredentialStore(opts: {
 	): Promise<CredentialStoreWriteResult> {
 		const available = availability();
 		if (!available.ok) return available;
-		const file = await readFile();
-		if (isCredentialFailure(file)) return file;
-		delete file.providers[provider];
-		const writeFailure = await writeFile(file);
-		if (writeFailure) return writeFailure;
-		return { ok: true, metadata: { saved: false, token: "" } };
+		const secretStorage = opts.secretStorage;
+		if (!isUsableSecretStorage(secretStorage)) return availability();
+		try {
+			secretStorage.setSecret(
+				cueCraftCredentialSecretId(provider),
+				JSON.stringify({
+					version: 1,
+					value: "",
+					updatedAt: now().toISOString(),
+				} satisfies StoredCredentialPayload)
+			);
+			return { ok: true, metadata: { saved: false, token: "" } };
+		} catch (error) {
+			return failure("write-failed", error);
+		}
 	}
 
 	return { availability, metadata, read, save, clear };
+}
+
+function isUsableSecretStorage(
+	secretStorage: SecretStorageAdapter | null | undefined
+): secretStorage is SecretStorageAdapter {
+	return (
+		typeof secretStorage?.getSecret === "function" &&
+		typeof secretStorage.setSecret === "function"
+	);
 }
 
 function failure(
@@ -329,10 +266,4 @@ function failure(
 ): CredentialStoreReadResult & CredentialStoreWriteResult {
 	const message = error instanceof Error ? error.message : String(error);
 	return { ok: false, reason, message };
-}
-
-function isCredentialFailure(
-	value: CredentialFileContents | CredentialStoreReadResult
-): value is CredentialStoreReadResult {
-	return "ok" in value && !value.ok;
 }
