@@ -42,6 +42,7 @@ describe("createSecureCredentialStore", () => {
 			metadata: {
 				saved: true,
 				token: "2026-06-29T12:00:00.000Z",
+				length: 14,
 			},
 		});
 
@@ -54,6 +55,7 @@ describe("createSecureCredentialStore", () => {
 			metadata: {
 				saved: true,
 				token: "2026-06-29T12:00:00.000Z",
+				length: 14,
 			},
 		});
 	});
@@ -69,7 +71,7 @@ describe("createSecureCredentialStore", () => {
 		await store.save("openrouter", "sk-or-test");
 		await expect(store.clear("openai")).resolves.toEqual({
 			ok: true,
-			metadata: { saved: false, token: "" },
+			metadata: { saved: false, token: "", length: 0 },
 		});
 
 		await expect(store.read("openai")).resolves.toMatchObject({

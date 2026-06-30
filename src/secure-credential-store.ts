@@ -27,6 +27,7 @@ export interface CredentialStoreAvailability {
 export interface StoredCredentialMetadata {
 	saved: boolean;
 	token: string;
+	length: number;
 }
 
 export interface CredentialStoreReadResult {
@@ -183,7 +184,11 @@ export function createSecureCredentialStore(opts: {
 		if (!("payload" in result)) return result;
 		return {
 			ok: true,
-			metadata: { saved: true, token: result.payload.updatedAt },
+			metadata: {
+				saved: true,
+				token: result.payload.updatedAt,
+				length: result.payload.value.length,
+			},
 		};
 	}
 
@@ -195,7 +200,11 @@ export function createSecureCredentialStore(opts: {
 		return {
 			ok: true,
 			value: result.payload.value,
-			metadata: { saved: true, token: result.payload.updatedAt },
+			metadata: {
+				saved: true,
+				token: result.payload.updatedAt,
+				length: result.payload.value.length,
+			},
 		};
 	}
 
@@ -219,7 +228,7 @@ export function createSecureCredentialStore(opts: {
 			);
 			return {
 				ok: true,
-				metadata: { saved: true, token },
+				metadata: { saved: true, token, length: value.length },
 			};
 		} catch (error) {
 			return failure("write-failed", error);
@@ -242,7 +251,7 @@ export function createSecureCredentialStore(opts: {
 					updatedAt: now().toISOString(),
 				} satisfies StoredCredentialPayload)
 			);
-			return { ok: true, metadata: { saved: false, token: "" } };
+			return { ok: true, metadata: { saved: false, token: "", length: 0 } };
 		} catch (error) {
 			return failure("write-failed", error);
 		}

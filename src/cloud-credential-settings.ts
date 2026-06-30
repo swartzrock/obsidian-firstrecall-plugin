@@ -10,10 +10,16 @@ export interface CloudCredentialDisplayState {
 
 export const SAVED_CLOUD_CREDENTIAL_MASK = "********";
 
+export function cloudCredentialMask(length: number): string {
+	const safeLength = Number.isFinite(length) && length > 0 ? Math.floor(length) : 8;
+	return "*".repeat(safeLength);
+}
+
 export function cloudCredentialDisplayState(opts: {
 	fieldDescription: string;
 	fieldPlaceholder: string;
 	saved: boolean;
+	credentialLength: number;
 	storageStatus: CredentialStoreAvailability;
 }): CloudCredentialDisplayState {
 	const canEdit = opts.storageStatus.ok;
@@ -26,7 +32,9 @@ export function cloudCredentialDisplayState(opts: {
 		placeholder: opts.saved
 			? "Saved - enter a new key to replace it"
 			: opts.fieldPlaceholder,
-		inputValue: opts.saved ? SAVED_CLOUD_CREDENTIAL_MASK : "",
+		inputValue: opts.saved
+			? cloudCredentialMask(opts.credentialLength)
+			: "",
 		saveButtonLabel: opts.saved ? "Replace key" : "Save key",
 		canEdit,
 	};

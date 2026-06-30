@@ -89,10 +89,10 @@ function fakeCredentialStore(opts: {
 	save?: (
 		provider: CueCraftCloudCredentialProvider,
 		value: string
-	) => Promise<{ ok: boolean; token?: string; message?: string }>;
+	) => Promise<{ ok: boolean; token?: string; length?: number; message?: string }>;
 	metadata?: (
 		provider: CueCraftCloudCredentialProvider
-	) => Promise<{ ok: boolean; token?: string }>;
+	) => Promise<{ ok: boolean; token?: string; length?: number }>;
 } = {}): SecureCredentialStore {
 	return {
 		availability: () => ({ ok: true }),
@@ -101,7 +101,11 @@ function fakeCredentialStore(opts: {
 			return result?.ok
 				? {
 					ok: true,
-					metadata: { saved: true, token: result.token ?? "token" },
+					metadata: {
+						saved: true,
+						token: result.token ?? "token",
+						length: result.length ?? 14,
+					},
 				}
 				: { ok: false, reason: "missing-credential" };
 		},
@@ -111,7 +115,11 @@ function fakeCredentialStore(opts: {
 			return result?.ok
 				? {
 					ok: true,
-					metadata: { saved: true, token: result.token ?? "token" },
+					metadata: {
+						saved: true,
+						token: result.token ?? "token",
+						length: result.length ?? value.length,
+					},
 				}
 				: {
 					ok: false,
@@ -119,7 +127,10 @@ function fakeCredentialStore(opts: {
 					message: result?.message ?? "write failed",
 				};
 		},
-		clear: async () => ({ ok: true, metadata: { saved: false, token: "" } }),
+		clear: async () => ({
+			ok: true,
+			metadata: { saved: false, token: "", length: 0 },
+		}),
 	};
 }
 
@@ -287,6 +298,7 @@ describe("CueCraft provider settings normalization", () => {
 						credential: "",
 						credentialSaved: true,
 						credentialUpdatedAt: "token-1",
+						credentialLength: 14,
 						model: "gpt-4o-mini",
 						availableModels: [],
 						modelOptions: [],
@@ -303,21 +315,25 @@ describe("CueCraft provider settings normalization", () => {
 			credential: "",
 			credentialSaved: true,
 			credentialUpdatedAt: "token-1",
+			credentialLength: 14,
 		});
 
 		setCueCraftProviderCredentialMetadata(s, "openai", {
 			saved: true,
 			token: "token-2",
+			length: 28,
 		});
 		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
 			credentialSaved: true,
 			credentialUpdatedAt: "token-2",
+			credentialLength: 28,
 		});
 
 		clearCueCraftProviderCredentialMetadata(s, "openai");
 		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
 			credentialSaved: false,
 			credentialUpdatedAt: "",
+			credentialLength: 0,
 		});
 	});
 });
@@ -486,6 +502,7 @@ describe("CueCraft BYOK settings migration", () => {
 			credential: "",
 			credentialSaved: true,
 			credentialUpdatedAt: "openai-token",
+			credentialLength: 14,
 			model: "gpt-4o-mini",
 		});
 		expect((s as unknown as { openaiApiKey?: string }).openaiApiKey).toBeUndefined();
@@ -524,6 +541,7 @@ describe("CueCraft BYOK settings migration", () => {
 			credential: "sk-openai-test",
 			credentialSaved: false,
 			credentialUpdatedAt: "",
+			credentialLength: 0,
 		});
 		expect((s as unknown as { openaiApiKey?: string }).openaiApiKey).toBe(
 			"sk-openai-test"
@@ -542,7 +560,7 @@ describe("CueCraft BYOK settings migration", () => {
 			fakeCredentialStore({
 				metadata: async (provider) =>
 					provider === "openai"
-						? { ok: true, token: "openai-token" }
+						? { ok: true, token: "openai-token", length: 14 }
 						: { ok: false },
 			})
 		);
@@ -552,6 +570,47 @@ describe("CueCraft BYOK settings migration", () => {
 			credential: "",
 			credentialSaved: true,
 			credentialUpdatedAt: "openai-token",
+			credentialLength: 14,
+		});
+	});
+
+	it("hydrates missing saved credential length metadata from secure storage", async () => {
+		const s = settings({
+			byok: {
+				selectedProvider: "openai",
+				providers: {
+					openai: {
+						credential: "",
+						credentialSaved: true,
+						credentialUpdatedAt: "old-token",
+						credentialLength: 0,
+						model: "gpt-4o-mini",
+						availableModels: [],
+						modelOptions: [],
+						hasFetchedModels: false,
+						modelRefreshMessage: "",
+					},
+				},
+				verification: {},
+			},
+		});
+		normalizeCueCraftProviderSettings(s, settings(), s);
+
+		const result = await migrateCueCraftCloudCredentials(
+			s,
+			fakeCredentialStore({
+				metadata: async (provider) =>
+					provider === "openai"
+						? { ok: true, token: "openai-token", length: 42 }
+						: { ok: false },
+			})
+		);
+
+		expect(result.settingsChanged).toBe(true);
+		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+			credentialSaved: true,
+			credentialUpdatedAt: "openai-token",
+			credentialLength: 42,
 		});
 	});
 });

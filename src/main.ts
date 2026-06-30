@@ -460,7 +460,8 @@ export default class CueCraftPlugin extends Plugin {
 		markCueCraftCloudCredentialSaved(
 			this.settings,
 			provider,
-			result.metadata.token
+			result.metadata.token,
+			result.metadata.length
 		);
 		return { ok: true };
 	}

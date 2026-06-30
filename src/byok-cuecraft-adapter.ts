@@ -164,6 +164,7 @@ function emptyStoredProviderSettings(): ByokProviderStoredSettings {
 		credential: "",
 		credentialSaved: false,
 		credentialUpdatedAt: "",
+		credentialLength: 0,
 		model: "",
 		modelSelection: "",
 		availableModels: [],
@@ -352,6 +353,15 @@ function normalizeStoredProviderSettings(
 	if (typeof stored.credentialUpdatedAt !== "string") {
 		stored.credentialUpdatedAt = "";
 	}
+	if (
+		typeof stored.credentialLength !== "number" ||
+		!Number.isFinite(stored.credentialLength) ||
+		stored.credentialLength < 0
+	) {
+		stored.credentialLength = 0;
+	} else {
+		stored.credentialLength = Math.floor(stored.credentialLength);
+	}
 	if (typeof stored.model !== "string") stored.model = "";
 	if (typeof stored.modelSelection !== "string") stored.modelSelection = "";
 	if (!Array.isArray(stored.availableModels)) stored.availableModels = [];
@@ -457,6 +467,15 @@ export function cueCraftProviderSettings(
 	if (typeof stored.credentialUpdatedAt !== "string") {
 		stored.credentialUpdatedAt = "";
 	}
+	if (
+		typeof stored.credentialLength !== "number" ||
+		!Number.isFinite(stored.credentialLength) ||
+		stored.credentialLength < 0
+	) {
+		stored.credentialLength = 0;
+	} else {
+		stored.credentialLength = Math.floor(stored.credentialLength);
+	}
 	if (typeof stored.model !== "string") stored.model = "";
 	if (typeof stored.hasFetchedModels !== "boolean") {
 		stored.hasFetchedModels = false;
@@ -479,11 +498,12 @@ export function setCueCraftProviderCredential(
 export function setCueCraftProviderCredentialMetadata(
 	settings: CueCraftSettings,
 	provider: ByokProviderId,
-	metadata: { saved: boolean; token: string }
+	metadata: { saved: boolean; token: string; length: number }
 ): void {
 	const stored = cueCraftProviderSettings(settings, provider);
 	stored.credentialSaved = metadata.saved;
 	stored.credentialUpdatedAt = metadata.token;
+	stored.credentialLength = metadata.length;
 }
 
 export function clearCueCraftProviderCredentialMetadata(
@@ -493,6 +513,7 @@ export function clearCueCraftProviderCredentialMetadata(
 	setCueCraftProviderCredentialMetadata(settings, provider, {
 		saved: false,
 		token: "",
+		length: 0,
 	});
 }
 
@@ -508,12 +529,14 @@ export function clearCueCraftStoredCloudCredential(
 export function markCueCraftCloudCredentialSaved(
 	settings: CueCraftSettings,
 	provider: CueCraftCloudCredentialProvider,
-	token: string
+	token: string,
+	length: number
 ): void {
 	cueCraftProviderSettings(settings, provider).credential = "";
 	setCueCraftProviderCredentialMetadata(settings, provider, {
 		saved: true,
 		token,
+		length,
 	});
 	deleteLegacyCloudProviderCredential(settings, provider);
 }
@@ -652,6 +675,19 @@ export function cueCraftProviderCredentialSaved(
 		: stored.credential.trim().length > 0;
 }
 
+export function cueCraftProviderCredentialLength(
+	settings: CueCraftSettings,
+	provider: ByokProviderId = cueCraftSelectedProvider(settings)
+): number {
+	const stored = cueCraftProviderSettings(settings, provider);
+	if (isCueCraftCloudCredentialProvider(provider)) {
+		return stored.credentialSaved
+			? stored.credentialLength ?? 0
+			: stored.credential.trim().length;
+	}
+	return stored.credential.trim().length;
+}
+
 export async function migrateCueCraftCloudCredentials(
 	settings: CueCraftSettings,
 	credentialStore: SecureCredentialStore
@@ -676,16 +712,28 @@ export async function migrateCueCraftCloudCredentials(
 			markCueCraftCloudCredentialSaved(
 				settings,
 				provider,
-				saved.metadata.token
+				saved.metadata.token,
+				saved.metadata.length
 			);
 			result.settingsChanged = true;
 			result.migratedProviders.push(provider);
 			continue;
 		}
 		if (stored.credentialSaved) {
-			result.settingsChanged =
-				deleteLegacyCloudProviderCredential(settings, provider) ||
-				result.settingsChanged;
+			const deletedLegacy =
+				deleteLegacyCloudProviderCredential(settings, provider);
+			const metadata = stored.credentialLength
+				? null
+				: await credentialStore.metadata(provider);
+			if (metadata?.ok && metadata.metadata) {
+				setCueCraftProviderCredentialMetadata(settings, provider, {
+					saved: true,
+					token: metadata.metadata.token,
+					length: metadata.metadata.length,
+				});
+				result.settingsChanged = true;
+			}
+			result.settingsChanged = deletedLegacy || result.settingsChanged;
 			continue;
 		}
 		const metadata = await credentialStore.metadata(provider);
@@ -693,7 +741,8 @@ export async function migrateCueCraftCloudCredentials(
 			markCueCraftCloudCredentialSaved(
 				settings,
 				provider,
-				metadata.metadata.token
+				metadata.metadata.token,
+				metadata.metadata.length
 			);
 			result.settingsChanged = true;
 		}

@@ -88,6 +88,7 @@ import {
 	cueCraftFetchedModelCount,
 	cueCraftModelRefreshMessage,
 	cueCraftProviderCredential,
+	cueCraftProviderCredentialLength,
 	cueCraftProviderLabel,
 	cueCraftProviderModel,
 	cueCraftProviderSettings,
@@ -121,6 +122,7 @@ import {
 import { formatCueCraftNotice } from "./notice";
 import {
 	SAVED_CLOUD_CREDENTIAL_MASK,
+	cloudCredentialMask,
 	cloudCredentialDisplayState,
 } from "./cloud-credential-settings";
 import {
@@ -1834,8 +1836,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			fieldDescription: opts.field.description,
 			fieldPlaceholder: opts.field.placeholder,
 			saved,
+			credentialLength: cueCraftProviderCredentialLength(
+				this.plugin.settings,
+				opts.provider
+			),
 			storageStatus,
 		});
+		const savedMask = saved
+			? cloudCredentialMask(
+				cueCraftProviderCredentialLength(this.plugin.settings, opts.provider)
+			)
+			: SAVED_CLOUD_CREDENTIAL_MASK;
 		let pendingKey = "";
 		const setting = new Setting(containerEl)
 			.setName(opts.field.label)
@@ -1848,20 +1859,20 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.setDisabled(!displayState.canEdit)
 					.onChange((value) => {
 						pendingKey =
-							saved && value === SAVED_CLOUD_CREDENTIAL_MASK
+							saved && value === savedMask
 								? ""
 								: value.trim();
 					});
 				text.inputEl.type = "password";
 				this.plugin.registerDomEvent(text.inputEl, "focus", () => {
-					if (saved && text.inputEl.value === SAVED_CLOUD_CREDENTIAL_MASK) {
+					if (saved && text.inputEl.value === savedMask) {
 						text.inputEl.value = "";
 						pendingKey = "";
 					}
 				});
 				this.plugin.registerDomEvent(text.inputEl, "blur", () => {
 					if (saved && !text.inputEl.value.trim()) {
-						text.inputEl.value = SAVED_CLOUD_CREDENTIAL_MASK;
+						text.inputEl.value = savedMask;
 						pendingKey = "";
 					}
 				});

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
 	SAVED_CLOUD_CREDENTIAL_MASK,
+	cloudCredentialMask,
 	cloudCredentialDisplayState,
 } from "../src/cloud-credential-settings";
 
@@ -10,11 +11,12 @@ describe("cloudCredentialDisplayState", () => {
 			fieldDescription: "OpenAI API key.",
 			fieldPlaceholder: "sk-...",
 			saved: true,
+			credentialLength: 14,
 			storageStatus: { ok: true },
 		});
 
 		expect(state).toMatchObject({
-			inputValue: SAVED_CLOUD_CREDENTIAL_MASK,
+			inputValue: cloudCredentialMask(14),
 			placeholder: "Saved - enter a new key to replace it",
 			saveButtonLabel: "Replace key",
 			canEdit: true,
@@ -28,6 +30,7 @@ describe("cloudCredentialDisplayState", () => {
 				fieldDescription: "OpenAI API key.",
 				fieldPlaceholder: "sk-...",
 				saved: false,
+				credentialLength: 0,
 				storageStatus: { ok: true },
 			})
 		).toMatchObject({
@@ -43,6 +46,7 @@ describe("cloudCredentialDisplayState", () => {
 			fieldDescription: "OpenAI API key.",
 			fieldPlaceholder: "sk-...",
 			saved: false,
+			credentialLength: 0,
 			storageStatus: {
 				ok: false,
 				reason: "secret-storage-unavailable",
@@ -53,5 +57,9 @@ describe("cloudCredentialDisplayState", () => {
 		expect(state.canEdit).toBe(false);
 		expect(state.description).toContain("Secure storage unavailable");
 		expect(state.description).toContain("Obsidian secret storage requires");
+	});
+
+	it("falls back to the standard mask when saved length is unknown", () => {
+		expect(cloudCredentialMask(0)).toBe(SAVED_CLOUD_CREDENTIAL_MASK);
 	});
 });
