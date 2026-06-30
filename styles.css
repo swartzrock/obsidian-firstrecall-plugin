@@ -265,6 +265,7 @@
 	align-items: stretch;
 	flex-direction: column;
 	gap: 8px;
+	justify-content: flex-start;
 }
 
 .cuecraft-active-provider-fields .cuecraft-api-key-setting .setting-item-info,
@@ -273,6 +274,7 @@
 }
 
 .cuecraft-active-provider-fields .cuecraft-api-key-setting .setting-item-control {
+	flex: 0 1 auto;
 	justify-content: flex-start;
 }
 
