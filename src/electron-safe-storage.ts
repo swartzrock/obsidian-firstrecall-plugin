@@ -10,7 +10,10 @@ type ElectronLike = {
 
 export async function loadElectronSafeStorage(): Promise<SafeStorageAdapter | null> {
 	try {
-		const electron = await import("electron") as ElectronLike;
+		if (typeof require !== "function") return null;
+		// Obsidian exposes Electron through CommonJS in the plugin runtime.
+		// eslint-disable-next-line @typescript-eslint/no-require-imports
+		const electron = require("electron") as ElectronLike;
 		return electron.safeStorage ?? null;
 	} catch {
 		return null;
