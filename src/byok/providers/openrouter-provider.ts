@@ -11,6 +11,7 @@ import {
 	type ModelOption,
 	type OpenRouterRawModel,
 } from "../models/model-options";
+import type { ByokProviderAppInfo } from "../types";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 
@@ -23,6 +24,8 @@ export interface OpenRouterProviderOptions {
 	generator?: ObjectGenerator;
 	/** Overrides the model-list call in tests. */
 	listModelsImpl?: () => Promise<ModelOption[]>;
+	/** Optional app metadata forwarded to OpenRouter request headers. */
+	appInfo?: ByokProviderAppInfo;
 }
 
 export class OpenRouterProvider extends AiSdkProvider {
@@ -32,16 +35,29 @@ export class OpenRouterProvider extends AiSdkProvider {
 			label: "OpenRouter",
 			vendor: "OpenRouter",
 			model: opts.model,
-			generate: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+			generate:
+				opts.generator ??
+				defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl, opts.appInfo),
 			listModels:
-				opts.listModelsImpl ?? (() => listOpenRouterModelOptions(opts.apiKey, opts.fetchImpl)),
+				opts.listModelsImpl ??
+				(() => listOpenRouterModelOptions(opts.apiKey, opts.fetchImpl, opts.appInfo)),
 		});
 	}
 }
 
+function openRouterAppHeaders(
+	appInfo: ByokProviderAppInfo | undefined
+): Record<string, string> {
+	const headers: Record<string, string> = {};
+	if (appInfo?.url) headers["HTTP-Referer"] = appInfo.url;
+	if (appInfo?.name) headers["X-Title"] = appInfo.name;
+	return headers;
+}
+
 async function listOpenRouterModelOptions(
 	apiKey: string,
-	fetchImpl?: FetchFunction
+	fetchImpl?: FetchFunction,
+	appInfo?: ByokProviderAppInfo
 ): Promise<ModelOption[]> {
 	const fetchFn = (fetchImpl ?? globalThis.fetch) as typeof fetch | undefined;
 	if (!fetchFn) {
@@ -51,8 +67,7 @@ async function listOpenRouterModelOptions(
 		method: "GET",
 		headers: {
 			Authorization: `Bearer ${apiKey}`,
-			"HTTP-Referer": "https://github.com/swartzrock/obsidian-cuecraft-plugin",
-			"X-Title": "CueCraft",
+			...openRouterAppHeaders(appInfo),
 		},
 	});
 	if (!response.ok) {
@@ -75,17 +90,15 @@ async function listOpenRouterModelOptions(
 function defaultGenerator(
 	apiKey: string,
 	modelId: string,
-	fetchImpl?: FetchFunction
+	fetchImpl?: FetchFunction,
+	appInfo?: ByokProviderAppInfo
 ): ObjectGenerator {
 	const openrouter = createOpenAI({
 		apiKey,
 		baseURL: OPENROUTER_BASE_URL,
 		fetch: fetchImpl,
 		name: "openrouter",
-		headers: {
-			"HTTP-Referer": "https://github.com/swartzrock/obsidian-cuecraft-plugin",
-			"X-Title": "CueCraft",
-		},
+		headers: openRouterAppHeaders(appInfo),
 	});
 	const model = openrouter.chat(modelId);
 	return async function generate<T>({ schema, prompt, signal }: {

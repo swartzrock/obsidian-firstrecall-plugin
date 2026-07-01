@@ -1,6 +1,6 @@
 import {
 	normalizeStringId,
-	sortCueCraftModelOptions,
+	sortByokModelOptions,
 	type ModelOption,
 	type ModelOptionSource,
 } from "./byok";
@@ -20,7 +20,7 @@ export function buildModelComboboxOptions(opts: {
 	if (currentModelId && !byId.has(currentModelId)) {
 		byId.set(currentModelId, normalizeStringId(currentModelId, opts.source));
 	}
-	return sortCueCraftModelOptions([...byId.values()], currentModelId);
+	return sortByokModelOptions([...byId.values()], currentModelId);
 }
 
 export function modelOptionSearchText(

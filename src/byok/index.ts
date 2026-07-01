@@ -6,16 +6,62 @@ export {
 	isByokProviderId,
 	normalizeProviderId,
 } from "./registry";
-export * from "./models/anthropic-models";
-export * from "./models/fetched-model-sorting";
-export * from "./models/model-compatibility";
-export * from "./models/model-options";
-export * from "./providers/provider-factory";
-export * from "./setup-status";
+export {
+	ANTHROPIC_CUSTOM_MODEL_ID,
+	anthropicModelInfoToByokModelOption,
+	buildAnthropicModelOptions,
+	describeAnthropicModel,
+	describeAnthropicModelDetails,
+	formatAnthropicModelHint,
+	formatAnthropicUnavailableModelMessage,
+	isAnthropicCustomModelSelection,
+	normalizeAnthropicModelSelection,
+	refreshAnthropicModelOptions,
+	type AnthropicModelHint,
+	type AnthropicModelListSource,
+	type AnthropicModelOption,
+	type AnthropicModelRefreshResult,
+} from "./models/anthropic-models";
+export {
+	compareFetchedModelIds,
+	sortFetchedModelIds,
+} from "./models/fetched-model-sorting";
+export {
+	isLargeContextModel,
+	isLowCostModel,
+	modelCompatibilityBadges,
+	modelCompatibilityWarning,
+	modelStructuredOutputSupport,
+	sortByokModelOptions,
+	type StructuredOutputSupport,
+} from "./models/model-compatibility";
+export {
+	isModelOption,
+	normalizeModelIds,
+	normalizeOpenRouterModel,
+	normalizeStringId,
+	sortModelOptions,
+	type ModelOption,
+	type ModelOptionSource,
+	type OpenRouterRawModel,
+} from "./models/model-options";
+export { createByokProvider } from "./providers/provider-factory";
+export {
+	CLI_DEFAULT_MODEL_SENTINEL,
+	deriveProviderSetupStatus,
+	providerCredentialFingerprint,
+	recordProviderConnectionSuccess,
+	type DerivedProviderSetupStatus,
+	type ProviderConnectionSnapshot,
+	type ProviderConnectionStatusMap,
+	type ProviderSetupStatusId,
+	type ProviderSetupStatusSettings,
+} from "./setup-status";
 export type {
 	ByokCliProviderConfig,
 	ByokCloudProviderConfig,
 	ByokConnectionState,
+	ByokCoreProviderConfig,
 	ByokCredentialFieldDefinition,
 	ByokCredentialKind,
 	ByokCueBatchResult,
@@ -37,6 +83,7 @@ export type {
 	ByokNoteBriefOutput,
 	ByokNoteBriefSectionInput,
 	ByokOllamaProviderConfig,
+	ByokProviderAppInfo,
 	ByokProviderConfig,
 	ByokProviderDefinition,
 	ByokProviderDeps,
@@ -53,4 +100,7 @@ export type {
 	ByokVerificationSnapshot,
 	ByokVerificationSnapshotMap,
 } from "./types";
-export { ByokProviderError, ByokProviderRateLimitError } from "./types";
+export {
+	ByokProviderError,
+	ByokProviderRateLimitError,
+} from "./types";

@@ -105,7 +105,7 @@ describe("Anthropic picker defaults", () => {
 
 	it("formats an unavailable Anthropic model message with friendly and raw IDs", () => {
 		expect(formatAnthropicUnavailableModelMessage("claude-unknown-xyz")).toBe(
-			"CueCraft: This key cannot access Custom model ID (claude-unknown-xyz). Pick another model or check your Anthropic account."
+			"This key cannot access Custom model ID (claude-unknown-xyz). Pick another model or check your Anthropic account."
 		);
 	});
 

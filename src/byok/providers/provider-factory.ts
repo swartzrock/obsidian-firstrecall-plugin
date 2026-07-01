@@ -1,19 +1,17 @@
 import { AnthropicProvider } from "./anthropic-provider";
-import { ClaudeCliProvider } from "./claude-cli-provider";
-import { CodexCliProvider } from "./codex-cli-provider";
 import { GoogleProvider } from "./google-provider";
 import { OllamaProvider } from "./ollama-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
 import { XaiProvider } from "./xai-provider";
 import type {
-	ByokProviderConfig,
+	ByokCoreProviderConfig,
 	ByokProviderDeps,
 	ByokProviderRuntime,
 } from "../types";
 
 export function createByokProvider(
-	config: ByokProviderConfig,
+	config: ByokCoreProviderConfig,
 	deps: ByokProviderDeps
 ): ByokProviderRuntime {
 	switch (config.provider) {
@@ -46,16 +44,7 @@ export function createByokProvider(
 				apiKey: config.apiKey,
 				model: config.model,
 				fetchImpl: deps.fetchImpl,
-			}) as unknown as ByokProviderRuntime;
-		case "codex-cli":
-			return new CodexCliProvider({
-				command: config.command,
-				model: config.model,
-			}) as unknown as ByokProviderRuntime;
-		case "claude-cli":
-			return new ClaudeCliProvider({
-				command: config.command,
-				model: config.model,
+				appInfo: deps.appInfo,
 			}) as unknown as ByokProviderRuntime;
 		case "ollama":
 			return new OllamaProvider({

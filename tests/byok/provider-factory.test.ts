@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { createByokProvider, type ByokHttpClient } from "../../src/byok";
+import {
+	createByokProvider,
+	type ByokCoreProviderConfig,
+	type ByokHttpClient,
+} from "../../src/byok";
+import {
+	createByokNodeProvider,
+	type ByokProviderConfig,
+} from "../../src/byok/node";
 
 const http: ByokHttpClient = async () => ({ status: 200, text: "{}", json: {} });
 const fetchImpl = (async () => new Response("{}")) as typeof fetch;
@@ -12,10 +20,11 @@ describe("createByokProvider", () => {
 		[{ provider: "google", apiKey: "AIza-test", model: "gemini-1.5-flash" }, "google"],
 		[{ provider: "xai", apiKey: "xai-test", model: "grok-2-latest" }, "xai"],
 		[{ provider: "openrouter", apiKey: "sk-or-test", model: "openai/gpt-4o" }, "openrouter"],
-		[{ provider: "codex-cli", command: "codex", model: "gpt-5" }, "codex-cli"],
-		[{ provider: "claude-cli", command: "claude", model: "sonnet" }, "claude-cli"],
 	] as const)("creates the %s runtime", (config, expectedId) => {
-		const provider = createByokProvider(config, { fetchImpl, http });
+		const provider = createByokProvider(config satisfies ByokCoreProviderConfig, {
+			fetchImpl,
+			http,
+		});
 		expect(provider.id).toBe(expectedId);
 		expect(provider.label).toBeTruthy();
 	});
@@ -29,13 +38,21 @@ describe("createByokProvider", () => {
 		expect(typeof provider.listModels).toBe("function");
 	});
 
-	it("keeps CLI model overrides optional", () => {
-		const provider = createByokProvider(
-			{ provider: "codex-cli", command: "codex" },
-			{ fetchImpl, http }
-		);
+	it("keeps CLI model overrides optional on the Node subpath", () => {
+		const config: ByokProviderConfig = { provider: "codex-cli", command: "codex" };
+		const provider = createByokNodeProvider(config, { fetchImpl, http });
 
 		expect(provider.id).toBe("codex-cli");
 		expect("listModels" in provider).toBe(false);
+	});
+
+	it("creates CLI providers from the Node subpath", () => {
+		const provider = createByokNodeProvider(
+			{ provider: "claude-cli", command: "claude", model: "sonnet" },
+			{ fetchImpl, http }
+		);
+
+		expect(provider.id).toBe("claude-cli");
+		expect(provider.label).toBe("Claude CLI");
 	});
 });

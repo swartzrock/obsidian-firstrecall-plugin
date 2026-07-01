@@ -41,9 +41,11 @@ export class AnthropicProvider extends AiSdkProvider {
 			fetch: this.fetchImpl,
 			dangerouslyAllowBrowser: true,
 		});
-		const models: ModelInfo[] = [];
-		for await (const model of client.models.list()) {
-			models.push(model);
+		let page = await client.models.list();
+		const models: ModelInfo[] = [...page.data];
+		while (page.hasNextPage()) {
+			page = await page.getNextPage();
+			models.push(...page.data);
 		}
 		return models;
 	}

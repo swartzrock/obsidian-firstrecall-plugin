@@ -322,7 +322,7 @@ describe("ClaudeCliProvider", () => {
 	it("reports command-not-found from the runner during connection checks", async () => {
 		const { provider } = makeProvider([
 			new ProviderError(
-				"CueCraft: claude was not found. Check the command path in settings."
+				"claude was not found. Check the command path supplied by the host app."
 			),
 		]);
 
@@ -346,7 +346,7 @@ describe("ClaudeCliProvider", () => {
 	it("reports Claude CLI 401 auth failures as setup guidance", async () => {
 		const { provider } = makeProvider([
 			new ProviderError(
-				'CueCraft: claude exited with code 1: {"type":"result","is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 Invalid authentication credentials"}'
+				'claude exited with code 1: {"type":"result","is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 Invalid authentication credentials"}'
 			),
 		]);
 
@@ -362,7 +362,7 @@ describe("ClaudeCliProvider", () => {
 	it("maps Claude CLI generation auth failures to setup guidance", async () => {
 		const { provider } = makeProvider([
 			new ProviderError(
-				'CueCraft: claude exited with code 1: {"type":"result","is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 Invalid authentication credentials"}'
+				'claude exited with code 1: {"type":"result","is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 Invalid authentication credentials"}'
 			),
 		]);
 

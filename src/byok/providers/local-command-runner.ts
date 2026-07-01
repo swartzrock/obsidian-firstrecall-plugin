@@ -79,16 +79,16 @@ function errorMessageForExit(
 ): string {
 	const output = stderr.trim() || stdout.trim();
 	const suffix = output ? `: ${excerpt(output)}` : ".";
-	return `CueCraft: ${commandLabel(command)} exited with code ${code ?? "unknown"}${suffix}`;
+	return `${commandLabel(command)} exited with code ${code ?? "unknown"}${suffix}`;
 }
 
 function errorMessageForSpawn(command: string, error: NodeJS.ErrnoException): string {
 	if (error.code === "ENOENT") {
-		return `CueCraft: ${commandLabel(command)} was not found. Check the command path in settings.`;
+		return `${commandLabel(command)} was not found. Check the command path supplied by the host app.`;
 	}
 	return error.message
-		? `CueCraft: ${commandLabel(command)} failed to start: ${error.message}`
-		: `CueCraft: ${commandLabel(command)} failed to start.`;
+		? `${commandLabel(command)} failed to start: ${error.message}`
+		: `${commandLabel(command)} failed to start.`;
 }
 
 function isBareCommand(command: string): boolean {
@@ -190,7 +190,7 @@ function resolveBareCommandPath(
 		mergePathValues(loginShellPath, basePath);
 	if (typeof loadedPath === "string") return mergeLoadedPath(loadedPath);
 	return loadedPath.then(mergeLoadedPath).catch((error: unknown) => {
-		logger.warn("CueCraft could not load login shell PATH", {
+		logger.warn("BYOK could not load login shell PATH", {
 			message: error instanceof Error ? error.message : String(error),
 		});
 		return basePath;
@@ -220,7 +220,7 @@ export class LocalCommandRunner {
 		};
 		if (request.signal?.aborted) {
 			return Promise.reject(
-				new ProviderError(`CueCraft: ${commandLabel(request.command)} was cancelled.`)
+				new ProviderError(`${commandLabel(request.command)} was cancelled.`)
 			);
 		}
 
@@ -237,7 +237,7 @@ export class LocalCommandRunner {
 			if (request.signal?.aborted) {
 				return Promise.reject(
 					new ProviderError(
-						`CueCraft: ${commandLabel(request.command)} was cancelled.`
+						`${commandLabel(request.command)} was cancelled.`
 					)
 				);
 			}
@@ -284,7 +284,7 @@ export class LocalCommandRunner {
 					() =>
 						reject(
 							new ProviderError(
-								`CueCraft: ${commandLabel(request.command)} was cancelled.`
+								`${commandLabel(request.command)} was cancelled.`
 							)
 						),
 					() => request.signal?.removeEventListener("abort", onAbort)
@@ -304,7 +304,7 @@ export class LocalCommandRunner {
 			child.once("error", (error) => {
 				settle(
 					() => {
-						this.logger.warn("CueCraft local CLI failed to start", {
+						this.logger.warn("BYOK local CLI failed to start", {
 							command: request.command,
 							code: error.code,
 							PATH: commandEnv.PATH ?? "",
@@ -337,7 +337,7 @@ export class LocalCommandRunner {
 					() =>
 						reject(
 							new ProviderError(
-								`CueCraft: ${commandLabel(request.command)} timed out after ${timeoutMs}ms.`
+								`${commandLabel(request.command)} timed out after ${timeoutMs}ms.`
 							)
 						),
 					removeAbortListener

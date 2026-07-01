@@ -213,7 +213,7 @@ export function formatAnthropicUnavailableModelMessage(
 	availableModels: AnthropicStoredModel[] = []
 ): string {
 	const model = describeAnthropicModel(modelId, availableModels);
-	return `CueCraft: This key cannot access ${model.label} (${model.rawId}). Pick another model or check your Anthropic account.`;
+	return `This key cannot access ${model.label} (${model.rawId}). Pick another model or check your Anthropic account.`;
 }
 
 export function formatAnthropicModelHint(

@@ -12,7 +12,7 @@ import {
 	deriveProviderSetupStatus,
 	isByokProviderId,
 	recordProviderConnectionSuccess,
-	type ByokProviderConfig,
+	type ByokCoreProviderConfig,
 	type ByokProviderDeps,
 	type ByokProviderRuntime,
 } from "./byok";
@@ -21,9 +21,10 @@ import {
 The public surface is:
 
 - Provider identity and metadata: `ByokProviderId`, `ByokProviderDefinition`, `BYOK_PROVIDER_IDS`, `byokProviderDefinition`, `byokProviderDefinitions`, and `isByokProviderId`.
-- Provider configuration: `ByokProviderConfig`, including API-key cloud providers, Ollama host/model, and local CLI command/model variants.
-- Runtime dependencies: `ByokProviderDeps`, with caller-supplied `fetchImpl` and `http` transports.
-- Runtime creation: `createByokProvider(config, deps): ByokProviderRuntime`.
+- Provider configuration: `ByokCoreProviderConfig` for API-key cloud providers and Ollama host/model on the browser-safe main entrypoint; `ByokProviderConfig` remains the full union for Node consumers.
+- Runtime dependencies: `ByokProviderDeps`, with caller-supplied `fetchImpl`, `http` transports, and optional `appInfo` metadata for provider-specific headers.
+- Runtime creation: `createByokProvider(config, deps): ByokProviderRuntime` from the main entrypoint for core providers.
+- Node-only runtime creation: `createByokNodeProvider(config, deps): ByokProviderRuntime` from `./byok/node` for Codex CLI and Claude CLI providers.
 - Setup state: verification snapshots, credential fingerprints, `recordProviderConnectionSuccess`, and `deriveProviderSetupStatus`.
 - Model discovery: normalized model IDs, rich model options, model option sorting, refresh-result types, and OpenRouter compatibility metadata.
 - Generation: cue, cue batch, and summary inputs/results plus `ByokProviderError` and `ByokProviderRateLimitError`.
@@ -33,7 +34,11 @@ The provider runtime contract intentionally stays app-agnostic:
 ```ts
 const provider = createByokProvider(
 	{ provider: "openai", apiKey, model: "gpt-4o-mini" },
-	{ fetchImpl, http }
+	{
+		fetchImpl,
+		http,
+		appInfo: { name: "My Study App", url: "https://example.com" },
+	}
 );
 
 const status = await provider.testConnection();
@@ -43,6 +48,23 @@ const cue = await provider.generateCue({
 	content: "Agent: an AI system that can plan and use tools.",
 	preset: "conceptual",
 });
+```
+
+Local CLI providers are opt-in through the Node-only subpath:
+
+```ts
+import {
+	createByokNodeProvider,
+	type ByokProviderConfig,
+	type ByokProviderDeps,
+} from "./byok/node";
+
+const config: ByokProviderConfig = {
+	provider: "codex-cli",
+	command: "codex",
+};
+
+const provider = createByokNodeProvider(config, deps satisfies ByokProviderDeps);
 ```
 
 ## CueCraft-Owned Responsibilities
@@ -74,7 +96,24 @@ When BYOK moves to a package, the package should own provider-runtime dependenci
 - Validation: `zod`.
 - Local CLI support: Node built-ins used by the command runner, including `node:child_process`, `node:os`, and `node:stream`.
 
-The package should not depend on `obsidian`, CodeMirror, DOM UI helpers, CueCraft settings, CueCraft plugin runtime, or CueCraft note/cache modules. Callers provide browser/Electron-safe transports through `ByokProviderDeps`.
+The package should not depend on `obsidian`, CodeMirror, DOM UI helpers, CueCraft settings, CueCraft plugin runtime, or CueCraft note/cache modules. Callers provide browser/Electron-safe transports through `ByokProviderDeps`, resolve secrets before provider creation, and own all secure storage or settings UI copy.
+
+## Package Shape and Verification Gates
+
+The future package manifest is drafted in `byok.package.json`. It must keep exactly two public entrypoints:
+
+- `.` for browser/Electron-safe core providers and shared types.
+- `./node` for Codex CLI, Claude CLI, and local command-runner support.
+
+Declaration output is configured in `tsconfig.byok.json`, and public examples are typechecked through `tsconfig.byok-examples.json`. Before extraction or release, run:
+
+```sh
+bun run typecheck:byok
+bun run typecheck:byok-examples
+bun test tests/byok
+```
+
+Pack-consumer validation should install the built package archive into a fresh fixture and verify ESM imports, declarations, the main entrypoint, the Node subpath, and the README examples before publishing.
 
 ## Files That Move Later
 
@@ -93,12 +132,21 @@ Stay in CueCraft:
 ## Extraction Sequence
 
 1. Create a package with `src/byok/index.ts` as the package entry point.
-2. Copy `src/byok/**` and its package-owned tests.
-3. Install the runtime dependencies listed above and keep `obsidian`, CodeMirror, and CueCraft UI dependencies out of the package manifest.
-4. Keep the import-boundary tests in the package test suite so package code cannot drift back toward CueCraft or Obsidian imports.
-5. Publish package types from the public barrel only; avoid documenting internal submodule imports.
-6. Update CueCraft to consume the package barrel and keep `src/byok-cuecraft-adapter.ts` as the app-specific bridge.
-7. Keep CueCraft free of local compatibility shims unless a real downstream consumer needs a transition path.
+2. Keep `src/byok/node.ts` as the only Node CLI subpath; do not expose provider implementation paths as documented imports.
+3. Copy `src/byok/**`, `byok.package.json`, BYOK-focused tests, and compile-checked examples.
+4. Install the runtime dependencies listed above and keep `obsidian`, CodeMirror, and CueCraft UI dependencies out of the package manifest.
+5. Keep the import-boundary tests in the package test suite so package code cannot drift back toward CueCraft or Obsidian imports.
+6. Publish package types from the public barrel and Node subpath only; avoid documenting internal submodule imports.
+7. Update CueCraft to consume the package barrel and keep `src/byok-cuecraft-adapter.ts` as the app-specific bridge.
+8. Keep CueCraft free of local compatibility shims unless a real downstream consumer needs a transition path.
+
+## Release Governance
+
+- Treat every new export, removed export, renamed type, or changed provider config shape as an API review item.
+- Use semver from the first public beta: patch for fixes, minor for additive exports/provider metadata, and major for breaking runtime or type changes.
+- Maintain a changelog that calls out provider behavior changes, runtime dependency changes, Node/browser entrypoint changes, and migration notes.
+- Publish first as beta or prerelease until CueCraft consumes the package-shaped API end to end from packed output.
+- Before a stable release, create `SECURITY.md`, `CONTRIBUTING.md`, issue templates, a release checklist, and npm trusted publishing with provenance enabled.
 
 ## Extraction Checklist
 
@@ -108,6 +156,8 @@ Stay in CueCraft:
 - Keep CueCraft adapters outside the package so another app can supply its own storage and UI.
 - Publish only after CueCraft consumes the internal public surface end to end.
 - Keep examples and package docs pointed at public BYOK exports, not provider implementation files.
+- Verify `byok.package.json`, declaration output, docs examples, and pack-consumer smoke tests before creating a public release.
+- Confirm CueCraft consumes the package-shaped API internally before promoting any release from beta to stable.
 
 ## Non-Goals
 

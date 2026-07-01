@@ -2312,9 +2312,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		) {
 			const stored = cueCraftProviderSettings(this.plugin.settings, "anthropic");
 			new Notice(
-				formatAnthropicUnavailableModelMessage(
-					cueCraftProviderModel(this.plugin.settings, "anthropic"),
-					stored.modelOptions
+				formatCueCraftNotice(
+					formatAnthropicUnavailableModelMessage(
+						cueCraftProviderModel(this.plugin.settings, "anthropic"),
+						stored.modelOptions
+					)
 				)
 			);
 			return;

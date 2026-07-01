@@ -250,7 +250,7 @@ describe("CodexCliProvider", () => {
 	it("reports command-not-found from the runner during connection checks", async () => {
 		const { provider } = makeProvider([
 			new ProviderError(
-				"CueCraft: codex was not found. Check the command path in settings."
+				"codex was not found. Check the command path supplied by the host app."
 			),
 		]);
 

@@ -1,7 +1,6 @@
 import {
 	BYOK_PROVIDER_IDS,
 	byokProviderDefinition,
-	createByokProvider,
 	deriveProviderSetupStatus,
 	isModelOption,
 	normalizeAnthropicModelSelection,
@@ -20,6 +19,7 @@ import {
 	type ByokStoredSettings,
 	type ByokVerificationSnapshotMap,
 } from "./byok";
+import { createByokNodeProvider } from "./byok/node";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { CueCraftSettings } from "./settings";
 import {
@@ -613,7 +613,10 @@ export function makeCueCraftByokProvider(
 	settings: CueCraftSettings,
 	deps: CueCraftProviderFactoryDeps
 ): CueCraftByokRuntime {
-	return createByokProvider(cueCraftProviderConfigFromSettings(settings), deps);
+	return createByokNodeProvider(
+		cueCraftProviderConfigFromSettings(settings),
+		withCueCraftAppInfo(deps)
+	);
 }
 
 export async function resolveCueCraftProviderConfigFromStore(
@@ -644,10 +647,20 @@ export async function makeCueCraftByokProviderFromStore(
 	deps: CueCraftProviderFactoryDeps,
 	credentialStore: SecureCredentialStore
 ): Promise<CueCraftByokRuntime> {
-	return createByokProvider(
+	return createByokNodeProvider(
 		await resolveCueCraftProviderConfigFromStore(settings, credentialStore),
-		deps
+		withCueCraftAppInfo(deps)
 	);
+}
+
+function withCueCraftAppInfo(deps: CueCraftProviderFactoryDeps): CueCraftProviderFactoryDeps {
+	return {
+		...deps,
+		appInfo: deps.appInfo ?? {
+			name: "CueCraft",
+			url: "https://github.com/swartzrock/obsidian-cuecraft-plugin",
+		},
+	};
 }
 
 export function isCueCraftLocalCliProvider(provider: ByokProviderId): boolean {

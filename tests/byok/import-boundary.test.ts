@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { dirname, join, normalize, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 interface SourceFile {
@@ -46,6 +46,10 @@ function localModuleName(specifier: string): string {
 	return parts[parts.length - 1] ?? "";
 }
 
+function resolvedLocalImportPath(filePath: string, specifier: string): string {
+	return normalize(join(dirname(filePath), specifier));
+}
+
 function findForbiddenByokImports(files: SourceFile[]): string[] {
 	const violations: string[] = [];
 	for (const file of files) {
@@ -56,6 +60,15 @@ function findForbiddenByokImports(files: SourceFile[]): string[] {
 			}
 			if (specifier.startsWith("..") && specifier.includes("/providers/")) {
 				violations.push(`${file.path} imports ${specifier}`);
+				continue;
+			}
+			if (
+				specifier.startsWith(".") &&
+				!resolvedLocalImportPath(file.path, specifier).startsWith(
+					normalize("src/byok/")
+				)
+			) {
+				violations.push(`${file.path} imports ${specifier} outside src/byok`);
 				continue;
 			}
 			if (
@@ -108,6 +121,7 @@ describe("BYOK import boundary", () => {
 						'import type { EditorView } from "@codemirror/view";\n' +
 						'import type { CueCraftSettings } from "../settings";\n' +
 						'import { renderModelCombobox } from "../model-combobox";\n' +
+						'import { cueDensityGuidance } from "../../cue-generation";\n' +
 						'import { OpenAIProvider } from "../../providers/openai-provider";\n' +
 						'const root: HTMLElement | null = document.querySelector(".x");\n' +
 						'activeDocument.body.createEl("div");\n',
@@ -116,8 +130,9 @@ describe("BYOK import boundary", () => {
 		).toEqual([
 			"src/byok/bad.ts imports obsidian",
 			"src/byok/bad.ts imports @codemirror/view",
-			"src/byok/bad.ts imports ../settings",
-			"src/byok/bad.ts imports ../model-combobox",
+			"src/byok/bad.ts imports ../settings outside src/byok",
+			"src/byok/bad.ts imports ../model-combobox outside src/byok",
+			"src/byok/bad.ts imports ../../cue-generation outside src/byok",
 			"src/byok/bad.ts imports ../../providers/openai-provider",
 			"src/byok/bad.ts uses DOM element type",
 			"src/byok/bad.ts uses Obsidian DOM helper",

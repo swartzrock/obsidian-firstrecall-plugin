@@ -55,9 +55,9 @@ export function modelCompatibilityWarning(option: ModelOption | null): string {
 	const support = modelStructuredOutputSupport(option);
 	if (support === "supported") return "";
 	if (support === "unsupported") {
-		return "This model does not advertise structured-output support. CueCraft can still try it, but generated cues may be less reliable.";
+		return "This model does not advertise structured-output support. BYOK can still try it, but generated cues may be less reliable.";
 	}
-	return "CueCraft does not have structured-output metadata for this model. You can still use it, but testing the connection is recommended.";
+	return "BYOK does not have structured-output metadata for this model. You can still use it, but testing the connection is recommended.";
 }
 
 function cueCraftSortScore(option: ModelOption): number {
@@ -68,7 +68,7 @@ function cueCraftSortScore(option: ModelOption): number {
 	return score;
 }
 
-export function sortCueCraftModelOptions(
+export function sortByokModelOptions(
 	options: ModelOption[],
 	currentModelId?: string
 ): ModelOption[] {

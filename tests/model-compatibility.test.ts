@@ -5,7 +5,7 @@ import {
 	modelCompatibilityBadges,
 	modelCompatibilityWarning,
 	modelStructuredOutputSupport,
-	sortCueCraftModelOptions,
+	sortByokModelOptions,
 	normalizeStringId,
 	type ModelOption,
 } from "../src/byok";
@@ -99,9 +99,9 @@ describe("modelCompatibilityWarning", () => {
 	});
 });
 
-describe("sortCueCraftModelOptions", () => {
+describe("sortByokModelOptions", () => {
 	it("prefers structured-output models without hiding others", () => {
-		const sorted = sortCueCraftModelOptions([
+		const sorted = sortByokModelOptions([
 			opt("legacy/model", { supportedParameters: ["temperature"] }),
 			opt("small/structured", { supportedParameters: ["response_format"] }),
 			opt("anthropic/claude-sonnet-4", {
@@ -118,7 +118,7 @@ describe("sortCueCraftModelOptions", () => {
 	});
 
 	it("keeps the current model first even when it lacks compatibility traits", () => {
-		const sorted = sortCueCraftModelOptions(
+		const sorted = sortByokModelOptions(
 			[
 				opt("anthropic/claude-sonnet-4", {
 					supportedParameters: ["structured_outputs"],
