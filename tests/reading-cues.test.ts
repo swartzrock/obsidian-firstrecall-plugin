@@ -33,6 +33,7 @@ function cacheFrom(
 		sections,
 		summary: "s",
 		learningObjective: null,
+		noteBrief: null,
 		canceled: false,
 	};
 	return buildNoteCache({

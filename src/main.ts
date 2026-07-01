@@ -25,7 +25,12 @@ import {
 	type ByokHttpClient,
 	byokProviderDefinition,
 } from "@cuecraft/byok";
-import { generateNote, generateSectionCue, type SectionResult } from "./generator";
+import {
+	generateNote,
+	generateNoteBriefForSections,
+	generateSectionCue,
+	type SectionResult,
+} from "./generator";
 import {
 	cueCraftProviderCredential,
 	cueCraftProviderCredentialSaved,
@@ -262,6 +267,14 @@ export default class CueCraftPlugin extends Plugin {
 				(settings as { autoGenerationSettleDelaySeconds?: unknown })
 					.autoGenerationSettleDelaySeconds
 			);
+		for (const key of ["showSectionLens", "showNoteBrief"] as const) {
+			if (
+				typeof (settings as unknown as Record<string, unknown>)[key] !==
+				"boolean"
+			) {
+				settings[key] = DEFAULT_SETTINGS[key];
+			}
+		}
 		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
 		}
@@ -1135,7 +1148,16 @@ export default class CueCraftPlugin extends Plugin {
 				signal: controller.signal,
 			});
 
-			const updated = replaceSection(cache, toCachedSection(result));
+			let updated = replaceSection(cache, toCachedSection(result));
+			if (!controller.signal.aborted) {
+				updated = await this.refreshNoteBriefForCache(
+					file,
+					markdown,
+					updated,
+					provider,
+					controller.signal
+				);
+			}
 			await this.cacheStore.set(file.path, updated);
 			await this.visibility.show(file.path);
 
@@ -1247,6 +1269,21 @@ export default class CueCraftPlugin extends Plugin {
 					noteModifiedAt: file.stat.mtime,
 				});
 				await this.cacheStore.set(file.path, working);
+			}
+			if (!controller.signal.aborted) {
+				const working = reconcileCacheSections(cache, sections, generated, {
+					noteModifiedAt: file.stat.mtime,
+				});
+				await this.cacheStore.set(
+					file.path,
+					await this.refreshNoteBriefForCache(
+						file,
+						markdown,
+						working,
+						provider,
+						controller.signal
+					)
+				);
 			}
 			await this.visibility.show(file.path);
 			const ok = done - failed;
@@ -1602,9 +1639,43 @@ export default class CueCraftPlugin extends Plugin {
 			});
 			await this.cacheStore.set(file.path, working);
 		}
+		if (!controller.signal.aborted) {
+			const working = reconcileCacheSections(cache, sections, generated, {
+				noteModifiedAt: file.stat.mtime,
+			});
+			await this.cacheStore.set(
+				file.path,
+				await this.refreshNoteBriefForCache(
+					file,
+					markdown,
+					working,
+					provider,
+					controller.signal
+				)
+			);
+		}
 		await this.visibility.show(file.path);
 		if (controller.signal.aborted) return "canceled";
 		return failed || completed < sectionIds.length ? "failed" : "completed";
+	}
+
+		private async refreshNoteBriefForCache(
+			file: TFile,
+			markdown: string,
+			cache: NoteCache,
+			provider: CueCraftByokRuntime,
+			signal?: AbortSignal
+		): Promise<NoteCache> {
+		return {
+			...cache,
+			noteBrief: await generateNoteBriefForSections({
+				noteTitle: file.basename,
+				markdown,
+				provider,
+				sections: cache.sections,
+				signal,
+			}),
+		};
 	}
 
 	private refreshGeneratedSurfaces(file: TFile): void {
@@ -1774,6 +1845,7 @@ function toCachedSection(result: SectionResult): CachedSection {
 		question: result.question,
 		confidence: result.confidence,
 		rationale: result.rationale,
+		sectionLens: result.sectionLens,
 		error: result.error,
 	};
 }

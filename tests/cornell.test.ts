@@ -38,6 +38,7 @@ function cacheFrom(
 		sections,
 		summary: top.summary ?? "the summary",
 		learningObjective: top.learningObjective ?? "the objective",
+		noteBrief: null,
 		canceled: false,
 	};
 	return buildNoteCache({

@@ -34,18 +34,29 @@ import {
 } from "./local-cli-cue-batch";
 import type {
 	CueCraftCueInput,
+	CueCraftNoteBriefInput,
 	CueCraftCueProviderRuntime,
 	CueCraftSummaryInput,
 } from "./cue-provider";
 import {
+	buildNoteBriefPrompt,
+	NOTE_BRIEF_JSON_SCHEMA,
+	SECTION_LENS_JSON_SCHEMA,
+	SECTION_LENS_PROMPT,
+} from "./review-artifact-prompts";
+import {
 	cueGenerationSchema,
 	cueOutputSchema,
 	formatZodError,
+	noteBriefGenerationSchema,
+	noteBriefOutputSchema,
 	summaryGenerationSchema,
 	summaryOutputSchema,
 	validateCue,
+	validateNoteBrief,
 	validateSummary,
 	type CueOutput,
+	type NoteBriefOutput,
 	type SummaryOutput,
 } from "./schemas";
 import type { CueCraftSettings } from "./settings";
@@ -66,6 +77,8 @@ export type {
 	CueCraftCueBatchResult,
 	CueCraftCueInput,
 	CueCraftCueOutput,
+	CueCraftNoteBriefInput,
+	CueCraftNoteBriefOutput,
 	CueCraftSummaryInput,
 	CueCraftSummaryOutput,
 } from "./cue-provider";
@@ -103,8 +116,9 @@ const CUE_JSON_SCHEMA = JSON.stringify({
 		},
 		confidence: { enum: ["high", "medium", "low"] },
 		rationale: { type: "string" },
+		sectionLens: SECTION_LENS_JSON_SCHEMA,
 	},
-	required: ["question", "keywords", "confidence"],
+	required: ["question", "keywords", "confidence", "sectionLens"],
 	additionalProperties: false,
 });
 
@@ -117,6 +131,8 @@ const SUMMARY_JSON_SCHEMA = JSON.stringify({
 	required: ["summary"],
 	additionalProperties: false,
 });
+
+const NOTE_BRIEF_SCHEMA = JSON.stringify(NOTE_BRIEF_JSON_SCHEMA);
 
 function cueCraftProviderError(message: string): ByokProviderError {
 	return new ByokProviderError(message);
@@ -135,7 +151,9 @@ function buildCuePrompt(input: CueCraftCueInput): string {
 		`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
 		`Return ONLY a JSON object with keys: "question" (string), ` +
 		`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
-		`and optional "rationale" (short reason, only when confidence is "low").\n` +
+		`optional "rationale" (short reason, only when confidence is "low"), ` +
+		`and "sectionLens" (object).\n` +
+		`${SECTION_LENS_PROMPT}\n` +
 		contextLine +
 		`\nSection heading: ${input.heading || "(untitled)"}\n` +
 		`Section content:\n${input.content}\n`
@@ -271,6 +289,63 @@ async function generateSummaryFromTextProvider(
 	return result.value;
 }
 
+async function generateNoteBriefFromObjectProvider(
+	runtime: ByokProviderRuntime,
+	input: CueCraftNoteBriefInput,
+	signal?: AbortSignal
+): Promise<NoteBriefOutput> {
+	if (!runtime.generateObject) {
+		throw cueCraftProviderError("Provider does not support structured output.");
+	}
+	const raw = await runtime.generateObject({
+		schema: noteBriefGenerationSchema,
+		prompt: buildNoteBriefPrompt(input),
+	}, signal);
+	const parsed = noteBriefOutputSchema.safeParse(raw);
+	if (!parsed.success) {
+		throw cueCraftProviderError(
+			`Model output could not be validated: ${formatZodError(parsed.error)}`
+		);
+	}
+	return parsed.data;
+}
+
+async function generateNoteBriefFromTextProvider(
+	runtime: ByokProviderRuntime,
+	input: CueCraftNoteBriefInput,
+	signal?: AbortSignal
+): Promise<NoteBriefOutput> {
+	const basePrompt = buildNoteBriefPrompt(input);
+	const raw = await runtime.generateText(
+		{
+			prompt: basePrompt,
+			responseFormat: "json",
+			jsonSchema: NOTE_BRIEF_SCHEMA,
+		},
+		signal
+	);
+	let result = validateNoteBrief(raw.text);
+	if (!result.ok) {
+		const repairPrompt =
+			basePrompt +
+			`\nYour previous reply could not be validated (${result.error}).\n` +
+			`Reply again with ONLY the corrected JSON object.`;
+		const retry = await runtime.generateText(
+			{
+				prompt: repairPrompt,
+				responseFormat: "json",
+				jsonSchema: NOTE_BRIEF_SCHEMA,
+			},
+			signal
+		);
+		result = validateNoteBrief(retry.text);
+	}
+	if (!result.ok) {
+		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
+	}
+	return result.value;
+}
+
 async function generateCueBatchFromTextProvider(
 	runtime: ByokProviderRuntime,
 	inputs: CueCraftCueInput[],
@@ -330,6 +405,10 @@ function wrapCueCraftByokRuntime(
 			generateFromObject
 				? generateSummaryFromObjectProvider(runtime, input, signal)
 				: generateSummaryFromTextProvider(runtime, input, signal),
+		generateNoteBrief: (input, signal) =>
+			generateFromObject
+				? generateNoteBriefFromObjectProvider(runtime, input, signal)
+				: generateNoteBriefFromTextProvider(runtime, input, signal),
 	};
 	if (runtime.id === "codex-cli" || runtime.id === "claude-cli") {
 		cueRuntime.generateCues = (inputs, signal) =>

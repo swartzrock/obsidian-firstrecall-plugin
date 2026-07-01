@@ -15,6 +15,8 @@ import type {
 	CueCraftCueInput,
 	CueCraftCueOutput,
 	CueCraftCueProviderRuntime,
+	CueCraftNoteBriefInput,
+	CueCraftNoteBriefOutput,
 	CueCraftSummaryInput,
 	CueCraftSummaryOutput,
 } from "../src/cue-provider";
@@ -32,14 +34,18 @@ interface MockOptions {
 function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 	summaryCalls: number;
 	lastSummaryInput?: CueCraftSummaryInput;
+	lastNoteBriefInput?: CueCraftNoteBriefInput;
 	cueInputs: CueCraftCueInput[];
 	batchInputs: CueCraftCueInput[][];
+	noteBriefCalls: number;
 } {
 	const provider: CueCraftCueProviderRuntime & {
 		summaryCalls: number;
 		lastSummaryInput?: CueCraftSummaryInput;
+		lastNoteBriefInput?: CueCraftNoteBriefInput;
 		cueInputs: CueCraftCueInput[];
 		batchInputs: CueCraftCueInput[][];
+		noteBriefCalls: number;
 	} = {
 		id: "ollama",
 		label: "Mock",
@@ -48,8 +54,10 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 		sectionConcurrencyLimit: opts.sectionConcurrencyLimit,
 		summaryCalls: 0,
 		lastSummaryInput: undefined as CueCraftSummaryInput | undefined,
+		lastNoteBriefInput: undefined as CueCraftNoteBriefInput | undefined,
 		cueInputs: [] as CueCraftCueInput[],
 		batchInputs: [] as CueCraftCueInput[][],
+		noteBriefCalls: 0,
 		async testConnection(): Promise<ByokProviderStatus> {
 			return { ok: true, message: "ok" };
 		},
@@ -67,12 +75,29 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 				keywords: ["k1", "k2"],
 				confidence: "high",
 				rationale: input.heading === "Terms" ? "clear section" : undefined,
+				sectionLens: {
+					takeaway: `${input.heading} carries the main review idea.`,
+					keyPhrase: input.heading || "section",
+					explanation: "This phrase anchors recall for the section.",
+				},
 			};
 		},
 		async generateSummary(input: CueCraftSummaryInput): Promise<CueCraftSummaryOutput> {
 			provider.summaryCalls++;
 			provider.lastSummaryInput = input;
 			return { summary: "the summary", learningObjective: null };
+		},
+		async generateNoteBrief(
+			input: CueCraftNoteBriefInput
+		): Promise<CueCraftNoteBriefOutput> {
+			provider.noteBriefCalls++;
+			provider.lastNoteBriefInput = input;
+			return {
+				overview: "the note brief",
+				whatMatters: { title: "Main idea", detail: "Review the main idea." },
+				reviewFirst: { title: "A", detail: "Start with the first section." },
+				sayItBack: { title: "Say it back", detail: "Explain the note aloud." },
+			};
 		},
 	};
 	if (opts.batch) {
@@ -94,6 +119,11 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 						keywords: ["k1", "k2"],
 						confidence: "high",
 						rationale: input.heading === "Terms" ? "clear section" : undefined,
+						sectionLens: {
+							takeaway: `${input.heading} carries the main review idea.`,
+							keyPhrase: input.heading || "section",
+							explanation: "This phrase anchors recall for the section.",
+						},
 					},
 				};
 			});
@@ -125,7 +155,15 @@ describe("generateNote", () => {
 			[3, 3],
 		]);
 		expect(provider.summaryCalls).toBe(1);
+		expect(provider.noteBriefCalls).toBe(1);
 		expect(result.summary).toBe("the summary");
+		expect(result.noteBrief?.overview).toBe("the note brief");
+		expect(result.sections[0].sectionLens?.keyPhrase).toBe("A");
+		expect(provider.lastNoteBriefInput?.sections.map((s) => s.heading)).toEqual([
+			"A",
+			"B",
+			"C",
+		]);
 		// Summary receives the per-section questions.
 		expect(provider.lastSummaryInput?.sectionQuestions).toEqual([
 			"Q:A",
@@ -282,6 +320,7 @@ describe("generateNote", () => {
 		const controller = new AbortController();
 		const provider = mockProvider();
 		const summarySpy = vi.spyOn(provider, "generateSummary");
+		const noteBriefSpy = vi.spyOn(provider, "generateNoteBrief");
 
 		const result = await generateNote({
 			noteTitle: "T",
@@ -299,6 +338,7 @@ describe("generateNote", () => {
 		expect(result.sections).toHaveLength(2); // in-flight batch finished
 		expect(result.summary).toBeNull();
 		expect(summarySpy).not.toHaveBeenCalled();
+		expect(noteBriefSpy).not.toHaveBeenCalled();
 	});
 
 	it("does not generate a title cue for notes with no headings", async () => {
@@ -311,6 +351,7 @@ describe("generateNote", () => {
 		});
 		expect(provider.cueInputs).toEqual([]);
 		expect(provider.summaryCalls).toBe(0);
+		expect(provider.noteBriefCalls).toBe(0);
 		expect(result.sections).toEqual([]);
 	});
 
@@ -340,6 +381,7 @@ describe("generateNote", () => {
 		});
 		expect(provider.cueInputs).toEqual([]);
 		expect(provider.summaryCalls).toBe(0);
+		expect(provider.noteBriefCalls).toBe(0);
 		expect(result.sections).toEqual([]);
 		expect(result.summary).toBeNull();
 	});
@@ -402,8 +444,10 @@ describe("generateNote", () => {
 			options: { autoSummary: false },
 		});
 		expect(provider.summaryCalls).toBe(0);
+		expect(provider.noteBriefCalls).toBe(1);
 		expect(result.summary).toBeNull();
 		expect(result.learningObjective).toBeNull();
+		expect(result.noteBrief?.overview).toBe("the note brief");
 	});
 });
 
@@ -429,6 +473,7 @@ describe("generateSectionCue", () => {
 		expect(result.keywords).toEqual(["k1", "k2"]);
 		expect(result.confidence).toBe("high");
 		expect(result.rationale).toBe("clear section");
+		expect(result.sectionLens?.keyPhrase).toBe("Terms");
 		expect(result.error).toBeNull();
 		expect(result.contentHash).toBe("abc123");
 	});

@@ -4,11 +4,12 @@ import type {
 	ByokProviderStatus,
 } from "@cuecraft/byok";
 import type { CueGenerationOptions } from "./cue-generation";
-import type { CueOutput, SummaryOutput } from "./schemas";
+import type { CueOutput, NoteBriefOutput, SummaryOutput } from "./schemas";
 
 export type CueCraftCueConfidence = "high" | "medium" | "low";
 export type CueCraftCueOutput = CueOutput;
 export type CueCraftSummaryOutput = SummaryOutput;
+export type CueCraftNoteBriefOutput = NoteBriefOutput;
 
 export interface CueCraftCueInput {
 	heading: string;
@@ -27,6 +28,18 @@ export interface CueCraftSummaryInput {
 	noteTitle: string;
 	fullText: string;
 	sectionQuestions: string[];
+}
+
+export interface CueCraftNoteBriefSectionInput {
+	heading: string;
+	question: string;
+	keywords: string[];
+}
+
+export interface CueCraftNoteBriefInput {
+	noteTitle: string;
+	fullText: string;
+	sections: CueCraftNoteBriefSectionInput[];
 }
 
 export interface CueCraftCueProviderRuntime {
@@ -49,4 +62,8 @@ export interface CueCraftCueProviderRuntime {
 		input: CueCraftSummaryInput,
 		signal?: AbortSignal
 	): Promise<SummaryOutput>;
+	generateNoteBrief?(
+		input: CueCraftNoteBriefInput,
+		signal?: AbortSignal
+	): Promise<NoteBriefOutput>;
 }

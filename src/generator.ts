@@ -7,6 +7,7 @@ import type {
 	CueCraftCueBatchResult,
 	CueCraftCueProviderRuntime,
 } from "./cue-provider";
+import type { NoteBriefOutput, SectionLens } from "./schemas";
 
 export interface SectionResult {
 	id: string;
@@ -18,6 +19,7 @@ export interface SectionResult {
 	question: string | null;
 	confidence: "high" | "medium" | "low" | null;
 	rationale: string | null;
+	sectionLens: SectionLens | null;
 	/** Non-null when this section failed validation/generation (isolated). */
 	error: string | null;
 }
@@ -26,6 +28,7 @@ export interface NoteGenerationResult {
 	sections: SectionResult[];
 	summary: string | null;
 	learningObjective: string | null;
+	noteBrief: NoteBriefOutput | null;
 	/** True if generation was cancelled before completing the summary. */
 	canceled: boolean;
 }
@@ -70,6 +73,22 @@ export interface GenerateNoteParams {
 	sectionConcurrency?: number;
 	signal?: AbortSignal;
 	onProgress?: (done: number, total: number) => void;
+}
+
+export interface NoteBriefSectionSource {
+	heading: string;
+	question: string | null;
+	keywords: string[] | null;
+	error: string | null;
+}
+
+export interface GenerateNoteBriefParams {
+	noteTitle: string;
+	markdown: string;
+	provider: CueCraftCueProviderRuntime;
+	sections: readonly NoteBriefSectionSource[];
+	maxContextChars?: number;
+	signal?: AbortSignal;
 }
 
 /** Default budget for note text injected into a single prompt. */
@@ -119,6 +138,7 @@ function emptySectionResult(
 		question: null,
 		confidence: null,
 		rationale: null,
+		sectionLens: null,
 		error: null,
 	};
 }
@@ -143,6 +163,7 @@ function applyCueResult(
 	result.question = item.cue.question;
 	result.confidence = item.cue.confidence;
 	result.rationale = item.cue.rationale ?? null;
+	result.sectionLens = item.cue.sectionLens ?? null;
 }
 
 /**
@@ -221,6 +242,42 @@ export async function generateSectionCueBatch(
 		});
 	}
 	return results;
+}
+
+export async function generateNoteBriefForSections(
+	params: GenerateNoteBriefParams
+): Promise<NoteBriefOutput | null> {
+	const generateNoteBrief = params.provider.generateNoteBrief?.bind(params.provider);
+	if (!generateNoteBrief) return null;
+	const sections = params.sections
+		.filter((section) => !section.error && section.question)
+		.map((section) => ({
+			heading: section.heading,
+			question: section.question as string,
+			keywords: section.keywords ?? [],
+		}));
+	if (!sections.length || params.signal?.aborted) return null;
+	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
+	const t0 = Date.now();
+	try {
+		const noteBrief = await generateNoteBrief(
+			{
+				noteTitle: params.noteTitle,
+				fullText: clampText(params.markdown, maxContextChars),
+				sections,
+			},
+			params.signal
+		);
+		console.debug(
+			`CueCraft note brief done (${((Date.now() - t0) / 1000).toFixed(1)}s)`
+		);
+		return noteBrief;
+	} catch {
+		console.debug(
+			`CueCraft note brief failed (${((Date.now() - t0) / 1000).toFixed(1)}s)`
+		);
+		return null;
+	}
 }
 
 /**
@@ -306,6 +363,7 @@ export async function generateNote(
 
 	let summary: string | null = null;
 	let learningObjective: string | null = null;
+	let noteBrief: NoteBriefOutput | null = null;
 	const completedResults = results.filter(
 		(r): r is SectionResult => Boolean(r)
 	);
@@ -315,17 +373,19 @@ export async function generateNote(
 			sections: completedResults,
 			summary,
 			learningObjective,
+			noteBrief,
 			canceled: true,
 		};
 	}
 
+	const questions = completedResults
+		.map((r) => r.question)
+		.filter((q): q is string => Boolean(q));
+	if (!questions.length) {
+		return { sections: completedResults, summary, learningObjective, noteBrief, canceled };
+	}
+
 	if (options.autoSummary && completedResults.length) {
-		const questions = completedResults
-			.map((r) => r.question)
-			.filter((q): q is string => Boolean(q));
-		if (!questions.length) {
-			return { sections: completedResults, summary, learningObjective, canceled };
-		}
 		const t0 = Date.now();
 		try {
 			const sum = await provider.generateSummary(
@@ -344,6 +404,17 @@ export async function generateNote(
 			summary = null;
 		}
 	}
+	if (!signal?.aborted) {
+		noteBrief = await generateNoteBriefForSections({
+			noteTitle,
+			markdown,
+			provider,
+			sections: completedResults,
+			maxContextChars,
+			signal,
+		});
+	}
+	if (signal?.aborted) canceled = true;
 
-	return { sections: completedResults, summary, learningObjective, canceled };
+	return { sections: completedResults, summary, learningObjective, noteBrief, canceled };
 }

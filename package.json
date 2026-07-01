@@ -55,6 +55,7 @@
 		"@ai-sdk/anthropic": "^3.0.81",
 		"@ai-sdk/google": "^3.0.80",
 		"@ai-sdk/openai": "^3.0.68",
+		"@ai-sdk/provider-utils": "^4.0.27",
 		"@ai-sdk/xai": "^3.0.93",
 		"@anthropic-ai/sdk": "^0.104.1",
 		"@google/genai": "^2.8.0",

@@ -17,6 +17,10 @@ import {
 	editorCueDisplayOption,
 	isEditorCueDisplay,
 } from "../src/editor-cue-display";
+import {
+	DEFAULT_SHOW_NOTE_BRIEF,
+	DEFAULT_SHOW_SECTION_LENS,
+} from "../src/review-surfaces";
 
 describe("settings defaults", () => {
 	it("defaults auto-generation settle delay to 10 seconds", () => {
@@ -71,6 +75,11 @@ describe("settings defaults", () => {
 		expect(editorCueDisplayOption(DEFAULT_EDITOR_CUE_DISPLAY).label).toBe(
 			"Inline cues"
 		);
+	});
+
+	it("defaults generated review surfaces to visible", () => {
+		expect(DEFAULT_SHOW_SECTION_LENS).toBe(true);
+		expect(DEFAULT_SHOW_NOTE_BRIEF).toBe(true);
 	});
 
 	it("validates persisted Cornell display mode values", () => {

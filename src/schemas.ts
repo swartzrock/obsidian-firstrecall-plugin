@@ -6,6 +6,12 @@ import { z } from "zod/v3";
  */
 export const confidenceSchema = z.enum(["high", "medium", "low"]);
 
+export const sectionLensSchema = z.object({
+	takeaway: z.string().trim().min(1, "sectionLens.takeaway is required"),
+	keyPhrase: z.string().trim().min(1, "sectionLens.keyPhrase is required"),
+	explanation: z.string().trim().min(1, "sectionLens.explanation is required"),
+});
+
 /** Drop blanks, trim, dedupe case-insensitively, and cap at 5 keywords. */
 function coerceKeywords(value: unknown): unknown {
 	if (!Array.isArray(value)) return value;
@@ -41,6 +47,10 @@ export const cueOutputSchema = z.object({
 		(value) => (value === null ? undefined : value),
 		z.string().trim().optional()
 	),
+	sectionLens: z.preprocess(
+		(value) => (value === null ? undefined : value),
+		sectionLensSchema.optional()
+	),
 });
 
 export const summaryOutputSchema = z.object({
@@ -49,6 +59,18 @@ export const summaryOutputSchema = z.object({
 		(value) => (value === null ? undefined : value),
 		z.string().trim().optional()
 	),
+});
+
+const noteBriefCardSchema = z.object({
+	title: z.string().trim().min(1, "title is required"),
+	detail: z.string().trim().min(1, "detail is required"),
+});
+
+export const noteBriefOutputSchema = z.object({
+	overview: z.string().trim().min(1, "overview is required"),
+	whatMatters: noteBriefCardSchema,
+	reviewFirst: noteBriefCardSchema,
+	sayItBack: noteBriefCardSchema,
 });
 
 export const cueGenerationSchema = z.object({
@@ -63,6 +85,19 @@ export const cueGenerationSchema = z.object({
 		.string()
 		.nullable()
 		.describe("If confidence is low, a short reason why this cue may need review."),
+	sectionLens: z
+		.object({
+			takeaway: z
+				.string()
+				.describe("One short sentence summarizing the section's most important idea."),
+			keyPhrase: z
+				.string()
+				.describe("The most important phrase or term to notice."),
+			explanation: z
+				.string()
+				.describe("One short sentence explaining why the phrase matters for recall."),
+		})
+		.describe("A compact AI-native review lens for this section."),
 });
 
 export const summaryGenerationSchema = z.object({
@@ -75,8 +110,24 @@ export const summaryGenerationSchema = z.object({
 		.describe("One short sentence stating what the reader should be able to do."),
 });
 
+const noteBriefCardGenerationSchema = z.object({
+	title: z.string().describe("Short, specific card title."),
+	detail: z.string().describe("One concise sentence explaining the card."),
+});
+
+export const noteBriefGenerationSchema = z.object({
+	overview: z
+		.string()
+		.describe("One concise paragraph, 2 to 4 sentences, summarizing the note."),
+	whatMatters: noteBriefCardGenerationSchema.describe("Central claim or idea card."),
+	reviewFirst: noteBriefCardGenerationSchema.describe("Best first review target card."),
+	sayItBack: noteBriefCardGenerationSchema.describe("Active recall self-test card."),
+});
+
 export type CueOutput = z.infer<typeof cueOutputSchema>;
+export type SectionLens = z.infer<typeof sectionLensSchema>;
 export type SummaryOutput = z.infer<typeof summaryOutputSchema>;
+export type NoteBriefOutput = z.infer<typeof noteBriefOutputSchema>;
 
 export interface CueBatchValidationItem {
 	value: CueOutput | null;
@@ -172,6 +223,18 @@ export function validateSummary(raw: string): ValidationResult<SummaryOutput> {
 		return { ok: false, error: "response was not valid JSON" };
 	}
 	const parsed = summaryOutputSchema.safeParse(json);
+	if (!parsed.success) {
+		return { ok: false, error: formatZodError(parsed.error) };
+	}
+	return { ok: true, value: parsed.data };
+}
+
+export function validateNoteBrief(raw: string): ValidationResult<NoteBriefOutput> {
+	const json = extractJson(raw);
+	if (json === null) {
+		return { ok: false, error: "response was not valid JSON" };
+	}
+	const parsed = noteBriefOutputSchema.safeParse(json);
 	if (!parsed.success) {
 		return { ok: false, error: formatZodError(parsed.error) };
 	}
