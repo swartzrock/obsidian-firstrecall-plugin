@@ -59,6 +59,12 @@ import {
 	type EditorCueDisplay,
 } from "./editor-cue-display";
 import {
+	DEFAULT_EDITOR_HOOK_CARD_STYLE,
+	EDITOR_HOOK_CARD_STYLE_OPTIONS,
+	editorHookCardStyleOption,
+	type EditorHookCardStyle,
+} from "./editor-hook-card-style";
+import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	anthropicModelInfoToByokModelOption,
 	buildAnthropicModelOptions,
@@ -178,6 +184,9 @@ export interface CueCraftSettings {
 	autoSummary: boolean;
 	showSectionLens: boolean;
 	showNoteBrief: boolean;
+	showRailQuestions: boolean;
+	showRailSupportTerms: boolean;
+	editorHookCardStyle: EditorHookCardStyle;
 	renderInReadingMode: boolean;
 	readingModeDisplay: ReadingModeDisplay;
 	foldCueColumnOnMobile: boolean;
@@ -238,6 +247,9 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	autoSummary: true,
 	showSectionLens: DEFAULT_SHOW_SECTION_LENS,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
+	showRailQuestions: true,
+	showRailSupportTerms: true,
+	editorHookCardStyle: DEFAULT_EDITOR_HOOK_CARD_STYLE,
 	renderInReadingMode: true,
 	readingModeDisplay: DEFAULT_READING_MODE_DISPLAY,
 	foldCueColumnOnMobile: true,
@@ -450,6 +462,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const editorDisplay = editorCueDisplayOption(
 			this.plugin.settings.editorCueDisplay
 		).label;
+		const hookCardStyle = editorHookCardStyleOption(
+			this.plugin.settings.editorHookCardStyle
+		).label;
 		const mode = cornellDisplayModeOption(
 			this.plugin.settings.cornellDisplayMode
 		).label;
@@ -457,7 +472,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			CORNELL_STYLES.find(
 				(item) => item.id === this.plugin.settings.cornellStyle
 			)?.label ?? "Custom";
-		return `${editorDisplay} · ${mode} · ${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
+		return `${editorDisplay} · ${hookCardStyle} · ${mode} · ${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
 	}
 
 	private studyAreasSummary(): string {
@@ -1200,6 +1215,32 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Show rail questions")
+			.setDesc("Show cue questions inside left-side editor rail cards.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.showRailQuestions)
+					.onChange(async (value) => {
+						this.plugin.settings.showRailQuestions = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshEditorCues();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show rail support terms")
+			.setDesc("Show generated support terms inside left-side editor rail cards.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.showRailSupportTerms)
+					.onChange(async (value) => {
+						this.plugin.settings.showRailSupportTerms = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshEditorCues();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Fold cue column on mobile")
 			.setDesc("Collapse the left cue column into a tap-to-expand panel on narrow screens.")
 			.addToggle((tg) =>
@@ -1246,6 +1287,27 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const editorDisplayDesc = (): string =>
 			editorCueDisplayOption(this.plugin.settings.editorCueDisplay).description;
 		editorDisplaySetting.setDesc(editorDisplayDesc());
+
+		const railCardStyleSetting = new Setting(containerEl)
+			.setName("Rail card background")
+			.addDropdown((dd) => {
+				for (const option of EDITOR_HOOK_CARD_STYLE_OPTIONS) {
+					dd.addOption(option.id, option.label);
+				}
+				dd.setValue(this.plugin.settings.editorHookCardStyle).onChange(
+					async (value) => {
+						this.plugin.settings.editorHookCardStyle =
+							value as EditorHookCardStyle;
+						await this.plugin.saveSettings();
+						this.plugin.refreshEditorCues();
+						railCardStyleSetting.setDesc(railCardStyleDesc());
+					}
+				);
+			});
+		const railCardStyleDesc = (): string =>
+			editorHookCardStyleOption(this.plugin.settings.editorHookCardStyle)
+				.description;
+		railCardStyleSetting.setDesc(railCardStyleDesc());
 
 		const displayDesc = (): string =>
 			cornellDisplayModeOption(this.plugin.settings.cornellDisplayMode)

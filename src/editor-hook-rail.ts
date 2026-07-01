@@ -4,11 +4,21 @@ import {
 } from "./short-form-hook";
 import type { CueLineData, Confidence } from "./cue-extension";
 import type { EditorCueDisplay } from "./editor-cue-display";
+import {
+	DEFAULT_EDITOR_HOOK_CARD_STYLE,
+	type EditorHookCardStyle,
+} from "./editor-hook-card-style";
 import type { SectionLens } from "./schemas";
 
 export type EditorHookCardKind = "hook" | "failed";
 export type EditorHookCardState = "current" | "upcoming";
 export type EditorHookTone = "warm" | "cool";
+
+export interface EditorHookCardOptions {
+	showQuestion?: boolean;
+	showSupportTerms?: boolean;
+	cardStyle?: EditorHookCardStyle;
+}
 
 export interface EditorHookCard {
 	kind: EditorHookCardKind;
@@ -24,18 +34,25 @@ export interface EditorHookCard {
 	titleDensity: "standard" | "long" | "dense";
 	state: EditorHookCardState;
 	tone: EditorHookTone;
+	gradientIndex: number;
+	showQuestion: boolean;
+	showSupportTerms: boolean;
+	cardStyle: EditorHookCardStyle;
 }
 
 export function buildEditorHookCard(
 	cue: CueLineData,
 	display: EditorCueDisplay,
 	index = 0,
-	state: EditorHookCardState = "upcoming"
+	state: EditorHookCardState = "upcoming",
+	options: EditorHookCardOptions = {}
 ): EditorHookCard {
 	const failed = Boolean(cue.error);
 	const hookTitle = failed
 		? "Cue unavailable"
 		: buildShortFormHookTitle(cue.question) ?? cue.heading;
+	const showQuestion = options.showQuestion ?? true;
+	const showSupportTerms = options.showSupportTerms ?? true;
 	return {
 		kind: failed ? "failed" : "hook",
 		display,
@@ -50,5 +67,9 @@ export function buildEditorHookCard(
 		titleDensity: shortFormHookTitleDensity(hookTitle),
 		state,
 		tone: index % 2 === 0 ? "warm" : "cool",
+		gradientIndex: index % 3,
+		showQuestion,
+		showSupportTerms,
+		cardStyle: options.cardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
 	};
 }

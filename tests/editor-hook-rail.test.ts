@@ -32,6 +32,10 @@ describe("buildEditorHookCard", () => {
 			titleDensity: "long",
 			state: "upcoming",
 			tone: "warm",
+			gradientIndex: 0,
+			showQuestion: true,
+			showSupportTerms: true,
+			cardStyle: "classic",
 		});
 	});
 
@@ -41,6 +45,18 @@ describe("buildEditorHookCard", () => {
 		expect(first.state).toBe("upcoming");
 		expect(card.state).toBe("upcoming");
 		expect(card.tone).toBe("cool");
+	});
+
+	it("accepts display-only rail card options", () => {
+		const card = buildEditorHookCard(cue(), "anchored-card-rail", 4, "upcoming", {
+			showQuestion: false,
+			showSupportTerms: false,
+			cardStyle: "gradient",
+		});
+		expect(card.showQuestion).toBe(false);
+		expect(card.showSupportTerms).toBe(false);
+		expect(card.cardStyle).toBe("gradient");
+		expect(card.gradientIndex).toBe(1);
 	});
 
 	it("accepts explicit active section state", () => {

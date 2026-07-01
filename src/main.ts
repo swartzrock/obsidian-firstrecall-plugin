@@ -84,6 +84,10 @@ import {
 	isEditorCueDisplay,
 } from "./editor-cue-display";
 import {
+	DEFAULT_EDITOR_HOOK_CARD_STYLE,
+	isEditorHookCardStyle,
+} from "./editor-hook-card-style";
+import {
 	selectExportableCues,
 	cuesToMarkdown,
 	cuesToAnki,
@@ -270,7 +274,12 @@ export default class CueCraftPlugin extends Plugin {
 				(settings as { autoGenerationSettleDelaySeconds?: unknown })
 					.autoGenerationSettleDelaySeconds
 			);
-		for (const key of ["showSectionLens", "showNoteBrief"] as const) {
+		for (const key of [
+			"showSectionLens",
+			"showNoteBrief",
+			"showRailQuestions",
+			"showRailSupportTerms",
+		] as const) {
 			if (
 				typeof (settings as unknown as Record<string, unknown>)[key] !==
 				"boolean"
@@ -287,6 +296,13 @@ export default class CueCraftPlugin extends Plugin {
 			)
 		) {
 			settings.editorCueDisplay = DEFAULT_EDITOR_CUE_DISPLAY;
+		}
+		if (
+			!isEditorHookCardStyle(
+				(settings as { editorHookCardStyle?: unknown }).editorHookCardStyle
+			)
+		) {
+			settings.editorHookCardStyle = DEFAULT_EDITOR_HOOK_CARD_STYLE;
 		}
 		if (
 			!isCornellDisplayMode(
@@ -383,6 +399,9 @@ export default class CueCraftPlugin extends Plugin {
 			effects: setCuesEffect.of({
 				cues,
 				display: this.settings.editorCueDisplay,
+				showRailQuestions: this.settings.showRailQuestions,
+				showRailSupportTerms: this.settings.showRailSupportTerms,
+				editorHookCardStyle: this.settings.editorHookCardStyle,
 				noteBrief:
 					cache &&
 					this.settings.showNoteBrief &&

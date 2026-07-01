@@ -251,11 +251,54 @@ describe("renderCueElement", () => {
 			expect(el.dataset.confidence).toBe("medium");
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
+				Array.from(
+					el.querySelectorAll(".cuecraft-editor-hook-section-label")
+				).map((label) => label.textContent)
+			).toEqual(["QUESTION", "LENS", "TERMS"]);
+			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("How do agents differ from chatbots");
 			expect(
 				el.querySelector(".cuecraft-editor-hook-keywords")?.textContent
 			).toBe("agents");
+			expect(
+				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+		});
+	});
+
+	it("hides rail questions and support terms when display settings are off", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 3,
+					heading: "Terms",
+					question: "How do agents differ from chatbots?",
+					keywords: ["agents", "tools"],
+					confidence: "medium",
+					sectionLens: SECTION_LENS,
+					error: null,
+				},
+				"anchored-card-rail",
+				4,
+				"upcoming",
+				{
+					showQuestion: false,
+					showSupportTerms: false,
+					cardStyle: "gradient",
+				}
+			);
+			expect(el.dataset.cardStyle).toBe("gradient");
+			expect(el.dataset.gradient).toBe("1");
+			expect(el.dataset.questionVisible).toBe("false");
+			expect(el.dataset.supportTermsVisible).toBe("false");
+			expect(
+				Array.from(
+					el.querySelectorAll(".cuecraft-editor-hook-section-label")
+				).map((label) => label.textContent)
+			).toEqual(["LENS"]);
+			expect(el.querySelector(".cuecraft-editor-hook-title")).toBeNull();
+			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
@@ -283,6 +326,7 @@ describe("renderCueElement", () => {
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.dataset.confidence).toBe("low");
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
+			expect(el.querySelector(".cuecraft-editor-hook-section-label")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("Who is this workflow designed for");

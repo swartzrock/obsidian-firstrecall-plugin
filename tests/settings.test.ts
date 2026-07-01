@@ -18,6 +18,12 @@ import {
 	isEditorCueDisplay,
 } from "../src/editor-cue-display";
 import {
+	DEFAULT_EDITOR_HOOK_CARD_STYLE,
+	EDITOR_HOOK_CARD_STYLE_OPTIONS,
+	editorHookCardStyleOption,
+	isEditorHookCardStyle,
+} from "../src/editor-hook-card-style";
+import {
 	DEFAULT_SHOW_NOTE_BRIEF,
 	DEFAULT_SHOW_SECTION_LENS,
 } from "../src/review-surfaces";
@@ -82,6 +88,13 @@ describe("settings defaults", () => {
 		expect(DEFAULT_SHOW_NOTE_BRIEF).toBe(true);
 	});
 
+	it("defaults rail cards to the classic style", () => {
+		expect(DEFAULT_EDITOR_HOOK_CARD_STYLE).toBe("classic");
+		expect(editorHookCardStyleOption(DEFAULT_EDITOR_HOOK_CARD_STYLE).label).toBe(
+			"Classic warm/cool"
+		);
+	});
+
 	it("validates persisted Cornell display mode values", () => {
 		expect(isCornellDisplayMode("classic")).toBe(true);
 		expect(isCornellDisplayMode("hook")).toBe(true);
@@ -107,6 +120,17 @@ describe("settings defaults", () => {
 		expect(isEditorCueDisplay("hook-minimap")).toBe(true);
 		for (const bad of ["", "hook", "cornell", null, undefined, 1, {}]) {
 			expect(isEditorCueDisplay(bad)).toBe(false);
+		}
+	});
+	it("validates persisted editor hook card style values", () => {
+		expect(EDITOR_HOOK_CARD_STYLE_OPTIONS.map((option) => option.id)).toEqual([
+			"classic",
+			"gradient",
+		]);
+		expect(isEditorHookCardStyle("classic")).toBe(true);
+		expect(isEditorHookCardStyle("gradient")).toBe(true);
+		for (const bad of ["", "orange", "soft", null, undefined, 1, {}]) {
+			expect(isEditorHookCardStyle(bad)).toBe(false);
 		}
 	});
 });

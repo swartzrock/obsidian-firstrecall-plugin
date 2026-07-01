@@ -1101,6 +1101,70 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		);
 }
 
+.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"] {
+	border: 1px solid var(--cuecraft-hook-gradient-border);
+	background: linear-gradient(
+		135deg,
+		var(--cuecraft-hook-gradient-start),
+		var(--cuecraft-hook-gradient-end)
+	);
+	box-shadow: 0 8px 22px rgba(20, 24, 32, 0.12);
+}
+
+.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"][data-gradient="0"] {
+	--cuecraft-hook-gradient-start: color-mix(
+		in srgb,
+		var(--color-cyan) 10%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-end: color-mix(
+		in srgb,
+		var(--color-cyan) 22%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-border: color-mix(
+		in srgb,
+		var(--color-cyan) 40%,
+		var(--background-modifier-border)
+	);
+}
+
+.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"][data-gradient="1"] {
+	--cuecraft-hook-gradient-start: color-mix(
+		in srgb,
+		var(--color-yellow) 12%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-end: color-mix(
+		in srgb,
+		var(--color-orange) 18%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-border: color-mix(
+		in srgb,
+		var(--color-orange) 38%,
+		var(--background-modifier-border)
+	);
+}
+
+.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"][data-gradient="2"] {
+	--cuecraft-hook-gradient-start: color-mix(
+		in srgb,
+		var(--color-purple) 10%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-end: color-mix(
+		in srgb,
+		var(--color-purple) 20%,
+		var(--background-primary)
+	);
+	--cuecraft-hook-gradient-border: color-mix(
+		in srgb,
+		var(--color-purple) 38%,
+		var(--background-modifier-border)
+	);
+}
+
 .cuecraft-editor-hook-heading {
 	margin-bottom: 0.35em;
 	overflow: hidden;
@@ -1116,6 +1180,31 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	z-index: 1;
 	font-weight: 800;
 	overflow-wrap: anywhere;
+}
+
+.cuecraft-editor-hook-section-label {
+	position: relative;
+	z-index: 1;
+	margin: 0 0 0.24em;
+	color: color-mix(in srgb, var(--text-normal) 62%, transparent);
+	font-size: 0.7em;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	line-height: 1.1;
+	text-transform: uppercase;
+}
+
+.cuecraft-editor-hook-section-label:not(:first-child) {
+	border-top: 1px solid
+		color-mix(in srgb, var(--text-normal) 16%, transparent);
+	margin-top: 0.6em;
+	padding-top: 0.55em;
+}
+
+.cuecraft-editor-hook-section-label + .cuecraft-section-lens {
+	border-top: 0;
+	margin-top: 0;
+	padding-top: 0;
 }
 
 .cuecraft-editor-hook[data-title-density="long"] .cuecraft-editor-hook-title {
@@ -1143,6 +1232,12 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	z-index: 1;
 	color: color-mix(in srgb, var(--text-normal) 70%, transparent);
 	font-weight: var(--font-medium);
+}
+
+.cuecraft-editor-hook[data-question-visible="false"] .cuecraft-section-lens {
+	margin-top: 0;
+	padding-top: 0;
+	border-top: 0;
 }
 
 .cuecraft-editor-hook-failed {
@@ -1727,7 +1822,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 @media (min-width: 1180px) {
 	.markdown-source-view.mod-cm6
 		.cm-editor.cuecraft-editor-hook-page-shift {
-		--cuecraft-editor-page-shift: clamp(5.5rem, 9vw, 9rem);
+		--cuecraft-editor-page-shift: clamp(6.5rem, 11vw, 11rem);
 	}
 
 	.markdown-source-view.mod-cm6
@@ -1747,7 +1842,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	.markdown-source-view.mod-cm6
 		.cm-editor.cuecraft-editor-hook-page-shift
 		.cuecraft-editor-hook-gutter
-		.cuecraft-editor-hook-anchored-card-rail,
+		.cuecraft-editor-hook-anchored-card-rail {
+		width: clamp(14.5rem, 21vw, 17.5rem);
+	}
+
 	.markdown-source-view.mod-cm6
 		.cm-editor.cuecraft-editor-hook-page-shift
 		.cuecraft-editor-hook-gutter
@@ -1785,7 +1883,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 @media (min-width: 980px) and (max-width: 1179.98px) {
 	.markdown-source-view.mod-cm6
 		.cm-editor.cuecraft-editor-hook-page-shift {
-		--cuecraft-editor-page-shift: clamp(2rem, 5vw, 3.5rem);
+		--cuecraft-editor-page-shift: clamp(4rem, 8vw, 6rem);
 	}
 
 	.markdown-source-view.mod-cm6
@@ -1793,6 +1891,13 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		.cm-contentContainer {
 		transform: translateX(var(--cuecraft-editor-page-shift));
 		transition: transform 140ms ease;
+	}
+
+	.markdown-source-view.mod-cm6
+		.cm-editor.cuecraft-editor-hook-page-shift
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-anchored-card-rail {
+		width: clamp(10rem, 19vw, 13rem);
 	}
 }
 

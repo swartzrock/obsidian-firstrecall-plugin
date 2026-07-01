@@ -3,8 +3,9 @@
 > AI-powered active-recall study cues for [Obsidian](https://obsidian.md).
 
 CueCraft turns ordinary notes into interactive study sessions. It reads the current note,
-generates Cornell-style cue questions, keywords, and a summary, and shows them as a
-**non-destructive** study layer beside the note — your Markdown file is never modified.
+generates Cornell-style cue questions, keywords, Section Lens notes, and a Note Brief, and
+shows them as a **non-destructive** study layer beside the note — your Markdown file is
+never modified.
 
 The goal is retention, not prettier summaries: see a question, try to recall the answer,
 reveal the source, then use the summary to check the big picture.
@@ -22,13 +23,42 @@ cue layer, Study Mode, and caching are being built out against the v1.0 spec.
 ## v1.0 at a glance
 
 - **Providers:** Ollama (local, free), direct cloud providers — Anthropic (Claude), OpenAI (ChatGPT), Google (Gemini), and xAI (Grok) — OpenRouter for one-key access to many hosted models, or local Codex / Claude CLI commands. Choose one in Settings; cloud providers and OpenRouter need an API key (stored locally in the vault's plugin data), while CLI providers use your existing local CLI login.
-- **Editor-mode** cue questions + keywords per section, and a whole-note summary.
+- **Editor-mode** cue questions + keywords per section, plus AI-native review surfaces:
+  Section Lens per section and a whole-note Note Brief.
 - **Cornell view** — a dedicated pane laying the note out as Title → left cue column | main notes → Summary, rendered from the cache (command: *Open Cornell View*).
 - **Study Mode** (in the Cornell view) blurs the left keyword hints until you reveal each cue.
 - **Cornell view styles** — pick a visual preset in settings: Cornell Classic, Exam Prep, Legal Pad, Minimal, or Handwritten.
 - **Per-note** enable / hide / clear.
 - **JSON cache** with stale detection; strict typed validation of model output.
 - **Desktop-only** (`isDesktopOnly: true`).
+
+## Review surfaces
+
+Section Lens adds a compact key phrase, takeaway, and explanation to each generated cue.
+Note Brief adds a whole-note overview with three review cards: what matters, review first,
+and say it back. Both artifacts are generated with cues and stored in CueCraft's cache even
+when their displays are turned off.
+
+Use **Settings → CueCraft → Note format** to toggle **Show Section Lens** and
+**Show Note Brief**. Turning a display off only hides cached review content; it does not
+delete cached data or stop future cue generation from creating it.
+
+Manual verification checklist for review-surface changes:
+
+1. Turn both toggles on, generate cues for a note with at least two headings, and confirm
+   the editor shows one Note Brief near the top plus Section Lens content attached to each
+   cue. Switch to Reading mode and Cornell/review views and confirm the same cached review
+   content appears without changing the Markdown file.
+2. Turn **Show Section Lens** off, clear or regenerate cues for a test note, and confirm
+   cues still generate but Section Lens blocks are hidden. Turn it back on and confirm the
+   cached Section Lens appears without regenerating the note.
+3. Turn **Show Note Brief** off, clear or regenerate cues, and confirm no note-level brief
+   appears in editor, Reading mode, or Cornell/review views. Turn it back on and confirm the
+   cached Note Brief appears without regenerating the note.
+4. Add a new heading with body text to a note that already has generated cues, then run
+   **Refresh stale**. Confirm CueCraft regenerates only the new or changed section, keeps
+   existing Section Lens content for unchanged sections, refreshes the Note Brief, and keeps
+   cue/Section Lens placement aligned after typing or inserting blank lines above headings.
 
 ## Development
 
