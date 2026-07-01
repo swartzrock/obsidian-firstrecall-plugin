@@ -1215,6 +1215,32 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
+			.setName("Show rail questions")
+			.setDesc("Show cue questions inside left-side editor rail cards.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.showRailQuestions)
+					.onChange(async (value) => {
+						this.plugin.settings.showRailQuestions = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshEditorCues();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show rail support terms")
+			.setDesc("Show generated support terms inside left-side editor rail cards.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.showRailSupportTerms)
+					.onChange(async (value) => {
+						this.plugin.settings.showRailSupportTerms = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshEditorCues();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Fold cue column on mobile")
 			.setDesc("Collapse the left cue column into a tap-to-expand panel on narrow screens.")
 			.addToggle((tg) =>
@@ -1261,32 +1287,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const editorDisplayDesc = (): string =>
 			editorCueDisplayOption(this.plugin.settings.editorCueDisplay).description;
 		editorDisplaySetting.setDesc(editorDisplayDesc());
-
-		new Setting(containerEl)
-			.setName("Show rail questions")
-			.setDesc("Show cue questions inside left-side editor rail cards.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.showRailQuestions)
-					.onChange(async (value) => {
-						this.plugin.settings.showRailQuestions = value;
-						await this.plugin.saveSettings();
-						this.plugin.refreshEditorCues();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Show rail support terms")
-			.setDesc("Show generated support terms inside left-side editor rail cards.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.showRailSupportTerms)
-					.onChange(async (value) => {
-						this.plugin.settings.showRailSupportTerms = value;
-						await this.plugin.saveSettings();
-						this.plugin.refreshEditorCues();
-					})
-			);
 
 		const railCardStyleSetting = new Setting(containerEl)
 			.setName("Rail card background")
