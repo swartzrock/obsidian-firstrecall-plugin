@@ -13,6 +13,8 @@ import type {
 	ByokCueBatchResult,
 	ByokCueInput,
 	ByokCueOutput,
+	ByokNoteBriefInput,
+	ByokNoteBriefOutput,
 	ByokProviderRuntime,
 	ByokProviderStatus,
 	ByokSummaryInput,
@@ -31,13 +33,17 @@ interface MockOptions {
 
 function mockProvider(opts: MockOptions = {}): ByokProviderRuntime & {
 	summaryCalls: number;
+	noteBriefCalls: number;
 	lastSummaryInput?: ByokSummaryInput;
+	lastNoteBriefInput?: ByokNoteBriefInput;
 	cueInputs: ByokCueInput[];
 	batchInputs: ByokCueInput[][];
 } {
 	const provider: ByokProviderRuntime & {
 		summaryCalls: number;
+		noteBriefCalls: number;
 		lastSummaryInput?: ByokSummaryInput;
+		lastNoteBriefInput?: ByokNoteBriefInput;
 		cueInputs: ByokCueInput[];
 		batchInputs: ByokCueInput[][];
 	} = {
@@ -47,7 +53,9 @@ function mockProvider(opts: MockOptions = {}): ByokProviderRuntime & {
 		requiresDownload: false,
 		sectionConcurrencyLimit: opts.sectionConcurrencyLimit,
 		summaryCalls: 0,
+		noteBriefCalls: 0,
 		lastSummaryInput: undefined as ByokSummaryInput | undefined,
+		lastNoteBriefInput: undefined as ByokNoteBriefInput | undefined,
 		cueInputs: [] as ByokCueInput[],
 		batchInputs: [] as ByokCueInput[][],
 		async testConnection(): Promise<ByokProviderStatus> {
@@ -78,6 +86,16 @@ function mockProvider(opts: MockOptions = {}): ByokProviderRuntime & {
 			provider.summaryCalls++;
 			provider.lastSummaryInput = input;
 			return { summary: "the summary", learningObjective: null };
+		},
+		async generateNoteBrief(input: ByokNoteBriefInput): Promise<ByokNoteBriefOutput> {
+			provider.noteBriefCalls++;
+			provider.lastNoteBriefInput = input;
+			return {
+				overview: "the note brief",
+				whatMatters: { title: "Main idea", detail: "Review the main idea." },
+				reviewFirst: { title: "A", detail: "Start with the first section." },
+				sayItBack: { title: "Say it back", detail: "Explain the note aloud." },
+			};
 		},
 	};
 	if (opts.batch) {
@@ -135,8 +153,15 @@ describe("generateNote", () => {
 			[3, 3],
 		]);
 		expect(provider.summaryCalls).toBe(1);
+		expect(provider.noteBriefCalls).toBe(1);
 		expect(result.summary).toBe("the summary");
+		expect(result.noteBrief?.overview).toBe("the note brief");
 		expect(result.sections[0].sectionLens?.keyPhrase).toBe("A");
+		expect(provider.lastNoteBriefInput?.sections.map((s) => s.heading)).toEqual([
+			"A",
+			"B",
+			"C",
+		]);
 		// Summary receives the per-section questions.
 		expect(provider.lastSummaryInput?.sectionQuestions).toEqual([
 			"Q:A",
@@ -293,6 +318,7 @@ describe("generateNote", () => {
 		const controller = new AbortController();
 		const provider = mockProvider();
 		const summarySpy = vi.spyOn(provider, "generateSummary");
+		const noteBriefSpy = vi.spyOn(provider, "generateNoteBrief");
 
 		const result = await generateNote({
 			noteTitle: "T",
@@ -310,6 +336,7 @@ describe("generateNote", () => {
 		expect(result.sections).toHaveLength(2); // in-flight batch finished
 		expect(result.summary).toBeNull();
 		expect(summarySpy).not.toHaveBeenCalled();
+		expect(noteBriefSpy).not.toHaveBeenCalled();
 	});
 
 	it("does not generate a title cue for notes with no headings", async () => {
@@ -322,6 +349,7 @@ describe("generateNote", () => {
 		});
 		expect(provider.cueInputs).toEqual([]);
 		expect(provider.summaryCalls).toBe(0);
+		expect(provider.noteBriefCalls).toBe(0);
 		expect(result.sections).toEqual([]);
 	});
 
@@ -351,6 +379,7 @@ describe("generateNote", () => {
 		});
 		expect(provider.cueInputs).toEqual([]);
 		expect(provider.summaryCalls).toBe(0);
+		expect(provider.noteBriefCalls).toBe(0);
 		expect(result.sections).toEqual([]);
 		expect(result.summary).toBeNull();
 	});
@@ -413,8 +442,10 @@ describe("generateNote", () => {
 			options: { autoSummary: false },
 		});
 		expect(provider.summaryCalls).toBe(0);
+		expect(provider.noteBriefCalls).toBe(1);
 		expect(result.summary).toBeNull();
 		expect(result.learningObjective).toBeNull();
+		expect(result.noteBrief?.overview).toBe("the note brief");
 	});
 });
 

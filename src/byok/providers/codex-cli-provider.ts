@@ -1,5 +1,5 @@
-import type { CueOutput, SummaryOutput } from "../schemas";
-import { validateCue, validateSummary } from "../schemas";
+import type { CueOutput, NoteBriefOutput, SummaryOutput } from "../schemas";
+import { validateCue, validateNoteBrief, validateSummary } from "../schemas";
 import {
 	cueDensityGuidance,
 	keywordGuidance,
@@ -9,6 +9,7 @@ import {
 	AiProvider,
 	type CueBatchResult,
 	CueInput,
+	NoteBriefInput,
 	ProviderError,
 	ProviderStatus,
 	SummaryInput,
@@ -23,7 +24,10 @@ import {
 	buildCueBatchPrompt,
 	parseCueBatch,
 } from "./local-cli-cue-batch";
-import { SECTION_LENS_PROMPT } from "./review-artifact-prompts";
+import {
+	buildNoteBriefPrompt,
+	SECTION_LENS_PROMPT,
+} from "./review-artifact-prompts";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const STATUS_TIMEOUT_MS = 15_000;
@@ -232,6 +236,26 @@ export class CodexCliProvider implements AiProvider {
 				`\nYour previous reply could not be validated (${result.error}).\n` +
 				`Reply again with ONLY the corrected JSON object.`;
 			result = validateSummary(await this.complete(repairPrompt, signal));
+		}
+		if (!result.ok) {
+			throw new ProviderError(`Model output could not be validated: ${result.error}`);
+		}
+		return result.value;
+	}
+
+	async generateNoteBrief(
+		input: NoteBriefInput,
+		signal?: AbortSignal
+	): Promise<NoteBriefOutput> {
+		const basePrompt = buildNoteBriefPrompt(input);
+		const raw = await this.complete(basePrompt, signal);
+		let result = validateNoteBrief(raw);
+		if (!result.ok) {
+			const repairPrompt =
+				basePrompt +
+				`\nYour previous reply could not be validated (${result.error}).\n` +
+				`Reply again with ONLY the corrected JSON object.`;
+			result = validateNoteBrief(await this.complete(repairPrompt, signal));
 		}
 		if (!result.ok) {
 			throw new ProviderError(`Model output could not be validated: ${result.error}`);

@@ -1,5 +1,5 @@
-import type { CueOutput, SummaryOutput } from "../schemas";
-import { validateCue, validateSummary } from "../schemas";
+import type { CueOutput, NoteBriefOutput, SummaryOutput } from "../schemas";
+import { validateCue, validateNoteBrief, validateSummary } from "../schemas";
 import {
 	cueDensityGuidance,
 	keywordGuidance,
@@ -10,6 +10,7 @@ import {
 	CueInput,
 	ProviderError,
 	ProviderStatus,
+	NoteBriefInput,
 	SummaryInput,
 	type CueBatchResult,
 } from "./types";
@@ -25,6 +26,8 @@ import {
 	parseCueBatch,
 } from "./local-cli-cue-batch";
 import {
+	buildNoteBriefPrompt,
+	NOTE_BRIEF_JSON_SCHEMA,
 	SECTION_LENS_JSON_SCHEMA,
 	SECTION_LENS_PROMPT,
 } from "./review-artifact-prompts";
@@ -79,6 +82,8 @@ const SUMMARY_JSON_SCHEMA = JSON.stringify({
 	required: ["summary"],
 	additionalProperties: false,
 });
+
+const NOTE_BRIEF_SCHEMA = JSON.stringify(NOTE_BRIEF_JSON_SCHEMA);
 
 const CONNECTION_JSON_SCHEMA = JSON.stringify({
 	type: "object",
@@ -318,6 +323,28 @@ export class ClaudeCliProvider implements AiProvider {
 				`Reply again with ONLY the corrected JSON object.`;
 			result = validateSummary(
 				await this.complete(repairPrompt, SUMMARY_JSON_SCHEMA, signal)
+			);
+		}
+		if (!result.ok) {
+			throw new ProviderError(`Model output could not be validated: ${result.error}`);
+		}
+		return result.value;
+	}
+
+	async generateNoteBrief(
+		input: NoteBriefInput,
+		signal?: AbortSignal
+	): Promise<NoteBriefOutput> {
+		const basePrompt = buildNoteBriefPrompt(input);
+		const raw = await this.complete(basePrompt, NOTE_BRIEF_SCHEMA, signal);
+		let result = validateNoteBrief(raw);
+		if (!result.ok) {
+			const repairPrompt =
+				basePrompt +
+				`\nYour previous reply could not be validated (${result.error}).\n` +
+				`Reply again with ONLY the corrected JSON object.`;
+			result = validateNoteBrief(
+				await this.complete(repairPrompt, NOTE_BRIEF_SCHEMA, signal)
 			);
 		}
 		if (!result.ok) {

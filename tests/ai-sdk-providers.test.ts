@@ -37,6 +37,11 @@ type Ctor = new (opts: {
 		fullText: string;
 		sectionQuestions: string[];
 	}) => Promise<{ summary: string }>;
+	generateNoteBrief: (input: {
+		noteTitle: string;
+		fullText: string;
+		sections: Array<{ heading: string; question: string; keywords: string[] }>;
+	}) => Promise<{ overview: string }>;
 	testConnection: () => Promise<{ ok: boolean; message: string }>;
 	listModels: () => Promise<unknown[]>;
 };
@@ -45,6 +50,13 @@ const sectionLens = {
 	takeaway: "X is the main idea to review.",
 	keyPhrase: "main idea",
 	explanation: "This phrase anchors the section for recall.",
+};
+
+const noteBrief = {
+	overview: "This note explains the main study idea.",
+	whatMatters: { title: "Main idea", detail: "Focus on the central claim." },
+	reviewFirst: { title: "Start here", detail: "Review the first section." },
+	sayItBack: { title: "Say it back", detail: "Explain the note from memory." },
 };
 
 /** Generator returning a fixed object and recording prompts. */
@@ -260,6 +272,25 @@ for (const c of cases) {
 			expect(out.summary).toBe("A short summary.");
 			expect(prompts[0]).toContain("one concise study takeaway sentence");
 			expect(prompts[0]).toContain("one short sentence");
+		});
+
+		it("returns a validated note brief", async () => {
+			const { generator, prompts } = fixedGenerator(noteBrief);
+			const out = await make(generator).generateNoteBrief({
+				noteTitle: "Note",
+				fullText: "text",
+				sections: [
+					{
+						heading: "Main",
+						question: "What matters?",
+						keywords: ["main", "claim"],
+					},
+				],
+			});
+			expect(out.overview).toBe("This note explains the main study idea.");
+			expect(prompts[0]).toContain("Note Brief");
+			expect(prompts[0]).toContain("What matters?");
+			expect(prompts[0]).toContain("sayItBack");
 		});
 
 		it("uses an OpenAI strict summary schema with nullable learning objective", async () => {

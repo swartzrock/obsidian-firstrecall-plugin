@@ -51,6 +51,13 @@ const sectionLens = {
 	explanation: "This phrase anchors the section for recall.",
 };
 
+const noteBrief = {
+	overview: "This note explains the main study idea.",
+	whatMatters: { title: "Main idea", detail: "Focus on the central claim." },
+	reviewFirst: { title: "Start here", detail: "Review the first section." },
+	sayItBack: { title: "Say it back", detail: "Explain the note from memory." },
+};
+
 describe("extractCodexCliOutput", () => {
 	it("extracts the final text from JSONL event output", () => {
 		expect(extractCodexCliOutput(eventOutput('{"question":"Q?"}'))).toBe(
@@ -216,6 +223,28 @@ describe("CodexCliProvider", () => {
 		});
 
 		expect(summary.summary).toBe("Covers X and Y.");
+	});
+
+	it("returns a validated note brief", async () => {
+		const { provider, run } = makeProvider([
+			result(eventOutput(JSON.stringify(noteBrief))),
+		]);
+
+		const out = await provider.generateNoteBrief({
+			noteTitle: "Note",
+			fullText: "text",
+			sections: [
+				{
+					heading: "Main",
+					question: "What matters?",
+					keywords: ["main", "claim"],
+				},
+			],
+		});
+
+		expect(out.overview).toBe("This note explains the main study idea.");
+		expect(run.mock.calls[0][0].stdin).toContain("Note Brief");
+		expect(run.mock.calls[0][0].stdin).toContain("What matters?");
 	});
 
 	it("reports command-not-found from the runner during connection checks", async () => {
