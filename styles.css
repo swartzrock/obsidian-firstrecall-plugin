@@ -941,6 +941,27 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-size: var(--font-smallest);
 }
 
+.cuecraft-section-lens {
+	margin-top: 0.4em;
+	padding-top: 0.35em;
+	border-top: 1px solid
+		color-mix(in srgb, var(--background-modifier-border) 72%, transparent);
+	color: var(--text-muted);
+	font-size: var(--font-smallest);
+	line-height: 1.25;
+	overflow-wrap: anywhere;
+}
+
+.cuecraft-section-lens-phrase {
+	color: var(--text-normal);
+	font-weight: var(--font-semibold);
+}
+
+.cuecraft-section-lens-explanation {
+	margin-top: 0.2em;
+	color: color-mix(in srgb, var(--text-muted) 82%, transparent);
+}
+
 /* Confidence accent on the cue's left border. */
 .cuecraft-cue[data-confidence="high"] {
 	border-left-color: var(--color-green);
@@ -1051,6 +1072,13 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	overflow-wrap: anywhere;
 }
 
+.cuecraft-editor-hook .cuecraft-section-lens {
+	position: relative;
+	z-index: 1;
+	color: color-mix(in srgb, var(--text-normal) 70%, transparent);
+	font-weight: var(--font-medium);
+}
+
 .cuecraft-editor-hook-failed {
 	border-color: color-mix(in srgb, var(--color-red) 72%, var(--text-normal));
 	background:
@@ -1087,6 +1115,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-editor-hook-collapsed-tabs .cuecraft-editor-hook-heading,
 .cuecraft-editor-hook-collapsed-tabs .cuecraft-editor-hook-keywords,
+.cuecraft-editor-hook-collapsed-tabs .cuecraft-section-lens,
 .cuecraft-editor-hook-collapsed-tabs .cuecraft-editor-hook-status {
 	display: none;
 }
@@ -1275,7 +1304,9 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-editor-hook-active-section-composer[data-state="upcoming"]
 	.cuecraft-editor-hook-heading,
 .cuecraft-editor-hook-active-section-composer[data-state="upcoming"]
-	.cuecraft-editor-hook-keywords {
+	.cuecraft-editor-hook-keywords,
+.cuecraft-editor-hook-active-section-composer[data-state="upcoming"]
+	.cuecraft-section-lens {
 	display: none;
 }
 
@@ -1370,6 +1401,25 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		transform 120ms ease;
 }
 
+.cuecraft-editor-hook-hook-minimap .cuecraft-section-lens {
+	position: absolute;
+	z-index: 2;
+	inset-block-start: 3.15rem;
+	inset-inline-start: calc(100% + 0.55rem);
+	width: min(18rem, calc(100vw - 9rem));
+	padding: 0.55em 0.7em;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	box-shadow: var(--shadow-s);
+	opacity: 0;
+	pointer-events: none;
+	transform: translateX(-0.25rem);
+	transition:
+		opacity 120ms ease,
+		transform 120ms ease;
+}
+
 .cuecraft-editor-hook-hook-minimap[data-state="current"]::before,
 .cuecraft-editor-hook-hook-minimap:hover::before,
 .cuecraft-editor-hook-hook-minimap:focus-visible::before {
@@ -1378,7 +1428,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-editor-hook-hook-minimap[data-state="current"] .cuecraft-editor-hook-title,
 .cuecraft-editor-hook-hook-minimap:hover .cuecraft-editor-hook-title,
-.cuecraft-editor-hook-hook-minimap:focus-visible .cuecraft-editor-hook-title {
+.cuecraft-editor-hook-hook-minimap:focus-visible .cuecraft-editor-hook-title,
+.cuecraft-editor-hook-hook-minimap[data-state="current"] .cuecraft-section-lens,
+.cuecraft-editor-hook-hook-minimap:hover .cuecraft-section-lens,
+.cuecraft-editor-hook-hook-minimap:focus-visible .cuecraft-section-lens {
 	opacity: 1;
 	pointer-events: auto;
 	transform: translateX(0);

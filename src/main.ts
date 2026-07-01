@@ -62,6 +62,7 @@ import {
 	type NoteCache,
 } from "./cache";
 import {
+	appendSectionLens,
 	buildCueLineData,
 	cueEditorExtension,
 	setCuesEffect,
@@ -369,6 +370,7 @@ export default class CueCraftPlugin extends Plugin {
 			cache && !this.visibility.isHidden(file.path)
 				? buildCueLineData(cache, parseSections(view.editor.getValue()), {
 						showKeywords: this.settings.generateKeywords,
+						showSectionLens: this.settings.showSectionLens,
 					})
 				: [];
 		this.updateEditorHookLayout(
@@ -762,6 +764,7 @@ export default class CueCraftPlugin extends Plugin {
 		path: string;
 		text: string;
 		showKeywords: boolean;
+		showSectionLens: boolean;
 		map: Map<number, CueLineData>;
 	} | null = null;
 
@@ -822,17 +825,20 @@ export default class CueCraftPlugin extends Plugin {
 			this.readingCueMemo &&
 			this.readingCueMemo.path === path &&
 			this.readingCueMemo.text === text &&
-			this.readingCueMemo.showKeywords === this.settings.generateKeywords
+			this.readingCueMemo.showKeywords === this.settings.generateKeywords &&
+			this.readingCueMemo.showSectionLens === this.settings.showSectionLens
 		) {
 			return this.readingCueMemo.map;
 		}
 		const map = buildReadingCueMap(cache, text, {
 			showKeywords: this.settings.generateKeywords,
+			showSectionLens: this.settings.showSectionLens,
 		});
 		this.readingCueMemo = {
 			path,
 			text,
 			showKeywords: this.settings.generateKeywords,
+			showSectionLens: this.settings.showSectionLens,
 			map,
 		};
 		return map;
@@ -868,6 +874,7 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		if (cue.confidence) root.dataset.confidence = cue.confidence;
 		root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
+		appendSectionLens(root, cue.sectionLens);
 		if (cue.keywords.length) {
 			root.createDiv({
 				cls: "cuecraft-cue-keywords",

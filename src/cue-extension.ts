@@ -22,6 +22,7 @@ import {
 } from "./editor-hook-rail";
 import type { EditorCueDisplay } from "./editor-cue-display";
 import { isCueEligibleSection, type Section } from "./parser";
+import type { SectionLens } from "./schemas";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -33,12 +34,14 @@ export interface CueLineData {
 	question: string;
 	keywords: string[];
 	confidence: Confidence | null;
+	sectionLens: SectionLens | null;
 	/** Generation error message, when this section failed. */
 	error: string | null;
 }
 
 export interface CueLineDataOptions {
 	showKeywords?: boolean;
+	showSectionLens?: boolean;
 }
 
 export interface CueEditorRenderState {
@@ -60,6 +63,7 @@ export function buildCueLineData(
 	options: CueLineDataOptions = {}
 ): CueLineData[] {
 	const showKeywords = options.showKeywords ?? true;
+	const showSectionLens = options.showSectionLens ?? true;
 	const byId = new Map<string, Section>();
 	for (const s of currentSections) byId.set(s.id, s);
 
@@ -76,6 +80,7 @@ export function buildCueLineData(
 			question: failed ? "" : (sec.question ?? ""),
 			keywords: failed || !showKeywords ? [] : sec.keywords ?? [],
 			confidence: failed ? null : sec.confidence,
+			sectionLens: failed || !showSectionLens ? null : sec.sectionLens ?? null,
 			error: failed ? sec.error ?? "Generation failed" : null,
 		});
 	}
@@ -100,6 +105,7 @@ class CueWidget extends WidgetType {
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
+			sectionLensKey(other.cue.sectionLens) === sectionLensKey(this.cue.sectionLens) &&
 			other.cue.error === this.cue.error
 		);
 	}
@@ -136,6 +142,7 @@ class CueGutterMarker extends GutterMarker {
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
+			sectionLensKey(other.cue.sectionLens) === sectionLensKey(this.cue.sectionLens) &&
 			other.cue.error === this.cue.error
 		);
 	}
@@ -180,6 +187,8 @@ function renderInlineCueElement(cue: CueLineData): HTMLElement {
 	q.textContent = cue.question;
 	root.appendChild(q);
 
+	appendSectionLens(root, cue.sectionLens);
+
 	if (cue.keywords.length) {
 		const kw = cueDocument().createElement("div");
 		kw.className = "cuecraft-cue-keywords";
@@ -220,6 +229,8 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 		return root;
 	}
 
+	appendSectionLens(root, card.sectionLens);
+
 	if (card.keywords.length) {
 		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
@@ -227,6 +238,41 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 		root.appendChild(keywords);
 	}
 	return root;
+}
+
+export function appendSectionLens(
+	parent: HTMLElement,
+	lens: SectionLens | null
+): void {
+	if (!lens) return;
+	const doc = parent.ownerDocument;
+	const root = doc.createElement("div");
+	root.className = "cuecraft-section-lens";
+
+	const phrase = doc.createElement("span");
+	phrase.className = "cuecraft-section-lens-phrase";
+	phrase.textContent = lens.keyPhrase;
+	root.appendChild(phrase);
+
+	root.appendChild(doc.createTextNode(" - "));
+
+	const takeaway = doc.createElement("span");
+	takeaway.className = "cuecraft-section-lens-takeaway";
+	takeaway.textContent = lens.takeaway;
+	root.appendChild(takeaway);
+
+	const explanation = doc.createElement("div");
+	explanation.className = "cuecraft-section-lens-explanation";
+	explanation.textContent = lens.explanation;
+	root.appendChild(explanation);
+
+	parent.appendChild(root);
+}
+
+function sectionLensKey(lens: SectionLens | null): string {
+	return lens
+		? [lens.keyPhrase, lens.takeaway, lens.explanation].join("\u0001")
+		: "";
 }
 
 function cueDocument(): Document {
