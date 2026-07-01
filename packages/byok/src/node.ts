@@ -19,9 +19,3 @@ export {
 	type LocalProcessSpawner,
 	type LoginShellPathLoader,
 } from "./providers/local-command-runner";
-export {
-	buildCueBatchPrompt,
-	cueBatchJsonSchema,
-	parseCueBatch,
-	type ParsedCueBatch,
-} from "./providers/local-cli-cue-batch";

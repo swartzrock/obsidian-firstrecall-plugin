@@ -1,9 +1,12 @@
 import { cueEligibleSections, parseSections } from "./parser";
-import type { ByokProviderRuntime, ByokCueBatchResult } from "@cuecraft/byok";
 import {
 	DEFAULT_CUE_GENERATION_OPTIONS,
 	type CueGenerationOptions,
 } from "./cue-generation";
+import type {
+	CueCraftCueBatchResult,
+	CueCraftCueProviderRuntime,
+} from "./cue-provider";
 
 export interface SectionResult {
 	id: string;
@@ -36,7 +39,7 @@ export interface GenerateSectionParams {
 		content: string;
 		contentHash: string;
 	};
-	provider: ByokProviderRuntime;
+	provider: CueCraftCueProviderRuntime;
 	preset: string;
 	options?: Partial<CueGenerationOptions>;
 	noteContext?: string;
@@ -46,7 +49,7 @@ export interface GenerateSectionParams {
 
 export interface GenerateSectionBatchParams {
 	sections: GenerateSectionParams["section"][];
-	provider: ByokProviderRuntime;
+	provider: CueCraftCueProviderRuntime;
 	preset: string;
 	options?: Partial<CueGenerationOptions>;
 	noteContext?: string;
@@ -57,7 +60,7 @@ export interface GenerateSectionBatchParams {
 export interface GenerateNoteParams {
 	noteTitle: string;
 	markdown: string;
-	provider: ByokProviderRuntime;
+	provider: CueCraftCueProviderRuntime;
 	preset: string;
 	options?: Partial<CueGenerationOptions>;
 	useWholeNoteContext?: boolean;
@@ -93,7 +96,7 @@ export function resolveSectionConcurrency(value: unknown): number {
 
 export function resolveEffectiveSectionConcurrency(
 	value: unknown,
-	provider: ByokProviderRuntime
+	provider: CueCraftCueProviderRuntime
 ): number {
 	const requested = resolveSectionConcurrency(value);
 	const limit = provider.sectionConcurrencyLimit;
@@ -122,7 +125,7 @@ function emptySectionResult(
 
 function applyCueResult(
 	result: SectionResult,
-	item: ByokCueBatchResult | undefined
+	item: CueCraftCueBatchResult | undefined
 ): void {
 	if (!item) {
 		result.error = "Provider returned no cue for this section.";

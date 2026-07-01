@@ -6,7 +6,6 @@ function jsonResponse(body: unknown, status = 200): HttpResponse {
 	return { status, text: JSON.stringify(body), json: body };
 }
 
-/** HTTP client that returns /api/generate responses from a queue. */
 function generateClient(responses: string[]): HttpClient {
 	let i = 0;
 	return async (req) => {
@@ -58,72 +57,28 @@ describe("OllamaProvider.testConnection", () => {
 	});
 });
 
-describe("OllamaProvider.generateCue", () => {
-	it("returns a validated cue on first try", async () => {
-		const good = JSON.stringify({
-			question: "What is X?",
-			keywords: ["a", "b"],
-			confidence: "high",
-		});
-		const http = generateClient([good]);
-		const spy = vi.fn(http);
+describe("OllamaProvider.generateText", () => {
+	it("returns raw generated text", async () => {
+		const spy = vi.fn(generateClient(["plain response"]));
 		const p = new OllamaProvider(baseOpts(spy));
-		const cue = await p.generateCue({ heading: "H", content: "c", preset: "conceptual" });
-		expect(cue.question).toBe("What is X?");
+		const out = await p.generateText({ prompt: "Say hi" });
+		expect(out).toEqual({ text: "plain response" });
 		expect(spy).toHaveBeenCalledTimes(1);
-	});
-
-	it("includes simpler preset guidance in the prompt", async () => {
-		const good = JSON.stringify({ question: "What is X?", keywords: ["a", "b"], confidence: "high" });
-		const spy = vi.fn(generateClient([good]));
-		const p = new OllamaProvider(baseOpts(spy));
-		await p.generateCue({ heading: "H", content: "c", preset: "simpler" });
 		const body = JSON.parse(spy.mock.calls[0][0].body as string);
-		expect(body.prompt).toContain("simple, accessible");
+		expect(body.prompt).toBe("Say hi");
+		expect(body.format).toBeUndefined();
 	});
 
-	it("includes generation option guidance in the prompt", async () => {
-		const good = JSON.stringify({ question: "What is X?", keywords: ["a", "b"], confidence: "high" });
-		const spy = vi.fn(generateClient([good]));
+	it("requests Ollama JSON mode for json responses", async () => {
+		const spy = vi.fn(generateClient(['{"ok":true}']));
 		const p = new OllamaProvider(baseOpts(spy));
-		await p.generateCue({
-			heading: "H",
-			content: "c",
-			preset: "conceptual",
-			options: {
-				cueDensity: 3,
-				questionStyle: "socratic",
-				generateKeywords: false,
-				autoSummary: true,
-			},
+		const out = await p.generateText({
+			prompt: "Return JSON",
+			responseFormat: "json",
 		});
+		expect(out.text).toBe('{"ok":true}');
 		const body = JSON.parse(spy.mock.calls[0][0].body as string);
-		expect(body.prompt).toContain("Socratic");
-		expect(body.prompt).toContain("thorough");
-		expect(body.prompt).toContain("minimum 2");
-	});
-
-	it("repairs once when the first response is malformed", async () => {
-		const bad = "totally not json";
-		const good = JSON.stringify({
-			question: "Fixed?",
-			keywords: ["a", "b", "c"],
-			confidence: "medium",
-		});
-		const spy = vi.fn(generateClient([bad, good]));
-		const p = new OllamaProvider(baseOpts(spy));
-		const cue = await p.generateCue({ heading: "H", content: "c", preset: "minimal" });
-		expect(cue.question).toBe("Fixed?");
-		expect(spy).toHaveBeenCalledTimes(2); // original + one repair
-	});
-
-	it("throws ProviderError when repair still fails", async () => {
-		const spy = vi.fn(generateClient(["nope", "still nope"]));
-		const p = new OllamaProvider(baseOpts(spy));
-		await expect(
-			p.generateCue({ heading: "H", content: "c", preset: "conceptual" })
-		).rejects.toBeInstanceOf(ProviderError);
-		expect(spy).toHaveBeenCalledTimes(2);
+		expect(body.format).toBe("json");
 	});
 
 	it("throws ProviderError when the server is unreachable", async () => {
@@ -133,7 +88,7 @@ describe("OllamaProvider.generateCue", () => {
 		};
 		const p = new OllamaProvider(baseOpts(http));
 		await expect(
-			p.generateCue({ heading: "H", content: "c", preset: "conceptual" })
+			p.generateText({ prompt: "Hi" })
 		).rejects.toBeInstanceOf(ProviderError);
 	});
 
@@ -146,7 +101,7 @@ describe("OllamaProvider.generateCue", () => {
 		};
 		const p = new OllamaProvider(baseOpts(http));
 		await expect(
-			p.generateCue({ heading: "H", content: "c", preset: "conceptual" })
+			p.generateText({ prompt: "Hi" })
 		).rejects.toThrow(/HTTP 500.*memory.*model requires more system memory/i);
 	});
 
@@ -155,24 +110,7 @@ describe("OllamaProvider.generateCue", () => {
 			jsonResponse({ error: "model 'x' not found" }, 404);
 		const p = new OllamaProvider(baseOpts(http));
 		await expect(
-			p.generateCue({ heading: "H", content: "c", preset: "conceptual" })
+			p.generateText({ prompt: "Hi" })
 		).rejects.toThrow(/HTTP 404.*ollama pull.*not found/i);
-	});
-});
-
-describe("OllamaProvider.generateSummary", () => {
-	it("returns a validated summary", async () => {
-		const good = JSON.stringify({ summary: "Covers X and Y." });
-		const spy = vi.fn(generateClient([good]));
-		const p = new OllamaProvider(baseOpts(spy));
-		const sum = await p.generateSummary({
-			noteTitle: "T",
-			fullText: "text",
-			sectionQuestions: ["Q1"],
-		});
-		expect(sum.summary).toBe("Covers X and Y.");
-		const body = JSON.parse(spy.mock.calls[0][0].body as string);
-		expect(body.prompt).toContain("one concise study takeaway sentence");
-		expect(body.prompt).toContain("learningObjective");
 	});
 });

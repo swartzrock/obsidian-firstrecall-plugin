@@ -123,7 +123,6 @@ describe("BYOK import boundary", () => {
 						'import type { EditorView } from "@codemirror/view";\n' +
 						'import type { CueCraftSettings } from "../settings";\n' +
 						'import { renderModelCombobox } from "../model-combobox";\n' +
-						'import { cueDensityGuidance } from "../../cue-generation";\n' +
 						'import { OpenAIProvider } from "../../providers/openai-provider";\n' +
 						'const root: HTMLElement | null = document.querySelector(".x");\n' +
 						'activeDocument.body.createEl("div");\n',
@@ -134,7 +133,6 @@ describe("BYOK import boundary", () => {
 			"src/bad.ts imports @codemirror/view",
 			"src/bad.ts imports ../settings outside src",
 			"src/bad.ts imports ../model-combobox outside src",
-			"src/bad.ts imports ../../cue-generation outside src",
 			"src/bad.ts imports ../../providers/openai-provider",
 			"src/bad.ts uses DOM element type",
 			"src/bad.ts uses Obsidian DOM helper",

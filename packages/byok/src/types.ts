@@ -1,3 +1,5 @@
+import type { z } from "zod/v3";
+
 export type ByokProviderId =
 	| "ollama"
 	| "anthropic"
@@ -54,7 +56,6 @@ export interface ByokProviderDefinition {
 	requiresNetwork: boolean;
 	requiresDownload: boolean;
 	supportsModelListing: boolean;
-	supportsBatchGeneration: boolean;
 }
 
 export interface ByokCloudProviderConfig {
@@ -191,44 +192,21 @@ export interface ByokModelRefreshResult {
 
 export type ByokListedModel = string | ByokModelOption;
 
-export type ByokCueConfidence = "high" | "medium" | "low";
-
-export interface ByokCueGenerationOptions {
-	cueDensity?: 1 | 2 | 3;
-	questionStyle?: "recall" | "socratic" | "exam";
-	generateKeywords?: boolean;
-	autoSummary?: boolean;
+export interface ByokTextGenerationInput {
+	prompt: string;
+	/** Ask providers with native support to constrain the response to JSON text. */
+	responseFormat?: "text" | "json";
+	/** Optional JSON schema for providers that support structured text output. */
+	jsonSchema?: string;
 }
 
-export interface ByokCueOutput {
-	question: string;
-	keywords: string[];
-	confidence: ByokCueConfidence;
-	rationale?: string | null;
+export interface ByokTextGenerationOutput {
+	text: string;
 }
 
-export interface ByokSummaryOutput {
-	summary: string;
-	learningObjective: string | null;
-}
-
-export interface ByokCueInput {
-	heading: string;
-	content: string;
-	noteContext?: string;
-	preset: string;
-	options?: ByokCueGenerationOptions;
-}
-
-export interface ByokCueBatchResult {
-	cue?: ByokCueOutput;
-	error?: string;
-}
-
-export interface ByokSummaryInput {
-	noteTitle: string;
-	fullText: string;
-	sectionQuestions: string[];
+export interface ByokObjectGenerationInput<T> {
+	prompt: string;
+	schema: z.ZodType<T, z.ZodTypeDef, unknown>;
 }
 
 export interface ByokProviderRuntime {
@@ -239,18 +217,14 @@ export interface ByokProviderRuntime {
 	sectionConcurrencyLimit?: number;
 	testConnection(): Promise<ByokProviderStatus>;
 	listModels?(): Promise<ByokListedModel[]>;
-	generateCue(
-		input: ByokCueInput,
+	generateText(
+		input: ByokTextGenerationInput,
 		signal?: AbortSignal
-	): Promise<ByokCueOutput>;
-	generateCues?(
-		inputs: ByokCueInput[],
+	): Promise<ByokTextGenerationOutput>;
+	generateObject?<T>(
+		input: ByokObjectGenerationInput<T>,
 		signal?: AbortSignal
-	): Promise<ByokCueBatchResult[]>;
-	generateSummary(
-		input: ByokSummaryInput,
-		signal?: AbortSignal
-	): Promise<ByokSummaryOutput>;
+	): Promise<T>;
 }
 
 export class ByokProviderError extends Error {

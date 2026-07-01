@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { confidenceSchema, type ValidationResult } from "./schemas";
 import { cueEligibleSections, type Section } from "./parser";
 import type { NoteGenerationResult } from "./generator";

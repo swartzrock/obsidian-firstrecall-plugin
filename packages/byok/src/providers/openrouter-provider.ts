@@ -1,10 +1,12 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import type { FetchFunction } from "@ai-sdk/provider-utils";
-import { generateText } from "ai";
+import { generateText as generateAiText } from "ai";
 import { z } from "zod/v3";
 import {
 	AiSdkProvider,
 	type ObjectGenerator,
+	textGenerator,
+	type TextGenerator,
 } from "./ai-sdk-provider";
 import {
 	normalizeOpenRouterModel,
@@ -18,10 +20,11 @@ const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
 export interface OpenRouterProviderOptions {
 	apiKey: string;
 	model: string;
-	/** Custom fetch (Obsidian's requestUrl) to avoid CORS in Electron. */
+	/** Custom fetch supplied by the host app. */
 	fetchImpl?: FetchFunction;
 	/** Overrides the real AI SDK call in tests. */
 	generator?: ObjectGenerator;
+	textGenerator?: TextGenerator;
 	/** Overrides the model-list call in tests. */
 	listModelsImpl?: () => Promise<ModelOption[]>;
 	/** Optional app metadata forwarded to OpenRouter request headers. */
@@ -35,9 +38,12 @@ export class OpenRouterProvider extends AiSdkProvider {
 			label: "OpenRouter",
 			vendor: "OpenRouter",
 			model: opts.model,
-			generate:
+			generateObject:
 				opts.generator ??
 				defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl, opts.appInfo),
+			generateText:
+				opts.textGenerator ??
+				defaultTextGenerator(opts.apiKey, opts.model, opts.fetchImpl, opts.appInfo),
 			listModels:
 				opts.listModelsImpl ??
 				(() => listOpenRouterModelOptions(opts.apiKey, opts.fetchImpl, opts.appInfo)),
@@ -109,14 +115,30 @@ function defaultGenerator(
 		const jsonPrompt =
 			`${prompt}\n\nRespond with ONLY a valid JSON object matching this schema ` +
 			`(no markdown fences, no extra text):\n${JSON.stringify(zodToJsonSchema(schema))}`;
-		const { text } = await generateText({
+		const { text } = await generateAiText({
 			model,
 			prompt: jsonPrompt,
 			abortSignal: signal,
 		});
 		const cleaned = text.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/, "").trim();
-		return JSON.parse(cleaned) as T;
+		return schema.parse(JSON.parse(cleaned));
 	};
+}
+
+function defaultTextGenerator(
+	apiKey: string,
+	modelId: string,
+	fetchImpl?: FetchFunction,
+	appInfo?: ByokProviderAppInfo
+): TextGenerator {
+	const openrouter = createOpenAI({
+		apiKey,
+		baseURL: OPENROUTER_BASE_URL,
+		fetch: fetchImpl,
+		name: "openrouter",
+		headers: openRouterAppHeaders(appInfo),
+	});
+	return textGenerator(openrouter.chat(modelId));
 }
 
 function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {

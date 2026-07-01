@@ -13,7 +13,7 @@ export interface AnthropicModelHint {
 	speed: string;
 	cost: string;
 	context: string;
-	cuecraftHint: string;
+	generationHint: string;
 }
 
 export interface AnthropicModelListSource {
@@ -35,7 +35,7 @@ const GENERIC_ANTHROPIC_MODEL_HINT: AnthropicModelHint = {
 	speed: "Varies",
 	cost: "Varies",
 	context: "Varies",
-	cuecraftHint: "Cue quality depends on the exact custom model you enter.",
+	generationHint: "Output quality depends on the exact custom model you enter.",
 };
 
 const EMPTY_ANTHROPIC_MODEL_HINT =

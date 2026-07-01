@@ -1,5 +1,6 @@
 import {
 	BYOK_PROVIDER_IDS,
+	ByokProviderError,
 	byokProviderDefinition,
 	deriveProviderSetupStatus,
 	isModelOption,
@@ -21,6 +22,32 @@ import {
 } from "@cuecraft/byok";
 import { createByokNodeProvider } from "@cuecraft/byok/node";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
+import {
+	cueDensityGuidance,
+	keywordGuidance,
+	questionStyleGuidance,
+} from "./cue-generation";
+import {
+	buildCueBatchPrompt,
+	cueBatchJsonSchema,
+	parseCueBatch,
+} from "./local-cli-cue-batch";
+import type {
+	CueCraftCueInput,
+	CueCraftCueProviderRuntime,
+	CueCraftSummaryInput,
+} from "./cue-provider";
+import {
+	cueGenerationSchema,
+	cueOutputSchema,
+	formatZodError,
+	summaryGenerationSchema,
+	summaryOutputSchema,
+	validateCue,
+	validateSummary,
+	type CueOutput,
+	type SummaryOutput,
+} from "./schemas";
 import type { CueCraftSettings } from "./settings";
 import {
 	isCueCraftCloudCredentialProvider,
@@ -28,13 +55,20 @@ import {
 	type SecureCredentialStore,
 } from "./secure-credential-store";
 
-export type CueCraftByokRuntime = ByokProviderRuntime;
+export type CueCraftByokRuntime = CueCraftCueProviderRuntime;
 export type CueCraftHttpClient = ByokHttpClient;
 export type CueCraftProviderFactoryDeps = ByokProviderDeps;
 export type CueCraftProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type CueCraftByokSettings = ByokStoredSettings;
 export type CueCraftByokProviderSettings = ByokProviderStoredSettings;
 export type { ByokProviderConfig, ByokProviderDeps } from "@cuecraft/byok";
+export type {
+	CueCraftCueBatchResult,
+	CueCraftCueInput,
+	CueCraftCueOutput,
+	CueCraftSummaryInput,
+	CueCraftSummaryOutput,
+} from "./cue-provider";
 
 export type CueCraftFetchedModelProvider =
 	| "ollama"
@@ -47,6 +81,261 @@ export interface CueCraftAppliedModelRefresh {
 	models: string[];
 	options: ByokModelOption[];
 	message: string;
+}
+
+const PRESET_GUIDANCE: Record<string, string> = {
+	conceptual: "Favor a single conceptual question that tests understanding, not trivia.",
+	"exam-prep": "Write an exam-style question a student is likely to be tested on.",
+	vocabulary: "Emphasize key terms and their definitions.",
+	minimal: "Keep the question short and direct.",
+	simpler: "Use simple, accessible language. Keep the question brief and focused on the single most basic idea.",
+};
+
+const CUE_JSON_SCHEMA = JSON.stringify({
+	type: "object",
+	properties: {
+		question: { type: "string" },
+		keywords: {
+			type: "array",
+			items: { type: "string" },
+			minItems: 2,
+			maxItems: 5,
+		},
+		confidence: { enum: ["high", "medium", "low"] },
+		rationale: { type: "string" },
+	},
+	required: ["question", "keywords", "confidence"],
+	additionalProperties: false,
+});
+
+const SUMMARY_JSON_SCHEMA = JSON.stringify({
+	type: "object",
+	properties: {
+		summary: { type: "string" },
+		learningObjective: { type: "string" },
+	},
+	required: ["summary"],
+	additionalProperties: false,
+});
+
+function cueCraftProviderError(message: string): ByokProviderError {
+	return new ByokProviderError(message);
+}
+
+function buildCuePrompt(input: CueCraftCueInput): string {
+	const preset = PRESET_GUIDANCE[input.preset] ?? PRESET_GUIDANCE.conceptual;
+	const contextLine = input.noteContext
+		? `\nWhole-note context (for relevance only):\n${input.noteContext}\n`
+		: "";
+	return (
+		`You are a study assistant creating Cornell-style active-recall cues.\n` +
+		`${preset}\n` +
+		`${questionStyleGuidance(input.options?.questionStyle)}\n` +
+		`${cueDensityGuidance(input.options?.cueDensity)}\n` +
+		`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
+		`Return ONLY a JSON object with keys: "question" (string), ` +
+		`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
+		`and optional "rationale" (short reason, only when confidence is "low").\n` +
+		contextLine +
+		`\nSection heading: ${input.heading || "(untitled)"}\n` +
+		`Section content:\n${input.content}\n`
+	);
+}
+
+function buildSummaryPrompt(input: CueCraftSummaryInput): string {
+	const questions = input.sectionQuestions.length
+		? `\nSection questions to reflect:\n- ${input.sectionQuestions.join("\n- ")}\n`
+		: "";
+	return (
+		`Summarize the following note for study review.\n` +
+		`Return ONLY a JSON object with keys: "summary" (one concise study takeaway sentence, not a paragraph) ` +
+		`and optional "learningObjective" (one short sentence).\n` +
+		`\nNote title: ${input.noteTitle}\n` +
+		questions +
+		`\nNote text:\n${input.fullText}\n`
+	);
+}
+
+async function generateCueFromObjectProvider(
+	runtime: ByokProviderRuntime,
+	input: CueCraftCueInput,
+	signal?: AbortSignal
+): Promise<CueOutput> {
+	if (!runtime.generateObject) {
+		throw cueCraftProviderError("Provider does not support structured output.");
+	}
+	const raw = await runtime.generateObject({
+		schema: cueGenerationSchema,
+		prompt: buildCuePrompt(input),
+	}, signal);
+	const parsed = cueOutputSchema.safeParse(raw);
+	if (!parsed.success) {
+		throw cueCraftProviderError(
+			`Model output could not be validated: ${formatZodError(parsed.error)}`
+		);
+	}
+	return parsed.data;
+}
+
+async function generateCueFromTextProvider(
+	runtime: ByokProviderRuntime,
+	input: CueCraftCueInput,
+	signal?: AbortSignal
+): Promise<CueOutput> {
+	const basePrompt = buildCuePrompt(input);
+	const raw = await runtime.generateText(
+		{
+			prompt: basePrompt,
+			responseFormat: "json",
+			jsonSchema: CUE_JSON_SCHEMA,
+		},
+		signal
+	);
+	let result = validateCue(raw.text);
+	if (!result.ok) {
+		const repairPrompt =
+			basePrompt +
+			`\nYour previous reply could not be validated (${result.error}).\n` +
+			`Previous reply:\n${raw.text}\n` +
+			`Reply again with ONLY the corrected JSON object.`;
+		const retry = await runtime.generateText(
+			{
+				prompt: repairPrompt,
+				responseFormat: "json",
+				jsonSchema: CUE_JSON_SCHEMA,
+			},
+			signal
+		);
+		result = validateCue(retry.text);
+	}
+	if (!result.ok) {
+		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
+	}
+	return result.value;
+}
+
+async function generateSummaryFromObjectProvider(
+	runtime: ByokProviderRuntime,
+	input: CueCraftSummaryInput,
+	signal?: AbortSignal
+): Promise<SummaryOutput> {
+	if (!runtime.generateObject) {
+		throw cueCraftProviderError("Provider does not support structured output.");
+	}
+	const raw = await runtime.generateObject({
+		schema: summaryGenerationSchema,
+		prompt: buildSummaryPrompt(input),
+	}, signal);
+	const parsed = summaryOutputSchema.safeParse(raw);
+	if (!parsed.success) {
+		throw cueCraftProviderError(
+			`Model output could not be validated: ${formatZodError(parsed.error)}`
+		);
+	}
+	return parsed.data;
+}
+
+async function generateSummaryFromTextProvider(
+	runtime: ByokProviderRuntime,
+	input: CueCraftSummaryInput,
+	signal?: AbortSignal
+): Promise<SummaryOutput> {
+	const basePrompt = buildSummaryPrompt(input);
+	const raw = await runtime.generateText(
+		{
+			prompt: basePrompt,
+			responseFormat: "json",
+			jsonSchema: SUMMARY_JSON_SCHEMA,
+		},
+		signal
+	);
+	let result = validateSummary(raw.text);
+	if (!result.ok) {
+		const repairPrompt =
+			basePrompt +
+			`\nYour previous reply could not be validated (${result.error}).\n` +
+			`Reply again with ONLY the corrected JSON object.`;
+		const retry = await runtime.generateText(
+			{
+				prompt: repairPrompt,
+				responseFormat: "json",
+				jsonSchema: SUMMARY_JSON_SCHEMA,
+			},
+			signal
+		);
+		result = validateSummary(retry.text);
+	}
+	if (!result.ok) {
+		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
+	}
+	return result.value;
+}
+
+async function generateCueBatchFromTextProvider(
+	runtime: ByokProviderRuntime,
+	inputs: CueCraftCueInput[],
+	signal?: AbortSignal
+) {
+	if (inputs.length === 0) return [];
+	const schema = cueBatchJsonSchema(inputs.length);
+	const basePrompt = buildCueBatchPrompt(inputs, PRESET_GUIDANCE);
+	const raw = await runtime.generateText(
+		{
+			prompt: basePrompt,
+			responseFormat: "json",
+			jsonSchema: schema,
+		},
+		signal
+	);
+	let result = parseCueBatch(raw.text, inputs.length);
+	if (typeof result === "string") {
+		const repairPrompt =
+			basePrompt +
+			`\nYour previous reply could not be validated (${result}).\n` +
+			`Previous reply:\n${raw.text}\n` +
+			`Reply again with ONLY the corrected JSON object.`;
+		const retry = await runtime.generateText(
+			{
+				prompt: repairPrompt,
+				responseFormat: "json",
+				jsonSchema: schema,
+			},
+			signal
+		);
+		result = parseCueBatch(retry.text, inputs.length);
+	}
+	if (typeof result === "string") {
+		throw cueCraftProviderError(`Model output could not be validated: ${result}`);
+	}
+	return result.results;
+}
+
+function wrapCueCraftByokRuntime(
+	runtime: ByokProviderRuntime
+): CueCraftByokRuntime {
+	const generateFromObject = Boolean(runtime.generateObject);
+	const cueRuntime: CueCraftByokRuntime = {
+		id: runtime.id,
+		label: runtime.label,
+		requiresNetwork: runtime.requiresNetwork,
+		requiresDownload: runtime.requiresDownload,
+		sectionConcurrencyLimit: runtime.sectionConcurrencyLimit,
+		testConnection: () => runtime.testConnection(),
+		listModels: runtime.listModels ? () => runtime.listModels!() : undefined,
+		generateCue: (input, signal) =>
+			generateFromObject
+				? generateCueFromObjectProvider(runtime, input, signal)
+				: generateCueFromTextProvider(runtime, input, signal),
+		generateSummary: (input, signal) =>
+			generateFromObject
+				? generateSummaryFromObjectProvider(runtime, input, signal)
+				: generateSummaryFromTextProvider(runtime, input, signal),
+	};
+	if (runtime.id === "codex-cli" || runtime.id === "claude-cli") {
+		cueRuntime.generateCues = (inputs, signal) =>
+			generateCueBatchFromTextProvider(runtime, inputs, signal);
+	}
+	return cueRuntime;
 }
 
 export class CueCraftCredentialUnavailableError extends Error {
@@ -613,9 +902,11 @@ export function makeCueCraftByokProvider(
 	settings: CueCraftSettings,
 	deps: CueCraftProviderFactoryDeps
 ): CueCraftByokRuntime {
-	return createByokNodeProvider(
-		cueCraftProviderConfigFromSettings(settings),
-		withCueCraftAppInfo(deps)
+	return wrapCueCraftByokRuntime(
+		createByokNodeProvider(
+			cueCraftProviderConfigFromSettings(settings),
+			withCueCraftAppInfo(deps)
+		)
 	);
 }
 
@@ -647,9 +938,11 @@ export async function makeCueCraftByokProviderFromStore(
 	deps: CueCraftProviderFactoryDeps,
 	credentialStore: SecureCredentialStore
 ): Promise<CueCraftByokRuntime> {
-	return createByokNodeProvider(
-		await resolveCueCraftProviderConfigFromStore(settings, credentialStore),
-		withCueCraftAppInfo(deps)
+	return wrapCueCraftByokRuntime(
+		createByokNodeProvider(
+			await resolveCueCraftProviderConfigFromStore(settings, credentialStore),
+			withCueCraftAppInfo(deps)
+		)
 	);
 }
 

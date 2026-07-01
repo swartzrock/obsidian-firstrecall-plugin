@@ -1,14 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { z } from "zod";
+import { z } from "zod/v3";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import {
 	AnthropicProvider,
 	type ObjectGenerator,
 } from "../src/providers/anthropic-provider";
+import type { TextGenerator } from "../src/providers/ai-sdk-provider";
 import { ProviderError } from "../src/providers/types";
 
-/** Generator that returns a fixed object and records the last prompt seen. */
-function fixedGenerator(value: unknown): {
+function fixedObjectGenerator(value: unknown): {
 	generator: ObjectGenerator;
 	prompts: string[];
 } {
@@ -20,105 +20,72 @@ function fixedGenerator(value: unknown): {
 	return { generator, prompts };
 }
 
-const opts = (generator: ObjectGenerator) => ({
+function fixedTextGenerator(value: string): {
+	textGenerator: TextGenerator;
+	prompts: string[];
+} {
+	const prompts: string[] = [];
+	const textGenerator: TextGenerator = async ({ prompt }) => {
+		prompts.push(prompt);
+		return value;
+	};
+	return { textGenerator, prompts };
+}
+
+const opts = (generator: ObjectGenerator, textGenerator: TextGenerator = async () => "ok") => ({
 	apiKey: "sk-ant-test",
 	model: "claude-3-5-sonnet-latest",
 	generator,
+	textGenerator,
 });
 
-describe("AnthropicProvider.generateCue", () => {
-	it("returns a validated cue from the structured output", async () => {
-		const { generator } = fixedGenerator({
-			question: "What is X?",
-			keywords: ["a", "b", "c"],
-			confidence: "high",
-		});
+describe("AnthropicProvider.generateObject", () => {
+	it("returns the structured output from the injected generator", async () => {
+		const schema = z.object({ answer: z.string() });
+		const { generator, prompts } = fixedObjectGenerator({ answer: "42" });
 		const p = new AnthropicProvider(opts(generator));
-		const cue = await p.generateCue({
-			heading: "X",
-			content: "body",
-			preset: "conceptual",
+		const out = await p.generateObject({
+			prompt: "Answer this.",
+			schema,
 		});
-		expect(cue.question).toBe("What is X?");
-		expect(cue.keywords).toEqual(["a", "b", "c"]);
-		expect(cue.confidence).toBe("high");
+		expect(out).toEqual({ answer: "42" });
+		expect(prompts).toEqual(["Answer this."]);
 	});
 
-	it("coerces benign model quirks (>5 keywords, odd casing)", async () => {
-		const { generator } = fixedGenerator({
-			question: "Q?",
-			keywords: ["a", "b", "c", "d", "e", "f"],
-			confidence: "HIGH",
-		});
-		const p = new AnthropicProvider(opts(generator));
-		const cue = await p.generateCue({ heading: "H", content: "c", preset: "minimal" });
-		expect(cue.keywords).toHaveLength(5);
-		expect(cue.confidence).toBe("high");
-	});
-
-	it("includes heading, content, preset, and note context in the prompt", async () => {
-		const { generator, prompts } = fixedGenerator({
-			question: "Q?",
-			keywords: ["a", "b"],
-			confidence: "low",
-		});
-		const p = new AnthropicProvider(opts(generator));
-		await p.generateCue({
-			heading: "Photosynthesis",
-			content: "light to sugar",
-			noteContext: "WHOLE NOTE",
-			preset: "exam-prep",
-		});
-		expect(prompts[0]).toContain("Photosynthesis");
-		expect(prompts[0]).toContain("light to sugar");
-		expect(prompts[0]).toContain("WHOLE NOTE");
-		expect(prompts[0]).toContain("exam-style");
-	});
-
-	it("throws a readable ProviderError when the model output is invalid", async () => {
-		const { generator } = fixedGenerator({
-			question: "Q?",
-			keywords: ["only-one"],
-			confidence: "high",
-		});
-		const p = new AnthropicProvider(opts(generator));
-		await expect(
-			p.generateCue({ heading: "H", content: "c", preset: "conceptual" })
-		).rejects.toBeInstanceOf(ProviderError);
-	});
-
-	it("maps an auth failure to a readable message", async () => {
+	it("maps an auth failure to a readable ProviderError", async () => {
 		const generator: ObjectGenerator = async () => {
 			throw new Error("401 invalid x-api-key");
 		};
 		const p = new AnthropicProvider(opts(generator));
 		await expect(
-			p.generateCue({ heading: "H", content: "c", preset: "conceptual" })
+			p.generateObject({
+				prompt: "Hi",
+				schema: z.object({ ok: z.boolean() }),
+			})
+		).rejects.toBeInstanceOf(ProviderError);
+		await expect(
+			p.generateObject({
+				prompt: "Hi",
+				schema: z.object({ ok: z.boolean() }),
+			})
 		).rejects.toThrow(/API key/i);
 	});
 });
 
-describe("AnthropicProvider.generateSummary", () => {
-	it("returns a validated summary", async () => {
-		const { generator } = fixedGenerator({
-			summary: "A short summary.",
-			learningObjective: "Understand X.",
-		});
-		const p = new AnthropicProvider(opts(generator));
-		const out = await p.generateSummary({
-			noteTitle: "Note",
-			fullText: "text",
-			sectionQuestions: ["Q1?"],
-		});
-		expect(out.summary).toBe("A short summary.");
-		expect(out.learningObjective).toBe("Understand X.");
+describe("AnthropicProvider.generateText", () => {
+	it("returns text from the injected text generator", async () => {
+		const { generator } = fixedObjectGenerator({ ok: true });
+		const { textGenerator, prompts } = fixedTextGenerator("A text reply.");
+		const p = new AnthropicProvider(opts(generator, textGenerator));
+		const out = await p.generateText({ prompt: "Write plainly." });
+		expect(out).toEqual({ text: "A text reply." });
+		expect(prompts).toEqual(["Write plainly."]);
 	});
 });
 
 describe("AnthropicProvider.testConnection", () => {
 	it("reports success when a trivial generation resolves", async () => {
 		const generator: ObjectGenerator = async ({ schema }) => {
-			// Honor the trivial schema used by testConnection.
 			expect(schema).toBeInstanceOf(z.ZodType);
 			return { ok: true } as never;
 		};

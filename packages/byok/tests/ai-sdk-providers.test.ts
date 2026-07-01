@@ -1,10 +1,13 @@
 import { describe, it, expect } from "vitest";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { OpenAIProvider } from "../src/providers/openai-provider";
 import { GoogleProvider } from "../src/providers/google-provider";
 import { XaiProvider } from "../src/providers/xai-provider";
 import { OpenRouterProvider } from "../src/providers/openrouter-provider";
-import type { ObjectGenerator } from "../src/providers/ai-sdk-provider";
+import type {
+	ObjectGenerator,
+	TextGenerator,
+} from "../src/providers/ai-sdk-provider";
 import { ProviderError, ProviderRateLimitError } from "../src/providers/types";
 import { normalizeStringId, type ModelOption } from "../src/models/model-options";
 
@@ -12,43 +15,47 @@ type Ctor = new (opts: {
 	apiKey: string;
 	model: string;
 	generator?: ObjectGenerator;
+	textGenerator?: TextGenerator;
 	fetchImpl?: typeof fetch;
 	listModelsImpl?: () => Promise<string[] | ModelOption[]>;
+	appInfo?: { name?: string; url?: string };
 }) => {
 	id: string;
 	label: string;
-	generateCue: (
-		input: {
-			heading: string;
-			content: string;
-			preset: string;
-			noteContext?: string;
-			options?: {
-				cueDensity: 1 | 2 | 3;
-				questionStyle: "recall" | "socratic" | "exam";
-				generateKeywords: boolean;
-				autoSummary: boolean;
-			};
-		},
+	generateObject: <T>(
+		input: { prompt: string; schema: z.ZodType<T, z.ZodTypeDef, unknown> },
 		signal?: AbortSignal
-	) => Promise<{ question: string; keywords: string[]; confidence: string }>;
-	generateSummary: (input: {
-		noteTitle: string;
-		fullText: string;
-		sectionQuestions: string[];
-	}) => Promise<{ summary: string }>;
+	) => Promise<T>;
+	generateText: (
+		input: { prompt: string },
+		signal?: AbortSignal
+	) => Promise<{ text: string }>;
 	testConnection: () => Promise<{ ok: boolean; message: string }>;
 	listModels: () => Promise<unknown[]>;
 };
 
-/** Generator returning a fixed object and recording prompts. */
-function fixedGenerator(value: unknown): { generator: ObjectGenerator; prompts: string[] } {
+function fixedObjectGenerator(value: unknown): {
+	generator: ObjectGenerator;
+	prompts: string[];
+} {
 	const prompts: string[] = [];
 	const generator: ObjectGenerator = async ({ prompt }) => {
 		prompts.push(prompt);
 		return value as never;
 	};
 	return { generator, prompts };
+}
+
+function fixedTextGenerator(value: string): {
+	textGenerator: TextGenerator;
+	prompts: string[];
+} {
+	const prompts: string[] = [];
+	const textGenerator: TextGenerator = async ({ prompt }) => {
+		prompts.push(prompt);
+		return value;
+	};
+	return { textGenerator, prompts };
 }
 
 const cases: Array<{ name: string; Ctor: Ctor; id: string; vendor: RegExp; model: string }> = [
@@ -59,128 +66,44 @@ const cases: Array<{ name: string; Ctor: Ctor; id: string; vendor: RegExp; model
 ];
 
 for (const c of cases) {
-	const make = (generator: ObjectGenerator) =>
-		new c.Ctor({ apiKey: "k", model: c.model, generator });
+	const make = (
+		generator: ObjectGenerator = async () => ({ ok: true }) as never,
+		textGenerator: TextGenerator = async () => "ok"
+	) =>
+		new c.Ctor({
+			apiKey: "k",
+			model: c.model,
+			generator,
+			textGenerator,
+		});
 
 	describe(c.name, () => {
-		it("exposes its id and uses the shared AiProvider shape", () => {
-			const p = make(async () => ({}) as never);
+		it("exposes its id and uses the generic provider shape", () => {
+			const p = make();
 			expect(p.id).toBe(c.id);
 			expect(typeof p.label).toBe("string");
+			expect(typeof p.generateText).toBe("function");
+			expect(typeof p.generateObject).toBe("function");
 		});
 
-		it("returns a validated, coerced cue from structured output", async () => {
-			const { generator } = fixedGenerator({
-				question: "What is X?",
-				keywords: ["a", "b", "c", "d", "e", "f"],
-				confidence: "HIGH",
-				rationale: null,
+		it("passes prompt and schema to generateObject", async () => {
+			const schema = z.object({ answer: z.string() });
+			const { generator, prompts } = fixedObjectGenerator({ answer: "42" });
+			const out = await make(generator).generateObject({
+				prompt: "Answer the question.",
+				schema,
 			});
-			const cue = await make(generator).generateCue({
-				heading: "X",
-				content: "body",
-				preset: "conceptual",
-			});
-			expect(cue.question).toBe("What is X?");
-			expect(cue.keywords).toHaveLength(5); // trimmed from 6
-			expect(cue.confidence).toBe("high"); // casing normalized
+			expect(out).toEqual({ answer: "42" });
+			expect(prompts).toEqual(["Answer the question."]);
 		});
 
-		it("uses an OpenAI strict cue schema with nullable rationale", async () => {
-			const generator: ObjectGenerator = async ({ schema }) => {
-				expect(
-					schema.safeParse({
-						question: "Q?",
-						keywords: ["a", "b"],
-						confidence: "high",
-						rationale: null,
-					}).success
-				).toBe(true);
-				expect(
-					schema.safeParse({
-						question: "Q?",
-						keywords: ["a", "b"],
-						confidence: "high",
-					}).success
-				).toBe(false);
-				return {
-					question: "Q?",
-					keywords: ["a", "b"],
-					confidence: "high",
-					rationale: null,
-				} as never;
-			};
-			const cue = await make(generator).generateCue({
-				heading: "H",
-				content: "c",
-				preset: "conceptual",
+		it("returns text from generateText", async () => {
+			const { textGenerator, prompts } = fixedTextGenerator("plain reply");
+			const out = await make(undefined, textGenerator).generateText({
+				prompt: "Write plainly.",
 			});
-			expect((cue as { rationale?: string }).rationale).toBeUndefined();
-		});
-
-		it("embeds heading, content, context and preset in the prompt", async () => {
-			const { generator, prompts } = fixedGenerator({
-				question: "Q?",
-				keywords: ["a", "b"],
-				confidence: "low",
-			});
-			await make(generator).generateCue({
-				heading: "Photosynthesis",
-				content: "light to sugar",
-				noteContext: "WHOLE NOTE",
-				preset: "exam-prep",
-			});
-			expect(prompts[0]).toContain("Photosynthesis");
-			expect(prompts[0]).toContain("light to sugar");
-			expect(prompts[0]).toContain("WHOLE NOTE");
-			expect(prompts[0]).toContain("exam-style");
-		});
-
-		it("includes simpler preset guidance in the prompt", async () => {
-				const { generator, prompts } = fixedGenerator({
-					question: "Q?",
-					keywords: ["a", "b"],
-					confidence: "low",
-				});
-				await make(generator).generateCue({
-					heading: "H",
-					content: "c",
-					preset: "simpler",
-				});
-				expect(prompts[0]).toContain("simple, accessible");
-			});
-
-		it("includes generation option guidance in the prompt", async () => {
-			const { generator, prompts } = fixedGenerator({
-				question: "Q?",
-				keywords: ["a", "b"],
-				confidence: "low",
-			});
-			await make(generator).generateCue({
-				heading: "H",
-				content: "c",
-				preset: "conceptual",
-				options: {
-					cueDensity: 1,
-					questionStyle: "exam",
-					generateKeywords: false,
-					autoSummary: true,
-				},
-			});
-			expect(prompts[0]).toContain("exam prompt");
-			expect(prompts[0]).toContain("minimal");
-			expect(prompts[0]).toContain("minimum 2");
-		});
-
-		it("throws a ProviderError on invalid model output", async () => {
-			const { generator } = fixedGenerator({
-				question: "Q?",
-				keywords: [], // too few -> invalid
-				confidence: "high",
-			});
-			await expect(
-				make(generator).generateCue({ heading: "H", content: "c", preset: "conceptual" })
-			).rejects.toBeInstanceOf(ProviderError);
+			expect(out).toEqual({ text: "plain reply" });
+			expect(prompts).toEqual(["Write plainly."]);
 		});
 
 		it("maps an auth error to a vendor-named readable message", async () => {
@@ -188,8 +111,17 @@ for (const c of cases) {
 				throw new Error("401 unauthorized invalid api key");
 			};
 			await expect(
-				make(generator).generateCue({ heading: "H", content: "c", preset: "conceptual" })
+				make(generator).generateObject({
+					prompt: "Hi",
+					schema: z.object({ ok: z.boolean() }),
+				})
 			).rejects.toThrow(c.vendor);
+			await expect(
+				make(generator).generateObject({
+					prompt: "Hi",
+					schema: z.object({ ok: z.boolean() }),
+				})
+			).rejects.toBeInstanceOf(ProviderError);
 		});
 
 		it("retries rate-limit errors before surfacing failure", async () => {
@@ -202,18 +134,13 @@ for (const c of cases) {
 						retryAfterMs: 0,
 					});
 				}
-				return {
-					question: "Recovered?",
-					keywords: ["a", "b"],
-					confidence: "medium",
-				} as never;
+				return { ok: true } as never;
 			};
-			const cue = await make(generator).generateCue({
-				heading: "H",
-				content: "c",
-				preset: "conceptual",
+			const out = await make(generator).generateObject({
+				prompt: "Hi",
+				schema: z.object({ ok: z.boolean() }),
 			});
-			expect(cue.question).toBe("Recovered?");
+			expect(out).toEqual({ ok: true });
 			expect(calls).toBe(3);
 		});
 
@@ -227,50 +154,12 @@ for (const c of cases) {
 				});
 			};
 			await expect(
-				make(generator).generateCue({
-					heading: "H",
-					content: "c",
-					preset: "conceptual",
+				make(generator).generateObject({
+					prompt: "Hi",
+					schema: z.object({ ok: z.boolean() }),
 				})
 			).rejects.toBeInstanceOf(ProviderRateLimitError);
 			expect(calls).toBe(3);
-		});
-
-		it("returns a validated summary", async () => {
-			const { generator, prompts } = fixedGenerator({
-				summary: "A short summary.",
-				learningObjective: "Understand X.",
-			});
-			const out = await make(generator).generateSummary({
-				noteTitle: "Note",
-				fullText: "text",
-				sectionQuestions: ["Q1?"],
-			});
-			expect(out.summary).toBe("A short summary.");
-			expect(prompts[0]).toContain("one concise study takeaway sentence");
-			expect(prompts[0]).toContain("one short sentence");
-		});
-
-		it("uses an OpenAI strict summary schema with nullable learning objective", async () => {
-			const generator: ObjectGenerator = async ({ schema }) => {
-				expect(
-					schema.safeParse({
-						summary: "A short summary.",
-						learningObjective: null,
-					}).success
-				).toBe(true);
-				expect(schema.safeParse({ summary: "A short summary." }).success).toBe(false);
-				return {
-					summary: "A short summary.",
-					learningObjective: null,
-				} as never;
-			};
-			const out = await make(generator).generateSummary({
-				noteTitle: "Note",
-				fullText: "text",
-				sectionQuestions: ["Q1?"],
-			});
-			expect((out as { learningObjective?: string }).learningObjective).toBeUndefined();
 		});
 
 		it("testConnection reports success and names the vendor", async () => {
@@ -309,6 +198,7 @@ for (const c of cases) {
 				apiKey: "k",
 				model: c.model,
 				generator: async () => ({ ok: true }) as never,
+				textGenerator: async () => "ok",
 				listModelsImpl: async () => expected,
 			});
 			const result = await provider.listModels();
@@ -337,6 +227,7 @@ describe("OpenRouter app metadata", () => {
 			model: "openai/gpt-4o",
 			fetchImpl,
 			generator: async () => ({ ok: true }) as never,
+			textGenerator: async () => "ok",
 		}).listModels();
 		await new OpenRouterProvider({
 			apiKey: "k",
@@ -347,6 +238,7 @@ describe("OpenRouter app metadata", () => {
 				url: "https://example.com",
 			},
 			generator: async () => ({ ok: true }) as never,
+			textGenerator: async () => "ok",
 		}).listModels();
 
 		expect(seenHeaders[0].get("HTTP-Referer")).toBeNull();

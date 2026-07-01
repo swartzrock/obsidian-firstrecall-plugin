@@ -2,9 +2,9 @@ import {
 	cueDensityGuidance,
 	keywordGuidance,
 	questionStyleGuidance,
-} from "../cue-generation";
-import { validateCueBatch } from "../schemas";
-import type { CueBatchResult, CueInput } from "./types";
+} from "./cue-generation";
+import type { CueCraftCueBatchResult, CueCraftCueInput } from "./cue-provider";
+import { validateCueBatch } from "./schemas";
 
 const CUE_BATCH_ITEM_SCHEMA = {
 	type: "object",
@@ -40,7 +40,7 @@ export function cueBatchJsonSchema(count: number): string {
 }
 
 export function buildCueBatchPrompt(
-	inputs: CueInput[],
+	inputs: CueCraftCueInput[],
 	presetGuidance: Record<string, string>
 ): string {
 	const first = inputs[0];
@@ -76,13 +76,13 @@ export function buildCueBatchPrompt(
 }
 
 export interface ParsedCueBatch {
-	results: CueBatchResult[];
+	results: CueCraftCueBatchResult[];
 }
 
 export function parseCueBatch(raw: string, expectedCount: number): ParsedCueBatch | string {
 	const result = validateCueBatch(raw, expectedCount);
 	if (!result.ok) return result.error;
-	const results = result.value.map<CueBatchResult>((item) =>
+	const results = result.value.map<CueCraftCueBatchResult>((item) =>
 		item.value ? { cue: item.value } : { error: item.error ?? "Invalid cue." }
 	);
 	return {

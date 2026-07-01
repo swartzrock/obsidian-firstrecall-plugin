@@ -37,7 +37,7 @@ function makeProvider(responses: Array<LocalCommandResult | Error>, model = ""):
 		provider: new CodexCliProvider({
 			command: "codex",
 			model,
-			cwd: "/tmp/cuecraft-empty",
+			cwd: "/tmp/byok-empty",
 			timeoutMs: 50,
 			runner: { run },
 		}),
@@ -58,31 +58,20 @@ describe("extractCodexCliOutput", () => {
 });
 
 describe("CodexCliProvider", () => {
-	it("returns a validated cue from Codex structured output", async () => {
+	it("returns generated text from Codex CLI output", async () => {
 		const { provider, run } = makeProvider([
-			result(
-				eventOutput(
-					JSON.stringify({
-						question: "What is X?",
-						keywords: ["a", "b"],
-						confidence: "high",
-					})
-				)
-			),
+			result(eventOutput("Plain final answer.")),
 		]);
 
-		const cue = await provider.generateCue({
-			heading: "X",
-			content: "body",
-			preset: "conceptual",
-		});
+		const out = await provider.generateText({ prompt: "Answer plainly." });
 
-		expect(cue.question).toBe("What is X?");
+		expect(out).toEqual({ text: "Plain final answer." });
 		expect(run).toHaveBeenCalledTimes(1);
 		expect(run.mock.calls[0][0]).toMatchObject({
 			command: "codex",
-			cwd: "/tmp/cuecraft-empty",
+			cwd: "/tmp/byok-empty",
 			timeoutMs: 50,
+			stdin: "Answer plainly.",
 		});
 		expect(run.mock.calls[0][0].args).toEqual([
 			"exec",
@@ -92,118 +81,22 @@ describe("CodexCliProvider", () => {
 			"--json",
 		]);
 		expect(run.mock.calls[0][0].args).not.toContain("--ask-for-approval");
-		expect(run.mock.calls[0][0].stdin).toContain("Section heading: X");
 	});
 
-	it("returns validated cues from a batched Codex output", async () => {
-		const { provider, run } = makeProvider([
-			result(
-				eventOutput(
-					JSON.stringify({
-						cues: [
-							{
-								question: "What is A?",
-								keywords: ["a", "b"],
-								confidence: "high",
-							},
-							{
-								question: "What is B?",
-								keywords: ["c", "d"],
-								confidence: "medium",
-							},
-						],
-					})
-				)
-			),
-		]);
-
-		const cues = await provider.generateCues?.([
-			{ heading: "A", content: "alpha", preset: "conceptual" },
-			{ heading: "B", content: "beta", preset: "conceptual" },
-		]);
-
-		expect(cues?.map((item) => item.cue?.question)).toEqual([
-			"What is A?",
-			"What is B?",
-		]);
-		expect(run).toHaveBeenCalledTimes(1);
-		expect(run.mock.calls[0][0].stdin).toContain("Return ONLY a JSON object");
-		expect(run.mock.calls[0][0].stdin).toContain("Section 1");
-		expect(run.mock.calls[0][0].stdin).toContain("Section 2");
-	});
-
-	it("keeps invalid batched Codex cue items isolated", async () => {
-		const { provider } = makeProvider([
-			result(
-				JSON.stringify({
-					cues: [
-						{
-							question: "What is A?",
-							keywords: ["a", "b"],
-							confidence: "high",
-						},
-						{
-							question: "",
-							keywords: ["c", "d"],
-							confidence: "medium",
-						},
-					],
-				})
-			),
-		]);
-
-		const cues = await provider.generateCues?.([
-			{ heading: "A", content: "alpha", preset: "conceptual" },
-			{ heading: "B", content: "beta", preset: "conceptual" },
-		]);
-
-		expect(cues?.[0].cue?.question).toBe("What is A?");
-		expect(cues?.[1].error).toMatch(/question/);
-	});
-
-	it("repairs malformed cue output once", async () => {
-		const { provider, run } = makeProvider([
-			result("not json"),
-			result(
-				JSON.stringify({
-					question: "Fixed?",
-					keywords: ["a", "b"],
-					confidence: "medium",
-				})
-			),
-		]);
-
-		const cue = await provider.generateCue({
-			heading: "H",
-			content: "c",
-			preset: "minimal",
-		});
-
-		expect(cue.question).toBe("Fixed?");
-		expect(run).toHaveBeenCalledTimes(2);
-		expect(run.mock.calls[1][0].stdin).toContain("Previous reply");
-	});
-
-	it("throws ProviderError when repair cannot produce valid output", async () => {
-		const { provider } = makeProvider([result("nope"), result("still nope")]);
+	it("throws ProviderError when Codex CLI returns no final text", async () => {
+		const { provider } = makeProvider([result("")]);
 
 		await expect(
-			provider.generateCue({ heading: "H", content: "c", preset: "conceptual" })
+			provider.generateText({ prompt: "Answer plainly." })
 		).rejects.toBeInstanceOf(ProviderError);
 	});
 
-	it("returns a validated summary", async () => {
-		const { provider } = makeProvider([
-			result(JSON.stringify({ summary: "Covers X and Y." })),
-		]);
+	it("maps runner failures into ProviderError", async () => {
+		const { provider } = makeProvider([new Error("boom")]);
 
-		const summary = await provider.generateSummary({
-			noteTitle: "Note",
-			fullText: "text",
-			sectionQuestions: ["Q1?"],
-		});
-
-		expect(summary.summary).toBe("Covers X and Y.");
+		await expect(
+			provider.generateText({ prompt: "Answer plainly." })
+		).rejects.toThrow(/Codex CLI request failed: boom/);
 	});
 
 	it("reports command-not-found from the runner during connection checks", async () => {
@@ -240,37 +133,13 @@ describe("CodexCliProvider", () => {
 	});
 
 	it("passes the configured model override and omits it when blank", async () => {
-		const withModel = makeProvider([
-			result(
-				JSON.stringify({
-					question: "Q?",
-					keywords: ["a", "b"],
-					confidence: "high",
-				})
-			),
-		], "gpt-5");
-		await withModel.provider.generateCue({
-			heading: "H",
-			content: "c",
-			preset: "conceptual",
-		});
+		const withModel = makeProvider([result("ok")], "gpt-5");
+		await withModel.provider.generateText({ prompt: "Hi" });
 		expect(withModel.run.mock.calls[0][0].args).toContain("--model");
 		expect(withModel.run.mock.calls[0][0].args).toContain("gpt-5");
 
-		const withoutModel = makeProvider([
-			result(
-				JSON.stringify({
-					question: "Q?",
-					keywords: ["a", "b"],
-					confidence: "high",
-				})
-			),
-		]);
-		await withoutModel.provider.generateCue({
-			heading: "H",
-			content: "c",
-			preset: "conceptual",
-		});
+		const withoutModel = makeProvider([result("ok")]);
+		await withoutModel.provider.generateText({ prompt: "Hi" });
 		expect(withoutModel.run.mock.calls[0][0].args).not.toContain("--model");
 	});
 

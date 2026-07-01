@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
 import type { CueCraftSettings } from "../src/settings";
-import { ClaudeCliProvider } from "@cuecraft/byok/node";
-import { CodexCliProvider } from "@cuecraft/byok/node";
 import {
 	makeCueCraftByokProvider,
 	cueCraftProviderConfigFromSettings,
@@ -84,8 +82,10 @@ describe("makeCueCraftByokProvider", () => {
 			settings({ provider: "codex-cli" }),
 			{ fetchImpl, http }
 		);
-		expect(provider).toBeInstanceOf(CodexCliProvider);
 		expect(provider.id).toBe("codex-cli");
+		expect(typeof provider.generateCue).toBe("function");
+		expect(typeof provider.generateCues).toBe("function");
+		expect(typeof provider.generateSummary).toBe("function");
 		expect(provider.sectionConcurrencyLimit).toBeUndefined();
 	});
 
@@ -94,8 +94,10 @@ describe("makeCueCraftByokProvider", () => {
 			settings({ provider: "claude-cli" }),
 			{ fetchImpl, http }
 		);
-		expect(provider).toBeInstanceOf(ClaudeCliProvider);
 		expect(provider.id).toBe("claude-cli");
+		expect(typeof provider.generateCue).toBe("function");
+		expect(typeof provider.generateCues).toBe("function");
+		expect(typeof provider.generateSummary).toBe("function");
 		expect(provider.sectionConcurrencyLimit).toBeUndefined();
 	});
 });

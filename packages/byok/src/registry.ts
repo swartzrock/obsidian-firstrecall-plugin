@@ -45,7 +45,6 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresNetwork: false,
 		requiresDownload: false,
 		supportsModelListing: true,
-		supportsBatchGeneration: false,
 	},
 	anthropic: {
 		id: "anthropic",
@@ -67,7 +66,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		modelField: {
 			label: "Claude model",
 			placeholder: "Select a model",
-			description: "Claude model for cue generation.",
+			description: "Claude model for AI generation.",
 			listModelsLabel: "Anthropic models",
 			listModelsDescription: "Fetch Anthropic models for this account.",
 			emptyListMessage: "No Anthropic models were returned for this account.",
@@ -76,7 +75,6 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: true,
-		supportsBatchGeneration: false,
 	},
 	openai: {
 		id: "openai",
@@ -98,7 +96,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		modelField: {
 			label: "OpenAI model",
 			placeholder: "Select a model",
-			description: "OpenAI model for cue generation.",
+			description: "OpenAI model for AI generation.",
 			listModelsLabel: "OpenAI models",
 			listModelsDescription: "Fetch OpenAI models for this account.",
 			emptyListMessage: "No OpenAI models were returned for this account.",
@@ -107,7 +105,6 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: true,
-		supportsBatchGeneration: false,
 	},
 	google: {
 		id: "google",
@@ -129,7 +126,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		modelField: {
 			label: "Gemini model",
 			placeholder: "Select a model",
-			description: "Gemini model for cue generation.",
+			description: "Gemini model for AI generation.",
 			listModelsLabel: "Gemini models",
 			listModelsDescription: "Fetch Gemini models for this account.",
 			emptyListMessage: "No Gemini models were returned for this account.",
@@ -138,7 +135,6 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: true,
-		supportsBatchGeneration: false,
 	},
 	xai: {
 		id: "xai",
@@ -160,7 +156,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		modelField: {
 			label: "Grok model",
 			placeholder: "Select a model",
-			description: "Grok model for cue generation.",
+			description: "Grok model for AI generation.",
 			listModelsLabel: "xAI models",
 			listModelsDescription: "Fetch xAI models for this account.",
 			emptyListMessage: "No xAI models were returned for this account.",
@@ -169,7 +165,6 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: true,
-		supportsBatchGeneration: false,
 	},
 	openrouter: {
 		id: "openrouter",
@@ -200,7 +195,6 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: true,
-		supportsBatchGeneration: false,
 	},
 	"codex-cli": {
 		id: "codex-cli",
@@ -226,7 +220,6 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: false,
-		supportsBatchGeneration: true,
 	},
 	"claude-cli": {
 		id: "claude-cli",
@@ -252,7 +245,6 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: false,
-		supportsBatchGeneration: true,
 	},
 };
 

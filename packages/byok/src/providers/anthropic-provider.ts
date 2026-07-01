@@ -5,7 +5,9 @@ import type { FetchFunction } from "@ai-sdk/provider-utils";
 import {
 	AiSdkProvider,
 	modelGenerator,
+	textGenerator,
 	type ObjectGenerator,
+	type TextGenerator,
 } from "./ai-sdk-provider";
 
 export type { ObjectGenerator } from "./ai-sdk-provider";
@@ -13,10 +15,11 @@ export type { ObjectGenerator } from "./ai-sdk-provider";
 export interface AnthropicProviderOptions {
 	apiKey: string;
 	model: string;
-	/** Custom fetch (Obsidian's requestUrl) to avoid CORS in Electron. */
+	/** Custom fetch supplied by the host app. */
 	fetchImpl?: FetchFunction;
 	/** Overrides the real AI SDK call in tests. */
 	generator?: ObjectGenerator;
+	textGenerator?: TextGenerator;
 }
 
 export class AnthropicProvider extends AiSdkProvider {
@@ -29,7 +32,10 @@ export class AnthropicProvider extends AiSdkProvider {
 			label: "Anthropic (Claude)",
 			vendor: "Anthropic",
 			model: opts.model,
-			generate: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+			generateObject: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+			generateText:
+				opts.textGenerator ??
+				defaultTextGenerator(opts.apiKey, opts.model, opts.fetchImpl),
 		});
 		this.apiKey = opts.apiKey;
 		this.fetchImpl = opts.fetchImpl;
@@ -58,4 +64,13 @@ function defaultGenerator(
 ): ObjectGenerator {
 	const anthropic = createAnthropic({ apiKey, fetch: fetchImpl });
 	return modelGenerator(anthropic(model));
+}
+
+function defaultTextGenerator(
+	apiKey: string,
+	model: string,
+	fetchImpl?: FetchFunction
+): TextGenerator {
+	const anthropic = createAnthropic({ apiKey, fetch: fetchImpl });
+	return textGenerator(anthropic(model));
 }

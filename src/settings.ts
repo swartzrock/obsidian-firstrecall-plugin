@@ -76,7 +76,6 @@ import {
 	sortFetchedModelIds,
 	type ByokProviderDefinition,
 	type ByokProviderId,
-	type ByokProviderRuntime,
 	type ByokStoredSettings,
 	type ModelOption,
 	type ModelOptionSource,
@@ -93,6 +92,7 @@ import {
 	cueCraftProviderModel,
 	cueCraftProviderSettings,
 	cueCraftSelectedProvider,
+	type CueCraftByokRuntime,
 	deriveCueCraftProviderSetupStatus,
 	isCueCraftLocalCliProvider,
 	recordCueCraftProviderConnectionSuccess,
@@ -1580,7 +1580,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Notice("CueCraft: enter your Anthropic API key first.");
 			return;
 		}
-		let provider: ByokProviderRuntime;
+		let provider: CueCraftByokRuntime;
 		try {
 			provider = await this.plugin.makeProvider();
 		} catch (error) {
@@ -2099,7 +2099,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Notice(`CueCraft: enter your ${opts.providerName} API key first.`);
 			return;
 		}
-		let provider: ByokProviderRuntime;
+		let provider: CueCraftByokRuntime;
 		try {
 			provider = await this.plugin.makeProvider();
 		} catch (error) {
@@ -2215,7 +2215,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Notice(`CueCraft: enter your ${providerName} API key first.`);
 			return;
 		}
-		let provider: ByokProviderRuntime;
+		let provider: CueCraftByokRuntime;
 		try {
 			provider = await this.plugin.makeProvider();
 		} catch (error) {

@@ -1,17 +1,9 @@
-import type { CueOutput, SummaryOutput } from "../schemas";
-import { validateCue, validateSummary } from "../schemas";
-import {
-	cueDensityGuidance,
-	keywordGuidance,
-	questionStyleGuidance,
-} from "../cue-generation";
 import {
 	AiProvider,
-	type CueBatchResult,
-	CueInput,
 	ProviderError,
 	ProviderStatus,
-	SummaryInput,
+	TextGenerationInput,
+	TextGenerationOutput,
 } from "./types";
 import {
 	defaultLocalCliCwd,
@@ -19,21 +11,8 @@ import {
 	type LocalCommandRequest,
 	type LocalCommandResult,
 } from "./local-command-runner";
-import {
-	buildCueBatchPrompt,
-	parseCueBatch,
-} from "./local-cli-cue-batch";
-
 const DEFAULT_TIMEOUT_MS = 120_000;
 const STATUS_TIMEOUT_MS = 15_000;
-
-const PRESET_GUIDANCE: Record<string, string> = {
-	conceptual: "Favor a single conceptual question that tests understanding, not trivia.",
-	"exam-prep": "Write an exam-style question a student is likely to be tested on.",
-	vocabulary: "Emphasize key terms and their definitions.",
-	minimal: "Keep the question short and direct.",
-	simpler: "Use simple, accessible language. Keep the question brief and focused on the single most basic idea.",
-};
 
 type CommandRunner = Pick<LocalCommandRunner, "run">;
 
@@ -153,87 +132,11 @@ export class CodexCliProvider implements AiProvider {
 		}
 	}
 
-	async generateCue(input: CueInput, signal?: AbortSignal): Promise<CueOutput> {
-		const preset = PRESET_GUIDANCE[input.preset] ?? PRESET_GUIDANCE.conceptual;
-		const contextLine = input.noteContext
-			? `\nWhole-note context (for relevance only):\n${input.noteContext}\n`
-			: "";
-		const basePrompt =
-			`You are a study assistant creating Cornell-style active-recall cues.\n` +
-			`${preset}\n` +
-			`${questionStyleGuidance(input.options?.questionStyle)}\n` +
-			`${cueDensityGuidance(input.options?.cueDensity)}\n` +
-			`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
-			`Return ONLY a JSON object with keys: "question" (string), ` +
-			`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
-			`and optional "rationale" (short reason, only when confidence is "low").\n` +
-			contextLine +
-			`\nSection heading: ${input.heading || "(untitled)"}\n` +
-			`Section content:\n${input.content}\n`;
-
-		const raw = await this.complete(basePrompt, signal);
-		let result = validateCue(raw);
-		if (!result.ok) {
-			const repairPrompt =
-				basePrompt +
-				`\nYour previous reply could not be validated (${result.error}).\n` +
-				`Previous reply:\n${raw}\n` +
-				`Reply again with ONLY the corrected JSON object.`;
-			result = validateCue(await this.complete(repairPrompt, signal));
-		}
-		if (!result.ok) {
-			throw new ProviderError(`Model output could not be validated: ${result.error}`);
-		}
-		return result.value;
-	}
-
-	async generateCues(
-		inputs: CueInput[],
+	async generateText(
+		input: TextGenerationInput,
 		signal?: AbortSignal
-	): Promise<CueBatchResult[]> {
-		if (inputs.length === 0) return [];
-		const basePrompt = buildCueBatchPrompt(inputs, PRESET_GUIDANCE);
-		const raw = await this.complete(basePrompt, signal);
-		let result = parseCueBatch(raw, inputs.length);
-		if (typeof result === "string") {
-			const repairPrompt =
-				basePrompt +
-				`\nYour previous reply could not be validated (${result}).\n` +
-				`Previous reply:\n${raw}\n` +
-				`Reply again with ONLY the corrected JSON object.`;
-			result = parseCueBatch(await this.complete(repairPrompt, signal), inputs.length);
-		}
-		if (typeof result === "string") {
-			throw new ProviderError(`Model output could not be validated: ${result}`);
-		}
-		return result.results;
-	}
-
-	async generateSummary(input: SummaryInput, signal?: AbortSignal): Promise<SummaryOutput> {
-		const questions = input.sectionQuestions.length
-			? `\nSection questions to reflect:\n- ${input.sectionQuestions.join("\n- ")}\n`
-			: "";
-		const basePrompt =
-			`Summarize the following note for study review.\n` +
-			`Return ONLY a JSON object with keys: "summary" (one concise study takeaway sentence, not a paragraph) ` +
-			`and optional "learningObjective" (one short sentence).\n` +
-			`\nNote title: ${input.noteTitle}\n` +
-			questions +
-			`\nNote text:\n${input.fullText}\n`;
-
-		const raw = await this.complete(basePrompt, signal);
-		let result = validateSummary(raw);
-		if (!result.ok) {
-			const repairPrompt =
-				basePrompt +
-				`\nYour previous reply could not be validated (${result.error}).\n` +
-				`Reply again with ONLY the corrected JSON object.`;
-			result = validateSummary(await this.complete(repairPrompt, signal));
-		}
-		if (!result.ok) {
-			throw new ProviderError(`Model output could not be validated: ${result.error}`);
-		}
-		return result.value;
+	): Promise<TextGenerationOutput> {
+		return { text: await this.complete(input.prompt, signal) };
 	}
 
 	private commandArgs(): string[] {

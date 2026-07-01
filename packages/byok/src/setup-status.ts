@@ -9,7 +9,7 @@ import type {
 
 export type ProviderSetupStatusId = ByokProviderId;
 
-export const CLI_DEFAULT_MODEL_SENTINEL = "__cuecraft_cli_default__";
+export const CLI_DEFAULT_MODEL_SENTINEL = "__byok_cli_default__";
 
 export type ProviderConnectionSnapshot = ByokVerificationSnapshot;
 

@@ -1,6 +1,6 @@
 # BYOK Extraction Notes
 
-BYOK is the workspace package for provider setup, model discovery, cue-generation contracts, and provider calls. It currently lives at `packages/byok` inside CueCraft so the interface can keep being proven before extraction to a separate public repository.
+BYOK is the workspace package for provider setup, model discovery, and app-agnostic AI access through text and structured-object generation. It currently lives at `packages/byok` inside CueCraft so the interface can keep being proven before extraction to a separate public repository.
 
 ## Public Surface
 
@@ -27,7 +27,7 @@ The public surface is:
 - Node-only runtime creation: `createByokNodeProvider(config, deps): ByokProviderRuntime` from `@cuecraft/byok/node` for Codex CLI and Claude CLI providers.
 - Setup state: verification snapshots, credential fingerprints, `recordProviderConnectionSuccess`, and `deriveProviderSetupStatus`.
 - Model discovery: normalized model IDs, rich model options, model option sorting, refresh-result types, and OpenRouter compatibility metadata.
-- Generation: cue, cue batch, and summary inputs/results plus `ByokProviderError` and `ByokProviderRateLimitError`.
+- Generation: `generateText`, optional `generateObject`, and provider errors such as `ByokProviderError` and `ByokProviderRateLimitError`.
 
 The provider runtime contract intentionally stays app-agnostic:
 
@@ -43,10 +43,23 @@ const provider = createByokProvider(
 
 const status = await provider.testConnection();
 const models = await provider.listModels?.();
-const cue = await provider.generateCue({
-	heading: "Terms",
-	content: "Agent: an AI system that can plan and use tools.",
-	preset: "conceptual",
+const { text } = await provider.generateText({
+	prompt: "Explain agentic AI in two sentences.",
+});
+```
+
+Structured-output capable providers also expose `generateObject`:
+
+```ts
+import { z } from "zod/v3";
+import { createByokProvider } from "@cuecraft/byok";
+
+const provider = createByokProvider(config, deps);
+const result = await provider.generateObject?.({
+	prompt: "Return three user-facing risks of storing API keys.",
+	schema: z.object({
+		risks: z.array(z.string()),
+	}),
 });
 ```
 
@@ -74,10 +87,11 @@ const provider = createByokNodeProvider(config, deps satisfies ByokProviderDeps)
 - Render Obsidian settings UI and notices.
 - Adapt Obsidian `requestUrl` into BYOK transport dependencies.
 - Parse notes and decide which sections need generation.
+- Build CueCraft study-cue prompts, JSON schemas, validation, repair prompts, and cue/summary runtime methods around BYOK text/object generation.
 - Map CueCraft settings into BYOK configs and map BYOK results back into settings through `src/byok-cuecraft-adapter.ts`.
 - Preserve Obsidian-specific user experience: settings copy, model refresh notices, setup status text, and note-cache metadata.
 
-`src/byok-cuecraft-adapter.ts` is deliberately outside `packages/byok/**`. A future non-Obsidian project should write its own adapter for storage, UI, and transport wiring instead of importing CueCraft settings types.
+`src/byok-cuecraft-adapter.ts` is deliberately outside `packages/byok/**`. A future non-Obsidian project should write its own adapter for storage, UI, transport wiring, prompting, and output validation instead of importing CueCraft settings or study-cue types.
 
 ## CueCraft Credential Storage
 
@@ -126,6 +140,7 @@ Owned by `packages/byok`:
 Stay in CueCraft:
 
 - `src/byok-cuecraft-adapter.ts`
+- `src/cue-generation.ts`, `src/schemas.ts`, `src/local-cli-cue-batch.ts`, and `src/cue-provider.ts`
 - `src/settings.ts`, `src/main.ts`, `src/generator.ts`, note parsing/cache/export/view code, and all Obsidian UI modules.
 - Any app-specific compatibility adapters that a future consumer needs. CueCraft no longer keeps the old `src/providers/*` or top-level model/setup shims.
 
@@ -164,5 +179,5 @@ Stay in CueCraft:
 - BYOK is not published as an npm package in this branch.
 - BYOK does not own encryption or persistence of stored keys.
 - BYOK does not add new providers.
-- BYOK is not a generic chat-completions package; this repo keeps CueCraft cue and summary generation as the proven first use case.
+- BYOK is not a storage, UI, prompt-template, or output-validation framework; host apps own those layers.
 - BYOK does not own Obsidian-specific settings UI, notices, note parsing, cache invalidation, or Cornell rendering.

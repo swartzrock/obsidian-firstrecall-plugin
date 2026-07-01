@@ -4,16 +4,19 @@ import type { Model as OpenAIModel } from "openai/resources/models";
 import {
 	AiSdkProvider,
 	modelGenerator,
+	textGenerator,
 	type ObjectGenerator,
+	type TextGenerator,
 } from "./ai-sdk-provider";
 
 export interface XaiProviderOptions {
 	apiKey: string;
 	model: string;
-	/** Custom fetch (Obsidian's requestUrl) to avoid CORS in Electron. */
+	/** Custom fetch supplied by the host app. */
 	fetchImpl?: FetchFunction;
 	/** Overrides the real AI SDK call in tests. */
 	generator?: ObjectGenerator;
+	textGenerator?: TextGenerator;
 	/** Overrides the model-list call in tests. */
 	listModelsImpl?: () => Promise<string[]>;
 }
@@ -25,7 +28,10 @@ export class XaiProvider extends AiSdkProvider {
 			label: "xAI (Grok)",
 			vendor: "xAI",
 			model: opts.model,
-			generate: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+			generateObject: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+			generateText:
+				opts.textGenerator ??
+				defaultTextGenerator(opts.apiKey, opts.model, opts.fetchImpl),
 			listModels: opts.listModelsImpl ?? (() => listXaiModels(opts.apiKey, opts.fetchImpl)),
 		});
 	}
@@ -55,4 +61,13 @@ function defaultGenerator(
 ): ObjectGenerator {
 	const xai = createXai({ apiKey, fetch: fetchImpl });
 	return modelGenerator(xai(model));
+}
+
+function defaultTextGenerator(
+	apiKey: string,
+	model: string,
+	fetchImpl?: FetchFunction
+): TextGenerator {
+	const xai = createXai({ apiKey, fetch: fetchImpl });
+	return textGenerator(xai(model));
 }

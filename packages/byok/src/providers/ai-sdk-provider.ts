@@ -1,64 +1,19 @@
 import { z } from "zod/v3";
-import { generateObject, zodSchema } from "ai";
+import {
+	generateObject as generateAiObject,
+	generateText as generateAiText,
+	zodSchema,
+} from "ai";
 import type { LanguageModel, Schema } from "ai";
 import {
-	cueOutputSchema,
-	summaryOutputSchema,
-	type CueOutput,
-	type SummaryOutput,
-} from "../schemas";
-import {
-	cueDensityGuidance,
-	keywordGuidance,
-	questionStyleGuidance,
-} from "../cue-generation";
-import {
 	AiProvider,
-	CueInput,
+	ObjectGenerationInput,
 	ProviderError,
 	ProviderRateLimitError,
 	ProviderStatus,
-	SummaryInput,
+	TextGenerationInput,
+	TextGenerationOutput,
 } from "./types";
-
-const PRESET_GUIDANCE: Record<string, string> = {
-	conceptual: "Favor a single conceptual question that tests understanding, not trivia.",
-	"exam-prep": "Write an exam-style question a student is likely to be tested on.",
-	vocabulary: "Emphasize key terms and their definitions.",
-	minimal: "Keep the question short and direct.",
-	simpler: "Use simple, accessible language. Keep the question brief and focused on the single most basic idea.",
-};
-
-/**
- * Loose generation schemas handed to the model. They mirror the strict
- * {@link cueOutputSchema}/{@link summaryOutputSchema} but without the coercion
- * `preprocess` wrappers (which don't translate to a clean JSON schema). The
- * model's structured output is run back through the strict schemas so the same
- * coercion (keyword trimming, confidence casing) applies regardless of provider.
- */
-const cueGenSchema = z.object({
-	question: z.string().describe("A single active-recall question for the section."),
-	keywords: z
-		.array(z.string())
-		.describe("2 to 5 short keyword hints that help recall the answer."),
-	confidence: z
-		.enum(["high", "medium", "low"])
-		.describe("How confident you are this cue tests the section well."),
-	rationale: z
-		.string()
-		.nullable()
-		.describe("If confidence is low, a short reason why this cue may need review."),
-});
-
-const summaryGenSchema = z.object({
-	summary: z
-		.string()
-		.describe("One concise study takeaway sentence capturing the most important idea or relationship."),
-	learningObjective: z
-		.string()
-		.nullable()
-		.describe("One short sentence stating what the reader should be able to do."),
-});
 
 /** Injectable structured-output call so the provider can be unit-tested. */
 export type ObjectGenerator = <T>(opts: {
@@ -66,6 +21,12 @@ export type ObjectGenerator = <T>(opts: {
 	prompt: string;
 	signal?: AbortSignal;
 }) => Promise<T>;
+
+/** Injectable text-generation call so providers can be unit-tested. */
+export type TextGenerator = (opts: {
+	prompt: string;
+	signal?: AbortSignal;
+}) => Promise<string>;
 
 export const DEFAULT_RATE_LIMIT_RETRIES = 2;
 const DEFAULT_RATE_LIMIT_RETRY_MS = 1000;
@@ -80,15 +41,11 @@ export interface AiSdkProviderConfig {
 	vendor: string;
 	model: string;
 	/** Structured-output call; the real one wraps the AI SDK, tests inject a mock. */
-	generate: ObjectGenerator;
+	generateObject: ObjectGenerator;
+	/** Text-generation call; the real one wraps the AI SDK, tests inject a mock. */
+	generateText: TextGenerator;
 	/** Optional model-list call for providers that expose discoverable models. */
 	listModels?: () => Promise<unknown[]>;
-}
-
-function formatZodError(error: z.ZodError): string {
-	return error.issues
-		.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-		.join("; ");
 }
 
 function errorMessage(e: unknown): string {
@@ -166,7 +123,8 @@ export class AiSdkProvider implements AiProvider {
 
 	protected readonly vendor: string;
 	protected readonly model: string;
-	private readonly generate: ObjectGenerator;
+	private readonly objectGenerator: ObjectGenerator;
+	private readonly textGenerator: TextGenerator;
 	private readonly listModelsImpl?: () => Promise<unknown[]>;
 
 	constructor(config: AiSdkProviderConfig) {
@@ -174,7 +132,8 @@ export class AiSdkProvider implements AiProvider {
 		this.label = config.label;
 		this.vendor = config.vendor;
 		this.model = config.model;
-		this.generate = config.generate;
+		this.objectGenerator = config.generateObject;
+		this.textGenerator = config.generateText;
 		this.listModelsImpl = config.listModels;
 	}
 
@@ -193,7 +152,7 @@ export class AiSdkProvider implements AiProvider {
 		return `${this.vendor} request failed: ${msg}`;
 	}
 
-	private async generateWithRetry<T>(opts: {
+	private async generateObjectWithRetry<T>(opts: {
 		schema: z.ZodType<T, z.ZodTypeDef, unknown>;
 		prompt: string;
 		signal?: AbortSignal;
@@ -201,7 +160,39 @@ export class AiSdkProvider implements AiProvider {
 		let lastRateLimit: unknown = null;
 		for (let attempt = 0; attempt <= DEFAULT_RATE_LIMIT_RETRIES; attempt++) {
 			try {
-				return await this.generate(opts);
+				return await this.objectGenerator(opts);
+			} catch (e) {
+				if (!isRateLimitError(e) || attempt === DEFAULT_RATE_LIMIT_RETRIES) {
+					if (isRateLimitError(e)) {
+						throw new ProviderRateLimitError(
+							this.describeError(e),
+							retryAfterMs(e)
+						);
+					}
+					throw e;
+				}
+				lastRateLimit = e;
+				const waitMs = Math.min(
+					retryAfterMs(e) ?? DEFAULT_RATE_LIMIT_RETRY_MS * 2 ** attempt,
+					MAX_RATE_LIMIT_RETRY_MS
+				);
+				await sleep(waitMs, opts.signal);
+			}
+		}
+		throw new ProviderRateLimitError(
+			this.describeError(lastRateLimit),
+			retryAfterMs(lastRateLimit)
+		);
+	}
+
+	private async generateTextWithRetry(opts: {
+		prompt: string;
+		signal?: AbortSignal;
+	}): Promise<string> {
+		let lastRateLimit: unknown = null;
+		for (let attempt = 0; attempt <= DEFAULT_RATE_LIMIT_RETRIES; attempt++) {
+			try {
+				return await this.textGenerator(opts);
 			} catch (e) {
 				if (!isRateLimitError(e) || attempt === DEFAULT_RATE_LIMIT_RETRIES) {
 					if (isRateLimitError(e)) {
@@ -231,7 +222,7 @@ export class AiSdkProvider implements AiProvider {
 			return { ok: false, message: `Choose a ${this.vendor} model.` };
 		}
 		try {
-			await this.generate({
+			await this.generateObjectWithRetry({
 				schema: z.object({ ok: z.boolean() }),
 				prompt: 'Reply with a JSON object {"ok": true}.',
 			});
@@ -246,63 +237,37 @@ export class AiSdkProvider implements AiProvider {
 		return this.listModelsImpl();
 	}
 
-	async generateCue(input: CueInput, signal?: AbortSignal): Promise<CueOutput> {
-		const preset = PRESET_GUIDANCE[input.preset] ?? PRESET_GUIDANCE.conceptual;
-		const contextLine = input.noteContext
-			? `\nWhole-note context (for relevance only):\n${input.noteContext}\n`
-			: "";
-		const prompt =
-			`You are a study assistant creating Cornell-style active-recall cues.\n` +
-			`${preset}\n` +
-			`${questionStyleGuidance(input.options?.questionStyle)}\n` +
-			`${cueDensityGuidance(input.options?.cueDensity)}\n` +
-			`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
-			contextLine +
-			`\nSection heading: ${input.heading || "(untitled)"}\n` +
-			`Section content:\n${input.content}\n`;
-
-		let raw;
+	async generateText(
+		input: TextGenerationInput,
+		signal?: AbortSignal
+	): Promise<TextGenerationOutput> {
 		try {
-			raw = await this.generateWithRetry({ schema: cueGenSchema, prompt, signal });
+			return {
+				text: await this.generateTextWithRetry({
+					prompt: input.prompt,
+					signal,
+				}),
+			};
 		} catch (e) {
 			if (e instanceof ProviderRateLimitError) throw e;
 			throw new ProviderError(this.describeError(e));
 		}
-		const parsed = cueOutputSchema.safeParse(raw);
-		if (!parsed.success) {
-			throw new ProviderError(
-				`Model output could not be validated: ${formatZodError(parsed.error)}`
-			);
-		}
-		return parsed.data;
 	}
 
-	async generateSummary(input: SummaryInput, signal?: AbortSignal): Promise<SummaryOutput> {
-		const questions = input.sectionQuestions.length
-			? `\nSection questions to reflect:\n- ${input.sectionQuestions.join("\n- ")}\n`
-			: "";
-		const prompt =
-			`Summarize the following note for study review.\n` +
-			`Write "summary" as one concise study takeaway sentence, not a paragraph.\n` +
-			`If you include "learningObjective", keep it to one short sentence.\n` +
-			`\nNote title: ${input.noteTitle}\n` +
-			questions +
-			`\nNote text:\n${input.fullText}\n`;
-
-		let raw;
+	async generateObject<T>(
+		input: ObjectGenerationInput<T>,
+		signal?: AbortSignal
+	): Promise<T> {
 		try {
-			raw = await this.generateWithRetry({ schema: summaryGenSchema, prompt, signal });
+			return await this.generateObjectWithRetry({
+				schema: input.schema,
+				prompt: input.prompt,
+				signal,
+			});
 		} catch (e) {
 			if (e instanceof ProviderRateLimitError) throw e;
 			throw new ProviderError(this.describeError(e));
 		}
-		const parsed = summaryOutputSchema.safeParse(raw);
-		if (!parsed.success) {
-			throw new ProviderError(
-				`Model output could not be validated: ${formatZodError(parsed.error)}`
-			);
-		}
-		return parsed.data;
 	}
 }
 
@@ -314,7 +279,7 @@ export function modelGenerator(model: LanguageModel): ObjectGenerator {
 		signal?: AbortSignal;
 	}): Promise<T> {
 		const sdkSchema: Schema<T> = zodSchema<T>(schema);
-		const { object } = await generateObject<Schema<T>, "object", T>({
+		const { object } = await generateAiObject<Schema<T>, "object", T>({
 			model,
 			schema: sdkSchema,
 			prompt,
@@ -322,5 +287,17 @@ export function modelGenerator(model: LanguageModel): ObjectGenerator {
 			abortSignal: signal,
 		});
 		return object;
+	};
+}
+
+/** Build the real AI SDK text caller for a resolved model. */
+export function textGenerator(model: LanguageModel): TextGenerator {
+	return async function generate({ prompt, signal }): Promise<string> {
+		const { text } = await generateAiText({
+			model,
+			prompt,
+			abortSignal: signal,
+		});
+		return text;
 	};
 }

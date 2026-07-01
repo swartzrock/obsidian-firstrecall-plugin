@@ -276,7 +276,7 @@ describe("LocalCommandRunner", () => {
 			command: "claude",
 			args: ["--model", model],
 			stdin: prompt,
-			cwd: "/tmp/cuecraft-empty",
+			cwd: "/tmp/byok-empty",
 		});
 
 		process.close(0);
@@ -287,7 +287,7 @@ describe("LocalCommandRunner", () => {
 				"claude",
 				["--model", model],
 				{
-					cwd: "/tmp/cuecraft-empty",
+					cwd: "/tmp/byok-empty",
 					env: { PATH: "/usr/bin" },
 					shell: false,
 				},

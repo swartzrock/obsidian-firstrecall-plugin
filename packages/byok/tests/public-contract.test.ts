@@ -2,6 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { z } from "zod/v3";
 import * as byok from "../src";
 import type {
 	ByokProviderConfig,
@@ -21,20 +22,12 @@ describe("BYOK public contract", () => {
 			"ByokProviderError",
 			"ByokProviderRateLimitError",
 			"CLI_DEFAULT_MODEL_SENTINEL",
-			"CUE_DENSITIES",
-			"DEFAULT_CUE_DENSITY",
-			"DEFAULT_CUE_GENERATION_OPTIONS",
-			"DEFAULT_QUESTION_STYLE",
-			"QUESTION_STYLES",
 			"anthropicModelInfoToByokModelOption",
 			"buildAnthropicModelOptions",
 			"byokProviderDefinition",
 			"byokProviderDefinitions",
 			"compareFetchedModelIds",
-			"confidenceSchema",
 			"createByokProvider",
-			"cueDensityGuidance",
-			"cueDensityLabel",
 			"deriveProviderSetupStatus",
 			"describeAnthropicModel",
 			"describeAnthropicModelDetails",
@@ -42,12 +35,9 @@ describe("BYOK public contract", () => {
 			"formatAnthropicUnavailableModelMessage",
 			"isAnthropicCustomModelSelection",
 			"isByokProviderId",
-			"isCueDensity",
 			"isLargeContextModel",
 			"isLowCostModel",
 			"isModelOption",
-			"isQuestionStyle",
-			"keywordGuidance",
 			"modelCompatibilityBadges",
 			"modelCompatibilityWarning",
 			"modelStructuredOutputSupport",
@@ -57,7 +47,6 @@ describe("BYOK public contract", () => {
 			"normalizeProviderId",
 			"normalizeStringId",
 			"providerCredentialFingerprint",
-			"questionStyleGuidance",
 			"recordProviderConnectionSuccess",
 			"refreshAnthropicModelOptions",
 			"sortByokModelOptions",
@@ -110,7 +99,7 @@ describe("BYOK public contract", () => {
 		);
 	});
 
-	it("exports a runtime shape with cue, batch, summary, status, and model hooks", async () => {
+	it("exports a runtime shape with text, object, status, and model hooks", async () => {
 		const runtime: ByokProviderRuntime = {
 			id: "openai",
 			label: "OpenAI (ChatGPT)",
@@ -122,29 +111,11 @@ describe("BYOK public contract", () => {
 			async listModels() {
 				return ["gpt-4o-mini"];
 			},
-			async generateCue() {
-				return {
-					question: "What changed?",
-					keywords: ["provider", "contract"],
-					confidence: "high",
-				};
+			async generateText() {
+				return { text: "Plain response." };
 			},
-			async generateCues() {
-				return [
-					{
-						cue: {
-							question: "What changed?",
-							keywords: ["provider", "contract"],
-							confidence: "high",
-						},
-					},
-				];
-			},
-			async generateSummary() {
-				return {
-					summary: "Provider contracts moved behind BYOK.",
-					learningObjective: null,
-				};
+			async generateObject() {
+				return { ok: true };
 			},
 		};
 
@@ -153,6 +124,15 @@ describe("BYOK public contract", () => {
 			message: "Connected.",
 		});
 		await expect(runtime.listModels?.()).resolves.toEqual(["gpt-4o-mini"]);
+		await expect(runtime.generateText({ prompt: "Hi" })).resolves.toEqual({
+			text: "Plain response.",
+		});
+		await expect(
+			runtime.generateObject?.({
+				prompt: "Hi",
+				schema: z.object({ ok: z.boolean() }),
+			})
+		).resolves.toEqual({ ok: true });
 	});
 
 	it("exposes every provider with stable labels and capability metadata", () => {
@@ -202,13 +182,11 @@ describe("BYOK public contract", () => {
 			label: "Codex CLI",
 			credentialKind: "command",
 			modelBehavior: "optional",
-			supportsBatchGeneration: true,
 		} satisfies Partial<ByokProviderDefinition>);
 		expect(byId.get("claude-cli")).toMatchObject({
 			label: "Claude CLI",
 			credentialKind: "command",
 			modelBehavior: "optional",
-			supportsBatchGeneration: true,
 		} satisfies Partial<ByokProviderDefinition>);
 	});
 

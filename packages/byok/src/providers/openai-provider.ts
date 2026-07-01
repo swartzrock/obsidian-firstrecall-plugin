@@ -4,16 +4,19 @@ import type { Model as OpenAIModel } from "openai/resources/models";
 import {
 	AiSdkProvider,
 	modelGenerator,
+	textGenerator,
 	type ObjectGenerator,
+	type TextGenerator,
 } from "./ai-sdk-provider";
 
 export interface OpenAIProviderOptions {
 	apiKey: string;
 	model: string;
-	/** Custom fetch (Obsidian's requestUrl) to avoid CORS in Electron. */
+	/** Custom fetch supplied by the host app. */
 	fetchImpl?: FetchFunction;
 	/** Overrides the real AI SDK call in tests. */
 	generator?: ObjectGenerator;
+	textGenerator?: TextGenerator;
 	/** Overrides the model-list call in tests. */
 	listModelsImpl?: () => Promise<string[]>;
 }
@@ -25,7 +28,10 @@ export class OpenAIProvider extends AiSdkProvider {
 			label: "OpenAI (ChatGPT)",
 			vendor: "OpenAI",
 			model: opts.model,
-			generate: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+			generateObject: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+			generateText:
+				opts.textGenerator ??
+				defaultTextGenerator(opts.apiKey, opts.model, opts.fetchImpl),
 			listModels:
 				opts.listModelsImpl ?? (() => listOpenAiModels(opts.apiKey, opts.fetchImpl)),
 		});
@@ -67,4 +73,13 @@ function defaultGenerator(
 ): ObjectGenerator {
 	const openai = createOpenAI({ apiKey, fetch: fetchImpl });
 	return modelGenerator(openai(model));
+}
+
+function defaultTextGenerator(
+	apiKey: string,
+	model: string,
+	fetchImpl?: FetchFunction
+): TextGenerator {
+	const openai = createOpenAI({ apiKey, fetch: fetchImpl });
+	return textGenerator(openai(model));
 }

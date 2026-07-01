@@ -22,7 +22,6 @@ import {
 	scheduleAutoGenerationTimer,
 } from "./auto-generation-delay";
 import {
-	type ByokProviderRuntime,
 	type ByokHttpClient,
 	byokProviderDefinition,
 } from "@cuecraft/byok";
@@ -37,6 +36,7 @@ import {
 	migrateCueCraftCloudCredentials,
 	normalizeCueCraftProviderSettings,
 	makeCueCraftByokProviderFromStore,
+	type CueCraftByokRuntime,
 } from "./byok-cuecraft-adapter";
 import {
 	createSecureCredentialStore,
@@ -964,7 +964,7 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
-	async makeProvider(): Promise<ByokProviderRuntime> {
+	async makeProvider(): Promise<CueCraftByokRuntime> {
 		return makeCueCraftByokProviderFromStore(this.settings, {
 			fetchImpl: this.makeFetch(),
 			http: this.makeHttpClient(),
@@ -973,7 +973,7 @@ export default class CueCraftPlugin extends Plugin {
 
 	private async makeProviderForRun(
 		opts: { automatic?: boolean } = {}
-	): Promise<ByokProviderRuntime | null> {
+	): Promise<CueCraftByokRuntime | null> {
 		try {
 			return await this.makeProvider();
 		} catch (error) {
@@ -1495,7 +1495,7 @@ export default class CueCraftPlugin extends Plugin {
 	private async runStudyAreaQueueItem(
 		file: TFile,
 		item: StudyAreaQueueItem,
-		provider: ByokProviderRuntime,
+		provider: CueCraftByokRuntime,
 		controller: AbortController,
 		onProgress?: (completedSections: number) => void
 	): Promise<"completed" | "failed" | "canceled"> {
@@ -1553,7 +1553,7 @@ export default class CueCraftPlugin extends Plugin {
 		file: TFile,
 		markdown: string,
 		sectionIds: readonly string[],
-		provider: ByokProviderRuntime,
+		provider: CueCraftByokRuntime,
 		controller: AbortController,
 		onProgress?: (completedSections: number) => void
 	): Promise<"completed" | "failed" | "canceled"> {

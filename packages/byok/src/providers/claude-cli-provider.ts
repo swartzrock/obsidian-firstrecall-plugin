@@ -1,17 +1,9 @@
-import type { CueOutput, SummaryOutput } from "../schemas";
-import { validateCue, validateSummary } from "../schemas";
-import {
-	cueDensityGuidance,
-	keywordGuidance,
-	questionStyleGuidance,
-} from "../cue-generation";
 import {
 	AiProvider,
-	CueInput,
 	ProviderError,
 	ProviderStatus,
-	SummaryInput,
-	type CueBatchResult,
+	TextGenerationInput,
+	TextGenerationOutput,
 } from "./types";
 import {
 	defaultLocalCliCwd,
@@ -19,12 +11,6 @@ import {
 	type LocalCommandRequest,
 	type LocalCommandResult,
 } from "./local-command-runner";
-import {
-	buildCueBatchPrompt,
-	cueBatchJsonSchema,
-	parseCueBatch,
-} from "./local-cli-cue-batch";
-
 const DEFAULT_TIMEOUT_MS = 120_000;
 const STATUS_TIMEOUT_MS = 15_000;
 const CLAUDE_CLI_ENV: NodeJS.ProcessEnv = {
@@ -39,41 +25,6 @@ const CLAUDE_CLI_ENV: NodeJS.ProcessEnv = {
 };
 const CLAUDE_CLI_AUTH_MESSAGE =
 	"Claude CLI is not authenticated. Run `claude auth login` in your terminal, then try again.";
-
-const PRESET_GUIDANCE: Record<string, string> = {
-	conceptual: "Favor a single conceptual question that tests understanding, not trivia.",
-	"exam-prep": "Write an exam-style question a student is likely to be tested on.",
-	vocabulary: "Emphasize key terms and their definitions.",
-	minimal: "Keep the question short and direct.",
-	simpler: "Use simple, accessible language. Keep the question brief and focused on the single most basic idea.",
-};
-
-const CUE_JSON_SCHEMA = JSON.stringify({
-	type: "object",
-	properties: {
-		question: { type: "string" },
-		keywords: {
-			type: "array",
-			items: { type: "string" },
-			minItems: 2,
-			maxItems: 5,
-		},
-		confidence: { enum: ["high", "medium", "low"] },
-		rationale: { type: "string" },
-	},
-	required: ["question", "keywords", "confidence"],
-	additionalProperties: false,
-});
-
-const SUMMARY_JSON_SCHEMA = JSON.stringify({
-	type: "object",
-	properties: {
-		summary: { type: "string" },
-		learningObjective: { type: "string" },
-	},
-	required: ["summary"],
-	additionalProperties: false,
-});
 
 const CONNECTION_JSON_SCHEMA = JSON.stringify({
 	type: "object",
@@ -230,96 +181,16 @@ export class ClaudeCliProvider implements AiProvider {
 		}
 	}
 
-	async generateCue(input: CueInput, signal?: AbortSignal): Promise<CueOutput> {
-		const preset = PRESET_GUIDANCE[input.preset] ?? PRESET_GUIDANCE.conceptual;
-		const contextLine = input.noteContext
-			? `\nWhole-note context (for relevance only):\n${input.noteContext}\n`
-			: "";
-		const basePrompt =
-			`You are a study assistant creating Cornell-style active-recall cues.\n` +
-			`${preset}\n` +
-			`${questionStyleGuidance(input.options?.questionStyle)}\n` +
-			`${cueDensityGuidance(input.options?.cueDensity)}\n` +
-			`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
-			`Return ONLY a JSON object with keys: "question" (string), ` +
-			`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
-			`and optional "rationale" (short reason, only when confidence is "low").\n` +
-			contextLine +
-			`\nSection heading: ${input.heading || "(untitled)"}\n` +
-			`Section content:\n${input.content}\n`;
-
-		const raw = await this.complete(basePrompt, CUE_JSON_SCHEMA, signal);
-		let result = validateCue(raw);
-		if (!result.ok) {
-			const repairPrompt =
-				basePrompt +
-				`\nYour previous reply could not be validated (${result.error}).\n` +
-				`Previous reply:\n${raw}\n` +
-				`Reply again with ONLY the corrected JSON object.`;
-			result = validateCue(await this.complete(repairPrompt, CUE_JSON_SCHEMA, signal));
-		}
-		if (!result.ok) {
-			throw new ProviderError(`Model output could not be validated: ${result.error}`);
-		}
-		return result.value;
-	}
-
-	async generateCues(
-		inputs: CueInput[],
+	async generateText(
+		input: TextGenerationInput,
 		signal?: AbortSignal
-	): Promise<CueBatchResult[]> {
-		if (inputs.length === 0) return [];
-		const schema = cueBatchJsonSchema(inputs.length);
-		const basePrompt = buildCueBatchPrompt(inputs, PRESET_GUIDANCE);
-		const raw = await this.complete(basePrompt, schema, signal);
-		let result = parseCueBatch(raw, inputs.length);
-		if (typeof result === "string") {
-			const repairPrompt =
-				basePrompt +
-				`\nYour previous reply could not be validated (${result}).\n` +
-				`Previous reply:\n${raw}\n` +
-				`Reply again with ONLY the corrected JSON object.`;
-			result = parseCueBatch(
-				await this.complete(repairPrompt, schema, signal),
-				inputs.length
-			);
-		}
-		if (typeof result === "string") {
-			throw new ProviderError(`Model output could not be validated: ${result}`);
-		}
-		return result.results;
+	): Promise<TextGenerationOutput> {
+		return {
+			text: await this.complete(input.prompt, input.jsonSchema, signal),
+		};
 	}
 
-	async generateSummary(input: SummaryInput, signal?: AbortSignal): Promise<SummaryOutput> {
-		const questions = input.sectionQuestions.length
-			? `\nSection questions to reflect:\n- ${input.sectionQuestions.join("\n- ")}\n`
-			: "";
-		const basePrompt =
-			`Summarize the following note for study review.\n` +
-			`Return ONLY a JSON object with keys: "summary" (one concise study takeaway sentence, not a paragraph) ` +
-			`and optional "learningObjective" (one short sentence).\n` +
-			`\nNote title: ${input.noteTitle}\n` +
-			questions +
-			`\nNote text:\n${input.fullText}\n`;
-
-		const raw = await this.complete(basePrompt, SUMMARY_JSON_SCHEMA, signal);
-		let result = validateSummary(raw);
-		if (!result.ok) {
-			const repairPrompt =
-				basePrompt +
-				`\nYour previous reply could not be validated (${result.error}).\n` +
-				`Reply again with ONLY the corrected JSON object.`;
-			result = validateSummary(
-				await this.complete(repairPrompt, SUMMARY_JSON_SCHEMA, signal)
-			);
-		}
-		if (!result.ok) {
-			throw new ProviderError(`Model output could not be validated: ${result.error}`);
-		}
-		return result.value;
-	}
-
-	private commandArgs(schema: string): string[] {
+	private commandArgs(schema?: string): string[] {
 		const args = [
 			"-p",
 			"--output-format",
@@ -335,17 +206,16 @@ export class ClaudeCliProvider implements AiProvider {
 			"dontAsk",
 			"--tools",
 			"",
-			"--json-schema",
-			schema,
 		];
+		if (schema) args.push("--json-schema", schema);
 		if (this.model) args.push("--model", this.model);
 		return args;
 	}
 
 	private async runPrompt(
 		prompt: string,
-		schema: string,
-		timeoutMs: number,
+		schema?: string,
+		timeoutMs = this.timeoutMs,
 		signal?: AbortSignal
 	): Promise<string> {
 		const request: LocalCommandRequest = {
@@ -386,7 +256,7 @@ export class ClaudeCliProvider implements AiProvider {
 
 	private async complete(
 		prompt: string,
-		schema: string,
+		schema?: string,
 		signal?: AbortSignal
 	): Promise<string> {
 		return this.runPrompt(prompt, schema, this.timeoutMs, signal);

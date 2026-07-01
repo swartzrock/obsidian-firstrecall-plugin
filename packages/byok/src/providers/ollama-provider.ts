@@ -1,18 +1,11 @@
-import type { CueOutput, SummaryOutput } from "../schemas";
-import { validateCue, validateSummary } from "../schemas";
-import {
-	cueDensityGuidance,
-	keywordGuidance,
-	questionStyleGuidance,
-} from "../cue-generation";
 import {
 	AiProvider,
-	CueInput,
 	HttpClient,
 	HttpResponse,
 	ProviderError,
 	ProviderStatus,
-	SummaryInput,
+	TextGenerationInput,
+	TextGenerationOutput,
 } from "./types";
 
 /** Pull Ollama's `{ "error": "..." }` body out of a failed response. */
@@ -36,14 +29,6 @@ export interface OllamaProviderOptions {
 	model: string;
 	http: HttpClient;
 }
-
-const PRESET_GUIDANCE: Record<string, string> = {
-	conceptual: "Favor a single conceptual question that tests understanding, not trivia.",
-	"exam-prep": "Write an exam-style question a student is likely to be tested on.",
-	vocabulary: "Emphasize key terms and their definitions.",
-	minimal: "Keep the question short and direct.",
-	simpler: "Use simple, accessible language. Keep the question brief and focused on the single most basic idea.",
-};
 
 export class OllamaProvider implements AiProvider {
 	readonly id = "ollama";
@@ -97,71 +82,20 @@ export class OllamaProvider implements AiProvider {
 			.filter((n): n is string => typeof n === "string");
 	}
 
-	async generateCue(input: CueInput, _signal?: AbortSignal): Promise<CueOutput> {
-		const preset = PRESET_GUIDANCE[input.preset] ?? PRESET_GUIDANCE.conceptual;
-		const contextLine = input.noteContext
-			? `\nWhole-note context (for relevance only):\n${input.noteContext}\n`
-			: "";
-		const basePrompt =
-			`You are a study assistant creating Cornell-style active-recall cues.\n` +
-			`${preset}\n` +
-			`${questionStyleGuidance(input.options?.questionStyle)}\n` +
-			`${cueDensityGuidance(input.options?.cueDensity)}\n` +
-			`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
-			`Return ONLY a JSON object with keys: "question" (string), ` +
-			`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
-			`and optional "rationale" (short reason, only when confidence is "low").\n` +
-			contextLine +
-			`\nSection heading: ${input.heading || "(untitled)"}\n` +
-			`Section content:\n${input.content}\n`;
-
-		const raw = await this.complete(basePrompt);
-		let result = validateCue(raw);
-		if (!result.ok) {
-			const repairPrompt =
-				basePrompt +
-				`\nYour previous reply could not be validated (${result.error}).\n` +
-				`Previous reply:\n${raw}\n` +
-				`Reply again with ONLY the corrected JSON object.`;
-			const retry = await this.complete(repairPrompt);
-			result = validateCue(retry);
-		}
-		if (!result.ok) {
-			throw new ProviderError(`Model output could not be validated: ${result.error}`);
-		}
-		return result.value;
+	async generateText(
+		input: TextGenerationInput,
+		_signal?: AbortSignal
+	): Promise<TextGenerationOutput> {
+		return {
+			text: await this.complete(input.prompt, input.responseFormat),
+		};
 	}
 
-	async generateSummary(input: SummaryInput, _signal?: AbortSignal): Promise<SummaryOutput> {
-		const questions = input.sectionQuestions.length
-			? `\nSection questions to reflect:\n- ${input.sectionQuestions.join("\n- ")}\n`
-			: "";
-		const basePrompt =
-			`Summarize the following note for study review.\n` +
-			`Return ONLY a JSON object with keys: "summary" (one concise study takeaway sentence, not a paragraph) ` +
-			`and optional "learningObjective" (one short sentence).\n` +
-			`\nNote title: ${input.noteTitle}\n` +
-			questions +
-			`\nNote text:\n${input.fullText}\n`;
-
-		const raw = await this.complete(basePrompt);
-		let result = validateSummary(raw);
-		if (!result.ok) {
-			const repairPrompt =
-				basePrompt +
-				`\nYour previous reply could not be validated (${result.error}).\n` +
-				`Reply again with ONLY the corrected JSON object.`;
-			const retry = await this.complete(repairPrompt);
-			result = validateSummary(retry);
-		}
-		if (!result.ok) {
-			throw new ProviderError(`Model output could not be validated: ${result.error}`);
-		}
-		return result.value;
-	}
-
-	/** POST /api/generate (non-streaming, JSON format) and return the raw model text. */
-	private async complete(prompt: string): Promise<string> {
+	/** POST /api/generate (non-streaming) and return the raw model text. */
+	private async complete(
+		prompt: string,
+		responseFormat: "text" | "json" = "text"
+	): Promise<string> {
 		let res;
 		try {
 			res = await this.http({
@@ -172,7 +106,7 @@ export class OllamaProvider implements AiProvider {
 					model: this.model,
 					prompt,
 					stream: false,
-					format: "json",
+					...(responseFormat === "json" ? { format: "json" } : {}),
 				}),
 			});
 		} catch {

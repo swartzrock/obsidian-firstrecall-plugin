@@ -1,5 +1,4 @@
-import type { CueGenerationOptions } from "../cue-generation";
-import type { CueOutput, SummaryOutput } from "../schemas";
+import type { z } from "zod/v3";
 
 /** Minimal HTTP abstraction so providers can be unit-tested without a live server. */
 export interface HttpRequest {
@@ -23,24 +22,21 @@ export interface ProviderStatus {
 	models?: string[];
 }
 
-export interface CueInput {
-	heading: string;
-	content: string;
-	/** Optional whole-note context for better questions. */
-	noteContext?: string;
-	preset: string;
-	options?: CueGenerationOptions;
+export interface TextGenerationInput {
+	prompt: string;
+	/** Ask providers with native support to constrain the response to JSON text. */
+	responseFormat?: "text" | "json";
+	/** Optional JSON schema for providers that support structured text output. */
+	jsonSchema?: string;
 }
 
-export interface CueBatchResult {
-	cue?: CueOutput;
-	error?: string;
+export interface TextGenerationOutput {
+	text: string;
 }
 
-export interface SummaryInput {
-	noteTitle: string;
-	fullText: string;
-	sectionQuestions: string[];
+export interface ObjectGenerationInput<T> {
+	prompt: string;
+	schema: z.ZodType<T, z.ZodTypeDef, unknown>;
 }
 
 /**
@@ -55,12 +51,14 @@ export interface AiProvider {
 	sectionConcurrencyLimit?: number;
 	testConnection(): Promise<ProviderStatus>;
 	listModels?(): Promise<unknown[]>;
-	generateCue(input: CueInput, signal?: AbortSignal): Promise<CueOutput>;
-	generateCues?(
-		inputs: CueInput[],
+	generateText(
+		input: TextGenerationInput,
 		signal?: AbortSignal
-	): Promise<CueBatchResult[]>;
-	generateSummary(input: SummaryInput, signal?: AbortSignal): Promise<SummaryOutput>;
+	): Promise<TextGenerationOutput>;
+	generateObject?<T>(
+		input: ObjectGenerationInput<T>,
+		signal?: AbortSignal
+	): Promise<T>;
 }
 
 /** Thrown for user-readable provider/transport failures. */

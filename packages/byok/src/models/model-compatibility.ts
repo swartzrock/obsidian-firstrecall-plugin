@@ -55,12 +55,12 @@ export function modelCompatibilityWarning(option: ModelOption | null): string {
 	const support = modelStructuredOutputSupport(option);
 	if (support === "supported") return "";
 	if (support === "unsupported") {
-		return "This model does not advertise structured-output support. BYOK can still try it, but generated cues may be less reliable.";
+		return "This model does not advertise structured-output support. BYOK can still try it, but structured responses may be less reliable.";
 	}
 	return "BYOK does not have structured-output metadata for this model. You can still use it, but testing the connection is recommended.";
 }
 
-function cueCraftSortScore(option: ModelOption): number {
+function byokSortScore(option: ModelOption): number {
 	let score = 0;
 	if (modelStructuredOutputSupport(option) === "supported") score += 4;
 	if (isLargeContextModel(option)) score += 2;
@@ -77,7 +77,7 @@ export function sortByokModelOptions(
 			if (a.id === currentModelId && b.id !== currentModelId) return -1;
 			if (b.id === currentModelId && a.id !== currentModelId) return 1;
 		}
-		const scoreDelta = cueCraftSortScore(b) - cueCraftSortScore(a);
+		const scoreDelta = byokSortScore(b) - byokSortScore(a);
 		if (scoreDelta !== 0) return scoreDelta;
 		return compareFetchedModelIds(a.id, b.id);
 	});

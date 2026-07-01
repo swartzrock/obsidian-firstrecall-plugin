@@ -30,7 +30,7 @@ function makeProvider(responses: Array<LocalCommandResult | Error>, model = ""):
 		provider: new ClaudeCliProvider({
 			command: "claude",
 			model,
-			cwd: "/tmp/cuecraft-empty",
+			cwd: "/tmp/byok-empty",
 			timeoutMs: 50,
 			runner: { run },
 		}),
@@ -78,37 +78,25 @@ describe("extractClaudeCliOutput", () => {
 });
 
 describe("ClaudeCliProvider", () => {
-	it("returns a validated cue from Claude structured output", async () => {
+	it("returns generated text from Claude CLI output", async () => {
 		const { provider, run } = makeProvider([
-			result(
-				JSON.stringify({
-					type: "result",
-					result: {
-						question: "What is X?",
-						keywords: ["a", "b"],
-						confidence: "high",
-					},
-				})
-			),
+			result(JSON.stringify({ type: "result", result: "Plain final answer." })),
 		]);
 
-		const cue = await provider.generateCue({
-			heading: "X",
-			content: "body",
-			preset: "conceptual",
-		});
+		const out = await provider.generateText({ prompt: "Answer plainly." });
 
-		expect(cue.question).toBe("What is X?");
+		expect(out).toEqual({ text: "Plain final answer." });
 		expect(run).toHaveBeenCalledTimes(1);
 		expect(run.mock.calls[0][0]).toMatchObject({
 			command: "claude",
-			cwd: "/tmp/cuecraft-empty",
+			cwd: "/tmp/byok-empty",
 			env: expect.objectContaining({
 				CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
 				CLAUDE_CODE_SKIP_PROMPT_HISTORY: "1",
 				DISABLE_AUTOUPDATER: "1",
 			}),
 			timeoutMs: 50,
+			stdin: "Answer plainly.",
 		});
 		expect(run.mock.calls[0][0].args).toEqual(
 			expect.arrayContaining([
@@ -126,80 +114,30 @@ describe("ClaudeCliProvider", () => {
 				"dontAsk",
 				"--tools",
 				"",
-				"--json-schema",
 			])
 		);
-		expect(run.mock.calls[0][0].stdin).toContain("Section heading: X");
+		expect(run.mock.calls[0][0].args).not.toContain("--json-schema");
 	});
 
-	it("returns validated cues from a batched Claude structured output", async () => {
+	it("passes a caller-provided JSON schema when supplied", async () => {
+		const schema = JSON.stringify({
+			type: "object",
+			properties: { ok: { type: "boolean" } },
+			required: ["ok"],
+		});
 		const { provider, run } = makeProvider([
-			result(
-				JSON.stringify({
-					type: "result",
-					structured_output: {
-						cues: [
-							{
-								question: "What is A?",
-								keywords: ["a", "b"],
-								confidence: "high",
-							},
-							{
-								question: "What is B?",
-								keywords: ["c", "d"],
-								confidence: "medium",
-							},
-						],
-					},
-				})
-			),
+			result(JSON.stringify({ type: "result", structured_output: { ok: true } })),
 		]);
 
-		const cues = await provider.generateCues?.([
-			{ heading: "A", content: "alpha", preset: "conceptual" },
-			{ heading: "B", content: "beta", preset: "conceptual" },
-		]);
+		const out = await provider.generateText({
+			prompt: "Return JSON.",
+			responseFormat: "json",
+			jsonSchema: schema,
+		});
 
-		expect(cues?.map((item) => item.cue?.question)).toEqual([
-			"What is A?",
-			"What is B?",
-		]);
-		expect(run).toHaveBeenCalledTimes(1);
-		expect(run.mock.calls[0][0].stdin).toContain("Return ONLY a JSON object");
-		expect(run.mock.calls[0][0].stdin).toContain("Section 1");
-		expect(run.mock.calls[0][0].stdin).toContain("Section 2");
-	});
-
-	it("keeps invalid batched Claude cue items isolated", async () => {
-		const { provider } = makeProvider([
-			result(
-				JSON.stringify({
-					type: "result",
-					structured_output: {
-						cues: [
-							{
-								question: "What is A?",
-								keywords: ["a", "b"],
-								confidence: "high",
-							},
-							{
-								question: "",
-								keywords: ["c", "d"],
-								confidence: "medium",
-							},
-						],
-					},
-				})
-			),
-		]);
-
-		const cues = await provider.generateCues?.([
-			{ heading: "A", content: "alpha", preset: "conceptual" },
-			{ heading: "B", content: "beta", preset: "conceptual" },
-		]);
-
-		expect(cues?.[0].cue?.question).toBe("What is A?");
-		expect(cues?.[1].error).toMatch(/question/);
+		expect(out).toEqual({ text: "{\"ok\":true}" });
+		expect(run.mock.calls[0][0].args).toContain("--json-schema");
+		expect(run.mock.calls[0][0].args).toContain(schema);
 	});
 
 	it("uses stderr JSON when Claude leaves stdout empty", async () => {
@@ -208,73 +146,36 @@ describe("ClaudeCliProvider", () => {
 				"",
 				JSON.stringify({
 					type: "result",
-					result: {
-						question: "What is X?",
-						keywords: ["a", "b"],
-						confidence: "high",
-					},
+					result: "stderr answer",
 				})
 			),
 		]);
 
-		const cue = await provider.generateCue({
-			heading: "X",
-			content: "body",
-			preset: "conceptual",
-		});
+		const out = await provider.generateText({ prompt: "Answer plainly." });
 
-		expect(cue.question).toBe("What is X?");
+		expect(out.text).toBe("stderr answer");
 	});
 
-	it("repairs malformed cue output once", async () => {
-		const { provider, run } = makeProvider([
-			result(JSON.stringify({ type: "result", result: "not json" })),
-			result(
-				JSON.stringify({
-					type: "result",
-					result: {
-						question: "Fixed?",
-						keywords: ["a", "b"],
-						confidence: "medium",
-					},
-				})
-			),
-		]);
-
-		const cue = await provider.generateCue({
-			heading: "H",
-			content: "c",
-			preset: "minimal",
-		});
-
-		expect(cue.question).toBe("Fixed?");
-		expect(run).toHaveBeenCalledTimes(2);
-		expect(run.mock.calls[1][0].stdin).toContain("Previous reply");
-	});
-
-	it("throws ProviderError when repair cannot produce valid output", async () => {
-		const { provider } = makeProvider([
-			result(JSON.stringify({ type: "result", result: "nope" })),
-			result(JSON.stringify({ type: "result", result: "still nope" })),
-		]);
+	it("throws ProviderError when Claude CLI returns no final text", async () => {
+		const { provider } = makeProvider([result("")]);
 
 		await expect(
-			provider.generateCue({ heading: "H", content: "c", preset: "conceptual" })
+			provider.generateText({ prompt: "Answer plainly." })
 		).rejects.toBeInstanceOf(ProviderError);
 	});
 
-	it("returns a validated summary", async () => {
+	it("maps Claude CLI generation auth failures to setup guidance", async () => {
 		const { provider } = makeProvider([
-			result(JSON.stringify({ type: "result", result: { summary: "Covers X." } })),
+			new ProviderError(
+				'claude exited with code 1: {"type":"result","is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 Invalid authentication credentials"}'
+			),
 		]);
 
-		const summary = await provider.generateSummary({
-			noteTitle: "Note",
-			fullText: "text",
-			sectionQuestions: ["Q1?"],
-		});
-
-		expect(summary.summary).toBe("Covers X.");
+		await expect(
+			provider.generateText({ prompt: "Hi" })
+		).rejects.toThrow(
+			"Claude CLI is not authenticated. Run `claude auth login` in your terminal, then try again."
+		);
 	});
 
 	it("reports command-not-found from the runner during connection checks", async () => {
@@ -315,20 +216,6 @@ describe("ClaudeCliProvider", () => {
 			message:
 				"Claude CLI is not authenticated. Run `claude auth login` in your terminal, then try again.",
 		});
-	});
-
-	it("maps Claude CLI generation auth failures to setup guidance", async () => {
-		const { provider } = makeProvider([
-			new ProviderError(
-				'claude exited with code 1: {"type":"result","is_error":true,"api_error_status":401,"result":"Failed to authenticate. API Error: 401 Invalid authentication credentials"}'
-			),
-		]);
-
-		await expect(
-			provider.generateCue({ heading: "H", content: "c", preset: "conceptual" })
-		).rejects.toThrow(
-			"Claude CLI is not authenticated. Run `claude auth login` in your terminal, then try again."
-		);
 	});
 
 	it("reports successful Claude CLI status", async () => {
@@ -386,7 +273,7 @@ describe("ClaudeCliProvider", () => {
 
 		expect(run.mock.calls[0][0]).toMatchObject({
 			command: "claude",
-			cwd: "/tmp/cuecraft-empty",
+			cwd: "/tmp/byok-empty",
 			env: expect.objectContaining({
 				CLAUDE_CODE_DISABLE_AGENT_VIEW: "1",
 				CLAUDE_CODE_DISABLE_ARTIFACT: "1",
@@ -441,42 +328,16 @@ describe("ClaudeCliProvider", () => {
 
 	it("passes the configured model override and omits it when blank", async () => {
 		const withModel = makeProvider([
-			result(
-				JSON.stringify({
-					type: "result",
-					result: {
-						question: "Q?",
-						keywords: ["a", "b"],
-						confidence: "high",
-					},
-				})
-			),
+			result(JSON.stringify({ type: "result", result: "ok" })),
 		], "sonnet");
-		await withModel.provider.generateCue({
-			heading: "H",
-			content: "c",
-			preset: "conceptual",
-		});
+		await withModel.provider.generateText({ prompt: "Hi" });
 		expect(withModel.run.mock.calls[0][0].args).toContain("--model");
 		expect(withModel.run.mock.calls[0][0].args).toContain("sonnet");
 
 		const withoutModel = makeProvider([
-			result(
-				JSON.stringify({
-					type: "result",
-					result: {
-						question: "Q?",
-						keywords: ["a", "b"],
-						confidence: "high",
-					},
-				})
-			),
+			result(JSON.stringify({ type: "result", result: "ok" })),
 		]);
-		await withoutModel.provider.generateCue({
-			heading: "H",
-			content: "c",
-			preset: "conceptual",
-		});
+		await withoutModel.provider.generateText({ prompt: "Hi" });
 		expect(withoutModel.run.mock.calls[0][0].args).not.toContain("--model");
 	});
 });

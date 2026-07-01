@@ -140,7 +140,7 @@ describe("Anthropic picker defaults", () => {
 				speed: "Varies",
 				cost: "Varies",
 				context: "Varies",
-				cuecraftHint: "Cue quality depends on the exact custom model you enter.",
+				generationHint: "Output quality depends on the exact custom model you enter.",
 			},
 		});
 		expect(
@@ -165,7 +165,7 @@ describe("Anthropic picker defaults", () => {
 				speed: "Varies",
 				cost: "Varies",
 				context: "Varies",
-				cuecraftHint: "Cue quality depends on the exact custom model you enter.",
+				generationHint: "Output quality depends on the exact custom model you enter.",
 			},
 		});
 		expect(formatAnthropicModelHint("claude-unknown-xyz")).toBe("");
