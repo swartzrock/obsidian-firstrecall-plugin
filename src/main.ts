@@ -267,6 +267,14 @@ export default class CueCraftPlugin extends Plugin {
 				(settings as { autoGenerationSettleDelaySeconds?: unknown })
 					.autoGenerationSettleDelaySeconds
 			);
+		for (const key of ["showSectionLens", "showNoteBrief"] as const) {
+			if (
+				typeof (settings as unknown as Record<string, unknown>)[key] !==
+				"boolean"
+			) {
+				settings[key] = DEFAULT_SETTINGS[key];
+			}
+		}
 		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
 		}

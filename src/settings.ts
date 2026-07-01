@@ -132,6 +132,10 @@ import {
 	normalizeAutoGenerationSettleDelaySeconds,
 	type AutoGenerationSettleDelaySeconds,
 } from "./auto-generation-delay";
+import {
+	DEFAULT_SHOW_NOTE_BRIEF,
+	DEFAULT_SHOW_SECTION_LENS,
+} from "./review-surfaces";
 
 /**
  * CueCraft supports a local provider (Ollama), local CLI providers, and several
@@ -172,6 +176,8 @@ export interface CueCraftSettings {
 	questionStyle: QuestionStyle;
 	generateKeywords: boolean;
 	autoSummary: boolean;
+	showSectionLens: boolean;
+	showNoteBrief: boolean;
 	renderInReadingMode: boolean;
 	readingModeDisplay: ReadingModeDisplay;
 	foldCueColumnOnMobile: boolean;
@@ -230,6 +236,8 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	questionStyle: DEFAULT_QUESTION_STYLE,
 	generateKeywords: true,
 	autoSummary: true,
+	showSectionLens: DEFAULT_SHOW_SECTION_LENS,
+	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
 	renderInReadingMode: true,
 	readingModeDisplay: DEFAULT_READING_MODE_DISPLAY,
 	foldCueColumnOnMobile: true,
@@ -1166,6 +1174,32 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		readingDisplaySetting.setDesc(readingDisplayDesc());
 
 		new Setting(containerEl)
+			.setName("Show Section Lens")
+			.setDesc("Show the generated key phrase and takeaway for each section.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.showSectionLens)
+					.onChange(async (value) => {
+						this.plugin.settings.showSectionLens = value;
+						await this.plugin.saveSettings();
+						this.refreshReviewSurfaces();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show Note Brief")
+			.setDesc("Show the generated whole-note brief when review surfaces support it.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.showNoteBrief)
+					.onChange(async (value) => {
+						this.plugin.settings.showNoteBrief = value;
+						await this.plugin.saveSettings();
+						this.refreshReviewSurfaces();
+					})
+			);
+
+		new Setting(containerEl)
 			.setName("Fold cue column on mobile")
 			.setDesc("Collapse the left cue column into a tap-to-expand panel on narrow screens.")
 			.addToggle((tg) =>
@@ -1176,6 +1210,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+	}
+
+	private refreshReviewSurfaces(): void {
+		this.plugin.refreshEditorCues();
+		this.plugin.refreshReadingModeSurface();
+		this.plugin.refreshCornellViews();
 	}
 
 	// ── Appearance ────────────────────────────────────────────────────────
