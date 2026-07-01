@@ -5,6 +5,10 @@ import {
 } from "../../cue-generation";
 import { validateCueBatch } from "../../schemas";
 import type { CueBatchResult, CueInput } from "./types";
+import {
+	SECTION_LENS_JSON_SCHEMA,
+	SECTION_LENS_PROMPT,
+} from "./review-artifact-prompts";
 
 const CUE_BATCH_ITEM_SCHEMA = {
 	type: "object",
@@ -18,8 +22,9 @@ const CUE_BATCH_ITEM_SCHEMA = {
 		},
 		confidence: { enum: ["high", "medium", "low"] },
 		rationale: { type: "string" },
+		sectionLens: SECTION_LENS_JSON_SCHEMA,
 	},
-	required: ["question", "keywords", "confidence"],
+	required: ["question", "keywords", "confidence", "sectionLens"],
 	additionalProperties: false,
 };
 
@@ -69,7 +74,8 @@ export function buildCueBatchPrompt(
 		`"cues" must be an array with exactly ${inputs.length} objects, in the same order as the sections. ` +
 		`Each object must have keys: "question" (string), ` +
 		`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
-		`and optional "rationale" (short reason, only when confidence is "low").\n` +
+		`optional "rationale" (short reason, only when confidence is "low"), ` +
+		`and "sectionLens" (object). ${SECTION_LENS_PROMPT}\n` +
 		contextLine +
 		`\nSections:\n${sections}\n`
 	);
