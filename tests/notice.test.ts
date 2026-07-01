@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { formatAnthropicUnavailableModelMessage } from "../src/byok";
 import { formatCueCraftNotice } from "../src/notice";
 
 describe("formatCueCraftNotice", () => {
@@ -11,5 +12,12 @@ describe("formatCueCraftNotice", () => {
 				"CueCraft: claude was not found. Check the command path in settings."
 			)
 		).toBe("CueCraft: claude was not found. Check the command path in settings.");
+		expect(
+			formatCueCraftNotice(
+				formatAnthropicUnavailableModelMessage("claude-unknown-xyz")
+			)
+		).toBe(
+			"CueCraft: This key cannot access Custom model ID (claude-unknown-xyz). Pick another model or check your Anthropic account."
+		);
 	});
 });

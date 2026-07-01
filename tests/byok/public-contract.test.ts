@@ -9,6 +9,49 @@ import type {
 } from "../../src/byok";
 
 describe("BYOK public contract", () => {
+	it("exports only the intentional main-entry public API", () => {
+		expect(Object.keys(byok).sort()).toEqual([
+			"ANTHROPIC_CUSTOM_MODEL_ID",
+			"BYOK_PROVIDER_DEFINITIONS",
+			"BYOK_PROVIDER_IDS",
+			"ByokProviderError",
+			"ByokProviderRateLimitError",
+			"CLI_DEFAULT_MODEL_SENTINEL",
+			"anthropicModelInfoToByokModelOption",
+			"buildAnthropicModelOptions",
+			"byokProviderDefinition",
+			"byokProviderDefinitions",
+			"compareFetchedModelIds",
+			"createByokProvider",
+			"deriveProviderSetupStatus",
+			"describeAnthropicModel",
+			"describeAnthropicModelDetails",
+			"formatAnthropicModelHint",
+			"formatAnthropicUnavailableModelMessage",
+			"isAnthropicCustomModelSelection",
+			"isByokProviderId",
+			"isLargeContextModel",
+			"isLowCostModel",
+			"isModelOption",
+			"modelCompatibilityBadges",
+			"modelCompatibilityWarning",
+			"modelStructuredOutputSupport",
+			"normalizeAnthropicModelSelection",
+			"normalizeModelIds",
+			"normalizeOpenRouterModel",
+			"normalizeProviderId",
+			"normalizeStringId",
+			"providerCredentialFingerprint",
+			"recordProviderConnectionSuccess",
+			"refreshAnthropicModelOptions",
+			"sortByokModelOptions",
+			"sortFetchedModelIds",
+			"sortModelOptions",
+		]);
+		expect("createByokNodeProvider" in byok).toBe(false);
+		expect("LocalCommandRunner" in byok).toBe(false);
+	});
+
 	it("keeps BYOK free of app and storage imports", () => {
 		const files = walkFiles("src/byok").filter((path) => path.endsWith(".ts"));
 		for (const file of files) {
@@ -26,6 +69,7 @@ describe("BYOK public contract", () => {
 			.join("\n");
 
 		expect(codeExamples).toContain('from "./byok"');
+		expect(codeExamples).toContain('from "./byok/node"');
 		expect(codeExamples).not.toMatch(
 			/from\s+["'][^"']*byok\/(?:models|providers|registry|setup-status|types)/
 		);
@@ -107,6 +151,9 @@ describe("BYOK public contract", () => {
 			expect(definition.credentialField.label.length).toBeGreaterThan(0);
 			expect(definition.credentialField.placeholder.length).toBeGreaterThan(0);
 			expect(definition.credentialField.missingMessage.length).toBeGreaterThan(0);
+			expect(definition.credentialField.description).not.toMatch(
+				/Obsidian|Secret Storage|CueCraft/i
+			);
 			expect(definition.modelField.label.length).toBeGreaterThan(0);
 			expect(definition.modelField.placeholder.length).toBeGreaterThan(0);
 		}
@@ -152,18 +199,6 @@ describe("BYOK public contract", () => {
 		expect(byok.isByokProviderId("claude")).toBe(false);
 		expect(byok.normalizeProviderId("claude")).toBe("claude-cli");
 		expect(byok.byokProviderDefinition("google").label).toBe("Google (Gemini)");
-		expect(Object.keys(byok)).toEqual(
-			expect.arrayContaining([
-				"BYOK_PROVIDER_DEFINITIONS",
-				"BYOK_PROVIDER_IDS",
-				"ByokProviderError",
-				"ByokProviderRateLimitError",
-				"byokProviderDefinition",
-				"byokProviderDefinitions",
-				"isByokProviderId",
-				"normalizeProviderId",
-			])
-		);
 	});
 });
 

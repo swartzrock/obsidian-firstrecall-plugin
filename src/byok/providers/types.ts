@@ -1,5 +1,5 @@
-import type { CueOutput, SummaryOutput } from "../../schemas";
-import type { CueGenerationOptions } from "../../cue-generation";
+import type { CueGenerationOptions } from "../cue-generation";
+import type { CueOutput, SummaryOutput } from "../schemas";
 
 /** Minimal HTTP abstraction so providers can be unit-tested without a live server. */
 export interface HttpRequest {

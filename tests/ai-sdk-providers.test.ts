@@ -320,3 +320,38 @@ for (const c of cases) {
 		});
 	});
 }
+
+describe("OpenRouter app metadata", () => {
+	it("omits app headers by default and forwards caller-provided metadata", async () => {
+		const seenHeaders: Headers[] = [];
+		const fetchImpl = (async (_input, init) => {
+			seenHeaders.push(new Headers(init?.headers));
+			return new Response(JSON.stringify({ data: [] }), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			});
+		}) as typeof fetch;
+
+		await new OpenRouterProvider({
+			apiKey: "k",
+			model: "openai/gpt-4o",
+			fetchImpl,
+			generator: async () => ({ ok: true }) as never,
+		}).listModels();
+		await new OpenRouterProvider({
+			apiKey: "k",
+			model: "openai/gpt-4o",
+			fetchImpl,
+			appInfo: {
+				name: "Example Study App",
+				url: "https://example.com",
+			},
+			generator: async () => ({ ok: true }) as never,
+		}).listModels();
+
+		expect(seenHeaders[0].get("HTTP-Referer")).toBeNull();
+		expect(seenHeaders[0].get("X-Title")).toBeNull();
+		expect(seenHeaders[1].get("HTTP-Referer")).toBe("https://example.com");
+		expect(seenHeaders[1].get("X-Title")).toBe("Example Study App");
+	});
+});

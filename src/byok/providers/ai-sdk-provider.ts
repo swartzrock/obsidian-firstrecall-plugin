@@ -6,12 +6,12 @@ import {
 	summaryOutputSchema,
 	type CueOutput,
 	type SummaryOutput,
-} from "../../schemas";
+} from "../schemas";
 import {
 	cueDensityGuidance,
 	keywordGuidance,
 	questionStyleGuidance,
-} from "../../cue-generation";
+} from "../cue-generation";
 import {
 	AiProvider,
 	CueInput,
@@ -182,7 +182,7 @@ export class AiSdkProvider implements AiProvider {
 	protected describeError(e: unknown): string {
 		const msg = errorMessage(e);
 		if (/api[\s_-]?key|authenticat|401|403/i.test(msg)) {
-			return `${this.vendor} rejected the API key. Check it in CueCraft settings.`;
+			return `${this.vendor} rejected the API key. Check the API key supplied by the host app.`;
 		}
 		if (/429|rate.?limit|quota/i.test(msg)) {
 			return `${this.vendor} rate limit hit. Wait a moment and try again.`;
@@ -228,7 +228,7 @@ export class AiSdkProvider implements AiProvider {
 
 	async testConnection(): Promise<ProviderStatus> {
 		if (!this.model) {
-			return { ok: false, message: `Choose a ${this.vendor} model in settings.` };
+			return { ok: false, message: `Choose a ${this.vendor} model.` };
 		}
 		try {
 			await this.generate({

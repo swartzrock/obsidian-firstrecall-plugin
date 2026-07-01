@@ -145,7 +145,7 @@ describe("LocalCommandRunner", () => {
 		process.close(2);
 
 		await expect(result).rejects.toThrow(
-			/CueCraft: claude exited with code 2: authentication failed/
+			/claude exited with code 2: authentication failed/
 		);
 		await expect(result).rejects.toBeInstanceOf(ProviderError);
 	});
@@ -159,7 +159,7 @@ describe("LocalCommandRunner", () => {
 		process.close(1);
 
 		await expect(result).rejects.toThrow(
-			/CueCraft: claude exited with code 1: Login required/
+			/claude exited with code 1: Login required/
 		);
 	});
 
@@ -220,26 +220,16 @@ describe("LocalCommandRunner", () => {
 	});
 
 	it("kills the process and reports timeout when the command hangs", async () => {
-		vi.useFakeTimers();
-		try {
-			const process = new FakeProcess();
-			const { runner } = makeRunner(process);
-			const result = runner.run({
-				command: "claude",
-				args: ["-p"],
-				timeoutMs: 25,
-			});
-			const expectation = expect(result).rejects.toThrow(
-				/claude timed out after 25ms/
-			);
+		const process = new FakeProcess();
+		const { runner } = makeRunner(process);
+		const result = runner.run({
+			command: "claude",
+			args: ["-p"],
+			timeoutMs: 1,
+		});
 
-			await vi.advanceTimersByTimeAsync(25);
-
-			await expectation;
-			expect(process.killedWith).toBe("SIGTERM");
-		} finally {
-			vi.useRealTimers();
-		}
+		await expect(result).rejects.toThrow(/claude timed out after 1ms/);
+		expect(process.killedWith).toBe("SIGTERM");
 	});
 
 	it("maps missing commands to setup guidance", async () => {
@@ -268,7 +258,7 @@ describe("LocalCommandRunner", () => {
 			/missing-codex was not found.*command path/i
 		);
 		expect(warn).toHaveBeenCalledWith(
-			"CueCraft local CLI failed to start",
+			"BYOK local CLI failed to start",
 			expect.objectContaining({
 				command: "missing-codex",
 				code: "ENOENT",

@@ -8,6 +8,8 @@
 		"dev": "bun esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && bun esbuild.config.mjs production",
 		"typecheck": "tsc -noEmit -skipLibCheck",
+		"typecheck:byok": "tsc -p tsconfig.byok.json",
+		"typecheck:byok-examples": "tsc -p tsconfig.byok-examples.json",
 		"lint": "eslint .",
 		"test": "vitest run"
 	},

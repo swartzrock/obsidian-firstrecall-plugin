@@ -1,10 +1,10 @@
-import type { CueOutput, SummaryOutput } from "../../schemas";
-import { validateCue, validateSummary } from "../../schemas";
+import type { CueOutput, SummaryOutput } from "../schemas";
+import { validateCue, validateSummary } from "../schemas";
 import {
 	cueDensityGuidance,
 	keywordGuidance,
 	questionStyleGuidance,
-} from "../../cue-generation";
+} from "../cue-generation";
 import {
 	AiProvider,
 	type CueBatchResult,

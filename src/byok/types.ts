@@ -85,6 +85,10 @@ export type ByokProviderConfig =
 	| ByokOllamaProviderConfig
 	| ByokCliProviderConfig;
 
+export type ByokCoreProviderConfig =
+	| ByokCloudProviderConfig
+	| ByokOllamaProviderConfig;
+
 export interface ByokHttpRequest {
 	url: string;
 	method: "GET" | "POST";
@@ -102,9 +106,17 @@ export type ByokHttpClient = (
 	request: ByokHttpRequest
 ) => Promise<ByokHttpResponse>;
 
+export interface ByokProviderAppInfo {
+	/** Optional application name for provider-specific metadata headers. */
+	name?: string;
+	/** Optional public application URL for provider-specific metadata headers. */
+	url?: string;
+}
+
 export interface ByokProviderDeps {
 	fetchImpl: typeof fetch;
 	http: ByokHttpClient;
+	appInfo?: ByokProviderAppInfo;
 }
 
 export interface ByokProviderStatus {

@@ -1,0 +1,10 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"allowJs": false,
+		"moduleResolution": "bundler",
+		"noEmit": true,
+		"skipLibCheck": true
+	},
+	"include": ["tests/byok/fixtures/**/*.ts"]
+}
