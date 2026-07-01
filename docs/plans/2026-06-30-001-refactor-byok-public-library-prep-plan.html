@@ -1,0 +1,1060 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>BYOK Public Library Preparation - Plan</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--bg: #f6f7f3;
+			--surface: #ffffff;
+			--surface-strong: #f0f5f2;
+			--ink: #17211d;
+			--muted: #5b6962;
+			--line: #cad5ce;
+			--accent: #176a6a;
+			--accent-soft: #dff2ef;
+			--accent-ink: #114f4d;
+			--warn-soft: #fff1d9;
+			--warn-ink: #7a4a0b;
+			--risk-soft: #f8e1e4;
+			--risk-ink: #7f2230;
+			--done-soft: #e6f4df;
+			--done-ink: #315b24;
+			--shadow: 0 18px 60px rgba(23, 33, 29, 0.10);
+			font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		html {
+			scroll-behavior: smooth;
+			scroll-snap-type: y proximity;
+		}
+
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--ink);
+			line-height: 1.45;
+		}
+
+		a {
+			color: var(--accent-ink);
+			text-decoration-thickness: 0.08em;
+			text-underline-offset: 0.18em;
+		}
+
+		code {
+			font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+			font-size: 0.92em;
+			background: rgba(23, 106, 106, 0.09);
+			border: 1px solid rgba(23, 106, 106, 0.13);
+			border-radius: 5px;
+			padding: 0.08rem 0.28rem;
+		}
+
+		.deck-nav {
+			position: sticky;
+			top: 0;
+			z-index: 10;
+			display: flex;
+			gap: 0.5rem;
+			align-items: center;
+			overflow-x: auto;
+			padding: 0.75rem max(1rem, calc((100vw - 1120px) / 2));
+			background: rgba(246, 247, 243, 0.94);
+			border-bottom: 1px solid var(--line);
+			backdrop-filter: blur(14px);
+		}
+
+		.deck-nav a {
+			flex: 0 0 auto;
+			border-radius: 999px;
+			border: 1px solid var(--line);
+			background: var(--surface);
+			color: var(--ink);
+			padding: 0.42rem 0.72rem;
+			font-size: 0.86rem;
+			text-decoration: none;
+		}
+
+		.deck-nav a:hover {
+			border-color: var(--accent);
+			background: var(--accent-soft);
+		}
+
+		main {
+			width: min(1120px, calc(100vw - 32px));
+			margin: 0 auto;
+		}
+
+		.slide {
+			min-height: calc(100vh - 56px);
+			scroll-snap-align: start;
+			padding: clamp(2.5rem, 6vw, 5rem) 0;
+			display: grid;
+			align-content: center;
+		}
+
+		.slide-inner {
+			background: var(--surface);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			box-shadow: var(--shadow);
+			padding: clamp(1.35rem, 3.2vw, 3rem);
+		}
+
+		.hero {
+			background: linear-gradient(135deg, #ffffff 0%, #eef7f4 58%, #fff8eb 100%);
+		}
+
+		.eyebrow {
+			margin: 0 0 0.65rem;
+			color: var(--accent-ink);
+			font-size: 0.78rem;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+		}
+
+		h1,
+		h2,
+		h3 {
+			line-height: 1.08;
+			letter-spacing: 0;
+		}
+
+		h1 {
+			max-width: 13ch;
+			margin: 0;
+			font-size: clamp(2.8rem, 8vw, 6.2rem);
+		}
+
+		h2 {
+			margin: 0 0 1.1rem;
+			font-size: clamp(2rem, 4.6vw, 4rem);
+		}
+
+		h3 {
+			margin: 0 0 0.75rem;
+			font-size: clamp(1.2rem, 2vw, 1.65rem);
+		}
+
+		p {
+			max-width: 72ch;
+		}
+
+		.lede {
+			max-width: 66ch;
+			font-size: clamp(1.1rem, 1.9vw, 1.45rem);
+			color: #31403a;
+		}
+
+		.meta-grid,
+		.stats,
+		.card-grid,
+		.two-col,
+		.three-col {
+			display: grid;
+			gap: 1rem;
+		}
+
+		.meta-grid {
+			grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+			margin-top: 2rem;
+		}
+
+		.meta-grid dt,
+		.unit-meta dt {
+			color: var(--muted);
+			font-size: 0.74rem;
+			font-weight: 800;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+		}
+
+		.meta-grid dd,
+		.unit-meta dd {
+			margin: 0.2rem 0 0;
+			font-weight: 650;
+		}
+
+		.stats {
+			grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+			margin: 1.5rem 0;
+		}
+
+		.stat,
+		.card,
+		.unit-card,
+		.callout {
+			border-radius: 8px;
+			border: 1px solid var(--line);
+			background: var(--surface);
+			padding: 1rem;
+		}
+
+		.stat {
+			background: var(--surface-strong);
+		}
+
+		.stat strong {
+			display: block;
+			font-size: 1.85rem;
+			line-height: 1;
+		}
+
+		.stat span {
+			display: block;
+			margin-top: 0.35rem;
+			color: var(--muted);
+			font-size: 0.9rem;
+		}
+
+		.card-grid {
+			grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+		}
+
+		.two-col {
+			grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+		}
+
+		.three-col {
+			grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+		}
+
+		.card h3,
+		.callout h3 {
+			font-size: 1.05rem;
+		}
+
+		.badge-row {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5rem;
+			margin: 1rem 0;
+		}
+
+		.badge {
+			display: inline-flex;
+			align-items: center;
+			border-radius: 999px;
+			padding: 0.32rem 0.62rem;
+			background: var(--accent-soft);
+			color: var(--accent-ink);
+			font-size: 0.82rem;
+			font-weight: 750;
+		}
+
+		.table-wrap {
+			overflow-x: auto;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: var(--surface);
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 0.94rem;
+		}
+
+		th,
+		td {
+			padding: 0.75rem;
+			border-bottom: 1px solid var(--line);
+			text-align: left;
+			vertical-align: top;
+		}
+
+		th {
+			background: var(--surface-strong);
+			font-size: 0.76rem;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+		}
+
+		tr:last-child td {
+			border-bottom: 0;
+		}
+
+		.id-chip {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			min-width: 2.2rem;
+			border-radius: 999px;
+			background: var(--ink);
+			color: #fff;
+			padding: 0.25rem 0.5rem;
+			font-size: 0.8rem;
+			font-weight: 800;
+		}
+
+		.unit-card {
+			margin: 1rem 0;
+			background: #fbfcfa;
+		}
+
+		.unit-head {
+			display: flex;
+			align-items: start;
+			gap: 0.8rem;
+		}
+
+		.unit-head h3 {
+			margin-top: 0.1rem;
+		}
+
+		.unit-meta {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+			gap: 0.8rem;
+			margin: 0.85rem 0 0;
+		}
+
+		details {
+			margin-top: 0.85rem;
+			border-top: 1px solid var(--line);
+			padding-top: 0.65rem;
+		}
+
+		summary {
+			cursor: pointer;
+			font-weight: 800;
+			color: var(--accent-ink);
+		}
+
+		.callout {
+			background: var(--accent-soft);
+			color: var(--accent-ink);
+		}
+
+		.callout.warn {
+			background: var(--warn-soft);
+			color: var(--warn-ink);
+		}
+
+		.callout.risk {
+			background: var(--risk-soft);
+			color: var(--risk-ink);
+		}
+
+		.callout.done {
+			background: var(--done-soft);
+			color: var(--done-ink);
+		}
+
+		.callout .label {
+			display: block;
+			font-size: 0.76rem;
+			font-weight: 850;
+			letter-spacing: 0.06em;
+			text-transform: uppercase;
+		}
+
+		.diagram {
+			width: 100%;
+			max-width: 980px;
+			margin: 1.25rem auto;
+			display: block;
+		}
+
+		.diagram text {
+			font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+			fill: var(--ink);
+		}
+
+		.source-list li {
+			margin: 0.5rem 0;
+		}
+
+		.composition-signal {
+			width: min(1120px, calc(100vw - 32px));
+			margin: 0 auto 2rem;
+			color: var(--muted);
+			font-size: 0.86rem;
+			padding: 1rem 0;
+		}
+
+		@media print {
+			html {
+				scroll-snap-type: none;
+			}
+
+			.deck-nav {
+				display: none;
+			}
+
+			.slide {
+				min-height: auto;
+				page-break-after: always;
+				padding: 0;
+			}
+
+			.slide-inner {
+				box-shadow: none;
+				border: 0;
+			}
+		}
+	</style>
+</head>
+<body>
+	<nav class="deck-nav" aria-label="Plan sections">
+		<a href="#goal-capsule">Goal</a>
+		<a href="#product-contract">Product</a>
+		<a href="#planning-contract">Planning</a>
+		<a href="#technical-design">Design</a>
+		<a href="#implementation-units">Units</a>
+		<a href="#verification-contract">Verify</a>
+		<a href="#definition-of-done">Done</a>
+		<a href="#appendix">Sources</a>
+	</nav>
+
+	<main>
+		<section class="slide" id="title-slide">
+			<div class="slide-inner hero">
+				<p class="eyebrow">Implementation-ready slide plan</p>
+				<h1>BYOK Public Library Preparation - Plan</h1>
+				<p class="lede">Prepare <code>src/byok</code> to become a standalone public JavaScript/TypeScript library without pulling CueCraft, Obsidian, or accidental internal APIs into the future package.</p>
+				<dl class="meta-grid">
+					<div>
+						<dt>title</dt>
+						<dd>BYOK Public Library Preparation - Plan</dd>
+					</div>
+					<div>
+						<dt>type</dt>
+						<dd>refactor</dd>
+					</div>
+					<div>
+						<dt>date</dt>
+						<dd><time datetime="2026-06-30">2026-06-30</time></dd>
+					</div>
+					<div>
+						<dt>artifact_contract</dt>
+						<dd>ce-unified-plan/v1</dd>
+					</div>
+					<div>
+						<dt>artifact_readiness</dt>
+						<dd>implementation-ready</dd>
+					</div>
+					<div>
+						<dt>product_contract_source</dt>
+						<dd>ce-plan-bootstrap</dd>
+					</div>
+					<div>
+						<dt>execution</dt>
+						<dd>code</dd>
+					</div>
+					<div>
+						<dt>format</dt>
+						<dd>HTML slide deck</dd>
+					</div>
+				</dl>
+			</div>
+		</section>
+
+		<section class="slide" id="goal-capsule">
+			<div class="slide-inner">
+				<p class="eyebrow">Goal Capsule</p>
+				<h2>Goal Capsule</h2>
+				<div class="stats">
+					<div class="stat"><strong>8</strong><span>implementation units</span></div>
+					<div class="stat"><strong>9</strong><span>requirements</span></div>
+					<div class="stat"><strong>5</strong><span>technical decisions</span></div>
+					<div class="stat"><strong>0</strong><span>blocking questions</span></div>
+				</div>
+				<div class="two-col">
+					<div class="card">
+						<h3>Objective</h3>
+						<p>Make the future BYOK package boundary explicit, portable, tested, and documented before copying it into a public repository.</p>
+					</div>
+					<div class="card">
+						<h3>Authority hierarchy</h3>
+						<p>Follow <code>docs/byok-extraction.md</code> first, then the current BYOK public-contract tests, then current TypeScript/npm package guidance.</p>
+					</div>
+					<div class="card">
+						<h3>Stop conditions</h3>
+						<p>Stop if the work requires changing BYOK's product identity into a generic chat SDK, adding new providers, or moving credential persistence into the package.</p>
+					</div>
+					<div class="card">
+						<h3>Execution profile</h3>
+						<p>Standard-to-deep refactor. Land in small units inside CueCraft first, then extract only after CueCraft consumes the package-shaped public surface end to end.</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="product-contract">
+			<div class="slide-inner">
+				<p class="eyebrow">Product Contract</p>
+				<h2>Product Contract</h2>
+				<div class="two-col">
+					<div>
+						<h3>Problem Frame</h3>
+						<p><code>src/byok</code> already has a strong extraction doc and import-boundary tests, but the package candidate is not yet a true standalone library. Its public barrel is wider than the documented API, provider code imports CueCraft-level schemas and generation guidance, some messages still name CueCraft or Obsidian, and Node CLI support is not isolated from browser-safe imports.</p>
+					</div>
+					<div>
+						<h3>Success Criteria</h3>
+						<p>A future public repository can copy the package candidate, publish typed entrypoints, run consumer smoke tests from packed output, and show consumers how to use providers without depending on CueCraft internals or storage policy.</p>
+					</div>
+				</div>
+				<div class="badge-row" aria-label="Actors">
+					<span class="badge" id="a1">A1. Library maintainer</span>
+					<span class="badge" id="a2">A2. CueCraft adapter</span>
+					<span class="badge" id="a3">A3. External JS/TS consumer</span>
+					<span class="badge" id="a4">A4. Release reviewer</span>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="product-requirements">
+			<div class="slide-inner">
+				<p class="eyebrow">Product Requirements</p>
+				<h2>Requirements</h2>
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>ID</th>
+								<th>Requirement</th>
+								<th>Covered by</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr id="r1">
+								<td><span class="id-chip">R1.</span></td>
+								<td>The package must expose a deliberately small public barrel and avoid wildcard exports that turn helpers into accidental public API.</td>
+								<td>U1, U6, U7</td>
+							</tr>
+							<tr id="r2">
+								<td><span class="id-chip">R2.</span></td>
+								<td>The package candidate must be self-contained or explicitly include every package-owned file currently outside <code>src/byok/**</code>.</td>
+								<td>U2, U7</td>
+							</tr>
+							<tr id="r3">
+								<td><span class="id-chip">R3.</span></td>
+								<td>Browser/Electron-safe consumers must be able to import core provider APIs without loading Node-only local CLI code.</td>
+								<td>U3, U7</td>
+							</tr>
+							<tr id="r4">
+								<td><span class="id-chip">R4.</span></td>
+								<td>Provider metadata, errors, headers, and docs must be package-neutral by default, with app-specific branding supplied by adapters.</td>
+								<td>U4, U6</td>
+							</tr>
+							<tr id="r5">
+								<td><span class="id-chip">R5.</span></td>
+								<td>The package must keep secret persistence out of scope and document that callers resolve secrets before provider creation.</td>
+								<td>U4, U6</td>
+							</tr>
+							<tr id="r6">
+								<td><span class="id-chip">R6.</span></td>
+								<td>The future package must emit TypeScript declarations and publish only intended files and entrypoints.</td>
+								<td>U5, U7</td>
+							</tr>
+							<tr id="r7">
+								<td><span class="id-chip">R7.</span></td>
+								<td>Documentation examples must compile or typecheck against the package public API rather than internal provider paths.</td>
+								<td>U6, U7</td>
+							</tr>
+							<tr id="r8">
+								<td><span class="id-chip">R8.</span></td>
+								<td>CueCraft must consume the package-shaped API internally before any stable public release.</td>
+								<td>U1, U8</td>
+							</tr>
+							<tr id="r9">
+								<td><span class="id-chip">R9.</span></td>
+								<td>The public release track must include API governance, changelog discipline, and provenance-ready publishing.</td>
+								<td>U5, U8</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="acceptance-examples">
+			<div class="slide-inner">
+				<p class="eyebrow">Acceptance Examples</p>
+				<h2>Acceptance Examples</h2>
+				<div class="card-grid">
+					<div class="callout done" id="ae1">
+						<span class="label">AE1.</span>
+						<p>When a TypeScript app imports <code>createByokProvider</code> and public types from the main entrypoint, it can create an OpenAI or Ollama runtime without importing provider internals.</p>
+					</div>
+					<div class="callout done" id="ae2">
+						<span class="label">AE2.</span>
+						<p>When a browser-safe consumer imports the main entrypoint, the packed artifact does not require <code>node:child_process</code>, <code>node:os</code>, or <code>node:stream</code>.</p>
+					</div>
+					<div class="callout done" id="ae3">
+						<span class="label">AE3.</span>
+						<p>When the package is packed, the archive contains built JS, declarations, README, license, and package metadata, but not CueCraft plugin UI or Obsidian settings files.</p>
+					</div>
+					<div class="callout done" id="ae4">
+						<span class="label">AE4.</span>
+						<p>When a README example changes, CI catches drift by compiling or typechecking that example against the public package entrypoints.</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="scope-boundaries">
+			<div class="slide-inner">
+				<p class="eyebrow">Scope Boundaries</p>
+				<h2>Scope Boundaries</h2>
+				<div class="three-col">
+					<div class="callout">
+						<span class="label">In scope</span>
+						<p>Public API trimming, package-owned type/schema relocation, package topology, docs-as-tests, pack verification, and release governance.</p>
+					</div>
+					<div class="callout warn">
+						<span class="label">Deferred to follow-up work</span>
+						<p>Creating the public GitHub repository, publishing to npm, and moving CueCraft to a remote package dependency after local package-shaped consumption is proven.</p>
+					</div>
+					<div class="callout risk">
+						<span class="label">Outside product identity</span>
+						<p>Adding new providers, becoming a generic chat-completions SDK, or owning API-key encryption and persistence inside BYOK.</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="planning-contract">
+			<div class="slide-inner">
+				<p class="eyebrow">Planning Contract</p>
+				<h2>Key Technical Decisions</h2>
+				<div class="card-grid">
+					<article class="card" id="ktd1">
+						<h3>KTD1. Public barrel is the API</h3>
+						<p>Replace wildcard exports in <code>src/byok/index.ts</code> with explicit exports that match <code>docs/byok-extraction.md</code>. This prevents helpers from becoming semver commitments by accident.</p>
+					</article>
+					<article class="card" id="ktd2">
+						<h3>KTD2. BYOK remains cue-domain runtime</h3>
+						<p>Move or rename cue output schemas and generation option guidance into the package candidate rather than widening the package into a generic chat SDK.</p>
+					</article>
+					<article class="card" id="ktd3">
+						<h3>KTD3. Split core and Node CLI entrypoints</h3>
+						<p>Keep cloud and Ollama runtime APIs on the main entrypoint. Put Codex/Claude CLI providers and command-runner code behind a Node-only subpath.</p>
+					</article>
+					<article class="card" id="ktd4">
+						<h3>KTD4. Apps own storage and branding</h3>
+						<p>The library accepts resolved runtime secrets and neutral provider metadata. CueCraft-specific secure storage and wording stay in <code>src/byok-cuecraft-adapter.ts</code> or UI code.</p>
+					</article>
+					<article class="card" id="ktd5">
+						<h3>KTD5. Publish readiness is proven by pack consumers</h3>
+						<p>Unit tests remain necessary, but release readiness requires installing or importing packed output in consumer fixtures so manifest, exports, declarations, and dependency topology are exercised together.</p>
+					</article>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="technical-design">
+			<div class="slide-inner">
+				<p class="eyebrow">High-Level Technical Design</p>
+				<h2>High-Level Technical Design</h2>
+				<p>The preparation path has two layers: harden the package-shaped boundary inside CueCraft, then extract to a public repository only after consumer-style validation passes.</p>
+				<svg class="diagram" viewBox="0 0 980 430" role="img" aria-label="BYOK package extraction topology">
+					<defs>
+						<marker id="arrow" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto">
+							<path d="M0,0 L10,4 L0,8 Z" fill="#176a6a"></path>
+						</marker>
+					</defs>
+					<rect x="28" y="40" width="250" height="130" rx="14" fill="#dff2ef" stroke="#176a6a" stroke-width="2"></rect>
+					<text x="153" y="78" text-anchor="middle" font-size="18" font-weight="800">CueCraft app</text>
+					<text x="153" y="108" text-anchor="middle" font-size="13">settings, Secret Storage, UI</text>
+					<text x="153" y="132" text-anchor="middle" font-size="13">Obsidian transport adapter</text>
+					<text x="153" y="156" text-anchor="middle" font-size="13">src/byok-cuecraft-adapter.ts</text>
+
+					<rect x="365" y="28" width="280" height="154" rx="14" fill="#ffffff" stroke="#17211d" stroke-width="2"></rect>
+					<text x="505" y="65" text-anchor="middle" font-size="18" font-weight="800">BYOK package core</text>
+					<text x="505" y="96" text-anchor="middle" font-size="13">provider registry and metadata</text>
+					<text x="505" y="120" text-anchor="middle" font-size="13">cloud and Ollama runtimes</text>
+					<text x="505" y="144" text-anchor="middle" font-size="13">cue schemas and model helpers</text>
+
+					<rect x="700" y="40" width="250" height="130" rx="14" fill="#fff1d9" stroke="#7a4a0b" stroke-width="2"></rect>
+					<text x="825" y="78" text-anchor="middle" font-size="18" font-weight="800">Node-only subpath</text>
+					<text x="825" y="108" text-anchor="middle" font-size="13">Codex CLI provider</text>
+					<text x="825" y="132" text-anchor="middle" font-size="13">Claude CLI provider</text>
+					<text x="825" y="156" text-anchor="middle" font-size="13">local command runner</text>
+
+					<rect x="365" y="250" width="280" height="118" rx="14" fill="#e6f4df" stroke="#315b24" stroke-width="2"></rect>
+					<text x="505" y="288" text-anchor="middle" font-size="18" font-weight="800">Pack validation</text>
+					<text x="505" y="318" text-anchor="middle" font-size="13">ESM and TypeScript fixtures</text>
+					<text x="505" y="342" text-anchor="middle" font-size="13">declaration and export checks</text>
+
+					<path d="M278 105 C316 105 324 105 365 105" fill="none" stroke="#176a6a" stroke-width="3" marker-end="url(#arrow)"></path>
+					<text x="322" y="91" text-anchor="middle" font-size="12" fill="#114f4d">runtime config</text>
+					<path d="M645 105 C680 105 672 105 700 105" fill="none" stroke="#176a6a" stroke-width="3" marker-end="url(#arrow)"></path>
+					<text x="672" y="91" text-anchor="middle" font-size="12" fill="#114f4d">subpath only</text>
+					<path d="M505 182 L505 250" fill="none" stroke="#176a6a" stroke-width="3" marker-end="url(#arrow)"></path>
+					<text x="570" y="222" text-anchor="middle" font-size="12" fill="#114f4d">packed output</text>
+					<path d="M153 170 C153 330 286 330 365 330" fill="none" stroke="#176a6a" stroke-width="3" marker-end="url(#arrow)"></path>
+					<text x="206" y="314" text-anchor="middle" font-size="12" fill="#114f4d">CueCraft consumes first</text>
+				</svg>
+			</div>
+		</section>
+
+		<section class="slide" id="output-structure">
+			<div class="slide-inner">
+				<p class="eyebrow">Output Structure</p>
+				<h2>Expected Package Shape</h2>
+				<p>This tree is the intended package shape after preparation. It can live in a local package folder first, then become the root of the future public repository.</p>
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>Path</th>
+								<th>Purpose</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td><code>src/index.ts</code></td>
+								<td>Main public API for browser/Electron-safe cloud and Ollama usage.</td>
+							</tr>
+							<tr>
+								<td><code>src/node.ts</code></td>
+								<td>Node-only CLI provider entrypoint for local command integrations.</td>
+							</tr>
+							<tr>
+								<td><code>src/internal/**</code></td>
+								<td>Provider implementations, schemas, prompt helpers, and model utilities not exported as public subpaths.</td>
+							</tr>
+							<tr>
+								<td><code>tests/public-contract.test.ts</code></td>
+								<td>Export and documentation contract coverage.</td>
+							</tr>
+							<tr>
+								<td><code>tests/consumer/**</code></td>
+								<td>Packed-output fixtures for ESM and TypeScript consumers.</td>
+							</tr>
+							<tr>
+								<td><code>README.md</code>, <code>SECURITY.md</code>, <code>CHANGELOG.md</code></td>
+								<td>Public repo reader entrypoints and release governance.</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="implementation-units">
+			<div class="slide-inner">
+				<p class="eyebrow">Implementation Units</p>
+				<h2>Implementation Units</h2>
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th>Unit</th>
+								<th>Title</th>
+								<th>Primary files</th>
+								<th>Depends on</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr><td>U1.</td><td>Freeze the public API surface</td><td><code>src/byok/index.ts</code>, <code>tests/byok/public-contract.test.ts</code></td><td>None</td></tr>
+							<tr><td>U2.</td><td>Move package-owned schemas and prompt helpers</td><td><code>src/byok/**</code>, <code>src/schemas.ts</code>, <code>src/cue-generation.ts</code></td><td>U1</td></tr>
+							<tr><td>U3.</td><td>Split core and Node-only entrypoints</td><td><code>src/byok/index.ts</code>, <code>src/byok/node.ts</code>, provider files</td><td>U1, U2</td></tr>
+							<tr><td>U4.</td><td>Neutralize app-specific integration copy</td><td><code>src/byok/registry.ts</code>, provider errors, adapter files</td><td>U1</td></tr>
+							<tr><td>U5.</td><td>Scaffold package manifest and declaration build</td><td><code>package.json</code>, <code>tsconfig*</code>, build config</td><td>U1, U3</td></tr>
+							<tr><td>U6.</td><td>Write public docs as compile-checked examples</td><td><code>docs/byok-extraction.md</code>, future <code>README.md</code>, docs tests</td><td>U1, U4, U5</td></tr>
+							<tr><td>U7.</td><td>Add pack-consumer readiness gates</td><td><code>tests/byok/**</code>, <code>tests/consumer/**</code>, CI config</td><td>U5, U6</td></tr>
+							<tr><td>U8.</td><td>Define extraction and release governance</td><td><code>docs/byok-extraction.md</code>, release docs, workflows</td><td>U7</td></tr>
+						</tbody>
+					</table>
+				</div>
+
+				<article class="unit-card" id="u1">
+					<div class="unit-head">
+						<span class="id-chip">U1.</span>
+						<h3>U1. Freeze the public API surface</h3>
+					</div>
+					<dl class="unit-meta">
+						<div><dt>Goal</dt><dd>Make the public barrel intentionally small.</dd></div>
+						<div><dt>Requirements</dt><dd>R1, R8</dd></div>
+						<div><dt>Dependencies</dt><dd>None</dd></div>
+						<div><dt>Files</dt><dd><code>src/byok/index.ts</code>, <code>tests/byok/public-contract.test.ts</code>, <code>docs/byok-extraction.md</code></dd></div>
+					</dl>
+					<details>
+						<summary>Approach, tests, and verification</summary>
+						<p><strong>Approach:</strong> Replace broad wildcard exports from model, provider, and setup modules with named exports that match the documented public surface. Decide which helpers are public, which are internal, and which should be renamed before public release.</p>
+						<p><strong>Patterns to follow:</strong> Keep the existing public-contract test style that imports from <code>../../src/byok</code> and checks documented examples.</p>
+						<p><strong>Test scenarios:</strong> Verify the barrel exports all intended runtime APIs. Verify internal provider classes are not reachable from the main barrel unless intentionally public. Verify docs examples import only from the barrel.</p>
+						<p><strong>Verification:</strong> Public-contract tests fail when a new export appears without an intentional update.</p>
+					</details>
+				</article>
+
+				<article class="unit-card" id="u2">
+					<div class="unit-head">
+						<span class="id-chip">U2.</span>
+						<h3>U2. Move package-owned schemas and prompt helpers</h3>
+					</div>
+					<dl class="unit-meta">
+						<div><dt>Goal</dt><dd>Make the package candidate self-contained.</dd></div>
+						<div><dt>Requirements</dt><dd>R2</dd></div>
+						<div><dt>Dependencies</dt><dd>U1</dd></div>
+						<div><dt>Files</dt><dd><code>src/byok/providers/types.ts</code>, <code>src/byok/providers/*</code>, <code>src/schemas.ts</code>, <code>src/cue-generation.ts</code>, tests touching provider validation</dd></div>
+					</dl>
+					<details>
+						<summary>Approach, tests, and verification</summary>
+						<p><strong>Approach:</strong> Move cue output schemas, summary schemas, validation helpers, and cue-generation option guidance into BYOK-owned modules, or define a clearly package-owned boundary that travels with the future package. Preserve CueCraft-facing aliases only if needed outside BYOK.</p>
+						<p><strong>Patterns to follow:</strong> Provider implementations already validate model output through shared schemas; preserve that single-source behavior after relocation.</p>
+						<p><strong>Test scenarios:</strong> Verify AI SDK, Ollama, Codex CLI, and Claude CLI providers still normalize cues, summaries, validation repair, and batch cue parsing. Verify no BYOK file imports <code>../../schemas</code> or <code>../../cue-generation</code> after the move.</p>
+						<p><strong>Verification:</strong> Existing provider tests pass and import-boundary tests cover the widened package-owned module set.</p>
+					</details>
+				</article>
+
+				<article class="unit-card" id="u3">
+					<div class="unit-head">
+						<span class="id-chip">U3.</span>
+						<h3>U3. Split core and Node-only entrypoints</h3>
+					</div>
+					<dl class="unit-meta">
+						<div><dt>Goal</dt><dd>Prevent browser-safe imports from loading local CLI code.</dd></div>
+						<div><dt>Requirements</dt><dd>R3, AE2</dd></div>
+						<div><dt>Dependencies</dt><dd>U1, U2</dd></div>
+						<div><dt>Files</dt><dd><code>src/byok/index.ts</code>, <code>src/byok/node.ts</code>, <code>src/byok/providers/local-command-runner.ts</code>, CLI provider tests</dd></div>
+					</dl>
+					<details>
+						<summary>Approach, tests, and verification</summary>
+						<p><strong>Approach:</strong> Keep cloud providers, Ollama, metadata, model helpers, and setup status on the main entrypoint. Move Codex/Claude CLI constructors and command-runner exports to a Node-only subpath so package exports can express runtime separation.</p>
+						<p><strong>Technical design:</strong> The main entrypoint is suitable for Electron/browser-like environments. The Node subpath is opt-in and owns <code>node:child_process</code>, <code>node:os</code>, and <code>node:stream</code> dependencies.</p>
+						<p><strong>Test scenarios:</strong> Verify main-entry imports do not reference Node built-ins. Verify Node subpath exports CLI providers. Verify CueCraft can still create CLI providers through the app adapter.</p>
+						<p><strong>Verification:</strong> Import-boundary and consumer fixture tests prove the split from built output, not only source text.</p>
+					</details>
+				</article>
+
+				<article class="unit-card" id="u4">
+					<div class="unit-head">
+						<span class="id-chip">U4.</span>
+						<h3>U4. Neutralize app-specific integration copy</h3>
+					</div>
+					<dl class="unit-meta">
+						<div><dt>Goal</dt><dd>Move CueCraft and Obsidian assumptions out of package defaults.</dd></div>
+						<div><dt>Requirements</dt><dd>R4, R5</dd></div>
+						<div><dt>Dependencies</dt><dd>U1</dd></div>
+						<div><dt>Files</dt><dd><code>src/byok/registry.ts</code>, <code>src/byok/providers/ai-sdk-provider.ts</code>, <code>src/byok/providers/local-command-runner.ts</code>, <code>src/byok/providers/openrouter-provider.ts</code>, <code>src/byok-cuecraft-adapter.ts</code></dd></div>
+					</dl>
+					<details>
+						<summary>Approach, tests, and verification</summary>
+						<p><strong>Approach:</strong> Change package-level provider definitions and errors to neutral language. Give apps a place to add storage descriptions, app title, OpenRouter referer/title headers, and settings-specific remediation copy.</p>
+						<p><strong>Patterns to follow:</strong> Keep storage resolution in <code>src/byok-cuecraft-adapter.ts</code> as documented by <code>docs/byok-extraction.md</code>.</p>
+						<p><strong>Test scenarios:</strong> Verify provider metadata no longer says Obsidian Secret Storage. Verify cloud auth errors do not say CueCraft settings at the package layer. Verify CueCraft UI still renders app-specific copy through its adapter or settings layer.</p>
+						<p><strong>Verification:</strong> String-focused tests cover both neutral package defaults and CueCraft-branded app presentation.</p>
+					</details>
+				</article>
+
+				<article class="unit-card" id="u5">
+					<div class="unit-head">
+						<span class="id-chip">U5.</span>
+						<h3>U5. Scaffold package manifest and declaration build</h3>
+					</div>
+					<dl class="unit-meta">
+						<div><dt>Goal</dt><dd>Make the future package mechanically publishable.</dd></div>
+						<div><dt>Requirements</dt><dd>R6, R9</dd></div>
+						<div><dt>Dependencies</dt><dd>U1, U3</dd></div>
+						<div><dt>Files</dt><dd><code>package.json</code>, package-specific <code>tsconfig</code>, build config, generated declaration output rules</dd></div>
+					</dl>
+					<details>
+						<summary>Approach, tests, and verification</summary>
+						<p><strong>Approach:</strong> Add or prototype package metadata for <code>exports</code>, <code>types</code>, packed <code>files</code>, <code>sideEffects</code>, license, repository, bugs, engines, and publish access. Emit declaration files and declaration maps from the package source.</p>
+						<p><strong>Patterns to follow:</strong> Node package guidance recommends <code>exports</code> for public entrypoint encapsulation; TypeScript declaration output is required for typed consumers.</p>
+						<p><strong>Test scenarios:</strong> Verify declarations are generated for public entrypoints. Verify package metadata blocks private internals. Verify packed file lists exclude CueCraft plugin files.</p>
+						<p><strong>Verification:</strong> A local pack dry run produces the intended archive shape and no package-internal TypeScript path leaks into declarations.</p>
+					</details>
+				</article>
+
+				<article class="unit-card" id="u6">
+					<div class="unit-head">
+						<span class="id-chip">U6.</span>
+						<h3>U6. Write public docs as compile-checked examples</h3>
+					</div>
+					<dl class="unit-meta">
+						<div><dt>Goal</dt><dd>Turn usage docs into contract coverage.</dd></div>
+						<div><dt>Requirements</dt><dd>R1, R4, R5, R7, AE1, AE4</dd></div>
+						<div><dt>Dependencies</dt><dd>U1, U4, U5</dd></div>
+						<div><dt>Files</dt><dd><code>docs/byok-extraction.md</code>, future package <code>README.md</code>, example fixtures, docs tests</dd></div>
+					</dl>
+					<details>
+						<summary>Approach, tests, and verification</summary>
+						<p><strong>Approach:</strong> Expand the extraction doc into a public README shape: install, quickstart, provider matrix, transports, credential policy, model listing, local CLI caveats, error handling, and migration notes. Extract examples into test fixtures or compile snippets from docs.</p>
+						<p><strong>Test scenarios:</strong> Verify quickstart examples typecheck. Verify docs mention that callers own secure storage. Verify examples use package public entrypoints only.</p>
+						<p><strong>Verification:</strong> Docs tests fail if a documented import or config shape drifts from the public API.</p>
+					</details>
+				</article>
+
+				<article class="unit-card" id="u7">
+					<div class="unit-head">
+						<span class="id-chip">U7.</span>
+						<h3>U7. Add pack-consumer readiness gates</h3>
+					</div>
+					<dl class="unit-meta">
+						<div><dt>Goal</dt><dd>Prove the built package works from the outside.</dd></div>
+						<div><dt>Requirements</dt><dd>R1, R2, R3, R6, R7, AE2, AE3, AE4</dd></div>
+						<div><dt>Dependencies</dt><dd>U5, U6</dd></div>
+						<div><dt>Files</dt><dd><code>tests/byok/**</code>, <code>tests/consumer/**</code>, CI workflow files</dd></div>
+					</dl>
+					<details>
+						<summary>Approach, tests, and verification</summary>
+						<p><strong>Approach:</strong> Add consumer fixtures that install or import packed output and exercise ESM, TypeScript declarations, main entrypoint, Node-only subpath, and documented examples.</p>
+						<p><strong>Test scenarios:</strong> Verify main entrypoint imports in an ESM fixture. Verify TypeScript can compile a consumer using public types. Verify Node subpath can import CLI providers. Verify browser-safe fixture fails if Node built-ins leak into the main entrypoint.</p>
+						<p><strong>Verification:</strong> CI includes package-readiness gates in addition to existing unit, typecheck, and build coverage.</p>
+					</details>
+				</article>
+
+				<article class="unit-card" id="u8">
+					<div class="unit-head">
+						<span class="id-chip">U8.</span>
+						<h3>U8. Define extraction and release governance</h3>
+					</div>
+					<dl class="unit-meta">
+						<div><dt>Goal</dt><dd>Prepare the future public repository without publishing prematurely.</dd></div>
+						<div><dt>Requirements</dt><dd>R8, R9</dd></div>
+						<div><dt>Dependencies</dt><dd>U7</dd></div>
+						<div><dt>Files</dt><dd><code>docs/byok-extraction.md</code>, release checklist docs, future public repo templates</dd></div>
+					</dl>
+					<details>
+						<summary>Approach, tests, and verification</summary>
+						<p><strong>Approach:</strong> Document the extraction sequence, API review rule, semver policy, beta/stable release path, changelog expectations, security policy, and npm trusted publishing/provenance setup for the future repository.</p>
+						<p><strong>Test scenarios:</strong> Verify the release checklist names every prepublish gate. Verify CueCraft consumes the local package-shaped API before any stable public release. Verify future repo docs include license, security reporting, contribution expectations, and provenance-ready publishing notes.</p>
+						<p><strong>Verification:</strong> The extraction doc can be followed from current source to public repo without inventing release policy during the move.</p>
+					</details>
+				</article>
+			</div>
+		</section>
+
+		<section class="slide" id="verification-contract">
+			<div class="slide-inner">
+				<p class="eyebrow">Verification Contract</p>
+				<h2>Verification Contract</h2>
+				<div class="card-grid">
+					<div class="card">
+						<h3>Existing project gates</h3>
+						<p>Run the repo's typecheck, test, and production build scripts after package-boundary changes. These cover current CueCraft behavior while the package is still internal.</p>
+					</div>
+					<div class="card">
+						<h3>Boundary gates</h3>
+						<p>Keep and expand BYOK import-boundary and public-contract tests so forbidden Obsidian/UI/storage imports and undocumented public exports fail fast.</p>
+					</div>
+					<div class="card">
+						<h3>Package gates</h3>
+						<p>Generate declaration output, inspect packed files, and compile external consumer fixtures against packed entrypoints.</p>
+					</div>
+					<div class="card">
+						<h3>Docs gates</h3>
+						<p>Compile or typecheck public README examples, especially quickstart, custom transport, credential policy, model listing, and Node CLI import examples.</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="risks-dependencies">
+			<div class="slide-inner">
+				<p class="eyebrow">Risks & Dependencies</p>
+				<h2>Risks & Dependencies</h2>
+				<div class="card-grid">
+					<div class="callout risk">
+						<span class="label">Risk</span>
+						<p>Accidental public API expansion through wildcard exports creates semver commitments before the package has external users.</p>
+					</div>
+					<div class="callout risk">
+						<span class="label">Risk</span>
+						<p>Node CLI code can make the main package unusable in browser-like environments if entrypoints are not split and tested from packed output.</p>
+					</div>
+					<div class="callout warn">
+						<span class="label">Dependency</span>
+						<p>Package publishing depends on a package manifest, declaration build, CI gates, and future npm/GitHub trusted publishing setup.</p>
+					</div>
+					<div class="callout warn">
+						<span class="label">Assumption</span>
+						<p>The package name remains undecided. The plan works for a scoped name such as <code>@cuecraft/byok</code> or a later neutral name.</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="system-wide-impact">
+			<div class="slide-inner">
+				<p class="eyebrow">System-Wide Impact</p>
+				<h2>System-Wide Impact</h2>
+				<div class="two-col">
+					<div class="card">
+						<h3>CueCraft app</h3>
+						<p>CueCraft keeps storage, settings UI, Obsidian transport adaptation, and note/cache orchestration. Its adapter becomes the proof that the package API is usable from a real app.</p>
+					</div>
+					<div class="card">
+						<h3>Future consumers</h3>
+						<p>Consumers get provider creation, model listing, cue/summary generation, capability metadata, typed configs, and clear runtime dependencies without app-specific settings assumptions.</p>
+					</div>
+					<div class="card">
+						<h3>Contributor workflow</h3>
+						<p>Provider additions and API changes require public-contract updates, docs examples, declaration output, and pack-consumer validation.</p>
+					</div>
+					<div class="card">
+						<h3>Release posture</h3>
+						<p>Public release becomes an API governance event, not a copy-paste of current source into a new repository.</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="definition-of-done">
+			<div class="slide-inner">
+				<p class="eyebrow">Definition of Done</p>
+				<h2>Definition of Done</h2>
+				<div class="card-grid">
+					<div class="callout done">
+						<span class="label">API</span>
+						<p>The public barrel and optional Node-only subpath are explicit, documented, and covered by contract tests.</p>
+					</div>
+					<div class="callout done">
+						<span class="label">Boundary</span>
+						<p>Package-owned source no longer depends on CueCraft-only schema or generation modules, Obsidian settings, storage adapters, DOM UI, or plugin runtime files.</p>
+					</div>
+					<div class="callout done">
+						<span class="label">Docs</span>
+						<p>Public README-shaped docs explain quickstart usage, transports, credential policy, model discovery, local CLI support, and troubleshooting.</p>
+					</div>
+					<div class="callout done">
+						<span class="label">Verification</span>
+						<p>Unit, type, build, boundary, docs, declaration, and pack-consumer checks all pass from current source and packed output.</p>
+					</div>
+					<div class="callout done">
+						<span class="label">Extraction readiness</span>
+						<p>CueCraft consumes the package-shaped API internally, and the release checklist is complete enough to create the public repo without re-deciding scope.</p>
+					</div>
+					<div class="callout done">
+						<span class="label">Cleanup</span>
+						<p>Dead compatibility shims, abandoned package experiments, and stale internal imports introduced during the work are removed before completion.</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<section class="slide" id="appendix">
+			<div class="slide-inner">
+				<p class="eyebrow">Appendix</p>
+				<h2>Sources & Research</h2>
+				<ul class="source-list">
+					<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/docs/byok-extraction.md">docs/byok-extraction.md</a> - current extraction notes, public surface, package dependency expectations, and non-goals.</li>
+					<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/byok/index.ts">src/byok/index.ts</a> - current public barrel with wildcard exports.</li>
+					<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/byok/types.ts">src/byok/types.ts</a> - current public runtime and stored-settings types.</li>
+					<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/tests/byok/public-contract.test.ts">tests/byok/public-contract.test.ts</a> - current public API and docs-example contract tests.</li>
+					<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/tests/byok/import-boundary.test.ts">tests/byok/import-boundary.test.ts</a> - current Obsidian/UI import-boundary guard.</li>
+					<li><a href="https://nodejs.org/api/packages.html">Node.js package entrypoints documentation</a> - <code>exports</code> defines public entrypoints and encapsulates other paths.</li>
+					<li><a href="https://docs.npmjs.com/cli/v11/configuring-npm/package-json">npm package.json documentation</a> - package metadata, packed-file control, and package fields.</li>
+					<li><a href="https://www.typescriptlang.org/tsconfig/declaration.html">TypeScript declaration option documentation</a> - declaration output for typed consumers.</li>
+					<li><a href="https://docs.npmjs.com/trusted-publishers">npm trusted publishing documentation</a> - OIDC-backed publishing path for future public release.</li>
+				</ul>
+			</div>
+		</section>
+	</main>
+
+	<footer class="composition-signal">Composed 2026-07-01T00:26:08Z by ce-plan from fresh BYOK public-library ideation context and the user request for an HTML slide plan.</footer>
+</body>
+</html>
