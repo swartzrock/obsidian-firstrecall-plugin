@@ -32,6 +32,13 @@ const sectionLens = {
 	explanation: "This phrase anchors the section for recall.",
 };
 
+const noteBrief = {
+	overview: "This note explains the main study idea.",
+	whatMatters: { title: "Main idea", detail: "Focus on the central claim." },
+	reviewFirst: { title: "Start here", detail: "Review the first section." },
+	sayItBack: { title: "Say it back", detail: "Explain the note from memory." },
+};
+
 describe("AnthropicProvider.generateCue", () => {
 	it("returns a validated cue from the structured output", async () => {
 		const { generator } = fixedGenerator({
@@ -121,6 +128,26 @@ describe("AnthropicProvider.generateSummary", () => {
 		});
 		expect(out.summary).toBe("A short summary.");
 		expect(out.learningObjective).toBe("Understand X.");
+	});
+});
+
+describe("AnthropicProvider.generateNoteBrief", () => {
+	it("returns a validated note brief", async () => {
+		const { generator, prompts } = fixedGenerator(noteBrief);
+		const p = new AnthropicProvider(opts(generator));
+		const out = await p.generateNoteBrief({
+			noteTitle: "Note",
+			fullText: "text",
+			sections: [
+				{
+					heading: "Main",
+					question: "What matters?",
+					keywords: ["main", "claim"],
+				},
+			],
+		});
+		expect(out.overview).toBe("This note explains the main study idea.");
+		expect(prompts[0]).toContain("Note Brief");
 	});
 });
 
