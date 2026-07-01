@@ -251,6 +251,11 @@ describe("renderCueElement", () => {
 			expect(el.dataset.confidence).toBe("medium");
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
+				Array.from(
+					el.querySelectorAll(".cuecraft-editor-hook-section-label")
+				).map((label) => label.textContent)
+			).toEqual(["QUESTION", "LENS", "TERMS"]);
+			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("How do agents differ from chatbots");
 			expect(
@@ -287,6 +292,11 @@ describe("renderCueElement", () => {
 			expect(el.dataset.gradient).toBe("1");
 			expect(el.dataset.questionVisible).toBe("false");
 			expect(el.dataset.supportTermsVisible).toBe("false");
+			expect(
+				Array.from(
+					el.querySelectorAll(".cuecraft-editor-hook-section-label")
+				).map((label) => label.textContent)
+			).toEqual(["LENS"]);
 			expect(el.querySelector(".cuecraft-editor-hook-title")).toBeNull();
 			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
 			expect(
@@ -316,6 +326,7 @@ describe("renderCueElement", () => {
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.dataset.confidence).toBe("low");
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
+			expect(el.querySelector(".cuecraft-editor-hook-section-label")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("Who is this workflow designed for");

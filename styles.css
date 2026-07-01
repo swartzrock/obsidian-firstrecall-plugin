@@ -1182,6 +1182,31 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	overflow-wrap: anywhere;
 }
 
+.cuecraft-editor-hook-section-label {
+	position: relative;
+	z-index: 1;
+	margin: 0 0 0.24em;
+	color: color-mix(in srgb, var(--text-normal) 62%, transparent);
+	font-size: 0.7em;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	line-height: 1.1;
+	text-transform: uppercase;
+}
+
+.cuecraft-editor-hook-section-label:not(:first-child) {
+	border-top: 1px solid
+		color-mix(in srgb, var(--text-normal) 16%, transparent);
+	margin-top: 0.6em;
+	padding-top: 0.55em;
+}
+
+.cuecraft-editor-hook-section-label + .cuecraft-section-lens {
+	border-top: 0;
+	margin-top: 0;
+	padding-top: 0;
+}
+
 .cuecraft-editor-hook[data-title-density="long"] .cuecraft-editor-hook-title {
 	font-size: var(--font-ui-smaller);
 }

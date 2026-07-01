@@ -245,6 +245,7 @@ function renderInlineCueElement(cue: CueLineData): HTMLElement {
 function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	const root = cueDocument().createElement("div");
 	root.className = `cuecraft-editor-hook cuecraft-editor-hook-${card.display}`;
+	const showSectionLabels = card.display === "anchored-card-rail" && !card.error;
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");
 	root.dataset.display = card.display;
@@ -260,6 +261,7 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
 	if (card.showQuestion || card.kind === "failed") {
+		if (showSectionLabels) appendEditorHookSectionLabel(root, "Question");
 		const title = cueDocument().createElement("div");
 		title.className = "cuecraft-editor-hook-title";
 		title.textContent =
@@ -280,15 +282,30 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 		return root;
 	}
 
+	if (card.sectionLens && showSectionLabels) {
+		appendEditorHookSectionLabel(root, "Lens");
+	}
 	appendSectionLens(root, card.sectionLens);
 
 	if (card.showSupportTerms && card.keywords.length) {
+		if (showSectionLabels) appendEditorHookSectionLabel(root, "Terms");
 		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
 		keywords.textContent = card.keywords.join(" · ");
 		root.appendChild(keywords);
 	}
 	return root;
+}
+
+function appendEditorHookSectionLabel(
+	parent: HTMLElement,
+	label: "Question" | "Lens" | "Terms"
+): void {
+	const sectionLabel = cueDocument().createElement("div");
+	sectionLabel.className = "cuecraft-editor-hook-section-label";
+	sectionLabel.dataset.section = label.toLowerCase();
+	sectionLabel.textContent = label.toUpperCase();
+	parent.appendChild(sectionLabel);
 }
 
 const noteBriefCardOrder = [
