@@ -72,7 +72,7 @@ export default defineConfig([
     ...json.configs.recommended,
   },
   {
-    files: ["src/**/*.ts", "tests/**/*.ts"],
+    files: ["packages/**/*.ts", "src/**/*.ts", "tests/**/*.ts"],
     languageOptions: {
       parser: tsparser,
       parserOptions: typedParserOptions,
@@ -90,7 +90,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["tests/**/*.ts"],
+    files: ["packages/*/tests/**/*.ts", "tests/**/*.ts"],
     rules: {
       "@microsoft/sdl/no-inner-html": "off",
       "@typescript-eslint/no-unnecessary-type-assertion": "off",

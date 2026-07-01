@@ -1,4 +1,4 @@
-import type { ByokProviderId } from "./byok";
+import type { ByokProviderId } from "@cuecraft/byok";
 
 export type CueCraftCloudCredentialProvider = Extract<
 	ByokProviderId,

@@ -9,17 +9,17 @@ import {
 	resolveGenerationOptions,
 	resolveSectionConcurrency,
 } from "../src/generator";
+import type { ByokProviderStatus } from "@cuecraft/byok";
 import type {
-	ByokCueBatchResult,
-	ByokCueInput,
-	ByokCueOutput,
-	ByokNoteBriefInput,
-	ByokNoteBriefOutput,
-	ByokProviderRuntime,
-	ByokProviderStatus,
-	ByokSummaryInput,
-	ByokSummaryOutput,
-} from "../src/byok";
+	CueCraftCueBatchResult,
+	CueCraftCueInput,
+	CueCraftCueOutput,
+	CueCraftCueProviderRuntime,
+	CueCraftNoteBriefInput,
+	CueCraftNoteBriefOutput,
+	CueCraftSummaryInput,
+	CueCraftSummaryOutput,
+} from "../src/cue-provider";
 
 interface MockOptions {
 	failOnHeading?: string;
@@ -31,21 +31,21 @@ interface MockOptions {
 	sectionConcurrencyLimit?: number;
 }
 
-function mockProvider(opts: MockOptions = {}): ByokProviderRuntime & {
+function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 	summaryCalls: number;
+	lastSummaryInput?: CueCraftSummaryInput;
+	lastNoteBriefInput?: CueCraftNoteBriefInput;
+	cueInputs: CueCraftCueInput[];
+	batchInputs: CueCraftCueInput[][];
 	noteBriefCalls: number;
-	lastSummaryInput?: ByokSummaryInput;
-	lastNoteBriefInput?: ByokNoteBriefInput;
-	cueInputs: ByokCueInput[];
-	batchInputs: ByokCueInput[][];
 } {
-	const provider: ByokProviderRuntime & {
+	const provider: CueCraftCueProviderRuntime & {
 		summaryCalls: number;
+		lastSummaryInput?: CueCraftSummaryInput;
+		lastNoteBriefInput?: CueCraftNoteBriefInput;
+		cueInputs: CueCraftCueInput[];
+		batchInputs: CueCraftCueInput[][];
 		noteBriefCalls: number;
-		lastSummaryInput?: ByokSummaryInput;
-		lastNoteBriefInput?: ByokNoteBriefInput;
-		cueInputs: ByokCueInput[];
-		batchInputs: ByokCueInput[][];
 	} = {
 		id: "ollama",
 		label: "Mock",
@@ -53,15 +53,15 @@ function mockProvider(opts: MockOptions = {}): ByokProviderRuntime & {
 		requiresDownload: false,
 		sectionConcurrencyLimit: opts.sectionConcurrencyLimit,
 		summaryCalls: 0,
+		lastSummaryInput: undefined as CueCraftSummaryInput | undefined,
+		lastNoteBriefInput: undefined as CueCraftNoteBriefInput | undefined,
+		cueInputs: [] as CueCraftCueInput[],
+		batchInputs: [] as CueCraftCueInput[][],
 		noteBriefCalls: 0,
-		lastSummaryInput: undefined as ByokSummaryInput | undefined,
-		lastNoteBriefInput: undefined as ByokNoteBriefInput | undefined,
-		cueInputs: [] as ByokCueInput[],
-		batchInputs: [] as ByokCueInput[][],
 		async testConnection(): Promise<ByokProviderStatus> {
 			return { ok: true, message: "ok" };
 		},
-		async generateCue(input: ByokCueInput): Promise<ByokCueOutput> {
+		async generateCue(input: CueCraftCueInput): Promise<CueCraftCueOutput> {
 			provider.cueInputs.push(input);
 			opts.onCue?.();
 			if (opts.delayMs) {
@@ -82,12 +82,14 @@ function mockProvider(opts: MockOptions = {}): ByokProviderRuntime & {
 				},
 			};
 		},
-		async generateSummary(input: ByokSummaryInput): Promise<ByokSummaryOutput> {
+		async generateSummary(input: CueCraftSummaryInput): Promise<CueCraftSummaryOutput> {
 			provider.summaryCalls++;
 			provider.lastSummaryInput = input;
 			return { summary: "the summary", learningObjective: null };
 		},
-		async generateNoteBrief(input: ByokNoteBriefInput): Promise<ByokNoteBriefOutput> {
+		async generateNoteBrief(
+			input: CueCraftNoteBriefInput
+		): Promise<CueCraftNoteBriefOutput> {
 			provider.noteBriefCalls++;
 			provider.lastNoteBriefInput = input;
 			return {
@@ -100,8 +102,8 @@ function mockProvider(opts: MockOptions = {}): ByokProviderRuntime & {
 	};
 	if (opts.batch) {
 		provider.generateCues = async (
-			inputs: ByokCueInput[]
-		): Promise<ByokCueBatchResult[]> => {
+			inputs: CueCraftCueInput[]
+		): Promise<CueCraftCueBatchResult[]> => {
 			provider.batchInputs.push(inputs);
 			opts.onBatch?.();
 			return inputs.map((input) => {

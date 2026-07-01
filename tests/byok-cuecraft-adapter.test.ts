@@ -17,7 +17,7 @@ import {
 	setCueCraftProviderCredentialMetadata,
 	setCueCraftProviderModel,
 } from "../src/byok-cuecraft-adapter";
-import type { ByokHttpClient, ByokModelOption } from "../src/byok";
+import type { ByokHttpClient, ByokModelOption } from "@cuecraft/byok";
 import {
 	type CueCraftSettings,
 } from "../src/settings";
@@ -259,6 +259,40 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(
 			makeCueCraftByokProvider(settings({ provider }), { fetchImpl, http }).id
 		).toBe(provider);
+	});
+
+	it("wraps generic text providers with CueCraft cue generation", async () => {
+		const calls: Array<{ url: string; body?: string }> = [];
+		const http: ByokHttpClient = async (request) => {
+			calls.push({ url: request.url, body: request.body });
+			return {
+				status: 200,
+				text: "{}",
+				json: {
+					response: JSON.stringify({
+						question: "What is an agent?",
+						keywords: ["plan", "tools"],
+						confidence: "high",
+					}),
+				},
+			};
+		};
+		const provider = makeCueCraftByokProvider(settings({ provider: "ollama" }), {
+			fetchImpl,
+			http,
+		});
+
+		const cue = await provider.generateCue({
+			heading: "Agents",
+			content: "Agents can plan and use tools.",
+			preset: "conceptual",
+		});
+
+		expect(cue.question).toBe("What is an agent?");
+		const body = JSON.parse(calls[0].body ?? "{}");
+		expect(body.format).toBe("json");
+		expect(body.prompt).toContain("Section heading: Agents");
+		expect(body.prompt).toContain("Agents can plan and use tools.");
 	});
 });
 

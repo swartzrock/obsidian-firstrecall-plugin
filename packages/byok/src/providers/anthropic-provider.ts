@@ -1,0 +1,76 @@
+import Anthropic from "@anthropic-ai/sdk";
+import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import type { FetchFunction } from "@ai-sdk/provider-utils";
+import {
+	AiSdkProvider,
+	modelGenerator,
+	textGenerator,
+	type ObjectGenerator,
+	type TextGenerator,
+} from "./ai-sdk-provider";
+
+export type { ObjectGenerator } from "./ai-sdk-provider";
+
+export interface AnthropicProviderOptions {
+	apiKey: string;
+	model: string;
+	/** Custom fetch supplied by the host app. */
+	fetchImpl?: FetchFunction;
+	/** Overrides the real AI SDK call in tests. */
+	generator?: ObjectGenerator;
+	textGenerator?: TextGenerator;
+}
+
+export class AnthropicProvider extends AiSdkProvider {
+	private readonly apiKey: string;
+	private readonly fetchImpl?: FetchFunction;
+
+	constructor(opts: AnthropicProviderOptions) {
+		super({
+			id: "anthropic",
+			label: "Anthropic (Claude)",
+			vendor: "Anthropic",
+			model: opts.model,
+			generateObject: opts.generator ?? defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+			generateText:
+				opts.textGenerator ??
+				defaultTextGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+		});
+		this.apiKey = opts.apiKey;
+		this.fetchImpl = opts.fetchImpl;
+	}
+
+	async listModels(): Promise<ModelInfo[]> {
+		const client = new Anthropic({
+			apiKey: this.apiKey,
+			fetch: this.fetchImpl,
+			dangerouslyAllowBrowser: true,
+		});
+		const models: ModelInfo[] = [];
+		// eslint-disable-next-line @typescript-eslint/await-thenable -- PagePromise implements AsyncIterable.
+		for await (const model of client.models.list()) {
+			models.push(model);
+		}
+		return models;
+	}
+}
+
+/** Build the real AI SDK structured-output caller for a given key/model. */
+function defaultGenerator(
+	apiKey: string,
+	model: string,
+	fetchImpl?: FetchFunction
+): ObjectGenerator {
+	const anthropic = createAnthropic({ apiKey, fetch: fetchImpl });
+	return modelGenerator(anthropic(model));
+}
+
+function defaultTextGenerator(
+	apiKey: string,
+	model: string,
+	fetchImpl?: FetchFunction
+): TextGenerator {
+	const anthropic = createAnthropic({ apiKey, fetch: fetchImpl });
+	return textGenerator(anthropic(model));
+}

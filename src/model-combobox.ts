@@ -3,7 +3,7 @@ import {
 	sortByokModelOptions,
 	type ModelOption,
 	type ModelOptionSource,
-} from "./byok";
+} from "@cuecraft/byok";
 
 let nextComboboxId = 0;
 
