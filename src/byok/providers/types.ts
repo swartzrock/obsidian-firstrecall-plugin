@@ -1,4 +1,4 @@
-import type { CueOutput, SummaryOutput } from "../../schemas";
+import type { CueOutput, NoteBriefOutput, SummaryOutput } from "../../schemas";
 import type { CueGenerationOptions } from "../../cue-generation";
 
 /** Minimal HTTP abstraction so providers can be unit-tested without a live server. */
@@ -43,6 +43,18 @@ export interface SummaryInput {
 	sectionQuestions: string[];
 }
 
+export interface NoteBriefSectionInput {
+	heading: string;
+	question: string;
+	keywords: string[];
+}
+
+export interface NoteBriefInput {
+	noteTitle: string;
+	fullText: string;
+	sections: NoteBriefSectionInput[];
+}
+
 /**
  * Shared provider interface. v1.0 implements only Ollama, but the full shape
  * ships now so adding OpenAI / Claude Code / Local VM later is additive.
@@ -61,6 +73,10 @@ export interface AiProvider {
 		signal?: AbortSignal
 	): Promise<CueBatchResult[]>;
 	generateSummary(input: SummaryInput, signal?: AbortSignal): Promise<SummaryOutput>;
+	generateNoteBrief?(
+		input: NoteBriefInput,
+		signal?: AbortSignal
+	): Promise<NoteBriefOutput>;
 }
 
 /** Thrown for user-readable provider/transport failures. */

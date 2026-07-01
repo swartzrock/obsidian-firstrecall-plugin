@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { confidenceSchema, type ValidationResult } from "./schemas";
+import {
+	confidenceSchema,
+	noteBriefOutputSchema,
+	sectionLensSchema,
+	type ValidationResult,
+} from "./schemas";
 import { cueEligibleSections, type Section } from "./parser";
 import type { NoteGenerationResult } from "./generator";
 
@@ -7,7 +12,7 @@ import type { NoteGenerationResult } from "./generator";
  * Persisted per-note study data. Bumping CACHE_SCHEMA_VERSION requires adding a
  * migration step in `migrateCache` so existing caches upgrade rather than break.
  */
-export const CACHE_SCHEMA_VERSION = 3;
+export const CACHE_SCHEMA_VERSION = 4;
 
 const cachedSectionSchema = z.object({
 	id: z.string(),
@@ -19,6 +24,7 @@ const cachedSectionSchema = z.object({
 	question: z.string().nullable(),
 	confidence: confidenceSchema.nullable(),
 	rationale: z.string().nullable(),
+	sectionLens: sectionLensSchema.nullable(),
 	error: z.string().nullable(),
 });
 
@@ -36,6 +42,7 @@ export const noteCacheSchema = z.object({
 	}),
 	sections: z.array(cachedSectionSchema),
 	summary: z.string().nullable(),
+	noteBrief: noteBriefOutputSchema.nullable(),
 });
 
 export type CachedSection = z.infer<typeof cachedSectionSchema>;
@@ -71,9 +78,11 @@ export function buildNoteCache(params: BuildCacheParams): NoteCache {
 			question: s.question,
 			confidence: s.confidence,
 			rationale: s.rationale ?? null,
+			sectionLens: s.sectionLens ?? null,
 			error: s.error,
 		})),
 		summary: params.result.summary,
+		noteBrief: params.result.noteBrief,
 	};
 }
 
@@ -96,6 +105,7 @@ export function validateCache(raw: unknown): ValidationResult<NoteCache> {
  *
  * v1 -> v2: v1 lacked `level`, `outline`, `generationMode`, and `preset`.
  * v2 -> v3: v2 lacked per-cue `rationale`.
+ * v3 -> v4: v3 lacked generated Section Lens and Note Brief artifacts.
  */
 export function migrateCache(raw: unknown): NoteCache | null {
 	if (!raw || typeof raw !== "object") return null;
@@ -124,10 +134,12 @@ export function migrateCache(raw: unknown): NoteCache | null {
 					question: sec.question ?? null,
 					confidence: sec.confidence ?? null,
 					rationale: null,
+					sectionLens: null,
 					error: sec.error ?? null,
 				};
 			}),
 			summary: obj.summary ?? null,
+			noteBrief: null,
 		};
 	}
 	if (version === 2) {
@@ -143,8 +155,25 @@ export function migrateCache(raw: unknown): NoteCache | null {
 						typeof sec.rationale === "string" && sec.rationale.trim()
 							? sec.rationale.trim()
 							: null,
+					sectionLens: null,
 				};
 			}),
+			noteBrief: null,
+		};
+	}
+	if (version === 3) {
+		const sections = Array.isArray(obj.sections) ? obj.sections : [];
+		candidate = {
+			...obj,
+			schemaVersion: CACHE_SCHEMA_VERSION,
+			sections: sections.map((s) => {
+				const sec = (s ?? {}) as Record<string, unknown>;
+				return {
+					...sec,
+					sectionLens: null,
+				};
+			}),
+			noteBrief: null,
 		};
 	}
 

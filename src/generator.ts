@@ -4,6 +4,7 @@ import {
 	DEFAULT_CUE_GENERATION_OPTIONS,
 	type CueGenerationOptions,
 } from "./cue-generation";
+import type { NoteBriefOutput, SectionLens } from "./schemas";
 
 export interface SectionResult {
 	id: string;
@@ -15,6 +16,7 @@ export interface SectionResult {
 	question: string | null;
 	confidence: "high" | "medium" | "low" | null;
 	rationale: string | null;
+	sectionLens: SectionLens | null;
 	/** Non-null when this section failed validation/generation (isolated). */
 	error: string | null;
 }
@@ -23,6 +25,7 @@ export interface NoteGenerationResult {
 	sections: SectionResult[];
 	summary: string | null;
 	learningObjective: string | null;
+	noteBrief: NoteBriefOutput | null;
 	/** True if generation was cancelled before completing the summary. */
 	canceled: boolean;
 }
@@ -116,6 +119,7 @@ function emptySectionResult(
 		question: null,
 		confidence: null,
 		rationale: null,
+		sectionLens: null,
 		error: null,
 	};
 }
@@ -140,6 +144,7 @@ function applyCueResult(
 	result.question = item.cue.question;
 	result.confidence = item.cue.confidence;
 	result.rationale = item.cue.rationale ?? null;
+	result.sectionLens = item.cue.sectionLens ?? null;
 }
 
 /**
@@ -303,6 +308,7 @@ export async function generateNote(
 
 	let summary: string | null = null;
 	let learningObjective: string | null = null;
+	let noteBrief: NoteBriefOutput | null = null;
 	const completedResults = results.filter(
 		(r): r is SectionResult => Boolean(r)
 	);
@@ -312,6 +318,7 @@ export async function generateNote(
 			sections: completedResults,
 			summary,
 			learningObjective,
+			noteBrief,
 			canceled: true,
 		};
 	}
@@ -321,7 +328,7 @@ export async function generateNote(
 			.map((r) => r.question)
 			.filter((q): q is string => Boolean(q));
 		if (!questions.length) {
-			return { sections: completedResults, summary, learningObjective, canceled };
+			return { sections: completedResults, summary, learningObjective, noteBrief, canceled };
 		}
 		const t0 = Date.now();
 		try {
@@ -342,5 +349,5 @@ export async function generateNote(
 		}
 	}
 
-	return { sections: completedResults, summary, learningObjective, canceled };
+	return { sections: completedResults, summary, learningObjective, noteBrief, canceled };
 }
