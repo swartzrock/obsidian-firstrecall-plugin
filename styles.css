@@ -1822,7 +1822,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 @media (min-width: 1180px) {
 	.markdown-source-view.mod-cm6
 		.cm-editor.cuecraft-editor-hook-page-shift {
-		--cuecraft-editor-page-shift: clamp(5.5rem, 9vw, 9rem);
+		--cuecraft-editor-page-shift: clamp(6.5rem, 11vw, 11rem);
 	}
 
 	.markdown-source-view.mod-cm6
@@ -1842,7 +1842,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	.markdown-source-view.mod-cm6
 		.cm-editor.cuecraft-editor-hook-page-shift
 		.cuecraft-editor-hook-gutter
-		.cuecraft-editor-hook-anchored-card-rail,
+		.cuecraft-editor-hook-anchored-card-rail {
+		width: clamp(14.5rem, 21vw, 17.5rem);
+	}
+
 	.markdown-source-view.mod-cm6
 		.cm-editor.cuecraft-editor-hook-page-shift
 		.cuecraft-editor-hook-gutter
@@ -1880,7 +1883,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 @media (min-width: 980px) and (max-width: 1179.98px) {
 	.markdown-source-view.mod-cm6
 		.cm-editor.cuecraft-editor-hook-page-shift {
-		--cuecraft-editor-page-shift: clamp(2rem, 5vw, 3.5rem);
+		--cuecraft-editor-page-shift: clamp(4rem, 8vw, 6rem);
 	}
 
 	.markdown-source-view.mod-cm6
@@ -1888,6 +1891,13 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		.cm-contentContainer {
 		transform: translateX(var(--cuecraft-editor-page-shift));
 		transition: transform 140ms ease;
+	}
+
+	.markdown-source-view.mod-cm6
+		.cm-editor.cuecraft-editor-hook-page-shift
+		.cuecraft-editor-hook-gutter
+		.cuecraft-editor-hook-anchored-card-rail {
+		width: clamp(10rem, 19vw, 13rem);
 	}
 }
 
