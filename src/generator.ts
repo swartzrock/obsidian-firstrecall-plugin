@@ -1,5 +1,5 @@
 import { cueEligibleSections, parseSections } from "./parser";
-import type { ByokProviderRuntime, ByokCueBatchResult } from "./byok";
+import type { ByokProviderRuntime, ByokCueBatchResult } from "@cuecraft/byok";
 import {
 	DEFAULT_CUE_GENERATION_OPTIONS,
 	type CueGenerationOptions,

@@ -1,14 +1,14 @@
 {
-	"extends": "./tsconfig.json",
+	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"allowJs": false,
 		"declaration": true,
 		"declarationMap": true,
 		"emitDeclarationOnly": true,
 		"moduleResolution": "bundler",
-		"outDir": ".tmp/byok-types",
-		"rootDir": "src/byok",
+		"outDir": ".tmp/types",
+		"rootDir": "src",
 		"skipLibCheck": true
 	},
-	"include": ["src/byok/**/*.ts"]
+	"include": ["src/**/*.ts"]
 }

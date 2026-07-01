@@ -8,7 +8,7 @@ import {
 	sortByokModelOptions,
 	normalizeStringId,
 	type ModelOption,
-} from "../src/byok";
+} from "../src";
 
 function opt(
 	id: string,

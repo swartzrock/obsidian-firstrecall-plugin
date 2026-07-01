@@ -25,7 +25,7 @@ import {
 	type ByokProviderRuntime,
 	type ByokHttpClient,
 	byokProviderDefinition,
-} from "./byok";
+} from "@cuecraft/byok";
 import { generateNote, generateSectionCue, type SectionResult } from "./generator";
 import {
 	cueCraftProviderCredential,

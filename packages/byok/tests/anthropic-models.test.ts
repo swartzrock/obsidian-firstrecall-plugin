@@ -10,7 +10,7 @@ import {
 	isAnthropicCustomModelSelection,
 	normalizeAnthropicModelSelection,
 	refreshAnthropicModelOptions,
-} from "../../src/byok";
+} from "../src";
 
 function modelInfo(id: string, display_name: string): ModelInfo {
 	return {

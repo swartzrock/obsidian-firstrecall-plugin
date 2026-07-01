@@ -18,8 +18,8 @@ import {
 	type ByokSetupStatus,
 	type ByokStoredSettings,
 	type ByokVerificationSnapshotMap,
-} from "./byok";
-import { createByokNodeProvider } from "./byok/node";
+} from "@cuecraft/byok";
+import { createByokNodeProvider } from "@cuecraft/byok/node";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import type { CueCraftSettings } from "./settings";
 import {
@@ -34,7 +34,7 @@ export type CueCraftProviderFactoryDeps = ByokProviderDeps;
 export type CueCraftProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type CueCraftByokSettings = ByokStoredSettings;
 export type CueCraftByokProviderSettings = ByokProviderStoredSettings;
-export type { ByokProviderConfig, ByokProviderDeps } from "./byok";
+export type { ByokProviderConfig, ByokProviderDeps } from "@cuecraft/byok";
 
 export type CueCraftFetchedModelProvider =
 	| "ollama"

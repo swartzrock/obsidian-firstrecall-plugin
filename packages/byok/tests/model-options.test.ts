@@ -7,7 +7,7 @@ import {
 	sortModelOptions,
 	type ModelOption,
 	type OpenRouterRawModel,
-} from "../src/byok";
+} from "../src";
 
 describe("normalizeStringId", () => {
 	it("normalizes a plain model ID from a string-only provider", () => {

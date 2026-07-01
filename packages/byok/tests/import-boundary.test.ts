@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 interface SourceFile {
@@ -28,6 +29,8 @@ const FORBIDDEN_SOURCE_PATTERNS: Array<[RegExp, string]> = [
 	[/\bdocument\./, "DOM document access"],
 	[/\bwindow\./, "DOM window access"],
 ];
+const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const SOURCE_ROOT = join(PACKAGE_ROOT, "src");
 
 function importedSpecifiers(source: string): string[] {
 	const specifiers: string[] = [];
@@ -65,10 +68,10 @@ function findForbiddenByokImports(files: SourceFile[]): string[] {
 			if (
 				specifier.startsWith(".") &&
 				!resolvedLocalImportPath(file.path, specifier).startsWith(
-					normalize("src/byok/")
+					normalize("src/")
 				)
 			) {
-				violations.push(`${file.path} imports ${specifier} outside src/byok`);
+				violations.push(`${file.path} imports ${specifier} outside src`);
 				continue;
 			}
 			if (
@@ -103,9 +106,8 @@ function collectTypeScriptFiles(dir: string): string[] {
 }
 
 function readByokSources(): SourceFile[] {
-	const root = join(process.cwd(), "src", "byok");
-	return collectTypeScriptFiles(root).map((path) => ({
-		path: relative(process.cwd(), path),
+	return collectTypeScriptFiles(SOURCE_ROOT).map((path) => ({
+		path: relative(PACKAGE_ROOT, path),
 		source: readFileSync(path, "utf8"),
 	}));
 }
@@ -115,7 +117,7 @@ describe("BYOK import boundary", () => {
 		expect(
 			findForbiddenByokImports([
 				{
-					path: "src/byok/bad.ts",
+					path: "src/bad.ts",
 					source:
 						'import { App } from "obsidian";\n' +
 						'import type { EditorView } from "@codemirror/view";\n' +
@@ -128,16 +130,16 @@ describe("BYOK import boundary", () => {
 				},
 			])
 		).toEqual([
-			"src/byok/bad.ts imports obsidian",
-			"src/byok/bad.ts imports @codemirror/view",
-			"src/byok/bad.ts imports ../settings outside src/byok",
-			"src/byok/bad.ts imports ../model-combobox outside src/byok",
-			"src/byok/bad.ts imports ../../cue-generation outside src/byok",
-			"src/byok/bad.ts imports ../../providers/openai-provider",
-			"src/byok/bad.ts uses DOM element type",
-			"src/byok/bad.ts uses Obsidian DOM helper",
-			"src/byok/bad.ts uses Obsidian active document global",
-			"src/byok/bad.ts uses DOM document access",
+			"src/bad.ts imports obsidian",
+			"src/bad.ts imports @codemirror/view",
+			"src/bad.ts imports ../settings outside src",
+			"src/bad.ts imports ../model-combobox outside src",
+			"src/bad.ts imports ../../cue-generation outside src",
+			"src/bad.ts imports ../../providers/openai-provider",
+			"src/bad.ts uses DOM element type",
+			"src/bad.ts uses Obsidian DOM helper",
+			"src/bad.ts uses Obsidian active document global",
+			"src/bad.ts uses DOM document access",
 		]);
 	});
 

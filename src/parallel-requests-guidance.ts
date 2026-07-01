@@ -1,4 +1,4 @@
-import { byokProviderDefinition, isByokProviderId } from "./byok";
+import { byokProviderDefinition, isByokProviderId } from "@cuecraft/byok";
 
 export interface ParallelRequestsGuidanceSettings {
 	sectionConcurrency: number;

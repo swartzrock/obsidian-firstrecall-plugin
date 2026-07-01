@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
-import { OpenAIProvider } from "../src/byok/providers/openai-provider";
-import { GoogleProvider } from "../src/byok/providers/google-provider";
-import { XaiProvider } from "../src/byok/providers/xai-provider";
-import { OpenRouterProvider } from "../src/byok/providers/openrouter-provider";
-import type { ObjectGenerator } from "../src/byok/providers/ai-sdk-provider";
-import { ProviderError, ProviderRateLimitError } from "../src/byok/providers/types";
-import { normalizeStringId, type ModelOption } from "../src/byok/models/model-options";
+import { OpenAIProvider } from "../src/providers/openai-provider";
+import { GoogleProvider } from "../src/providers/google-provider";
+import { XaiProvider } from "../src/providers/xai-provider";
+import { OpenRouterProvider } from "../src/providers/openrouter-provider";
+import type { ObjectGenerator } from "../src/providers/ai-sdk-provider";
+import { ProviderError, ProviderRateLimitError } from "../src/providers/types";
+import { normalizeStringId, type ModelOption } from "../src/models/model-options";
 
 type Ctor = new (opts: {
 	apiKey: string;

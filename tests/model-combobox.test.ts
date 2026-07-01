@@ -7,7 +7,7 @@ import {
 	modelOptionSearchText,
 	renderModelCombobox,
 } from "../src/model-combobox";
-import { normalizeStringId, type ModelOption } from "../src/byok";
+import { normalizeStringId, type ModelOption } from "@cuecraft/byok";
 
 function opt(
 	id: string,

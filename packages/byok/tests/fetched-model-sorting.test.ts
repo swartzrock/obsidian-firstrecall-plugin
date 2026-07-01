@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sortFetchedModelIds } from "../src/byok";
+import { sortFetchedModelIds } from "../src";
 
 describe("sortFetchedModelIds", () => {
 	it("sorts fetched model IDs in a natural, readable order", () => {

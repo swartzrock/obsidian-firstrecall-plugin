@@ -4,7 +4,7 @@ import {
 	type ByokHttpClient,
 	type ByokProviderDeps,
 	type ByokProviderRuntime,
-} from "../../../src/byok";
+} from "../../src";
 
 const http: ByokHttpClient = async () => ({
 	status: 200,

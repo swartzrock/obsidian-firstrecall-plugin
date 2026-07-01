@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import {
 	ClaudeCliProvider,
 	extractClaudeCliOutput,
-} from "../src/byok/providers/claude-cli-provider";
-import { defaultLocalCliCwd } from "../src/byok/providers/local-command-runner";
+} from "../src/providers/claude-cli-provider";
+import { defaultLocalCliCwd } from "../src/providers/local-command-runner";
 import type {
 	LocalCommandRequest,
 	LocalCommandResult,
-} from "../src/byok/providers/local-command-runner";
-import { ProviderError } from "../src/byok/providers/types";
+} from "../src/providers/local-command-runner";
+import { ProviderError } from "../src/providers/types";
 
 function result(stdout: string, stderr = ""): LocalCommandResult {
 	return { stdout, stderr, exitCode: 0 };

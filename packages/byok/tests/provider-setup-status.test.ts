@@ -6,7 +6,7 @@ import {
 	type ByokProviderId,
 	type ByokProviderStoredSettings,
 	type ProviderSetupStatusSettings,
-} from "../src/byok";
+} from "../src";
 
 function providerSettings(
 	credential: string,

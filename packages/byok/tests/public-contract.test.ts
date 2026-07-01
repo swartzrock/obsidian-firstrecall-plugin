@@ -1,12 +1,16 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import * as byok from "../../src/byok";
+import * as byok from "../src";
 import type {
 	ByokProviderConfig,
 	ByokProviderDefinition,
 	ByokProviderRuntime,
-} from "../../src/byok";
+} from "../src";
+
+const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
+const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 
 describe("BYOK public contract", () => {
 	it("exports only the intentional main-entry public API", () => {
@@ -17,12 +21,20 @@ describe("BYOK public contract", () => {
 			"ByokProviderError",
 			"ByokProviderRateLimitError",
 			"CLI_DEFAULT_MODEL_SENTINEL",
+			"CUE_DENSITIES",
+			"DEFAULT_CUE_DENSITY",
+			"DEFAULT_CUE_GENERATION_OPTIONS",
+			"DEFAULT_QUESTION_STYLE",
+			"QUESTION_STYLES",
 			"anthropicModelInfoToByokModelOption",
 			"buildAnthropicModelOptions",
 			"byokProviderDefinition",
 			"byokProviderDefinitions",
 			"compareFetchedModelIds",
+			"confidenceSchema",
 			"createByokProvider",
+			"cueDensityGuidance",
+			"cueDensityLabel",
 			"deriveProviderSetupStatus",
 			"describeAnthropicModel",
 			"describeAnthropicModelDetails",
@@ -30,9 +42,12 @@ describe("BYOK public contract", () => {
 			"formatAnthropicUnavailableModelMessage",
 			"isAnthropicCustomModelSelection",
 			"isByokProviderId",
+			"isCueDensity",
 			"isLargeContextModel",
 			"isLowCostModel",
 			"isModelOption",
+			"isQuestionStyle",
+			"keywordGuidance",
 			"modelCompatibilityBadges",
 			"modelCompatibilityWarning",
 			"modelStructuredOutputSupport",
@@ -42,6 +57,7 @@ describe("BYOK public contract", () => {
 			"normalizeProviderId",
 			"normalizeStringId",
 			"providerCredentialFingerprint",
+			"questionStyleGuidance",
 			"recordProviderConnectionSuccess",
 			"refreshAnthropicModelOptions",
 			"sortByokModelOptions",
@@ -53,7 +69,9 @@ describe("BYOK public contract", () => {
 	});
 
 	it("keeps BYOK free of app and storage imports", () => {
-		const files = walkFiles("src/byok").filter((path) => path.endsWith(".ts"));
+		const files = walkFiles(join(PACKAGE_ROOT, "src")).filter((path) =>
+			path.endsWith(".ts")
+		);
 		for (const file of files) {
 			const source = readFileSync(file, "utf8");
 			expect(source, file).not.toMatch(/from\s+["'](?:obsidian|electron)["']/);
@@ -63,13 +81,13 @@ describe("BYOK public contract", () => {
 	});
 
 	it("documents examples against the public barrel", () => {
-		const doc = readFileSync("docs/byok-extraction.md", "utf8");
+		const doc = readFileSync(join(REPO_ROOT, "docs", "byok-extraction.md"), "utf8");
 		const codeExamples = [...doc.matchAll(/```(?:ts|typescript)\n([\s\S]*?)```/g)]
 			.map((match) => match[1] ?? "")
 			.join("\n");
 
-		expect(codeExamples).toContain('from "./byok"');
-		expect(codeExamples).toContain('from "./byok/node"');
+		expect(codeExamples).toContain('from "@cuecraft/byok"');
+		expect(codeExamples).toContain('from "@cuecraft/byok/node"');
 		expect(codeExamples).not.toMatch(
 			/from\s+["'][^"']*byok\/(?:models|providers|registry|setup-status|types)/
 		);

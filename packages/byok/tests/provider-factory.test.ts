@@ -3,11 +3,11 @@ import {
 	createByokProvider,
 	type ByokCoreProviderConfig,
 	type ByokHttpClient,
-} from "../../src/byok";
+} from "../src";
 import {
 	createByokNodeProvider,
 	type ByokProviderConfig,
-} from "../../src/byok/node";
+} from "../src/node";
 
 const http: ByokHttpClient = async () => ({ status: 200, text: "{}", json: {} });
 const fetchImpl = (async () => new Response("{}")) as typeof fetch;

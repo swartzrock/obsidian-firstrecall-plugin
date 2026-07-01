@@ -80,7 +80,7 @@ import {
 	type ByokStoredSettings,
 	type ModelOption,
 	type ModelOptionSource,
-} from "./byok";
+} from "@cuecraft/byok";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
 import {
 	applyCueCraftListedModels,

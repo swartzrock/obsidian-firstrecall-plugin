@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join, normalize } from "node:path";
+import { dirname, join, normalize, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const NODE_BUILTIN_IMPORTS = [
@@ -7,9 +8,21 @@ const NODE_BUILTIN_IMPORTS = [
 	"node:os",
 	"node:stream",
 ] as const;
+const PACKAGE_ROOT = fileURLToPath(new URL("..", import.meta.url));
+
+function fromPackage(path: string): string {
+	return join(PACKAGE_ROOT, path);
+}
+
+function toPackagePath(path: string): string {
+	return normalize(relative(PACKAGE_ROOT, path));
+}
 
 function readJson(path: string): Record<string, unknown> {
-	return JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
+	return JSON.parse(readFileSync(fromPackage(path), "utf8")) as Record<
+		string,
+		unknown
+	>;
 }
 
 function localImports(path: string): string[] {
@@ -34,7 +47,7 @@ function resolveSourcePath(fromPath: string, specifier: string): string | null {
 
 function transitiveLocalSources(entrypoint: string): string[] {
 	const seen = new Set<string>();
-	const queue = [entrypoint];
+	const queue = [fromPackage(entrypoint)];
 	while (queue.length) {
 		const current = queue.shift();
 		if (!current || seen.has(current)) continue;
@@ -44,12 +57,12 @@ function transitiveLocalSources(entrypoint: string): string[] {
 			if (resolved) queue.push(resolved);
 		}
 	}
-	return [...seen].sort();
+	return [...seen].map(toPackagePath).sort();
 }
 
 describe("BYOK package readiness", () => {
 	it("drafts package exports, declarations, and publish metadata", () => {
-		const manifest = readJson("byok.package.json");
+		const manifest = readJson("package.json");
 		expect(manifest).toMatchObject({
 			type: "module",
 			sideEffects: false,
@@ -76,28 +89,30 @@ describe("BYOK package readiness", () => {
 			"LICENSE",
 			"package.json",
 		]);
+		expect(existsSync(fromPackage("README.md"))).toBe(true);
+		expect(existsSync(fromPackage("LICENSE"))).toBe(true);
 	});
 
 	it("declares BYOK-only type output", () => {
-		const config = readJson("tsconfig.byok.json");
-		expect(config.include).toEqual(["src/byok/**/*.ts"]);
+		const config = readJson("tsconfig.json");
+		expect(config.include).toEqual(["src/**/*.ts"]);
 		expect(config.compilerOptions).toMatchObject({
 			declaration: true,
 			declarationMap: true,
 			emitDeclarationOnly: true,
-			outDir: ".tmp/byok-types",
-			rootDir: "src/byok",
+			outDir: ".tmp/types",
+			rootDir: "src",
 		});
 	});
 
 	it("keeps the main entrypoint away from Node-only local CLI files", () => {
-		const files = transitiveLocalSources("src/byok/index.ts");
-		expect(files).not.toContain("src/byok/node.ts");
-		expect(files).not.toContain("src/byok/providers/local-command-runner.ts");
-		expect(files).not.toContain("src/byok/providers/codex-cli-provider.ts");
-		expect(files).not.toContain("src/byok/providers/claude-cli-provider.ts");
+		const files = transitiveLocalSources("src/index.ts");
+		expect(files).not.toContain("src/node.ts");
+		expect(files).not.toContain("src/providers/local-command-runner.ts");
+		expect(files).not.toContain("src/providers/codex-cli-provider.ts");
+		expect(files).not.toContain("src/providers/claude-cli-provider.ts");
 		for (const file of files) {
-			const source = readFileSync(file, "utf8");
+			const source = readFileSync(fromPackage(file), "utf8");
 			for (const nodeImport of NODE_BUILTIN_IMPORTS) {
 				expect(source, file).not.toContain(nodeImport);
 			}
@@ -105,7 +120,7 @@ describe("BYOK package readiness", () => {
 	});
 
 	it("keeps the Node subpath as the only local CLI entrypoint", () => {
-		const nodeSource = readFileSync("src/byok/node.ts", "utf8");
+		const nodeSource = readFileSync(fromPackage("src/node.ts"), "utf8");
 		expect(nodeSource).toContain("./providers/local-command-runner");
 		expect(nodeSource).toContain("./providers/codex-cli-provider");
 		expect(nodeSource).toContain("./providers/claude-cli-provider");

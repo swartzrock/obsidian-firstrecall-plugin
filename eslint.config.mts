@@ -20,6 +20,7 @@ const currentCodebaseRules = {
   "@typescript-eslint/no-unsafe-assignment": "off",
   "@typescript-eslint/no-unsafe-call": "off",
   "@typescript-eslint/no-unsafe-member-access": "off",
+  "@typescript-eslint/unbound-method": "off",
   "obsidianmd/no-global-this": "off",
   "obsidianmd/prefer-window-timers": "off",
   "obsidianmd/settings-tab/no-problematic-settings-headings": "off",
@@ -42,7 +43,7 @@ const jsonMetadataRules = {
 
 export default defineConfig([
   {
-    ignores: [".agents/", ".tmp/", "main.js", "node_modules/", "coverage/", "v0-prototype/"],
+    ignores: [".agents/", ".tmp/", "**/.tmp/", "main.js", "node_modules/", "coverage/", "v0-prototype/"],
   },
   ...obsidianmd.configs.recommended,
   {
@@ -71,7 +72,7 @@ export default defineConfig([
     ...json.configs.recommended,
   },
   {
-    files: ["src/**/*.ts", "tests/**/*.ts"],
+    files: ["packages/**/*.ts", "src/**/*.ts", "tests/**/*.ts"],
     languageOptions: {
       parser: tsparser,
       parserOptions: typedParserOptions,
@@ -89,7 +90,7 @@ export default defineConfig([
     },
   },
   {
-    files: ["tests/**/*.ts"],
+    files: ["packages/*/tests/**/*.ts", "tests/**/*.ts"],
     rules: {
       "@microsoft/sdl/no-inner-html": "off",
       "@typescript-eslint/no-unnecessary-type-assertion": "off",

@@ -42,6 +42,7 @@ export class AnthropicProvider extends AiSdkProvider {
 			dangerouslyAllowBrowser: true,
 		});
 		const models: ModelInfo[] = [];
+		// eslint-disable-next-line @typescript-eslint/await-thenable -- PagePromise implements AsyncIterable.
 		for await (const model of client.models.list()) {
 			models.push(model);
 		}

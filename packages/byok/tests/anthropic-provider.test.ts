@@ -4,8 +4,8 @@ import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import {
 	AnthropicProvider,
 	type ObjectGenerator,
-} from "../src/byok/providers/anthropic-provider";
-import { ProviderError } from "../src/byok/providers/types";
+} from "../src/providers/anthropic-provider";
+import { ProviderError } from "../src/providers/types";
 
 /** Generator that returns a fixed object and records the last prompt seen. */
 function fixedGenerator(value: unknown): {

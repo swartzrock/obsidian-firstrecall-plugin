@@ -10,6 +10,7 @@
         "@ai-sdk/openai": "^3.0.68",
         "@ai-sdk/xai": "^3.0.93",
         "@anthropic-ai/sdk": "^0.104.1",
+        "@cuecraft/byok": "workspace:*",
         "@google/genai": "^2.8.0",
         "ai": "^6.0.197",
         "ollama": "^0.6.3",
@@ -36,6 +37,29 @@
         "tslib": "2.6.2",
         "typescript": "^5.8.3",
         "typescript-eslint": "^8.34.1",
+        "vitest": "^3.2.4",
+      },
+    },
+    "packages/byok": {
+      "name": "@cuecraft/byok",
+      "version": "0.0.0-private",
+      "dependencies": {
+        "@ai-sdk/anthropic": "^3.0.81",
+        "@ai-sdk/google": "^3.0.80",
+        "@ai-sdk/openai": "^3.0.68",
+        "@ai-sdk/provider-utils": "^4.0.27",
+        "@ai-sdk/xai": "^3.0.93",
+        "@anthropic-ai/sdk": "^0.104.1",
+        "@google/genai": "^2.8.0",
+        "ai": "^6.0.197",
+        "ollama": "^0.6.3",
+        "openai": "^6.42.0",
+        "tslib": "2.6.2",
+        "zod": "^3.25.76",
+      },
+      "devDependencies": {
+        "@types/node": "^24.0.4",
+        "typescript": "^5.8.3",
         "vitest": "^3.2.4",
       },
     },
@@ -76,6 +100,8 @@
     "@csstools/css-parser-algorithms": ["@csstools/css-parser-algorithms@3.0.5", "", { "peerDependencies": { "@csstools/css-tokenizer": "^3.0.4" } }, "sha512-DaDeUkXZKjdGhgYaHNJTV9pV7Y9B3b644jCLs9Upc3VeNGg6LWARAT6O+Q+/COo+2gg/bM5rhpMAtf70WqfBdQ=="],
 
     "@csstools/css-tokenizer": ["@csstools/css-tokenizer@3.0.4", "", {}, "sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw=="],
+
+    "@cuecraft/byok": ["@cuecraft/byok@workspace:packages/byok"],
 
     "@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.28.1", "", { "os": "aix", "cpu": "ppc64" }, "sha512-Svl7tq8k/08+p6CXPpRjQ1fKX+1odH/BQbb48fV6fj3CWHhsoIOoY87w1oHXm0qEpkIK3ZfVgp0hed3XBXzXMQ=="],
 

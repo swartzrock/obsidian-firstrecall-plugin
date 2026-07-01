@@ -5,7 +5,7 @@ import {
 	modelCompatibilityBadges,
 	normalizeOpenRouterModel,
 	recordProviderConnectionSuccess,
-} from "../../src/byok";
+} from "../src";
 
 describe("BYOK model metadata and setup status", () => {
 	it("normalizes model metadata and exposes compatibility helpers", () => {

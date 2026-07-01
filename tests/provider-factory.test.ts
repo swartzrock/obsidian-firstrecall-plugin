@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { CueCraftSettings } from "../src/settings";
-import { ClaudeCliProvider } from "../src/byok/providers/claude-cli-provider";
-import { CodexCliProvider } from "../src/byok/providers/codex-cli-provider";
+import { ClaudeCliProvider } from "@cuecraft/byok/node";
+import { CodexCliProvider } from "@cuecraft/byok/node";
 import {
 	makeCueCraftByokProvider,
 	cueCraftProviderConfigFromSettings,

@@ -17,7 +17,7 @@ import type {
 	ByokProviderStatus,
 	ByokSummaryInput,
 	ByokSummaryOutput,
-} from "../src/byok";
+} from "@cuecraft/byok";
 
 interface MockOptions {
 	failOnHeading?: string;
