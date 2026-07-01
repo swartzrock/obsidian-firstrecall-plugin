@@ -3,6 +3,7 @@ import {
 	extractJson,
 	validateCue,
 	validateCueBatch,
+	validateNoteBrief,
 	validateSummary,
 } from "../src/schemas";
 
@@ -72,6 +73,41 @@ describe("validateCue", () => {
 		);
 		expect(r.ok).toBe(true);
 		if (r.ok) expect(r.value.rationale).toBe("The section is sparse.");
+	});
+
+	it("accepts an optional Section Lens", () => {
+		const r = validateCue(
+			JSON.stringify({
+				question: "Q",
+				keywords: ["a", "b"],
+				confidence: "high",
+				sectionLens: {
+					takeaway: "Focus on agent autonomy.",
+					keyPhrase: "agent autonomy",
+					explanation: "This phrase separates multi-step work from chat.",
+				},
+			})
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) {
+			expect(r.value.sectionLens?.keyPhrase).toBe("agent autonomy");
+		}
+	});
+
+	it("rejects a malformed Section Lens when present", () => {
+		const r = validateCue(
+			JSON.stringify({
+				question: "Q",
+				keywords: ["a", "b"],
+				confidence: "high",
+				sectionLens: {
+					keyPhrase: "agent autonomy",
+					explanation: "This phrase separates multi-step work from chat.",
+				},
+			})
+		);
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error).toMatch(/sectionLens\.takeaway/);
 	});
 
 	it("accepts a nullable rationale from strict structured output", () => {
@@ -159,5 +195,41 @@ describe("validateSummary", () => {
 
 	it("rejects a missing summary", () => {
 		expect(validateSummary("{}").ok).toBe(false);
+	});
+});
+
+describe("validateNoteBrief", () => {
+	it("accepts an overview with the three review cards", () => {
+		const r = validateNoteBrief(
+			JSON.stringify({
+				overview: "The note explains how AI work depends on encoded context.",
+				whatMatters: {
+					title: "Trust boundaries decide what can ship.",
+					detail: "Governance changes whether AI workflows are usable.",
+				},
+				reviewFirst: {
+					title: "Transform Product Dev",
+					detail: "This section carries the central claim.",
+				},
+				sayItBack: {
+					title: "Why are plugins reusable expertise?",
+					detail: "Answering this checks the main idea.",
+				},
+			})
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.reviewFirst.title).toBe("Transform Product Dev");
+	});
+
+	it("rejects a missing Note Brief overview", () => {
+		const r = validateNoteBrief(
+			JSON.stringify({
+				whatMatters: { title: "A", detail: "B" },
+				reviewFirst: { title: "C", detail: "D" },
+				sayItBack: { title: "E", detail: "F" },
+			})
+		);
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error).toMatch(/overview/);
 	});
 });

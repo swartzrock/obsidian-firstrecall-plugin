@@ -92,7 +92,7 @@ describe("BYOK public contract", () => {
 		);
 	});
 
-	it("exports a runtime shape with cue, batch, summary, status, and model hooks", async () => {
+	it("exports a runtime shape with cue, batch, summary, note brief, status, and model hooks", async () => {
 		const runtime: ByokProviderRuntime = {
 			id: "openai",
 			label: "OpenAI (ChatGPT)",
@@ -109,6 +109,11 @@ describe("BYOK public contract", () => {
 					question: "What changed?",
 					keywords: ["provider", "contract"],
 					confidence: "high",
+					sectionLens: {
+						takeaway: "Provider contracts now include review artifacts.",
+						keyPhrase: "review artifacts",
+						explanation: "Section Lens data travels with the cue.",
+					},
 				};
 			},
 			async generateCues() {
@@ -118,6 +123,11 @@ describe("BYOK public contract", () => {
 							question: "What changed?",
 							keywords: ["provider", "contract"],
 							confidence: "high",
+							sectionLens: {
+								takeaway: "Provider contracts now include review artifacts.",
+								keyPhrase: "review artifacts",
+								explanation: "Section Lens data travels with the cue.",
+							},
 						},
 					},
 				];
@@ -128,6 +138,23 @@ describe("BYOK public contract", () => {
 					learningObjective: null,
 				};
 			},
+			async generateNoteBrief() {
+				return {
+					overview: "Provider contracts now include review artifacts.",
+					whatMatters: {
+						title: "Review artifacts",
+						detail: "Generated review content is now part of the runtime shape.",
+					},
+					reviewFirst: {
+						title: "Provider contract",
+						detail: "Start with the shared interface before provider prompts.",
+					},
+					sayItBack: {
+						title: "What changed?",
+						detail: "Explain how Section Lens and Note Brief travel through BYOK.",
+					},
+				};
+			},
 		};
 
 		await expect(runtime.testConnection()).resolves.toEqual({
@@ -135,6 +162,19 @@ describe("BYOK public contract", () => {
 			message: "Connected.",
 		});
 		await expect(runtime.listModels?.()).resolves.toEqual(["gpt-4o-mini"]);
+		await expect(runtime.generateNoteBrief?.({
+			noteTitle: "BYOK",
+			fullText: "Provider contracts moved behind BYOK.",
+			sections: [
+				{
+					heading: "Contracts",
+					question: "What changed?",
+					keywords: ["provider", "contract"],
+				},
+			],
+		})).resolves.toMatchObject({
+			overview: "Provider contracts now include review artifacts.",
+		});
 	});
 
 	it("exposes every provider with stable labels and capability metadata", () => {

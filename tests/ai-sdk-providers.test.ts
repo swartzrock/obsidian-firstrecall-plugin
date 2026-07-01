@@ -41,6 +41,12 @@ type Ctor = new (opts: {
 	listModels: () => Promise<unknown[]>;
 };
 
+const sectionLens = {
+	takeaway: "X is the main idea to review.",
+	keyPhrase: "main idea",
+	explanation: "This phrase anchors the section for recall.",
+};
+
 /** Generator returning a fixed object and recording prompts. */
 function fixedGenerator(value: unknown): { generator: ObjectGenerator; prompts: string[] } {
 	const prompts: string[] = [];
@@ -75,6 +81,7 @@ for (const c of cases) {
 				keywords: ["a", "b", "c", "d", "e", "f"],
 				confidence: "HIGH",
 				rationale: null,
+				sectionLens,
 			});
 			const cue = await make(generator).generateCue({
 				heading: "X",
@@ -84,6 +91,7 @@ for (const c of cases) {
 			expect(cue.question).toBe("What is X?");
 			expect(cue.keywords).toHaveLength(5); // trimmed from 6
 			expect(cue.confidence).toBe("high"); // casing normalized
+			expect(cue.sectionLens?.keyPhrase).toBe("main idea");
 		});
 
 		it("uses an OpenAI strict cue schema with nullable rationale", async () => {
@@ -94,6 +102,7 @@ for (const c of cases) {
 						keywords: ["a", "b"],
 						confidence: "high",
 						rationale: null,
+						sectionLens,
 					}).success
 				).toBe(true);
 				expect(
@@ -108,6 +117,7 @@ for (const c of cases) {
 					keywords: ["a", "b"],
 					confidence: "high",
 					rationale: null,
+					sectionLens,
 				} as never;
 			};
 			const cue = await make(generator).generateCue({
@@ -134,6 +144,7 @@ for (const c of cases) {
 			expect(prompts[0]).toContain("light to sugar");
 			expect(prompts[0]).toContain("WHOLE NOTE");
 			expect(prompts[0]).toContain("exam-style");
+			expect(prompts[0]).toContain("sectionLens");
 		});
 
 		it("includes simpler preset guidance in the prompt", async () => {

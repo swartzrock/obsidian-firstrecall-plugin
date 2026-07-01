@@ -26,12 +26,19 @@ const opts = (generator: ObjectGenerator) => ({
 	generator,
 });
 
+const sectionLens = {
+	takeaway: "X is the main idea to review.",
+	keyPhrase: "main idea",
+	explanation: "This phrase anchors the section for recall.",
+};
+
 describe("AnthropicProvider.generateCue", () => {
 	it("returns a validated cue from the structured output", async () => {
 		const { generator } = fixedGenerator({
 			question: "What is X?",
 			keywords: ["a", "b", "c"],
 			confidence: "high",
+			sectionLens,
 		});
 		const p = new AnthropicProvider(opts(generator));
 		const cue = await p.generateCue({
@@ -42,6 +49,7 @@ describe("AnthropicProvider.generateCue", () => {
 		expect(cue.question).toBe("What is X?");
 		expect(cue.keywords).toEqual(["a", "b", "c"]);
 		expect(cue.confidence).toBe("high");
+		expect(cue.sectionLens?.keyPhrase).toBe("main idea");
 	});
 
 	it("coerces benign model quirks (>5 keywords, odd casing)", async () => {
@@ -73,6 +81,7 @@ describe("AnthropicProvider.generateCue", () => {
 		expect(prompts[0]).toContain("light to sugar");
 		expect(prompts[0]).toContain("WHOLE NOTE");
 		expect(prompts[0]).toContain("exam-style");
+		expect(prompts[0]).toContain("sectionLens");
 	});
 
 	it("throws a readable ProviderError when the model output is invalid", async () => {

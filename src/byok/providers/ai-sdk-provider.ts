@@ -20,6 +20,7 @@ import {
 	ProviderStatus,
 	SummaryInput,
 } from "./types";
+import { SECTION_LENS_PROMPT } from "./review-artifact-prompts";
 
 const PRESET_GUIDANCE: Record<string, string> = {
 	conceptual: "Favor a single conceptual question that tests understanding, not trivia.",
@@ -48,6 +49,19 @@ const cueGenSchema = z.object({
 		.string()
 		.nullable()
 		.describe("If confidence is low, a short reason why this cue may need review."),
+	sectionLens: z
+		.object({
+			takeaway: z
+				.string()
+				.describe("One short sentence summarizing the section's most important idea."),
+			keyPhrase: z
+				.string()
+				.describe("The most important phrase or term to notice."),
+			explanation: z
+				.string()
+				.describe("One short sentence explaining why the phrase matters for recall."),
+		})
+		.describe("A compact AI-native review lens for this section."),
 });
 
 const summaryGenSchema = z.object({
@@ -257,6 +271,7 @@ export class AiSdkProvider implements AiProvider {
 			`${questionStyleGuidance(input.options?.questionStyle)}\n` +
 			`${cueDensityGuidance(input.options?.cueDensity)}\n` +
 			`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
+			`${SECTION_LENS_PROMPT}\n` +
 			contextLine +
 			`\nSection heading: ${input.heading || "(untitled)"}\n` +
 			`Section content:\n${input.content}\n`;

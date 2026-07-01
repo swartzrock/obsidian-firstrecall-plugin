@@ -20,6 +20,7 @@ const currentCodebaseRules = {
   "@typescript-eslint/no-unsafe-assignment": "off",
   "@typescript-eslint/no-unsafe-call": "off",
   "@typescript-eslint/no-unsafe-member-access": "off",
+  "@typescript-eslint/unbound-method": "off",
   "obsidianmd/no-global-this": "off",
   "obsidianmd/prefer-window-timers": "off",
   "obsidianmd/settings-tab/no-problematic-settings-headings": "off",
@@ -42,7 +43,7 @@ const jsonMetadataRules = {
 
 export default defineConfig([
   {
-    ignores: [".agents/", ".tmp/", "main.js", "node_modules/", "coverage/", "v0-prototype/"],
+    ignores: [".agents/", ".tmp/", "**/.tmp/", "main.js", "node_modules/", "coverage/", "v0-prototype/"],
   },
   ...obsidianmd.configs.recommended,
   {

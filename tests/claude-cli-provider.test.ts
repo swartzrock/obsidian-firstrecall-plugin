@@ -38,6 +38,12 @@ function makeProvider(responses: Array<LocalCommandResult | Error>, model = ""):
 	};
 }
 
+const sectionLens = {
+	takeaway: "X is the main idea to review.",
+	keyPhrase: "main idea",
+	explanation: "This phrase anchors the section for recall.",
+};
+
 describe("extractClaudeCliOutput", () => {
 	it("extracts a string result from Claude JSON output", () => {
 		expect(
@@ -87,6 +93,7 @@ describe("ClaudeCliProvider", () => {
 						question: "What is X?",
 						keywords: ["a", "b"],
 						confidence: "high",
+						sectionLens,
 					},
 				})
 			),
@@ -99,6 +106,7 @@ describe("ClaudeCliProvider", () => {
 		});
 
 		expect(cue.question).toBe("What is X?");
+		expect(cue.sectionLens?.keyPhrase).toBe("main idea");
 		expect(run).toHaveBeenCalledTimes(1);
 		expect(run.mock.calls[0][0]).toMatchObject({
 			command: "claude",
@@ -129,7 +137,9 @@ describe("ClaudeCliProvider", () => {
 				"--json-schema",
 			])
 		);
+		expect(run.mock.calls[0][0].args.at(-1)).toContain("sectionLens");
 		expect(run.mock.calls[0][0].stdin).toContain("Section heading: X");
+		expect(run.mock.calls[0][0].stdin).toContain("sectionLens");
 	});
 
 	it("returns validated cues from a batched Claude structured output", async () => {
@@ -143,11 +153,13 @@ describe("ClaudeCliProvider", () => {
 								question: "What is A?",
 								keywords: ["a", "b"],
 								confidence: "high",
+								sectionLens,
 							},
 							{
 								question: "What is B?",
 								keywords: ["c", "d"],
 								confidence: "medium",
+								sectionLens,
 							},
 						],
 					},
@@ -166,6 +178,7 @@ describe("ClaudeCliProvider", () => {
 		]);
 		expect(run).toHaveBeenCalledTimes(1);
 		expect(run.mock.calls[0][0].stdin).toContain("Return ONLY a JSON object");
+		expect(run.mock.calls[0][0].stdin).toContain("sectionLens");
 		expect(run.mock.calls[0][0].stdin).toContain("Section 1");
 		expect(run.mock.calls[0][0].stdin).toContain("Section 2");
 	});

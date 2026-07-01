@@ -24,6 +24,10 @@ import {
 	cueBatchJsonSchema,
 	parseCueBatch,
 } from "./local-cli-cue-batch";
+import {
+	SECTION_LENS_JSON_SCHEMA,
+	SECTION_LENS_PROMPT,
+} from "./review-artifact-prompts";
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const STATUS_TIMEOUT_MS = 15_000;
@@ -60,8 +64,9 @@ const CUE_JSON_SCHEMA = JSON.stringify({
 		},
 		confidence: { enum: ["high", "medium", "low"] },
 		rationale: { type: "string" },
+		sectionLens: SECTION_LENS_JSON_SCHEMA,
 	},
-	required: ["question", "keywords", "confidence"],
+	required: ["question", "keywords", "confidence", "sectionLens"],
 	additionalProperties: false,
 });
 
@@ -243,7 +248,9 @@ export class ClaudeCliProvider implements AiProvider {
 			`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
 			`Return ONLY a JSON object with keys: "question" (string), ` +
 			`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
-			`and optional "rationale" (short reason, only when confidence is "low").\n` +
+			`optional "rationale" (short reason, only when confidence is "low"), ` +
+			`and "sectionLens" (object).\n` +
+			`${SECTION_LENS_PROMPT}\n` +
 			contextLine +
 			`\nSection heading: ${input.heading || "(untitled)"}\n` +
 			`Section content:\n${input.content}\n`;
