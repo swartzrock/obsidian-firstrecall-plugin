@@ -10,6 +10,7 @@ function cue(overrides: Partial<CueLineData> = {}): CueLineData {
 			"How do agents differ from chatbots, and how do tools make them useful?",
 		keywords: ["agents", "tools"],
 		confidence: "high",
+		sectionLens: null,
 		error: null,
 		...overrides,
 	};

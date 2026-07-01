@@ -1,5 +1,6 @@
 import type { NoteCache } from "./cache";
 import { cueEligibleSections, type Section } from "./parser";
+import type { NoteBriefOutput } from "./schemas";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -29,6 +30,7 @@ export interface CornellModel {
 	rows: CornellRow[];
 	summary: string | null;
 	learningObjective: string | null;
+	noteBrief: NoteBriefOutput | null;
 }
 
 export interface CornellTakeawayPresentation {
@@ -82,6 +84,7 @@ export function buildCornellModel(
 		rows,
 		summary: cache.summary,
 		learningObjective: cache.outline.learningObjective,
+		noteBrief: cache.noteBrief,
 	};
 }
 

@@ -14,13 +14,30 @@ import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
+const NOTE_BRIEF = {
+	overview: "This note explains the core agent workflow.",
+	whatMatters: {
+		title: "Agent workflow",
+		detail: "Agents can plan, decide, and use tools.",
+	},
+	reviewFirst: {
+		title: "Agent versus chatbot",
+		detail: "Review the single-turn chatbot contrast.",
+	},
+	sayItBack: {
+		title: "Explain the distinction",
+		detail: "Say why tool use changes the task boundary.",
+	},
+};
 
 function cacheFrom(
 	overrides: (
 		s: ReturnType<typeof parseSections>[number],
 		i: number
 	) => Partial<NoteGenerationResult["sections"][number]> = () => ({}),
-	top: Partial<Pick<NoteGenerationResult, "summary" | "learningObjective">> = {}
+	top: Partial<
+		Pick<NoteGenerationResult, "summary" | "learningObjective" | "noteBrief">
+	> = {}
 ) {
 	const sections = parseSections(NOTE).map((s, i) => ({
 		id: s.id,
@@ -38,7 +55,7 @@ function cacheFrom(
 		sections,
 		summary: top.summary ?? "the summary",
 		learningObjective: top.learningObjective ?? "the objective",
-		noteBrief: null,
+		noteBrief: top.noteBrief ?? null,
 		canceled: false,
 	};
 	return buildNoteCache({
@@ -66,6 +83,18 @@ describe("buildCornellModel", () => {
 		});
 		expect(model.summary).toBe("the summary");
 		expect(model.learningObjective).toBe("the objective");
+		expect(model.noteBrief).toBeNull();
+	});
+
+	it("carries structured Note Brief content into the model", () => {
+		const model = buildCornellModel(
+			cacheFrom(() => ({}), { noteBrief: NOTE_BRIEF }),
+			parseSections(NOTE)
+		);
+		expect(model.noteBrief?.overview).toBe(
+			"This note explains the core agent workflow."
+		);
+		expect(model.noteBrief?.reviewFirst.title).toBe("Agent versus chatbot");
 	});
 
 	it("carries low-confidence rationale into rows", () => {

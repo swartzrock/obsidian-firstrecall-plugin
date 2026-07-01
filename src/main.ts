@@ -65,6 +65,7 @@ import {
 	appendSectionLens,
 	buildCueLineData,
 	cueEditorExtension,
+	renderNoteBriefElement,
 	setCuesEffect,
 	type CueLineData,
 } from "./cue-extension";
@@ -72,6 +73,7 @@ import {
 	buildReadingCueMap,
 	isReadingModeDisplay,
 	readingModeDisplayState,
+	readingNoteBriefDisplayState,
 } from "./reading-cues";
 import {
 	DEFAULT_CORNELL_DISPLAY_MODE,
@@ -381,6 +383,12 @@ export default class CueCraftPlugin extends Plugin {
 			effects: setCuesEffect.of({
 				cues,
 				display: this.settings.editorCueDisplay,
+				noteBrief:
+					cache &&
+					this.settings.showNoteBrief &&
+					!this.visibility.isHidden(file.path)
+						? cache.noteBrief
+						: null,
 			}),
 		});
 	}
@@ -784,9 +792,17 @@ export default class CueCraftPlugin extends Plugin {
 			hasUsableCues: hasUsableCues(cache),
 			isHidden,
 		});
+		const noteBriefState = readingNoteBriefDisplayState({
+			renderInReadingMode: this.settings.renderInReadingMode,
+			showNoteBrief: this.settings.showNoteBrief,
+			hasCache: true,
+			hasNoteBrief: Boolean(cache.noteBrief),
+			isHidden,
+		});
 		if (
 			!displayState.showInlineCues &&
-			!displayState.showReviewButton
+			!displayState.showReviewButton &&
+			!noteBriefState.showNoteBrief
 		) {
 			return;
 		}
@@ -798,6 +814,9 @@ export default class CueCraftPlugin extends Plugin {
 			const info = ctx.getSectionInfo(heading);
 			if (!info) continue;
 			const map = this.readingMapFor(path, info.text, cache);
+			if (noteBriefState.showNoteBrief) {
+				this.maybeInsertReadingNoteBriefEl(cache, map, info, heading);
+			}
 			if (displayState.showReviewButton) {
 				this.maybeInsertReadingReviewEl(path, map, info, heading);
 			}
@@ -857,6 +876,26 @@ export default class CueCraftPlugin extends Plugin {
 		if (previous && previous.hasClass("cuecraft-reading-review")) return false;
 		const reviewEl = this.buildReadingReviewEl(path);
 		heading.insertAdjacentElement("beforebegin", reviewEl);
+		return true;
+	}
+
+	private maybeInsertReadingNoteBriefEl(
+		cache: NoteCache,
+		map: Map<number, CueLineData>,
+		info: ReturnType<MarkdownPostProcessorContext["getSectionInfo"]>,
+		heading: HTMLElement
+	): boolean {
+		if (!info || !this.settings.showNoteBrief || !cache.noteBrief) return false;
+		const firstCueLine = [...map.keys()].sort((a, b) => a - b)[0];
+		if (firstCueLine !== info.lineStart + 1) return false;
+		const previous = heading.previousElementSibling;
+		if (previous && previous.hasClass("cuecraft-note-brief")) return false;
+		const parent = heading.parentElement;
+		if (parent?.querySelector(":scope > .cuecraft-note-brief")) return false;
+		heading.insertAdjacentElement(
+			"beforebegin",
+			renderNoteBriefElement(cache.noteBrief, "reading")
+		);
 		return true;
 	}
 

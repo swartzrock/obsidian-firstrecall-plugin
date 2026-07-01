@@ -962,6 +962,72 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	color: color-mix(in srgb, var(--text-muted) 82%, transparent);
 }
 
+.cuecraft-note-brief {
+	box-sizing: border-box;
+	max-width: min(48rem, 100%);
+	margin: 0.65em 0 1em;
+	padding: 0.85em 0.95em;
+	border: 1px solid var(--background-modifier-border);
+	border-inline-start: 4px solid var(--interactive-accent);
+	border-radius: var(--radius-s);
+	background: color-mix(
+		in srgb,
+		var(--background-secondary) 82%,
+		var(--interactive-accent) 8%
+	);
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	line-height: 1.35;
+	user-select: text;
+}
+
+.cuecraft-note-brief-cornell {
+	max-width: 76ch;
+	margin: 18px auto 0;
+}
+
+.cuecraft-note-brief-label {
+	margin-bottom: 0.35em;
+	color: var(--text-muted);
+	font-size: var(--font-smallest);
+	font-weight: var(--font-bold);
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.cuecraft-note-brief-overview {
+	margin: 0;
+	color: var(--text-normal);
+	text-wrap: pretty;
+}
+
+.cuecraft-note-brief-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+	gap: 0.55em;
+	margin-top: 0.75em;
+}
+
+.cuecraft-note-brief-card {
+	padding: 0.55em 0.65em;
+	border: 1px solid
+		color-mix(in srgb, var(--background-modifier-border) 78%, transparent);
+	border-radius: var(--radius-s);
+	background: color-mix(in srgb, var(--background-primary) 88%, transparent);
+}
+
+.cuecraft-note-brief-card-title {
+	font-weight: var(--font-semibold);
+	overflow-wrap: anywhere;
+}
+
+.cuecraft-note-brief-card-detail {
+	margin-top: 0.25em;
+	color: var(--text-muted);
+	font-size: var(--font-smallest);
+	overflow-wrap: anywhere;
+}
+
 /* Confidence accent on the cue's left border. */
 .cuecraft-cue[data-confidence="high"] {
 	border-left-color: var(--color-green);

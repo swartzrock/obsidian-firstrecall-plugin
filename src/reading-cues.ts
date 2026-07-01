@@ -43,6 +43,10 @@ export interface ReadingModeDisplayState {
 	showReviewButton: boolean;
 }
 
+export interface ReadingNoteBriefDisplayState {
+	showNoteBrief: boolean;
+}
+
 /**
  * Resolve a note's cached cues against its current Markdown and index them by
  * 1-based heading line. Sections without a heading (the intro/whole-note
@@ -82,6 +86,23 @@ export function readingModeDisplayState(opts: {
 	return {
 		showInlineCues: opts.display === "inline-cues",
 		showReviewButton: opts.display === "review-button" && opts.hasUsableCues,
+	};
+}
+
+export function readingNoteBriefDisplayState(opts: {
+	renderInReadingMode: boolean;
+	showNoteBrief: boolean;
+	hasCache: boolean;
+	hasNoteBrief: boolean;
+	isHidden: boolean;
+}): ReadingNoteBriefDisplayState {
+	return {
+		showNoteBrief:
+			opts.renderInReadingMode &&
+			opts.showNoteBrief &&
+			opts.hasCache &&
+			opts.hasNoteBrief &&
+			!opts.isHidden,
 	};
 }
 

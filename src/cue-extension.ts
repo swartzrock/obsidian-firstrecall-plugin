@@ -22,7 +22,7 @@ import {
 } from "./editor-hook-rail";
 import type { EditorCueDisplay } from "./editor-cue-display";
 import { isCueEligibleSection, type Section } from "./parser";
-import type { SectionLens } from "./schemas";
+import type { NoteBriefOutput, SectionLens } from "./schemas";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -47,6 +47,7 @@ export interface CueLineDataOptions {
 export interface CueEditorRenderState {
 	cues: CueLineData[];
 	display: EditorCueDisplay;
+	noteBrief?: NoteBriefOutput | null;
 }
 
 /**
@@ -120,6 +121,20 @@ class CueWidget extends WidgetType {
 
 	ignoreEvent(): boolean {
 		return false;
+	}
+}
+
+class NoteBriefWidget extends WidgetType {
+	constructor(private readonly noteBrief: NoteBriefOutput) {
+		super();
+	}
+
+	eq(other: NoteBriefWidget): boolean {
+		return noteBriefKey(other.noteBrief) === noteBriefKey(this.noteBrief);
+	}
+
+	toDOM(): HTMLElement {
+		return renderNoteBriefElement(this.noteBrief, "editor");
 	}
 }
 
@@ -240,6 +255,55 @@ function renderEditorHookElement(card: EditorHookCard): HTMLElement {
 	return root;
 }
 
+const noteBriefCardOrder = [
+	"whatMatters",
+	"reviewFirst",
+	"sayItBack",
+] as const;
+
+export function renderNoteBriefElement(
+	noteBrief: NoteBriefOutput,
+	variant: "editor" | "reading" | "cornell" = "editor"
+): HTMLElement {
+	const doc = cueDocument();
+	const root = doc.createElement("section");
+	root.className = `cuecraft-note-brief cuecraft-note-brief-${variant}`;
+	root.setAttribute("role", "note");
+
+	const label = doc.createElement("div");
+	label.className = "cuecraft-note-brief-label";
+	label.textContent = "Note brief";
+	root.appendChild(label);
+
+	const overview = doc.createElement("p");
+	overview.className = "cuecraft-note-brief-overview";
+	overview.textContent = noteBrief.overview;
+	root.appendChild(overview);
+
+	const cards = doc.createElement("div");
+	cards.className = "cuecraft-note-brief-cards";
+	for (const key of noteBriefCardOrder) {
+		const card = noteBrief[key];
+		const cardEl = doc.createElement("div");
+		cardEl.className = "cuecraft-note-brief-card";
+		cardEl.dataset.card = key;
+
+		const title = doc.createElement("div");
+		title.className = "cuecraft-note-brief-card-title";
+		title.textContent = card.title;
+		cardEl.appendChild(title);
+
+		const detail = doc.createElement("div");
+		detail.className = "cuecraft-note-brief-card-detail";
+		detail.textContent = card.detail;
+		cardEl.appendChild(detail);
+
+		cards.appendChild(cardEl);
+	}
+	root.appendChild(cards);
+	return root;
+}
+
 export function appendSectionLens(
 	parent: HTMLElement,
 	lens: SectionLens | null
@@ -275,6 +339,20 @@ function sectionLensKey(lens: SectionLens | null): string {
 		: "";
 }
 
+function noteBriefKey(noteBrief: NoteBriefOutput | null | undefined): string {
+	return noteBrief
+		? [
+				noteBrief.overview,
+				noteBrief.whatMatters.title,
+				noteBrief.whatMatters.detail,
+				noteBrief.reviewFirst.title,
+				noteBrief.reviewFirst.detail,
+				noteBrief.sayItBack.title,
+				noteBrief.sayItBack.detail,
+			].join("\u0001")
+		: "";
+}
+
 function cueDocument(): Document {
 	return typeof activeDocument === "undefined"
 		? globalThis.document
@@ -290,10 +368,22 @@ export function buildCueWidgetDecorations(
 	state: EditorState,
 	payload: CueEditorRenderState
 ): DecorationSet {
-	if (payload.display !== "inline-cues") return Decoration.none;
-
 	const ranges: Range<Decoration>[] = [];
 	const doc = state.doc;
+	if (payload.noteBrief && doc.lines >= 1) {
+		ranges.push(
+			Decoration.widget({
+				widget: new NoteBriefWidget(payload.noteBrief),
+				block: true,
+				side: 0,
+			}).range(doc.line(1).to)
+		);
+	}
+
+	if (payload.display !== "inline-cues") {
+		return ranges.length ? Decoration.set(ranges, true) : Decoration.none;
+	}
+
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const headingLine = doc.line(cue.line);
