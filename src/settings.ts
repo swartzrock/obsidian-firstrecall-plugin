@@ -1286,6 +1286,35 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				.description;
 		railCardStyleSetting.setDesc(railCardStyleDesc());
 
+		const editorWidthDesc = (): string =>
+			CUE_COLUMN_WIDTHS.find(
+				(w) => w.id === this.plugin.settings.cueColumnWidth
+			)?.description ?? "Width of editor cue cards and inline cue blocks.";
+		this.renderEditingViewThumbnailSetting<CueColumnWidth>(containerEl, {
+			name: "Cue column width",
+			description: editorWidthDesc,
+			options: cueColumnWidthThumbnailOptions(),
+			value: () => this.plugin.settings.cueColumnWidth,
+			setValue: (value) => {
+				this.plugin.settings.cueColumnWidth = value;
+			},
+			className: "cuecraft-thumbnail-group-cue-width",
+		});
+
+		const editorFontDesc = (): string =>
+			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
+				?.description ?? "Font size of editor cue text.";
+		this.renderEditingViewThumbnailSetting<CueFontSize>(containerEl, {
+			name: "Cue font size",
+			description: editorFontDesc,
+			options: cueFontSizeThumbnailOptions(),
+			value: () => this.plugin.settings.cueFontSize,
+			setValue: (value) => {
+				this.plugin.settings.cueFontSize = value;
+			},
+			className: "cuecraft-thumbnail-group-cue-font",
+		});
+
 		new Setting(containerEl)
 			.setName("Show rail questions")
 			.setDesc("Show cue questions inside left-side editor rail cards.")
@@ -1311,6 +1340,28 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						this.plugin.refreshEditorCues();
 					})
 			);
+	}
+
+	private async saveEditingViewChange(afterSave?: () => void): Promise<void> {
+		await this.plugin.saveSettings();
+		this.plugin.refreshEditorCues();
+		afterSave?.();
+	}
+
+	private renderEditingViewThumbnailSetting<T extends string>(
+		containerEl: HTMLElement,
+		config: {
+			name: string;
+			description: () => string;
+			options: readonly AppearanceThumbnailOption<T>[];
+			value: () => T;
+			setValue: (value: T) => void;
+			className?: string;
+		}
+	): void {
+		this.renderCueThumbnailSetting(containerEl, config, (afterSave) =>
+			this.saveEditingViewChange(afterSave)
+		);
 	}
 
 	// ── Cornell View ──────────────────────────────────────────────────────
@@ -1444,6 +1495,23 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			className?: string;
 		}
 	): void {
+		this.renderCueThumbnailSetting(containerEl, config, (afterSave) =>
+			this.saveCornellViewChange(afterSave)
+		);
+	}
+
+	private renderCueThumbnailSetting<T extends string>(
+		containerEl: HTMLElement,
+		config: {
+			name: string;
+			description: () => string;
+			options: readonly AppearanceThumbnailOption<T>[];
+			value: () => T;
+			setValue: (value: T) => void;
+			className?: string;
+		},
+		saveChange: (afterSave?: () => void) => Promise<void>
+	): void {
 		const setting = new Setting(containerEl)
 			.setName(config.name)
 			.setDesc(config.description());
@@ -1458,7 +1526,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				className: config.className,
 				onSelect: async (value) => {
 					config.setValue(value);
-					await this.saveCornellViewChange(() => {
+					await saveChange(() => {
 						setting.setDesc(config.description());
 						group.setValue(config.value());
 					});

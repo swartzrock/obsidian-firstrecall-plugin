@@ -1049,6 +1049,49 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	user-select: text;
 }
 
+.cuecraft-cue.cuecraft-cuewidth-narrow {
+	max-width: min(28rem, 100%);
+}
+
+.cuecraft-cue.cuecraft-cuewidth-medium {
+	max-width: min(36rem, 100%);
+}
+
+.cuecraft-cue.cuecraft-cuewidth-wide {
+	max-width: min(46rem, 100%);
+}
+
+.cuecraft-cue.cuecraft-cuefont-small .cuecraft-cue-question,
+.cuecraft-cue.cuecraft-cuefont-small .cuecraft-cue-keywords,
+.cuecraft-cue.cuecraft-cuefont-small .cuecraft-section-lens {
+	font-size: var(--font-smallest);
+}
+
+.cuecraft-cue.cuecraft-cuefont-medium .cuecraft-cue-question {
+	font-size: var(--font-ui-small);
+}
+
+.cuecraft-cue.cuecraft-cuefont-large .cuecraft-cue-question {
+	font-size: var(--font-ui-medium);
+}
+
+.cuecraft-cue.cuecraft-cuefont-large .cuecraft-cue-keywords,
+.cuecraft-cue.cuecraft-cuefont-large .cuecraft-section-lens {
+	font-size: var(--font-ui-smaller, var(--font-smallest));
+}
+
+.cuecraft-editor-hook.cuecraft-cuefont-small {
+	font-size: var(--font-smallest);
+}
+
+.cuecraft-editor-hook.cuecraft-cuefont-medium {
+	font-size: var(--font-ui-small);
+}
+
+.cuecraft-editor-hook.cuecraft-cuefont-large {
+	font-size: var(--font-ui-medium);
+}
+
 .cuecraft-editor-hook-inline-fallback {
 	display: none;
 }
@@ -1899,6 +1942,57 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		.cuecraft-editor-hook-anchored-card-rail {
 		width: clamp(10rem, 19vw, 13rem);
 	}
+}
+
+.markdown-source-view.mod-cm6
+	.cuecraft-editor-hook-gutter
+	.cuecraft-editor-hook.cuecraft-cuewidth-narrow {
+	width: clamp(6rem, 12vw, 9rem);
+}
+
+.markdown-source-view.mod-cm6
+	.cuecraft-editor-hook-gutter
+	.cuecraft-editor-hook.cuecraft-cuewidth-medium {
+	width: clamp(8.5rem, 16vw, 13rem);
+}
+
+.markdown-source-view.mod-cm6
+	.cuecraft-editor-hook-gutter
+	.cuecraft-editor-hook.cuecraft-cuewidth-wide {
+	width: clamp(12rem, 22vw, 18rem);
+}
+
+.markdown-source-view.mod-cm6
+	.cuecraft-editor-hook-gutter
+	.cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-narrow
+	.cuecraft-editor-hook-title,
+.markdown-source-view.mod-cm6
+	.cuecraft-editor-hook-gutter
+	.cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-narrow
+	.cuecraft-section-lens {
+	width: min(14rem, calc(100vw - 9rem));
+}
+
+.markdown-source-view.mod-cm6
+	.cuecraft-editor-hook-gutter
+	.cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-medium
+	.cuecraft-editor-hook-title,
+.markdown-source-view.mod-cm6
+	.cuecraft-editor-hook-gutter
+	.cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-medium
+	.cuecraft-section-lens {
+	width: min(18rem, calc(100vw - 9rem));
+}
+
+.markdown-source-view.mod-cm6
+	.cuecraft-editor-hook-gutter
+	.cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-wide
+	.cuecraft-editor-hook-title,
+.markdown-source-view.mod-cm6
+	.cuecraft-editor-hook-gutter
+	.cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-wide
+	.cuecraft-section-lens {
+	width: min(24rem, calc(100vw - 9rem));
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -10,6 +10,7 @@ import {
 	renderCueElement,
 	setCuesEffect,
 } from "../src/cue-extension";
+import { EDITOR_CUE_DISPLAY_OPTIONS } from "../src/editor-cue-display";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
@@ -213,7 +214,9 @@ describe("renderCueElement", () => {
 				},
 				"inline-cues"
 			);
-			expect(el.className).toBe("cuecraft-cue");
+			expect(el.classList.contains("cuecraft-cue")).toBe(true);
+			expect(el.classList.contains("cuecraft-cuewidth-medium")).toBe(true);
+			expect(el.classList.contains("cuecraft-cuefont-medium")).toBe(true);
 			expect(el.dataset.confidence).toBe("high");
 			expect(el.querySelector(".cuecraft-cue-question")?.textContent).toBe(
 				"What is an agent?"
@@ -660,5 +663,18 @@ describe("cue editor placement", () => {
 			positions.push(from);
 		});
 		expect(positions).toEqual([state.doc.line(1).to, state.doc.line(3).to]);
+	});
+
+	it("applies cue width and font settings to every editor cue display", () => {
+		withDocument(() => {
+			for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
+				const element = renderCueElement(cues[0], option.id, 0, "current", {
+					cueColumnWidth: "wide",
+					cueFontSize: "large",
+				});
+				expect(element.classList.contains("cuecraft-cuewidth-wide")).toBe(true);
+				expect(element.classList.contains("cuecraft-cuefont-large")).toBe(true);
+			}
+		});
 	});
 });

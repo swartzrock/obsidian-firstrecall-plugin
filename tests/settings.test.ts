@@ -315,6 +315,23 @@ async function changeToggle(
 	await toggle.__onChange(value);
 }
 
+async function clickThumbnail(
+	containerEl: HTMLElement,
+	name: string,
+	optionId: string
+): Promise<void> {
+	const setting = containerEl.querySelector<HTMLElement>(
+		`[data-setting-name="${name}"]`
+	);
+	if (!setting) throw new Error(`Missing setting: ${name}`);
+	const button = setting.querySelector<HTMLButtonElement>(
+		`[data-option-id="${optionId}"]`
+	);
+	if (!button) throw new Error(`Missing thumbnail option: ${name} ${optionId}`);
+	button.click();
+	await Promise.resolve();
+}
+
 describe("settings defaults", () => {
 	it("defaults auto-generation settle delay to 10 seconds", () => {
 		expect(DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS).toBe(10);
@@ -454,11 +471,9 @@ describe("settings defaults", () => {
 		} as const;
 
 		expect(editingViewSettingsSummary(settings)).toBe(
-			"Hook minimap · Soft gradients · questions hidden · supports shown"
+			"Hook minimap · Soft gradients · wide width · large text · questions hidden · supports shown"
 		);
 		expect(editingViewSettingsSummary(settings)).not.toContain("Legal Pad");
-		expect(editingViewSettingsSummary(settings)).not.toContain("wide width");
-		expect(editingViewSettingsSummary(settings)).not.toContain("large text");
 	});
 
 	it("renders Cornell View and Editing View settings destinations", async () => {
@@ -493,7 +508,7 @@ describe("settings defaults", () => {
 		expect(text).not.toContain("Show rail support terms");
 	});
 
-	it("keeps Editing View controls editor-only", async () => {
+	it("shows Editing View controls for all editor cue display options", async () => {
 		const { tab } = await setupSettingsTab();
 
 		tab.display();
@@ -502,12 +517,12 @@ describe("settings defaults", () => {
 		const text = settingText(tab.containerEl);
 		expect(text).toContain("Editor cue display");
 		expect(text).toContain("Rail card background");
+		expect(text).toContain("Cue column width");
+		expect(text).toContain("Cue font size");
 		expect(text).toContain("Show rail questions");
 		expect(text).toContain("Show rail support terms");
 		expect(text).not.toContain("Cornell display mode");
 		expect(text).not.toContain("Cornell view style");
-		expect(text).not.toContain("Cue column width");
-		expect(text).not.toContain("Cue font size");
 		expect(text).not.toContain("Cue accent color");
 	});
 
@@ -536,6 +551,21 @@ describe("settings defaults", () => {
 		expect(plugin.settings.showRailQuestions).toBe(false);
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
+		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
+	});
+
+	it("refreshes editor cues for Editing View width and font controls", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+
+		tab.display();
+		openSettingsCard(tab, "Editing View");
+		await clickThumbnail(tab.containerEl, "Cue column width", "wide");
+		await clickThumbnail(tab.containerEl, "Cue font size", "large");
+
+		expect(plugin.settings.cueColumnWidth).toBe("wide");
+		expect(plugin.settings.cueFontSize).toBe("large");
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
+		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
 	});
 

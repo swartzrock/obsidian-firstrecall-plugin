@@ -402,6 +402,8 @@ export default class CueCraftPlugin extends Plugin {
 				showRailQuestions: this.settings.showRailQuestions,
 				showRailSupportTerms: this.settings.showRailSupportTerms,
 				editorHookCardStyle: this.settings.editorHookCardStyle,
+				cueColumnWidth: this.settings.cueColumnWidth,
+				cueFontSize: this.settings.cueFontSize,
 				noteBrief:
 					cache &&
 					this.settings.showNoteBrief &&
