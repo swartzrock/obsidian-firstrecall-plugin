@@ -33,6 +33,7 @@ export {
 	sortModelOptions,
 	type ModelOption,
 } from "./models/model-options";
+export { createByok, generateText } from "./client";
 export { createByokProvider } from "./providers/provider-factory";
 export {
 	CLI_DEFAULT_MODEL_SENTINEL,
@@ -47,14 +48,19 @@ export {
 } from "./setup-status";
 export type {
 	ByokCliProviderConfig,
+	ByokClient,
+	ByokClientConfig,
+	ByokClientTextGenerationInput,
 	ByokCloudProviderConfig,
 	ByokConnectionState,
 	ByokCoreProviderConfig,
 	ByokCredentialFieldDefinition,
 	ByokCredentialKind,
+	ByokFacadeDeps,
 	ByokHttpClient,
 	ByokHttpRequest,
 	ByokHttpResponse,
+	ByokGenerateTextOptions,
 	ByokModelBehavior,
 	ByokModelFieldDefinition,
 	ByokModelOption,

@@ -8,8 +8,10 @@ Import public BYOK APIs from the barrel:
 
 ```ts
 import {
+	createByok,
 	createByokProvider,
 	deriveProviderSetupStatus,
+	generateText,
 	isByokProviderId,
 	recordProviderConnectionSuccess,
 	type ByokCoreProviderConfig,
@@ -23,13 +25,40 @@ The public surface is:
 - Provider identity and metadata: `ByokProviderId`, `ByokProviderDefinition`, `BYOK_PROVIDER_IDS`, `byokProviderDefinition`, `byokProviderDefinitions`, and `isByokProviderId`.
 - Provider configuration: `ByokCoreProviderConfig` for API-key cloud providers and Ollama host/model on the browser-safe main entrypoint; `ByokProviderConfig` remains the full union for Node consumers.
 - Runtime dependencies: `ByokProviderDeps`, with caller-supplied `fetchImpl`, `http` transports, and optional `appInfo` metadata for provider-specific headers.
+- Function-first generation: `generateText(options)` for one-call text generation with explicit provider credentials, model, prompt, optional `signal`, and optional custom deps.
+- Repeated-call client: `createByok(config)` for binding one provider credential or Ollama host while supplying `model` per generation call.
 - Runtime creation: `createByokProvider(config, deps): ByokProviderRuntime` from the main entrypoint for core providers.
 - Node-only runtime creation: `createByokNodeProvider(config, deps): ByokProviderRuntime` from `@cuecraft/byok/node` for Codex CLI and Claude CLI providers.
 - Setup state: verification snapshots, credential fingerprints, `recordProviderConnectionSuccess`, and `deriveProviderSetupStatus`.
 - Model discovery: provider runtimes return portable `ByokModelOption` values with `id` and `label` only. Provider-specific metadata such as OpenRouter pricing, context length, supported parameters, and compatibility badges is intentionally not part of the main public surface.
-- Generation: `generateText`, optional `generateObject`, and provider errors such as `ByokProviderError` and `ByokProviderRateLimitError`.
+- Runtime generation: `ByokProviderRuntime.generateText`, optional `generateObject`, and provider errors such as `ByokProviderError` and `ByokProviderRateLimitError`.
 
-The provider runtime contract intentionally stays app-agnostic:
+The first-success API is function-first:
+
+```ts
+const { text } = await generateText({
+	provider: "openai",
+	apiKey,
+	model: "gpt-4o-mini",
+	prompt: "Explain agentic AI in two sentences.",
+});
+```
+
+For repeated calls, bind the credential once and keep the model per call:
+
+```ts
+const ai = createByok({ provider: "openai", apiKey });
+
+const { text } = await ai.generateText({
+	model: "gpt-4o-mini",
+	prompt: "Write one sentence about BYOK.",
+});
+```
+
+BYOK is AI-SDK-shaped, not AI-SDK-compatible. Consumers that need AI SDK `LanguageModel` objects or full AI SDK result semantics should use AI SDK directly.
+The function-first API accepts plain text prompts only; provider-specific generation hints stay on the lower-level runtime.
+
+The provider runtime contract remains the advanced setup/model-discovery layer and intentionally stays app-agnostic:
 
 ```ts
 const provider = createByokProvider(
@@ -98,6 +127,8 @@ const provider = createByokNodeProvider(config, deps satisfies ByokProviderDeps)
 CueCraft stores non-secret BYOK settings in Obsidian plugin data, but cloud provider API keys are not part of that JSON shape. Anthropic, OpenAI, Google, xAI, and OpenRouter keys are stored in Obsidian `app.secretStorage` under CueCraft-owned secret IDs. `data.json` keeps only provider/model/cache state and non-secret credential metadata such as saved-key presence and a change token for verification freshness.
 
 The secure-storage boundary stays in CueCraft. BYOK receives plain `apiKey` values only after CueCraft resolves a key at runtime for provider creation, model refresh, connection testing, or generation. BYOK must not import Electron, Obsidian, filesystem adapters, or CueCraft settings types.
+
+Direct browser or Electron-renderer BYOK calls are appropriate only for user-entered transient keys. App-owned keys should stay behind a server, main process, or custom transport. Ollama hosts are explicit prompt destinations and must be valid `http:` or `https:` URLs without embedded credentials. OpenRouter `appInfo` is provider-visible metadata forwarded as headers after normalization.
 
 If Obsidian `app.secretStorage` is unavailable, cloud providers fail closed in that state; Ollama host and local CLI command providers remain regular non-secret settings. CueCraft requires Obsidian 1.11.4 or newer for cloud API-key storage.
 

@@ -1,0 +1,142 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type {
+	createByok as createByokType,
+	generateText as generateTextType,
+} from "../src/client";
+import type { ByokProviderRuntime } from "../src";
+
+const mocks = {
+	createByokProvider: vi.fn(),
+	generateText: vi.fn(),
+};
+
+let createByok: typeof createByokType;
+let generateText: typeof generateTextType;
+
+const fetchImpl = (async () => new Response("{}")) as typeof fetch;
+const describeForVitest =
+	"Bun" in globalThis ? describe.skip : describe;
+
+function mockRuntime(id = "openai"): ByokProviderRuntime {
+	return {
+		id: id as ByokProviderRuntime["id"],
+		label: id,
+		requiresNetwork: true,
+		requiresDownload: false,
+		testConnection: async () => ({ ok: true, message: "ok" }),
+		generateText: mocks.generateText,
+	};
+}
+
+describeForVitest("BYOK cloud client facade", () => {
+	beforeEach(async () => {
+		vi.resetModules();
+		mocks.createByokProvider.mockReset();
+		mocks.generateText.mockReset();
+		mocks.createByokProvider.mockReturnValue(mockRuntime());
+		mocks.generateText.mockResolvedValue({ text: "Cloud response." });
+		vi.doMock("../src/providers/provider-factory", () => ({
+			createByokProvider: mocks.createByokProvider,
+		}));
+		({ createByok, generateText } = await import("../src/client"));
+	});
+
+	it("builds cloud provider config for generateText", async () => {
+		const signal = new AbortController().signal;
+
+		const result = await generateText({
+			provider: "openai",
+			apiKey: "sk-openai-test",
+			model: "gpt-4o-mini",
+			prompt: "Say hi.",
+			signal,
+			deps: { fetchImpl },
+		});
+
+		expect(result).toEqual({ text: "Cloud response." });
+		expect(mocks.createByokProvider).toHaveBeenCalledWith(
+			{
+				provider: "openai",
+				apiKey: "sk-openai-test",
+				model: "gpt-4o-mini",
+			},
+			{ fetchImpl }
+		);
+		expect(mocks.generateText).toHaveBeenCalledWith({ prompt: "Say hi." }, signal);
+	});
+
+	it("binds cloud credentials in createByok and uses the call model", async () => {
+		const client = createByok({
+			provider: "anthropic",
+			apiKey: "sk-ant-test",
+			deps: { fetchImpl },
+		});
+
+		await expect(
+			client.generateText({
+				model: "claude-sonnet-4-6",
+				prompt: "Say hi.",
+			})
+		).resolves.toEqual({ text: "Cloud response." });
+		expect(mocks.createByokProvider).toHaveBeenCalledWith(
+			{
+				provider: "anthropic",
+				apiKey: "sk-ant-test",
+				model: "claude-sonnet-4-6",
+			},
+			{ fetchImpl }
+		);
+	});
+
+	it("forwards top-level OpenRouter app metadata through the facade", async () => {
+		const leakedDeps = {
+			fetchImpl,
+			appInfo: { name: "Ignored dependency metadata" },
+		};
+
+		await generateText({
+			provider: "openrouter",
+			apiKey: "sk-or-test",
+			model: "openai/gpt-4o",
+			prompt: "Say hi.",
+			deps: leakedDeps,
+			appInfo: { name: "My App", url: "https://example.com" },
+		});
+
+		expect(mocks.createByokProvider).toHaveBeenCalledWith(
+			{
+				provider: "openrouter",
+				apiKey: "sk-or-test",
+				model: "openai/gpt-4o",
+			},
+			{
+				fetchImpl,
+				appInfo: { name: "My App", url: "https://example.com" },
+			}
+		);
+	});
+
+	it("strips dependency appInfo when the facade has no top-level metadata", async () => {
+		const leakedDeps = {
+			fetchImpl,
+			appInfo: { name: "Ignored dependency metadata" },
+		};
+
+		await generateText({
+			provider: "openrouter",
+			apiKey: "sk-or-test",
+			model: "openai/gpt-4o",
+			prompt: "Say hi.",
+			deps: leakedDeps,
+		});
+
+		expect(mocks.createByokProvider).toHaveBeenCalledWith(
+			{
+				provider: "openrouter",
+				apiKey: "sk-or-test",
+				model: "openai/gpt-4o",
+			},
+			{ fetchImpl }
+		);
+	});
+});

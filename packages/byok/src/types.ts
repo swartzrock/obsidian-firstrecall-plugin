@@ -94,6 +94,7 @@ export interface ByokHttpRequest {
 	method: "GET" | "POST";
 	body?: string;
 	headers?: Record<string, string>;
+	signal?: AbortSignal;
 }
 
 export interface ByokHttpResponse {
@@ -118,6 +119,8 @@ export interface ByokProviderDeps {
 	http: ByokHttpClient;
 	appInfo?: ByokProviderAppInfo;
 }
+
+export type ByokFacadeDeps = Partial<Omit<ByokProviderDeps, "appInfo">>;
 
 export interface ByokProviderStatus {
 	ok: boolean;
@@ -185,6 +188,52 @@ export interface ByokTextGenerationInput {
 
 export interface ByokTextGenerationOutput {
 	text: string;
+}
+
+export type ByokGenerateTextOptions =
+	| (Omit<ByokCloudProviderConfig, "provider"> & {
+			provider: "anthropic" | "openai" | "google" | "xai";
+			prompt: string;
+			deps?: ByokFacadeDeps;
+			signal?: AbortSignal;
+	  })
+	| (Omit<ByokCloudProviderConfig, "provider"> & {
+			provider: "openrouter";
+			prompt: string;
+			deps?: ByokFacadeDeps;
+			signal?: AbortSignal;
+			appInfo?: ByokProviderAppInfo;
+	  })
+	| (ByokOllamaProviderConfig & {
+			prompt: string;
+			deps?: ByokFacadeDeps;
+			signal?: AbortSignal;
+	  });
+
+export type ByokClientConfig =
+	| (Omit<ByokCloudProviderConfig, "provider" | "model"> & {
+			provider: "anthropic" | "openai" | "google" | "xai";
+			deps?: ByokFacadeDeps;
+	  })
+	| (Omit<ByokCloudProviderConfig, "provider" | "model"> & {
+			provider: "openrouter";
+			deps?: ByokFacadeDeps;
+			appInfo?: ByokProviderAppInfo;
+	  })
+	| (Omit<ByokOllamaProviderConfig, "model"> & {
+			deps?: ByokFacadeDeps;
+	  });
+
+export interface ByokClientTextGenerationInput {
+	model: string;
+	prompt: string;
+	signal?: AbortSignal;
+}
+
+export interface ByokClient {
+	generateText(
+		input: ByokClientTextGenerationInput
+	): Promise<ByokTextGenerationOutput>;
 }
 
 export interface ByokObjectGenerationInput<T> {

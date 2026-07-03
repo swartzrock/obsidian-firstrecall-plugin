@@ -5,7 +5,7 @@ This reference documents the public API exported by `@cuecraft/byok` and `@cuecr
 Use only the public entrypoints:
 
 ```ts
-import { createByokProvider } from "@cuecraft/byok";
+import { createByok, createByokProvider, generateText } from "@cuecraft/byok";
 import { createByokNodeProvider } from "@cuecraft/byok/node";
 ```
 
@@ -19,6 +19,7 @@ The main entrypoint is for browser/Electron-safe core providers and shared helpe
 
 It exports:
 
+- Function-first text generation helpers.
 - Provider registry constants and helpers.
 - Core provider factory.
 - Setup-status helpers.
@@ -42,16 +43,97 @@ The Node subpath re-exports the main entrypoint and adds local CLI support:
 
 Use this subpath only where spawning local processes is acceptable.
 
+## Function-First Generation
+
+### `generateText(options)`
+
+Generates text for core providers from one flat options object.
+
+```ts
+function generateText(
+	options: ByokGenerateTextOptions
+): Promise<ByokTextGenerationOutput>;
+```
+
+Cloud provider options combine provider config, text input, optional custom deps, optional abort signal, and optional OpenRouter app metadata:
+
+```ts
+type ByokGenerateTextOptions =
+	| {
+			provider: "anthropic" | "openai" | "google" | "xai" | "openrouter";
+			apiKey: string;
+			model: string;
+			prompt: string;
+			signal?: AbortSignal;
+			deps?: ByokFacadeDeps;
+	  }
+	| {
+			provider: "openrouter";
+			apiKey: string;
+			model: string;
+			prompt: string;
+			signal?: AbortSignal;
+			deps?: ByokFacadeDeps;
+			appInfo?: ByokProviderAppInfo;
+	  }
+	| {
+			provider: "ollama";
+			host: string;
+			model: string;
+			prompt: string;
+			signal?: AbortSignal;
+			deps?: ByokFacadeDeps;
+	  };
+```
+
+`generateText` delegates to `createByokProvider` and returns the same simple output:
+
+```ts
+const { text } = await generateText({
+	provider: "openai",
+	apiKey,
+	model: "gpt-4o-mini",
+	prompt: "Explain BYOK in one sentence.",
+});
+```
+
+BYOK is AI-SDK-shaped, not AI-SDK-compatible. Use AI SDK directly when callers need AI SDK `LanguageModel` objects, middleware semantics, or the full AI SDK result object.
+The function-first API intentionally accepts plain text prompts only; use `createByokProvider` when you need provider-specific text hints such as JSON response formatting.
+
+### `createByok(config)`
+
+Creates a credential-bound client for repeated text generation.
+
+```ts
+function createByok(config: ByokClientConfig): ByokClient;
+```
+
+The client binds provider credentials or Ollama host, but the model is supplied per generation call:
+
+```ts
+const ai = createByok({
+	provider: "openai",
+	apiKey,
+});
+
+const { text } = await ai.generateText({
+	model: "gpt-4o-mini",
+	prompt: "Draft a short release note.",
+});
+```
+
+`ByokClient` intentionally exposes only `generateText`. Use `createByokProvider` for `testConnection`, `listModels`, or `generateObject`.
+
 ## Provider Factories
 
-### `createByokProvider(config, deps)`
+### `createByokProvider(config, deps?)`
 
 Creates a runtime for the browser/Electron-safe providers.
 
 ```ts
 function createByokProvider(
 	config: ByokCoreProviderConfig,
-	deps: ByokProviderDeps
+	deps?: Partial<ByokProviderDeps>
 ): ByokProviderRuntime;
 ```
 
@@ -64,16 +146,16 @@ Supported provider configs:
 - `openrouter`
 - `ollama`
 
-Use this factory when your host application provides resolved API keys, selected models, and transport dependencies.
+Use this factory when your host application provides resolved API keys, selected models, and needs runtime methods. When `deps` is omitted, BYOK uses `globalThis.fetch` and an internal HTTP adapter. Pass custom deps for Electron IPC, tests, request instrumentation, or runtimes without global fetch.
 
-### `createByokNodeProvider(config, deps)`
+### `createByokNodeProvider(config, deps?)`
 
 Creates a runtime for every provider, including Node-only CLI providers.
 
 ```ts
 function createByokNodeProvider(
 	config: ByokProviderConfig,
-	deps: ByokProviderDeps
+	deps?: Partial<ByokProviderDeps>
 ): ByokProviderRuntime;
 ```
 
@@ -173,6 +255,7 @@ interface ByokOllamaProviderConfig {
 ```
 
 `host` is normalized by trimming trailing slashes.
+BYOK accepts only `http:` and `https:` URLs without embedded credentials. LAN and remote hosts are allowed as explicit caller input; prompts are sent to that configured host.
 
 ### `ByokCliProviderConfig`
 
@@ -211,9 +294,19 @@ type ByokCoreProviderConfig =
 
 ## Runtime Dependencies
 
+### `ByokFacadeDeps`
+
+Transport overrides accepted by the simple `generateText` and `createByok` APIs.
+
+```ts
+type ByokFacadeDeps = Partial<Omit<ByokProviderDeps, "appInfo">>;
+```
+
+Use top-level `appInfo` for provider-visible OpenRouter metadata.
+
 ### `ByokProviderDeps`
 
-Transport dependencies supplied by the host application.
+Transport dependencies supplied by the host application. All fields are required in the type, but callers may pass `Partial<ByokProviderDeps>` to `createByokProvider` and `createByokNodeProvider`.
 
 ```ts
 interface ByokProviderDeps {
@@ -226,6 +319,16 @@ interface ByokProviderDeps {
 - `fetchImpl` is used by AI SDK and vendor SDK providers.
 - `http` is used by Ollama and by environments that need a custom request adapter.
 - `appInfo` is forwarded to providers that support application metadata, currently OpenRouter.
+- `generateText` and `createByok` accept `ByokFacadeDeps`, which omits `appInfo` so provider-visible metadata has one explicit top-level home.
+
+Default dependency resolution:
+
+- Full deps are used as supplied.
+- Cloud providers may pass only `fetchImpl`.
+- OpenRouter may pass only `fetchImpl` plus top-level `appInfo` metadata.
+- Ollama callers may pass only `http`; when `http` is omitted, BYOK builds an HTTP adapter from `fetchImpl`.
+- When no usable fetch exists for a provider that needs one, BYOK throws a `ByokProviderError`.
+- The default HTTP adapter forwards abort signals where fetch supports them and caps response bodies before JSON parsing.
 
 ### `ByokHttpClient`
 
@@ -243,6 +346,7 @@ interface ByokHttpRequest {
 	method: "GET" | "POST";
 	body?: string;
 	headers?: Record<string, string>;
+	signal?: AbortSignal;
 }
 ```
 
@@ -266,6 +370,11 @@ interface ByokProviderAppInfo {
 ```
 
 OpenRouter maps this to `X-Title` and `HTTP-Referer` headers.
+This metadata is externally visible to OpenRouter. BYOK normalizes control characters from `name` and keeps only safe public `http:` or `https:` URLs without embedded credentials.
+
+## Credential and Runtime Boundaries
+
+BYOK receives plain API keys only after the host app resolves them. It does not persist or log credentials. Direct browser or Electron-renderer usage is suitable for user-entered transient keys only. App-owned keys should stay behind a server, main process, or custom transport controlled by the host app.
 
 ## Generation Types
 

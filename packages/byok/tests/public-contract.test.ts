@@ -31,12 +31,14 @@ describe("BYOK public contract", () => {
 			"byokProviderDefinition",
 			"byokProviderDefinitions",
 			"compareFetchedModelIds",
+			"createByok",
 			"createByokProvider",
 			"deriveProviderSetupStatus",
 			"describeAnthropicModel",
 			"describeAnthropicModelDetails",
 			"formatAnthropicModelHint",
 			"formatAnthropicUnavailableModelMessage",
+			"generateText",
 			"isAnthropicCustomModelSelection",
 			"isByokProviderId",
 			"isModelOption",
@@ -88,13 +90,24 @@ describe("BYOK public contract", () => {
 	});
 
 	it("documents examples against the public barrel", () => {
-		const doc = readFileSync(join(REPO_ROOT, "docs", "byok-extraction.md"), "utf8");
-		const codeExamples = [...doc.matchAll(/```(?:ts|typescript)\n([\s\S]*?)```/g)]
-			.map((match) => match[1] ?? "")
+		const docs = [
+			join(REPO_ROOT, "docs", "byok-extraction.md"),
+			join(PACKAGE_ROOT, "README.md"),
+			join(PACKAGE_ROOT, "API.md"),
+		];
+		const codeExamples = docs
+			.map((path) => readFileSync(path, "utf8"))
+			.flatMap((doc) =>
+				[...doc.matchAll(/```(?:ts|typescript)\n([\s\S]*?)```/g)].map(
+					(match) => match[1] ?? ""
+				)
+			)
 			.join("\n");
 
 		expect(codeExamples).toContain('from "@cuecraft/byok"');
 		expect(codeExamples).toContain('from "@cuecraft/byok/node"');
+		expect(codeExamples).toContain("generateText");
+		expect(codeExamples).toContain("createByok");
 		expect(codeExamples).not.toMatch(
 			/from\s+["'][^"']*byok\/(?:models|providers|registry|setup-status|types)/
 		);
