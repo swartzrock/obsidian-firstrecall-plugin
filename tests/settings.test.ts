@@ -195,6 +195,32 @@ type MockPlugin = {
 	) => void;
 };
 
+type DomCreateOptions = {
+	text?: string;
+	cls?: string | string[];
+	attr?: Record<string, string>;
+};
+
+function appendElement(
+	parent: HTMLElement,
+	tag: string,
+	options: DomCreateOptions = {}
+): HTMLElement {
+	const child = parent.ownerDocument.createElement(tag);
+	if (options.text) child.textContent = options.text;
+	if (options.cls) {
+		const classes = Array.isArray(options.cls) ? options.cls : [options.cls];
+		child.classList.add(
+			...classes.flatMap((cls) => cls.split(/\s+/).filter(Boolean))
+		);
+	}
+	for (const [name, value] of Object.entries(options.attr ?? {})) {
+		child.setAttribute(name, value);
+	}
+	parent.appendChild(child);
+	return child;
+}
+
 async function setupSettingsTab(): Promise<{
 	tab: CueCraftSettingTab;
 	plugin: MockPlugin;
@@ -212,11 +238,7 @@ async function setupSettingsTab(): Promise<{
 		setAttr?: (name: string, value: string) => void;
 		createEl?: (
 			tag: string,
-			options?: {
-				text?: string;
-				cls?: string | string[];
-				attr?: Record<string, string>;
-			}
+			options?: DomCreateOptions
 		) => HTMLElement;
 		createDiv?: (options?: { text?: string; cls?: string }) => HTMLElement;
 		createSpan?: (options?: { text?: string; cls?: string }) => HTMLElement;
@@ -233,26 +255,14 @@ async function setupSettingsTab(): Promise<{
 	proto.setAttr = function setAttr(name: string, value: string) {
 		this.setAttribute(name, value);
 	};
-	proto.createEl = function createEl(tag, options = {}) {
-		const child = this.ownerDocument.createElement(tag);
-		if (options.text) child.textContent = options.text;
-		if (options.cls) {
-			const classes = Array.isArray(options.cls) ? options.cls : [options.cls];
-			child.classList.add(
-				...classes.flatMap((cls) => cls.split(/\s+/).filter(Boolean))
-			);
-		}
-		for (const [name, value] of Object.entries(options.attr ?? {})) {
-			child.setAttribute(name, value);
-		}
-		this.appendChild(child);
-		return child;
+	proto.createEl = function createEl(tag: string, options: DomCreateOptions = {}) {
+		return appendElement(this, tag, options);
 	};
-	proto.createDiv = function createDiv(options = {}) {
-		return this.createEl?.("div", options) as HTMLElement;
+	proto.createDiv = function createDiv(options: DomCreateOptions = {}) {
+		return appendElement(this, "div", options);
 	};
-	proto.createSpan = function createSpan(options = {}) {
-		return this.createEl?.("span", options) as HTMLElement;
+	proto.createSpan = function createSpan(options: DomCreateOptions = {}) {
+		return appendElement(this, "span", options);
 	};
 
 	const plugin: MockPlugin = {
