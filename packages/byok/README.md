@@ -262,6 +262,35 @@ const models = await provider.listModels?.();
 
 `ByokModelOption` intentionally contains only `id` and `label`. Provider-specific metadata such as pricing, context length, supported parameters, or recommendation badges belongs in provider-specific APIs or the host app.
 
+### List Claude/Anthropic Models
+
+Use the provider runtime when you need setup-time model discovery. The `model` field can be the currently selected model while the runtime fetches the account's available model IDs.
+
+```ts
+import { createByokProvider } from "@cuecraft/byok";
+
+const provider = createByokProvider({
+	provider: "anthropic",
+	apiKey: process.env.ANTHROPIC_API_KEY!,
+	model: "claude-sonnet-4-6",
+});
+
+const models = await provider.listModels?.();
+console.log(models);
+```
+
+The same pattern works for other providers that support model discovery:
+
+```ts
+const provider = createByokProvider({
+	provider: "openai",
+	apiKey: process.env.OPENAI_API_KEY!,
+	model: "gpt-4o-mini",
+});
+
+const models = await provider.listModels?.();
+```
+
 ### Use Ollama
 
 Ollama uses a host URL instead of a raw API key.
@@ -278,23 +307,6 @@ const response = await generateText({
 ```
 
 BYOK accepts explicit `http:` and `https:` Ollama hosts without embedded credentials. Prompts are sent to the configured host; remote or LAN Ollama hosts are caller-approved trust boundaries.
-
-### OpenRouter App Metadata
-
-OpenRouter supports provider-visible app metadata. BYOK forwards normalized `appInfo.name` as `X-Title` and `appInfo.url` as `HTTP-Referer` only for OpenRouter.
-
-```ts
-const { text } = await generateText({
-	provider: "openrouter",
-	apiKey,
-	model: "openai/gpt-4o",
-	prompt: "Write one sentence about BYOK.",
-	appInfo: {
-		name: "My Backend App",
-		url: "https://example.com",
-	},
-});
-```
 
 ### Use Local CLI Providers
 

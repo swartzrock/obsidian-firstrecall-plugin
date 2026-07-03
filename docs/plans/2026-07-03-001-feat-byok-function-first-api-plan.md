@@ -40,7 +40,7 @@ BYOK should not clone AI SDK exactly because BYOK's domain includes explicit use
 
 **Function-First Generation**
 
-- R1. The main `@cuecraft/byok` entrypoint exports a `generateText` helper with a flat options object: provider config fields (`provider`, `apiKey` or `host`, `model`), prompt text, optional `signal`, optional custom deps, and optional OpenRouter `appInfo`.
+- R1. The main `@cuecraft/byok` entrypoint exports a `generateText` helper with a flat options object: provider config fields (`provider`, `apiKey` or `host`, `model`), prompt text, optional `signal`, and optional custom deps.
 - R2. The helper returns the existing simple text output shape so first-call examples can destructure `{ text }`.
 - R3. The helper supports browser/Electron-safe core providers: Anthropic, OpenAI, Google, xAI, OpenRouter, and Ollama.
 
@@ -68,7 +68,7 @@ BYOK should not clone AI SDK exactly because BYOK's domain includes explicit use
 **Local and Provider Metadata Safety**
 
 - R11. Ollama hosts accepted by the facade and default runtime path must be valid `http:` or `https:` URLs without embedded credentials; LAN and remote hosts are allowed only as explicit caller input and documented as prompt destinations.
-- R12. `appInfo` remains OpenRouter-only transmitted metadata, is documented as externally forwarded, and is normalized to safe public `name` and `url` values.
+- R12. Provider-specific transmitted metadata is not part of the function-first API or shared dependency surface.
 
 ### Scope Boundaries
 
@@ -163,14 +163,14 @@ flowchart TB
 - **Requirements:** R1, R2, R3, R9a, R10, R11, R12
 - **Dependencies:** U1
 - **Files:** `packages/byok/src/client.ts`, `packages/byok/src/index.ts`, `packages/byok/src/types.ts`, `packages/byok/tests/public-contract.test.ts`, `packages/byok/tests/client.test.ts`, `packages/byok/tests/fixtures/main-entrypoint.ts`
-- **Approach:** Add explicit facade option types for a flat BYOK-owned API: cloud calls use `provider`, `apiKey`, `model`, `prompt`, optional `signal`, optional `deps`, and OpenRouter-only `appInfo`; Ollama calls use `provider: "ollama"`, `host`, `model`, `prompt`, optional `signal`, and optional `deps`. The helper constructs a runtime through `createByokProvider` and calls `runtime.generateText`, returning the existing `ByokTextGenerationOutput`.
+- **Approach:** Add explicit facade option types for a flat BYOK-owned API: cloud calls use `provider`, `apiKey`, `model`, `prompt`, optional `signal`, and optional `deps`; Ollama calls use `provider: "ollama"`, `host`, `model`, `prompt`, optional `signal`, and optional `deps`. The helper constructs a runtime through `createByokProvider` and calls `runtime.generateText`, returning the existing `ByokTextGenerationOutput`.
 - **Patterns to follow:** Existing provider config discriminated unions in `types.ts` and the text output contract used by `ByokProviderRuntime.generateText`.
 - **Test scenarios:**
   - An OpenAI-style options object creates the OpenAI runtime and returns `{ text }` from its text generator.
   - Anthropic, Google, xAI, and OpenRouter options are accepted by facade type and provider-dispatch tests so R3 coverage is explicit.
   - An Ollama-style options object creates the Ollama runtime, forwards prompt and abort signals, and returns `{ text }`.
   - The abort signal option is forwarded to `runtime.generateText`.
-  - OpenRouter `appInfo` is forwarded only for OpenRouter, with unsafe `name` or `url` values normalized or dropped.
+  - Provider-specific transmitted metadata is not accepted by the shared facade.
   - Public barrel export snapshot includes `generateText` and the new public facade types.
   - The main entrypoint fixture typechecks using the new happy-path import.
 - **Verification:** Package public-contract tests and new facade tests prove the happy path without custom deps.
@@ -181,7 +181,7 @@ flowchart TB
 - **Requirements:** R4, R5, R10
 - **Dependencies:** U1, U2
 - **Files:** `packages/byok/src/client.ts`, `packages/byok/src/index.ts`, `packages/byok/src/types.ts`, `packages/byok/tests/client.test.ts`, `packages/byok/tests/public-contract.test.ts`
-- **Approach:** Build a small client facade around the same `generateText` path. The client binds only provider credentials or Ollama host plus optional deps/app metadata; every `client.generateText` call requires `model` and text input. Do not add runtime-style methods to the client. Callers that need `testConnection`, `listModels`, or `generateObject` should use `createByokProvider`.
+- **Approach:** Build a small client facade around the same `generateText` path. The client binds only provider credentials or Ollama host plus optional deps; every `client.generateText` call requires `model` and text input. Do not add runtime-style methods to the client. Callers that need `testConnection`, `listModels`, or `generateObject` should use `createByokProvider`.
 - **Patterns to follow:** Existing provider config union naming and runtime factory delegation rather than new provider-specific classes.
 - **Test scenarios:**
   - A credential-bound OpenAI client can generate text with only model and prompt on the per-call input.
@@ -205,7 +205,7 @@ flowchart TB
   - README/API docs state that BYOK is AI-SDK-shaped, not AI-SDK-compatible, and point full AI SDK users back to AI SDK.
   - README/API docs state credential and browser/renderer trust boundaries.
   - README/API docs explain that Ollama prompts are sent to the configured host and that remote hosts are caller-approved trust boundaries.
-  - README/API docs explain that OpenRouter `appInfo` is sent as provider-visible metadata.
+  - README/API docs do not expose OpenRouter-specific metadata options in the shared interface.
   - Public-contract docs scan covers `packages/byok/README.md`, `packages/byok/API.md`, and `docs/byok-extraction.md`, rejecting examples that import provider internals.
 - **Verification:** `typecheck:byok-examples` catches fixture drift, and public-contract tests catch export/docs drift.
 

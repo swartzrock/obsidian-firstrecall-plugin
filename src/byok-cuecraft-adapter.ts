@@ -983,7 +983,7 @@ export function makeCueCraftByokProvider(
 	return wrapCueCraftByokRuntime(
 		createByokNodeProvider(
 			cueCraftProviderConfigFromSettings(settings),
-			withCueCraftAppInfo(deps)
+			deps
 		)
 	);
 }
@@ -1019,19 +1019,9 @@ export async function makeCueCraftByokProviderFromStore(
 	return wrapCueCraftByokRuntime(
 		createByokNodeProvider(
 			await resolveCueCraftProviderConfigFromStore(settings, credentialStore),
-			withCueCraftAppInfo(deps)
+			deps
 		)
 	);
-}
-
-function withCueCraftAppInfo(deps: CueCraftProviderFactoryDeps): CueCraftProviderFactoryDeps {
-	return {
-		...deps,
-		appInfo: deps.appInfo ?? {
-			name: "CueCraft",
-			url: "https://github.com/swartzrock/obsidian-cuecraft-plugin",
-		},
-	};
 }
 
 export function isCueCraftLocalCliProvider(provider: ByokProviderId): boolean {

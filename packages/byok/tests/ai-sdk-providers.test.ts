@@ -18,7 +18,6 @@ type Ctor = new (opts: {
 	textGenerator?: TextGenerator;
 	fetchImpl?: typeof fetch;
 	listModelsImpl?: () => Promise<ModelOption[]>;
-	appInfo?: { name?: string; url?: string };
 }) => {
 	id: string;
 	label: string;
@@ -232,7 +231,7 @@ describe("OpenAI model discovery", () => {
 	});
 });
 
-describe("OpenRouter app metadata", () => {
+describe("OpenRouter model discovery", () => {
 	it("normalizes rich model responses to portable options", async () => {
 		const fetchImpl = (async () =>
 			new Response(
@@ -269,10 +268,10 @@ describe("OpenRouter app metadata", () => {
 		]);
 	});
 
-	it("omits app headers by default and forwards caller-provided metadata", async () => {
-		const seenHeaders: Headers[] = [];
+	it("lists OpenRouter models with authorization only", async () => {
+		let seenHeaders: Headers | undefined;
 		const fetchImpl = (async (_input, init) => {
-			seenHeaders.push(new Headers(init?.headers));
+			seenHeaders = new Headers(init?.headers);
 			return new Response(JSON.stringify({ data: [] }), {
 				status: 200,
 				headers: { "content-type": "application/json" },
@@ -286,21 +285,7 @@ describe("OpenRouter app metadata", () => {
 			generator: async () => ({ ok: true }) as never,
 			textGenerator: async () => "ok",
 		}).listModels();
-		await new OpenRouterProvider({
-			apiKey: "k",
-			model: "openai/gpt-4o",
-			fetchImpl,
-			appInfo: {
-				name: "Example Study App",
-				url: "https://example.com",
-			},
-			generator: async () => ({ ok: true }) as never,
-			textGenerator: async () => "ok",
-		}).listModels();
 
-		expect(seenHeaders[0].get("HTTP-Referer")).toBeNull();
-		expect(seenHeaders[0].get("X-Title")).toBeNull();
-		expect(seenHeaders[1].get("HTTP-Referer")).toBe("https://example.com");
-		expect(seenHeaders[1].get("X-Title")).toBe("Example Study App");
+		expect(seenHeaders?.get("Authorization")).toBe("Bearer k");
 	});
 });

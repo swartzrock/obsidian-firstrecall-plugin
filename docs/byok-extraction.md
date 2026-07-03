@@ -24,7 +24,7 @@ The public surface is:
 
 - Provider identity and metadata: `ByokProviderId`, `ByokProviderDefinition`, `BYOK_PROVIDER_IDS`, `byokProviderDefinition`, `byokProviderDefinitions`, and `isByokProviderId`.
 - Provider configuration: `ByokCoreProviderConfig` for API-key cloud providers and Ollama host/model on the browser-safe main entrypoint; `ByokProviderConfig` remains the full union for Node consumers.
-- Runtime dependencies: `ByokProviderDeps`, with caller-supplied `fetchImpl`, `http` transports, and optional `appInfo` metadata for provider-specific headers.
+- Runtime dependencies: `ByokProviderDeps`, with caller-supplied `fetchImpl` and `http` transports.
 - Function-first generation: `generateText(options)` for one-call text generation with explicit provider credentials, model, prompt, optional `signal`, and optional custom deps.
 - Repeated-call client: `createByok(config)` for binding one provider credential or Ollama host while supplying `model` per generation call.
 - Runtime creation: `createByokProvider(config, deps): ByokProviderRuntime` from the main entrypoint for core providers.
@@ -66,7 +66,6 @@ const provider = createByokProvider(
 	{
 		fetchImpl,
 		http,
-		appInfo: { name: "My Study App", url: "https://example.com" },
 	}
 );
 
@@ -128,7 +127,7 @@ CueCraft stores non-secret BYOK settings in Obsidian plugin data, but cloud prov
 
 The secure-storage boundary stays in CueCraft. BYOK receives plain `apiKey` values only after CueCraft resolves a key at runtime for provider creation, model refresh, connection testing, or generation. BYOK must not import Electron, Obsidian, filesystem adapters, or CueCraft settings types.
 
-Direct browser or Electron-renderer BYOK calls are appropriate only for user-entered transient keys. App-owned keys should stay behind a server, main process, or custom transport. Ollama hosts are explicit prompt destinations and must be valid `http:` or `https:` URLs without embedded credentials. OpenRouter `appInfo` is provider-visible metadata forwarded as headers after normalization.
+Direct browser or Electron-renderer BYOK calls are appropriate only for user-entered transient keys. App-owned keys should stay behind a server, main process, or custom transport. Ollama hosts are explicit prompt destinations and must be valid `http:` or `https:` URLs without embedded credentials.
 
 If Obsidian `app.secretStorage` is unavailable, cloud providers fail closed in that state; Ollama host and local CLI command providers remain regular non-secret settings. CueCraft requires Obsidian 1.11.4 or newer for cloud API-key storage.
 

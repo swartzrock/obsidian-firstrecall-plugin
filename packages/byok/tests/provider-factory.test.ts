@@ -4,16 +4,12 @@ import {
 	createByokProvider,
 	type ByokCoreProviderConfig,
 	type ByokHttpClient,
-	type ByokProviderAppInfo,
 } from "../src";
 import {
 	createByokNodeProvider,
 	type ByokProviderConfig,
 } from "../src/node";
-import {
-	createDefaultHttpClient,
-	normalizeProviderAppInfo,
-} from "../src/providers/default-deps";
+import { createDefaultHttpClient } from "../src/providers/default-deps";
 
 const http: ByokHttpClient = async () => ({ status: 200, text: "{}", json: {} });
 const fetchImpl = (async () => new Response("{}")) as typeof fetch;
@@ -120,24 +116,6 @@ describe("createByokProvider", () => {
 		);
 
 		expect(typeof provider.listModels).toBe("function");
-	});
-
-	it("normalizes public OpenRouter app metadata", () => {
-		const appInfo: ByokProviderAppInfo = {
-			name: " My\nApp\tName ",
-			url: "https://example.com/app",
-		};
-
-		expect(normalizeProviderAppInfo(appInfo)).toEqual({
-			name: "My App Name",
-			url: "https://example.com/app",
-		});
-		expect(
-			normalizeProviderAppInfo({
-				name: "\n",
-				url: "file:///tmp/private",
-			})
-		).toBeUndefined();
 	});
 
 	it("keeps CLI model overrides optional on the Node subpath", () => {

@@ -107,20 +107,12 @@ export type ByokHttpClient = (
 	request: ByokHttpRequest
 ) => Promise<ByokHttpResponse>;
 
-export interface ByokProviderAppInfo {
-	/** Optional application name for provider-specific metadata headers. */
-	name?: string;
-	/** Optional public application URL for provider-specific metadata headers. */
-	url?: string;
-}
-
 export interface ByokProviderDeps {
 	fetchImpl: typeof fetch;
 	http: ByokHttpClient;
-	appInfo?: ByokProviderAppInfo;
 }
 
-export type ByokFacadeDeps = Partial<Omit<ByokProviderDeps, "appInfo">>;
+export type ByokFacadeDeps = Partial<ByokProviderDeps>;
 
 export interface ByokProviderStatus {
 	ok: boolean;
@@ -191,18 +183,10 @@ export interface ByokTextGenerationOutput {
 }
 
 export type ByokGenerateTextOptions =
-	| (Omit<ByokCloudProviderConfig, "provider"> & {
-			provider: "anthropic" | "openai" | "google" | "xai";
+	| (ByokCloudProviderConfig & {
 			prompt: string;
 			deps?: ByokFacadeDeps;
 			signal?: AbortSignal;
-	  })
-	| (Omit<ByokCloudProviderConfig, "provider"> & {
-			provider: "openrouter";
-			prompt: string;
-			deps?: ByokFacadeDeps;
-			signal?: AbortSignal;
-			appInfo?: ByokProviderAppInfo;
 	  })
 	| (ByokOllamaProviderConfig & {
 			prompt: string;
@@ -211,14 +195,8 @@ export type ByokGenerateTextOptions =
 	  });
 
 export type ByokClientConfig =
-	| (Omit<ByokCloudProviderConfig, "provider" | "model"> & {
-			provider: "anthropic" | "openai" | "google" | "xai";
+	| (Omit<ByokCloudProviderConfig, "model"> & {
 			deps?: ByokFacadeDeps;
-	  })
-	| (Omit<ByokCloudProviderConfig, "provider" | "model"> & {
-			provider: "openrouter";
-			deps?: ByokFacadeDeps;
-			appInfo?: ByokProviderAppInfo;
 	  })
 	| (Omit<ByokOllamaProviderConfig, "model"> & {
 			deps?: ByokFacadeDeps;

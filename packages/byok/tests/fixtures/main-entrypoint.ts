@@ -43,27 +43,11 @@ const openRouterText = generateText({
 	apiKey: "sk-test",
 	model: "openai/gpt-4o",
 	prompt: "Explain BYOK in one sentence.",
-	appInfo: {
-		name: "Fixture App",
-		url: "https://example.com",
-	},
 	deps,
 });
 
 void generateText({
-	provider: "openai",
-	apiKey: "sk-test",
-	model: "gpt-4o-mini",
-	prompt: "Explain BYOK in one sentence.",
-	// @ts-expect-error appInfo is OpenRouter-specific on the simple facade.
-	appInfo: {
-		name: "Fixture App",
-	},
-	deps,
-});
-
-void generateText({
-	provider: "openai",
+	provider: "openrouter",
 	apiKey: "sk-test",
 	model: "gpt-4o-mini",
 	prompt: "Explain BYOK in one sentence.",

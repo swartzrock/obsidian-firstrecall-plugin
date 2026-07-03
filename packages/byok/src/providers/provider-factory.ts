@@ -8,7 +8,6 @@ import {
 	normalizeOllamaHost,
 	resolveByokFetchDeps,
 	resolveOllamaDeps,
-	resolveOpenRouterDeps,
 } from "./default-deps";
 import type {
 	ByokCoreProviderConfig,
@@ -54,12 +53,11 @@ export function createByokProvider(
 			}) as unknown as ByokProviderRuntime;
 		}
 		case "openrouter": {
-			const { fetchImpl, appInfo } = resolveOpenRouterDeps(deps);
+			const { fetchImpl } = resolveByokFetchDeps(deps);
 			return new OpenRouterProvider({
 				apiKey: config.apiKey,
 				model: config.model,
 				fetchImpl,
-				appInfo,
 			}) as unknown as ByokProviderRuntime;
 		}
 		case "ollama": {

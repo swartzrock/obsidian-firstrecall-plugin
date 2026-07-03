@@ -55,7 +55,7 @@ function generateText(
 ): Promise<ByokTextGenerationOutput>;
 ```
 
-Cloud provider options combine provider config, text input, optional custom deps, optional abort signal, and optional OpenRouter app metadata:
+Cloud provider options combine provider config, text input, optional custom deps, and optional abort signal:
 
 ```ts
 type ByokGenerateTextOptions =
@@ -66,15 +66,6 @@ type ByokGenerateTextOptions =
 			prompt: string;
 			signal?: AbortSignal;
 			deps?: ByokFacadeDeps;
-	  }
-	| {
-			provider: "openrouter";
-			apiKey: string;
-			model: string;
-			prompt: string;
-			signal?: AbortSignal;
-			deps?: ByokFacadeDeps;
-			appInfo?: ByokProviderAppInfo;
 	  }
 	| {
 			provider: "ollama";
@@ -299,10 +290,8 @@ type ByokCoreProviderConfig =
 Transport overrides accepted by the simple `generateText` and `createByok` APIs.
 
 ```ts
-type ByokFacadeDeps = Partial<Omit<ByokProviderDeps, "appInfo">>;
+type ByokFacadeDeps = Partial<ByokProviderDeps>;
 ```
-
-Use top-level `appInfo` for provider-visible OpenRouter metadata.
 
 ### `ByokProviderDeps`
 
@@ -312,20 +301,16 @@ Transport dependencies supplied by the host application. All fields are required
 interface ByokProviderDeps {
 	fetchImpl: typeof fetch;
 	http: ByokHttpClient;
-	appInfo?: ByokProviderAppInfo;
 }
 ```
 
 - `fetchImpl` is used by AI SDK and vendor SDK providers.
 - `http` is used by Ollama and by environments that need a custom request adapter.
-- `appInfo` is forwarded to providers that support application metadata, currently OpenRouter.
-- `generateText` and `createByok` accept `ByokFacadeDeps`, which omits `appInfo` so provider-visible metadata has one explicit top-level home.
 
 Default dependency resolution:
 
 - Full deps are used as supplied.
 - Cloud providers may pass only `fetchImpl`.
-- OpenRouter may pass only `fetchImpl` plus top-level `appInfo` metadata.
 - Ollama callers may pass only `http`; when `http` is omitted, BYOK builds an HTTP adapter from `fetchImpl`.
 - When no usable fetch exists for a provider that needs one, BYOK throws a `ByokProviderError`.
 - The default HTTP adapter forwards abort signals where fetch supports them and caps response bodies before JSON parsing.
@@ -359,18 +344,6 @@ interface ByokHttpResponse {
 	json: unknown;
 }
 ```
-
-### `ByokProviderAppInfo`
-
-```ts
-interface ByokProviderAppInfo {
-	name?: string;
-	url?: string;
-}
-```
-
-OpenRouter maps this to `X-Title` and `HTTP-Referer` headers.
-This metadata is externally visible to OpenRouter. BYOK normalizes control characters from `name` and keeps only safe public `http:` or `https:` URLs without embedded credentials.
 
 ## Credential and Runtime Boundaries
 

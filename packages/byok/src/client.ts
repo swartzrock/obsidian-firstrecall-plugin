@@ -6,20 +6,8 @@ import type {
 	ByokCoreProviderConfig,
 	ByokFacadeDeps,
 	ByokGenerateTextOptions,
-	ByokProviderAppInfo,
-	ByokProviderDeps,
 	ByokTextGenerationOutput,
 } from "./types";
-
-function depsWithAppInfo(
-	deps: ByokFacadeDeps | undefined,
-	appInfo: ByokProviderAppInfo | undefined
-): Partial<ByokProviderDeps> | undefined {
-	if (!deps) return appInfo ? { appInfo } : undefined;
-	const { appInfo: _droppedAppInfo, ...transportDeps } =
-		deps as Partial<ByokProviderDeps>;
-	return appInfo ? { ...transportDeps, appInfo } : transportDeps;
-}
 
 function providerConfigFromGenerateTextOptions(
 	options: ByokGenerateTextOptions
@@ -62,13 +50,9 @@ async function generateTextForConfig(
 	options: {
 		deps?: ByokFacadeDeps;
 		signal?: AbortSignal;
-		appInfo?: ByokProviderAppInfo;
 	} = {}
 ): Promise<ByokTextGenerationOutput> {
-	const provider = createByokProvider(
-		config,
-		depsWithAppInfo(options.deps, options.appInfo)
-	);
+	const provider = createByokProvider(config, options.deps);
 	return provider.generateText({ prompt: input.prompt }, options.signal);
 }
 
@@ -78,7 +62,6 @@ export async function generateText(
 	return generateTextForConfig(providerConfigFromGenerateTextOptions(options), options, {
 		deps: options.deps,
 		signal: options.signal,
-		appInfo: "appInfo" in options ? options.appInfo : undefined,
 	});
 }
 
@@ -88,7 +71,6 @@ export function createByok(config: ByokClientConfig): ByokClient {
 			return generateTextForConfig(providerConfigFromClientInput(config, input), input, {
 				deps: config.deps,
 				signal: input.signal,
-				appInfo: "appInfo" in config ? config.appInfo : undefined,
 			});
 		},
 	};

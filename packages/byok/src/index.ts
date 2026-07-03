@@ -67,7 +67,6 @@ export type {
 	ByokModelRefreshResult,
 	ByokObjectGenerationInput,
 	ByokOllamaProviderConfig,
-	ByokProviderAppInfo,
 	ByokProviderConfig,
 	ByokProviderDefinition,
 	ByokProviderDeps,
