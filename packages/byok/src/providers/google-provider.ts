@@ -7,6 +7,7 @@ import {
 	type ObjectGenerator,
 	type TextGenerator,
 } from "./ai-sdk-provider";
+import { normalizeModelIds, type ModelOption } from "../models/model-options";
 
 export interface GoogleProviderOptions {
 	apiKey: string;
@@ -17,7 +18,7 @@ export interface GoogleProviderOptions {
 	generator?: ObjectGenerator;
 	textGenerator?: TextGenerator;
 	/** Overrides the model-list call in tests. */
-	listModelsImpl?: () => Promise<string[]>;
+	listModelsImpl?: () => Promise<ModelOption[]>;
 }
 
 export class GoogleProvider extends AiSdkProvider {
@@ -32,7 +33,8 @@ export class GoogleProvider extends AiSdkProvider {
 				opts.textGenerator ??
 				defaultTextGenerator(opts.apiKey, opts.model, opts.fetchImpl),
 			listModels:
-				opts.listModelsImpl ?? (() => listGoogleModels(opts.apiKey, opts.fetchImpl)),
+				opts.listModelsImpl ??
+				(async () => normalizeModelIds(await listGoogleModels(opts.apiKey, opts.fetchImpl))),
 		});
 	}
 }

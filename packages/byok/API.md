@@ -22,7 +22,7 @@ It exports:
 - Provider registry constants and helpers.
 - Core provider factory.
 - Setup-status helpers.
-- Model option and compatibility helpers.
+- Portable model option helpers.
 - Anthropic model-selection helpers.
 - Public runtime, config, storage, model, and error types.
 
@@ -99,7 +99,7 @@ interface ByokProviderRuntime {
 	requiresDownload: boolean;
 	sectionConcurrencyLimit?: number;
 	testConnection(): Promise<ByokProviderStatus>;
-	listModels?(): Promise<ByokListedModel[]>;
+	listModels?(): Promise<ByokModelOption[]>;
 	generateText(
 		input: ByokTextGenerationInput,
 		signal?: AbortSignal
@@ -431,7 +431,6 @@ interface ByokModelFieldDefinition {
 	listModelsLabel?: string;
 	listModelsDescription?: string;
 	emptyListMessage?: string;
-	optionSource?: ByokModelOptionSource;
 }
 ```
 
@@ -439,94 +438,39 @@ interface ByokModelFieldDefinition {
 
 ### `ByokModelOption`
 
-Normalized rich model metadata.
+Portable model choice returned by provider model discovery.
 
 ```ts
 interface ByokModelOption {
 	id: string;
 	label: string;
-	provider: string;
-	contextLength: number | null;
-	pricing: { prompt: number; completion: number } | null;
-	supportedParameters: string[] | null;
-	source: ByokModelOptionSource;
 }
 ```
 
-### `ByokModelOptionSource`
+Provider-specific metadata such as pricing, context length, supported parameters, or recommendation badges is intentionally not part of the main model option contract.
 
-```ts
-type ByokModelOptionSource =
-	| "openrouter"
-	| "openai"
-	| "google"
-	| "xai"
-	| "ollama"
-	| "anthropic"
-	| "string";
-```
+### `ModelOption`
 
-### `ByokListedModel`
-
-Model-list return value shape.
-
-```ts
-type ByokListedModel = string | ByokModelOption;
-```
-
-### `ModelOption` and `ModelOptionSource`
-
-Aliases exported for model helper users:
+Alias exported for model helper users:
 
 ```ts
 type ModelOption = ByokModelOption;
-type ModelOptionSource = ByokModelOptionSource;
 ```
 
-### `OpenRouterRawModel`
-
-Subset of the OpenRouter `/models` API response accepted by the normalizer.
-
-```ts
-interface OpenRouterRawModel {
-	id?: string;
-	name?: string;
-	context_length?: number;
-	pricing?: { prompt?: string; completion?: string };
-	supported_parameters?: string[];
-}
-```
-
-### `normalizeStringId(id, source)`
+### `normalizeStringId(id)`
 
 Converts a string model ID into a `ModelOption`.
 
 ```ts
-function normalizeStringId(
-	id: string,
-	source: ModelOptionSource
-): ModelOption;
+function normalizeStringId(id: string): ModelOption;
 ```
 
-### `normalizeModelIds(ids, source)`
+### `normalizeModelIds(ids)`
 
 Converts an array of string model IDs into `ModelOption` values.
 
 ```ts
-function normalizeModelIds(
-	ids: string[],
-	source: ModelOptionSource
-): ModelOption[];
-```
-
-### `normalizeOpenRouterModel(entry)`
-
-Converts an OpenRouter model record into a `ModelOption`.
-
-```ts
-function normalizeOpenRouterModel(
-	entry: OpenRouterRawModel
-): ModelOption;
+function normalizeModelIds(ids: string[]): ModelOption[];
 ```
 
 ### `isModelOption(value)`
@@ -562,71 +506,6 @@ Sorts model IDs with natural collation.
 
 ```ts
 function sortFetchedModelIds(modelIds: string[]): string[];
-```
-
-## Model Compatibility
-
-### `StructuredOutputSupport`
-
-```ts
-type StructuredOutputSupport = "supported" | "unsupported" | "unknown";
-```
-
-### `modelStructuredOutputSupport(option)`
-
-Infers structured-output support from a model option's advertised parameters.
-
-```ts
-function modelStructuredOutputSupport(
-	option: ModelOption
-): StructuredOutputSupport;
-```
-
-### `isLargeContextModel(option)`
-
-Returns `true` when `contextLength` is at least `100000`.
-
-```ts
-function isLargeContextModel(option: ModelOption): boolean;
-```
-
-### `isLowCostModel(option)`
-
-Returns `true` when prompt and completion pricing fall below BYOK's low-cost thresholds.
-
-```ts
-function isLowCostModel(option: ModelOption): boolean;
-```
-
-### `modelCompatibilityBadges(option)`
-
-Returns up to three display badges:
-
-- `"Structured output"`
-- `"Large context"`
-- `"Low cost"`
-
-```ts
-function modelCompatibilityBadges(option: ModelOption): string[];
-```
-
-### `modelCompatibilityWarning(option)`
-
-Returns a user-facing warning when structured-output support is unsupported or unknown.
-
-```ts
-function modelCompatibilityWarning(option: ModelOption | null): string;
-```
-
-### `sortByokModelOptions(options, currentModelId?)`
-
-Sorts model options with the current model first, then BYOK-preferred compatibility score, then natural model-ID order.
-
-```ts
-function sortByokModelOptions(
-	options: ModelOption[],
-	currentModelId?: string
-): ModelOption[];
 ```
 
 ## Anthropic Model Helpers
@@ -668,17 +547,15 @@ interface AnthropicModelOption {
 
 ```ts
 interface AnthropicModelListSource {
-	listModels(): Promise<ModelInfo[]>;
+	listModels(): Promise<ByokModelOption[]>;
 }
 ```
-
-`ModelInfo` comes from `@anthropic-ai/sdk/resources/models`.
 
 ### `AnthropicModelRefreshResult`
 
 ```ts
 interface AnthropicModelRefreshResult {
-	availableModels: ModelInfo[];
+	availableModels: ByokModelOption[];
 	options: AnthropicModelOption[];
 	message: string;
 }
@@ -1159,7 +1036,6 @@ type LoginShellPathLoader = (
 
 ## API Caveats Before Public v1
 
-- `listModels()` should be normalized across providers. The public runtime type is `ByokListedModel[]`, but Anthropic-specific flows currently use `ModelInfo[]` plus Anthropic helpers before storing normalized BYOK options.
 - `ByokProviderDeps.http` is required even for cloud-only usage. A Node convenience helper would reduce setup code.
 - Structured-output support is currently indicated by the optional `generateObject` method, not by provider metadata.
 - `ByokStoredSettings` is useful for CueCraft-style setup state, but many backend apps will prefer a smaller credential/model verification abstraction.

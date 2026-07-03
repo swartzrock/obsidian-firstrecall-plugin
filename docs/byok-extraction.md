@@ -26,7 +26,7 @@ The public surface is:
 - Runtime creation: `createByokProvider(config, deps): ByokProviderRuntime` from the main entrypoint for core providers.
 - Node-only runtime creation: `createByokNodeProvider(config, deps): ByokProviderRuntime` from `@cuecraft/byok/node` for Codex CLI and Claude CLI providers.
 - Setup state: verification snapshots, credential fingerprints, `recordProviderConnectionSuccess`, and `deriveProviderSetupStatus`.
-- Model discovery: normalized model IDs, rich model options, model option sorting, refresh-result types, and OpenRouter compatibility metadata.
+- Model discovery: provider runtimes return portable `ByokModelOption` values with `id` and `label` only. Provider-specific metadata such as OpenRouter pricing, context length, supported parameters, and compatibility badges is intentionally not part of the main public surface.
 - Generation: `generateText`, optional `generateObject`, and provider errors such as `ByokProviderError` and `ByokProviderRateLimitError`.
 
 The provider runtime contract intentionally stays app-agnostic:

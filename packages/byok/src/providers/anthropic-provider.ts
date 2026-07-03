@@ -1,5 +1,4 @@
 import Anthropic from "@anthropic-ai/sdk";
-import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import type { FetchFunction } from "@ai-sdk/provider-utils";
 import {
@@ -9,6 +8,8 @@ import {
 	type ObjectGenerator,
 	type TextGenerator,
 } from "./ai-sdk-provider";
+import { anthropicModelInfoToByokModelOption } from "../models/anthropic-models";
+import type { ByokModelOption } from "../types";
 
 export type { ObjectGenerator } from "./ai-sdk-provider";
 
@@ -41,16 +42,16 @@ export class AnthropicProvider extends AiSdkProvider {
 		this.fetchImpl = opts.fetchImpl;
 	}
 
-	async listModels(): Promise<ModelInfo[]> {
+	async listModels(): Promise<ByokModelOption[]> {
 		const client = new Anthropic({
 			apiKey: this.apiKey,
 			fetch: this.fetchImpl,
 			dangerouslyAllowBrowser: true,
 		});
-		const models: ModelInfo[] = [];
+		const models: ByokModelOption[] = [];
 		// eslint-disable-next-line @typescript-eslint/await-thenable -- PagePromise implements AsyncIterable.
 		for await (const model of client.models.list()) {
-			models.push(model);
+			models.push(anthropicModelInfoToByokModelOption(model));
 		}
 		return models;
 	}

@@ -107,7 +107,7 @@ describe("AnthropicProvider.testConnection", () => {
 });
 
 describe("AnthropicProvider.listModels", () => {
-	it("returns typed models with display names from the official SDK", async () => {
+	it("returns portable model options with display names from the official SDK", async () => {
 		const models: ModelInfo[] = [
 			{
 				id: "claude-account-123",
@@ -141,8 +141,8 @@ describe("AnthropicProvider.listModels", () => {
 			fetchImpl: fetchMock as never,
 		});
 		const listed = await p.listModels();
-		expect(listed).toHaveLength(1);
-		expect(listed[0].display_name).toBe("Claude Account 123");
-		expect(listed[0].id).toBe("claude-account-123");
+		expect(listed).toEqual([
+			{ id: "claude-account-123", label: "Claude Account 123" },
+		]);
 	});
 });

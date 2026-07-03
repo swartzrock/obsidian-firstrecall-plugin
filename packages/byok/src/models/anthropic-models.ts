@@ -17,11 +17,11 @@ export interface AnthropicModelHint {
 }
 
 export interface AnthropicModelListSource {
-	listModels(): Promise<ModelInfo[]>;
+	listModels(): Promise<ByokModelOption[]>;
 }
 
 export interface AnthropicModelRefreshResult {
-	availableModels: ModelInfo[];
+	availableModels: ByokModelOption[];
 	options: AnthropicModelOption[];
 	message: string;
 }
@@ -95,11 +95,6 @@ export function anthropicModelInfoToByokModelOption(
 	return {
 		id: model.id,
 		label: model.display_name,
-		provider: "Anthropic",
-		contextLength: null,
-		pricing: null,
-		supportedParameters: null,
-		source: "anthropic",
 	};
 }
 

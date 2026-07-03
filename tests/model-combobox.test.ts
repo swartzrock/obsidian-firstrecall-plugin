@@ -13,7 +13,7 @@ function opt(
 	id: string,
 	overrides: Partial<ModelOption> = {}
 ): ModelOption {
-	return { ...normalizeStringId(id, "openrouter"), ...overrides };
+	return { ...normalizeStringId(id), ...overrides };
 }
 
 type ObsidianDomOptions = {
@@ -108,30 +108,26 @@ describe("buildModelComboboxOptions", () => {
 		const options = buildModelComboboxOptions({
 			options: [opt("openai/gpt-4o"), opt("anthropic/claude-sonnet-4")],
 			currentModelId: "custom-provider/private-model",
-			source: "openrouter",
 		});
 		expect(options[0]).toMatchObject({
 			id: "custom-provider/private-model",
-			provider: "custom-provider",
+			label: "custom-provider/private-model",
 		});
 		expect(options.map((option) => option.id)).toContain("openai/gpt-4o");
 	});
 
-	it("preserves fetched metadata for the current model", () => {
+	it("preserves fetched labels for the current model", () => {
 		const options = buildModelComboboxOptions({
 			options: [
 				opt("openai/gpt-4o", {
 					label: "OpenAI: GPT-4o",
-					contextLength: 128000,
 				}),
 			],
 			currentModelId: "openai/gpt-4o",
-			source: "openrouter",
 		});
 		expect(options[0]).toMatchObject({
 			id: "openai/gpt-4o",
 			label: "OpenAI: GPT-4o",
-			contextLength: 128000,
 		});
 	});
 
@@ -140,7 +136,6 @@ describe("buildModelComboboxOptions", () => {
 			buildModelComboboxOptions({
 				options: [],
 				currentModelId: "   ",
-				source: "openai",
 			})
 		).toEqual([]);
 	});
@@ -159,7 +154,7 @@ describe("filterModelOptions", () => {
 		}),
 	];
 
-	it("matches by model ID, label, and provider", () => {
+	it("matches by model ID and label", () => {
 		expect(filterModelOptions(options, "gpt").map((o) => o.id)).toEqual([
 			"openai/gpt-4o",
 		]);
@@ -168,17 +163,6 @@ describe("filterModelOptions", () => {
 		]);
 		expect(filterModelOptions(options, "google").map((o) => o.id)).toEqual([
 			"google/gemini-pro",
-		]);
-	});
-
-	it("can match badge text supplied by the caller", () => {
-		const result = filterModelOptions(options, "structured", (option) =>
-			option.id === "anthropic/claude-sonnet-4"
-				? ["Structured output"]
-				: []
-		);
-		expect(result.map((option) => option.id)).toEqual([
-			"anthropic/claude-sonnet-4",
 		]);
 	});
 
@@ -196,7 +180,6 @@ describe("buildModelComboboxSuggestions", () => {
 			],
 			selectedModelId: "",
 			query: "qwen3",
-			source: "openrouter",
 		});
 		expect(suggestions.map((option) => option.id)).toEqual([
 			"qwen/qwen3-8b",
@@ -210,7 +193,6 @@ describe("buildModelComboboxSuggestions", () => {
 			options: [opt("qwen/qwen3-8b")],
 			selectedModelId: "custom/private-model",
 			query: "custom",
-			source: "openrouter",
 		});
 		expect(suggestions.map((option) => option.id)).toEqual([
 			"custom/private-model",
@@ -219,10 +201,12 @@ describe("buildModelComboboxSuggestions", () => {
 });
 
 describe("modelOptionSearchText", () => {
-	it("includes badge text for searchable metadata", () => {
+	it("includes model ID and label", () => {
 		expect(
-			modelOptionSearchText(opt("openai/gpt-4o"), ["Low cost"])
-		).toContain("low cost");
+			modelOptionSearchText(
+				opt("openai/gpt-4o", { label: "OpenAI: GPT-4o" })
+			)
+		).toBe("openai/gpt-4o openai: gpt-4o");
 	});
 });
 
@@ -236,10 +220,9 @@ describe("renderModelCombobox", () => {
 			containerEl: container,
 			value: "",
 			options: [
-				normalizeStringId("Entire vault", "string"),
-				normalizeStringId("ClaudeNotes", "string"),
+				normalizeStringId("Entire vault"),
+				normalizeStringId("ClaudeNotes"),
 			],
-			source: "string",
 			placeholder: "Choose a scope...",
 			emptyMessage: "No matching scopes.",
 			onCommit: () => {},
@@ -274,8 +257,7 @@ describe("renderModelCombobox", () => {
 		renderModelCombobox({
 			containerEl: container,
 			value: "",
-			options: [normalizeStringId("ClaudeNotes", "string")],
-			source: "string",
+			options: [normalizeStringId("ClaudeNotes")],
 			placeholder: "Choose a folder...",
 			emptyMessage: "No matching folders.",
 			onCommit: (value) => {

@@ -3,13 +3,11 @@ import {
 	ByokProviderError,
 	byokProviderDefinition,
 	deriveProviderSetupStatus,
-	isModelOption,
 	normalizeAnthropicModelSelection,
 	normalizeProviderId,
 	recordProviderConnectionSuccess,
 	sortFetchedModelIds,
 	type ByokHttpClient,
-	type ByokListedModel,
 	type ByokModelOption,
 	type ByokProviderConfig,
 	type ByokProviderDeps,
@@ -85,6 +83,7 @@ export type {
 
 export type CueCraftFetchedModelProvider =
 	| "ollama"
+	| "anthropic"
 	| "openai"
 	| "google"
 	| "xai"
@@ -1163,7 +1162,7 @@ export function recordCueCraftProviderConnectionSuccess(
 
 export function resetCueCraftFetchedModels(
 	settings: CueCraftSettings,
-	provider: CueCraftFetchedModelProvider | "anthropic",
+	provider: CueCraftFetchedModelProvider,
 	message: string
 ): void {
 	const stored = cueCraftProviderSettings(settings, provider);
@@ -1176,17 +1175,10 @@ export function resetCueCraftFetchedModels(
 export function applyCueCraftListedModels(
 	settings: CueCraftSettings,
 	provider: CueCraftFetchedModelProvider,
-	listedModels: ByokListedModel[],
+	options: ByokModelOption[],
 	emptyMessage: string
 ): CueCraftAppliedModelRefresh {
-	const options =
-		listedModels.length > 0 && isModelOption(listedModels[0])
-			? (listedModels as ByokModelOption[])
-			: [];
-	const ids =
-		options.length > 0
-			? options.map((option) => option.id)
-			: (listedModels as string[]);
+	const ids = options.map((option) => option.id);
 	const models = sortFetchedModelIds(ids);
 	const message = models.length > 0 ? "" : emptyMessage;
 	const stored = cueCraftProviderSettings(settings, provider);

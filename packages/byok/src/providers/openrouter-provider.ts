@@ -8,14 +8,15 @@ import {
 	textGenerator,
 	type TextGenerator,
 } from "./ai-sdk-provider";
-import {
-	normalizeOpenRouterModel,
-	type ModelOption,
-	type OpenRouterRawModel,
-} from "../models/model-options";
+import type { ModelOption } from "../models/model-options";
 import type { ByokProviderAppInfo } from "../types";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+
+interface OpenRouterRawModel {
+	id?: string;
+	name?: string;
+}
 
 export interface OpenRouterProviderOptions {
 	apiKey: string;
@@ -58,6 +59,14 @@ function openRouterAppHeaders(
 	if (appInfo?.url) headers["HTTP-Referer"] = appInfo.url;
 	if (appInfo?.name) headers["X-Title"] = appInfo.name;
 	return headers;
+}
+
+function normalizeOpenRouterModel(entry: OpenRouterRawModel): ModelOption {
+	const id = entry.id ?? "";
+	return {
+		id,
+		label: entry.name ?? id,
+	};
 }
 
 async function listOpenRouterModelOptions(
