@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Ideation: Editing View Settings Split</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--bg: #f7f4ef;
+			--paper: #fffdf8;
+			--ink: #24211c;
+			--muted: #655f56;
+			--line: #d9d1c4;
+			--accent: #0d766f;
+			--accent-soft: #dcefed;
+			--warm: #b85c38;
+			--cool: #334b7d;
+			--shadow: 0 16px 36px rgba(50, 41, 28, 0.08);
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--ink);
+			font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			font-size: 15px;
+			line-height: 1.58;
+		}
+
+		.page {
+			width: min(960px, calc(100vw - 32px));
+			margin: 0 auto;
+			padding: 48px 0 56px;
+		}
+
+		header {
+			border-bottom: 1px solid var(--line);
+			padding-bottom: 24px;
+			margin-bottom: 28px;
+		}
+
+		.kicker {
+			margin: 0 0 8px;
+			color: var(--accent);
+			font-size: 12px;
+			font-weight: 750;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+		}
+
+		h1 {
+			margin: 0;
+			font-size: clamp(32px, 5vw, 52px);
+			line-height: 1.02;
+			letter-spacing: 0;
+		}
+
+		.summary {
+			max-width: 72ch;
+			margin: 16px 0 0;
+			color: var(--muted);
+			font-size: 17px;
+		}
+
+		.meta {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 10px;
+			margin-top: 20px;
+		}
+
+		.meta span,
+		.badge {
+			display: inline-flex;
+			align-items: center;
+			border: 1px solid var(--line);
+			border-radius: 999px;
+			padding: 5px 10px;
+			background: rgba(255, 255, 255, 0.62);
+			color: var(--muted);
+			font-size: 12px;
+			font-weight: 650;
+		}
+
+		nav {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin: 24px 0 32px;
+		}
+
+		nav a {
+			color: var(--accent);
+			text-decoration: none;
+			border: 1px solid var(--line);
+			border-radius: 999px;
+			padding: 6px 10px;
+			background: var(--paper);
+			font-size: 13px;
+			font-weight: 700;
+		}
+
+		section {
+			margin: 34px 0;
+		}
+
+		h2 {
+			margin: 0 0 14px;
+			font-size: 25px;
+			line-height: 1.2;
+			letter-spacing: 0;
+		}
+
+		h3 {
+			margin: 0;
+			font-size: 20px;
+			line-height: 1.25;
+			letter-spacing: 0;
+		}
+
+		p {
+			max-width: 74ch;
+		}
+
+		code {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+			font-size: 0.92em;
+			background: #f0ebe2;
+			border: 1px solid #e1d9cc;
+			border-radius: 5px;
+			padding: 1px 4px;
+		}
+
+		.context,
+		.idea,
+		.rejection-wrap {
+			background: var(--paper);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			box-shadow: var(--shadow);
+		}
+
+		.context {
+			padding: 20px;
+		}
+
+		.context ul,
+		.axes ul {
+			margin: 0;
+			padding-left: 20px;
+		}
+
+		.context li,
+		.axes li {
+			margin: 8px 0;
+		}
+
+		.idea-list {
+			display: grid;
+			gap: 18px;
+		}
+
+		.idea {
+			padding: 22px;
+		}
+
+		.idea-head {
+			display: flex;
+			align-items: start;
+			justify-content: space-between;
+			gap: 16px;
+			margin-bottom: 12px;
+		}
+
+		.rank {
+			flex: 0 0 auto;
+			display: inline-grid;
+			place-items: center;
+			width: 34px;
+			height: 34px;
+			border-radius: 50%;
+			background: var(--accent);
+			color: white;
+			font-weight: 800;
+		}
+
+		.idea-title {
+			display: flex;
+			gap: 12px;
+			align-items: center;
+		}
+
+		.idea-meta {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin: 12px 0 14px;
+		}
+
+		.idea-grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 14px;
+		}
+
+		.field {
+			border-top: 1px solid var(--line);
+			padding-top: 10px;
+		}
+
+		.field strong {
+			display: block;
+			margin-bottom: 4px;
+			color: var(--ink);
+		}
+
+		.visual {
+			margin: 16px 0 2px;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: #fbf8f1;
+			overflow: hidden;
+		}
+
+		.visual svg {
+			display: block;
+			width: 100%;
+			height: auto;
+		}
+
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			background: var(--paper);
+		}
+
+		th,
+		td {
+			border-bottom: 1px solid var(--line);
+			padding: 10px 12px;
+			text-align: left;
+			vertical-align: top;
+		}
+
+		th {
+			color: var(--muted);
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+		}
+
+		.rejection-wrap {
+			overflow: auto;
+		}
+
+		footer {
+			margin-top: 42px;
+			padding-top: 18px;
+			border-top: 1px solid var(--line);
+			color: var(--muted);
+			font-size: 13px;
+		}
+
+		@media (max-width: 760px) {
+			.page {
+				width: min(100vw - 20px, 960px);
+				padding-top: 28px;
+			}
+
+			.idea-head,
+			.idea-title {
+				align-items: flex-start;
+			}
+
+			.idea-grid {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</head>
+<body>
+	<main class="page">
+		<header>
+			<p class="kicker">CueCraft ideation</p>
+			<h1>Editing View Settings Split</h1>
+			<p class="summary">A fresh ideation pass on splitting settings so Cornell View styling has its own named destination, while settings that only affect the live editor move into a new Editing View page. The product reason is strategic: Cornell View may eventually be removed as an extra step with limited benefit, so Editing View appearance may become CueCraft's main study surface.</p>
+			<div class="meta">
+				<span>Date: <time datetime="2026-07-02">2026-07-02</time></span>
+				<span>Updated: <time datetime="2026-07-03">2026-07-03</time></span>
+				<span>Topic: editing-view-settings-split</span>
+				<span>Focus: rename Appearance to Cornell View and add Editing View settings with Editing View as a possible future primary surface</span>
+				<span>Mode: repo-grounded</span>
+			</div>
+		</header>
+
+		<nav aria-label="Idea index">
+			<a href="#grounding-context">Grounding</a>
+			<a href="#topic-axes">Axes</a>
+			<a href="#idea-1">1. Split</a>
+			<a href="#idea-2">2. Editing View</a>
+			<a href="#idea-3">3. Cross-view toggles</a>
+			<a href="#idea-4">4. Summaries</a>
+			<a href="#idea-5">5. Tests</a>
+			<a href="#idea-6">6. Future Reading View</a>
+			<a href="#rejection-summary">Rejected</a>
+		</nav>
+
+		<section id="grounding-context">
+			<h2>Grounding Context</h2>
+			<div class="context">
+				<ul>
+					<li>CueCraft is an Obsidian plugin for active-recall study cues. The README distinguishes <strong>Editor-mode</strong> cue questions from a dedicated <strong>Cornell view</strong>, and separately calls out Cornell view styles in settings.</li>
+					<li>The settings home currently has a single <code>Appearance</code> nav card whose description says it adjusts Cornell view styling, sizing, accents, and compact display options.</li>
+					<li>The <code>Appearance</code> subpage header says "Cornell view styling, layout, cue accents, and visual density," but the first two controls in <code>renderAppearanceSection</code> are <code>Editor cue display</code> and <code>Rail card background</code>.</li>
+					<li>The current <code>appearanceSummary()</code> mixes editor state and Cornell state in one string: editor display, hook card style, Cornell display mode, Cornell style, width, and font size.</li>
+					<li><code>Note format</code> currently contains Reading mode controls, cross-view review-surface toggles, editor rail-only toggles, and one Cornell mobile toggle. That makes the page a grab bag rather than a semantic destination.</li>
+					<li>The strategic premise changed after the first draft: Cornell View may be removed in the future because it adds an extra user step with limited benefit. That makes Editing View appearance work more important, because the editor may become the main review surface.</li>
+					<li>Behavioral evidence is cleanly separable: editor rail settings call <code>refreshEditorCues()</code>; Cornell appearance settings call <code>refreshCornellViews()</code>; review-surface toggles refresh editor, Reading mode, and Cornell view together.</li>
+					<li>No settings data migration is required. The split is about page taxonomy and rendering placement, not changing stored setting keys.</li>
+				</ul>
+			</div>
+		</section>
+
+		<section id="topic-axes" class="axes">
+			<h2>Topic Axes</h2>
+			<ul>
+				<li>Navigation naming</li>
+				<li>Cornell-only controls</li>
+				<li>Editing View-only controls</li>
+				<li>Editing View as the possible primary surface</li>
+				<li>Cross-view review toggles</li>
+				<li>Refresh and verification behavior</li>
+			</ul>
+		</section>
+
+		<section id="ranked-ideas">
+			<h2>Ranked Ideas</h2>
+			<div class="idea-list">
+				<article class="idea" id="idea-1">
+					<div class="idea-head">
+						<div class="idea-title">
+							<span class="rank">1</span>
+							<h3>Make Cornell View the renamed, Cornell-only Appearance page</h3>
+						</div>
+					</div>
+					<div class="idea-meta">
+						<span class="badge">Axis: Navigation naming</span>
+						<span class="badge">Confidence: 94%</span>
+						<span class="badge">Complexity: Low</span>
+					</div>
+					<p><strong>Description:</strong> Rename the existing <code>Appearance</code> subpage, nav card, heading, and summary to <code>Cornell View</code>. Its controls should be only settings whose visible effect is the Cornell pane: display mode, Cornell style, cue column width, cue font size, accent, border, compact supports, and mobile folding.</p>
+					<div class="visual" aria-label="Settings split diagram">
+						<svg viewBox="0 0 760 230" role="img">
+							<rect width="760" height="230" fill="#fbf8f1"/>
+							<rect x="34" y="42" width="190" height="146" rx="8" fill="#ffffff" stroke="#d9d1c4"/>
+							<text x="54" y="76" font-size="16" font-weight="700" fill="#24211c">Appearance</text>
+							<text x="54" y="112" font-size="13" fill="#655f56">Editor cue display</text>
+							<text x="54" y="140" font-size="13" fill="#655f56">Rail card background</text>
+							<text x="54" y="168" font-size="13" fill="#655f56">Cornell styles</text>
+							<path d="M248 115 L330 115" stroke="#0d766f" stroke-width="4" marker-end="url(#arrow)"/>
+							<rect x="356" y="28" width="168" height="174" rx="8" fill="#ffffff" stroke="#0d766f"/>
+							<text x="376" y="62" font-size="16" font-weight="700" fill="#0d766f">Cornell View</text>
+							<text x="376" y="100" font-size="13" fill="#655f56">Display mode</text>
+							<text x="376" y="128" font-size="13" fill="#655f56">Style / width / text</text>
+							<text x="376" y="156" font-size="13" fill="#655f56">Accent / border</text>
+							<rect x="552" y="28" width="168" height="174" rx="8" fill="#ffffff" stroke="#334b7d"/>
+							<text x="572" y="62" font-size="16" font-weight="700" fill="#334b7d">Editing View</text>
+							<text x="572" y="100" font-size="13" fill="#655f56">Editor display</text>
+							<text x="572" y="128" font-size="13" fill="#655f56">Rail card style</text>
+							<text x="572" y="156" font-size="13" fill="#655f56">Rail content</text>
+							<defs>
+								<marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+									<path d="M0,0 L0,6 L9,3 z" fill="#0d766f"/>
+								</marker>
+							</defs>
+						</svg>
+					</div>
+					<div class="idea-grid">
+						<div class="field"><strong>Basis</strong><span>direct: <code>src/settings.ts:291-297</code> renders the current Appearance page with a Cornell-specific description, while <code>src/settings.ts:1263-1407</code> contains both editor controls and Cornell controls.</span></div>
+						<div class="field"><strong>Rationale</strong><span>The user's requested rename becomes truthful instead of cosmetic: the page label, description, summary, and contents all point at the same surface.</span></div>
+						<div class="field"><strong>Downsides</strong><span>Existing users who remember "Appearance" need one release cycle to re-map the label, but the new name is more precise.</span></div>
+						<div class="field"><strong>Meeting Test</strong><span>This warrants team discussion because it sets the durable information architecture for every future visual setting.</span></div>
+					</div>
+				</article>
+
+				<article class="idea" id="idea-2">
+					<div class="idea-head">
+						<div class="idea-title">
+							<span class="rank">2</span>
+							<h3>Add an Editing View page for editor-only visual controls and future main-surface polish</h3>
+						</div>
+					</div>
+					<div class="idea-meta">
+						<span class="badge">Axis: Editing View-only controls</span>
+						<span class="badge">Confidence: 91%</span>
+						<span class="badge">Complexity: Medium</span>
+					</div>
+					<p><strong>Description:</strong> Add <code>editing-view</code> as a settings subpage and home nav card. Move <code>Editor cue display</code>, <code>Rail card background</code>, <code>Show rail questions</code>, and <code>Show rail support terms</code> there because those controls only affect CodeMirror/editor rail rendering. Treat this page as the first home for editor appearance polish, not just a relocation bucket, because Editing View may become CueCraft's main review surface if Cornell View is retired.</p>
+					<div class="idea-grid">
+						<div class="field"><strong>Basis</strong><span>direct: <code>src/settings.ts:1271-1303</code> saves editor display and rail card style by refreshing editor cues, and <code>src/settings.ts:1217-1239</code> does the same for rail questions and rail support terms. reasoned: if Cornell View may be removed because it adds an extra step, the editor-only display controls are no longer secondary polish; they shape the likely primary review experience.</span></div>
+						<div class="field"><strong>Rationale</strong><span>The new page answers the user's exact rule: settings that only affect Editing View should live under Editing View, regardless of whether they are currently in Appearance or Note format. It also gives future editor-first design work a clear destination before Cornell View decisions are final.</span></div>
+						<div class="field"><strong>Downsides</strong><span>The settings home gains one more card. That is acceptable because it removes ambiguity rather than adding a feature.</span></div>
+						<div class="field"><strong>Meeting Test</strong><span>This is the central product move and should be the first implementation slice because it improves the surface most likely to matter if Cornell View is removed.</span></div>
+					</div>
+				</article>
+
+				<article class="idea" id="idea-3">
+					<div class="idea-head">
+						<div class="idea-title">
+							<span class="rank">3</span>
+							<h3>Keep cross-view review toggles out of Editing View</h3>
+						</div>
+					</div>
+					<div class="idea-meta">
+						<span class="badge">Axis: Cross-view review toggles</span>
+						<span class="badge">Confidence: 88%</span>
+						<span class="badge">Complexity: Low</span>
+					</div>
+					<p><strong>Description:</strong> Do not move <code>Show Section Lens</code> or <code>Show Note Brief</code> into Editing View. They may be rendered in the editor, but they are not editor-only: they affect Reading mode and Cornell/review surfaces too. Keep them in <code>Note format</code>, or rename that remaining page later to <code>Review Surfaces</code>.</p>
+					<div class="idea-grid">
+						<div class="field"><strong>Basis</strong><span>direct: <code>src/settings.ts:1191-1214</code> toggles Section Lens and Note Brief through <code>refreshReviewSurfaces()</code>; <code>src/settings.ts:1256-1259</code> refreshes editor, Reading mode, and Cornell views together.</span></div>
+						<div class="field"><strong>Rationale</strong><span>This preserves the user's boundary. "Editing View" should not become the new catch-all for anything visible while editing.</span></div>
+						<div class="field"><strong>Downsides</strong><span>Users may still wonder why "Note format" contains display settings. That is a separate naming problem, not part of the Editing View split.</span></div>
+						<div class="field"><strong>Meeting Test</strong><span>Important because it prevents the split from introducing a new misleading bucket.</span></div>
+					</div>
+				</article>
+
+				<article class="idea" id="idea-4">
+					<div class="idea-head">
+						<div class="idea-title">
+							<span class="rank">4</span>
+							<h3>Split the mixed Appearance summary into Cornell and Editing summaries</h3>
+						</div>
+					</div>
+					<div class="idea-meta">
+						<span class="badge">Axis: Navigation naming</span>
+						<span class="badge">Confidence: 84%</span>
+						<span class="badge">Complexity: Low</span>
+					</div>
+					<p><strong>Description:</strong> Replace <code>appearanceSummary()</code> with <code>cornellViewSummary()</code> and add <code>editingViewSummary()</code>. The Cornell card can summarize Cornell mode, style, width, and font size; the Editing View card can summarize editor display, rail background, and rail content visibility.</p>
+					<div class="idea-grid">
+						<div class="field"><strong>Basis</strong><span>direct: <code>src/settings.ts:461-475</code> currently returns a single summary string that mixes editor display, hook card style, Cornell display mode, Cornell style, width, and font size.</span></div>
+						<div class="field"><strong>Rationale</strong><span>The nav cards are the user's first orientation point. If their summaries mix surfaces, the split feels incomplete even if the subpages are right.</span></div>
+						<div class="field"><strong>Downsides</strong><span>Small duplication risk in summary formatting. Keep each summary inline and simple rather than adding a generic summary abstraction.</span></div>
+						<div class="field"><strong>Meeting Test</strong><span>Worth doing with the split because it is a low-cost correctness detail users will notice.</span></div>
+					</div>
+				</article>
+
+				<article class="idea" id="idea-5">
+					<div class="idea-head">
+						<div class="idea-title">
+							<span class="rank">5</span>
+							<h3>Verify the split by refresh behavior, not just labels</h3>
+						</div>
+					</div>
+					<div class="idea-meta">
+						<span class="badge">Axis: Refresh and verification behavior</span>
+						<span class="badge">Confidence: 79%</span>
+						<span class="badge">Complexity: Medium</span>
+					</div>
+					<p><strong>Description:</strong> Add focused tests or review checks that classify moved settings by their refresh path. Editing View controls should save and call <code>refreshEditorCues()</code>; Cornell View controls should save and call <code>refreshCornellViews()</code>; review toggles should still refresh all review surfaces.</p>
+					<div class="idea-grid">
+						<div class="field"><strong>Basis</strong><span>direct: <code>src/main.ts:399-405</code> passes editor display, rail questions, rail support terms, and hook card style into the editor render payload; <code>src/settings.ts:1405-1407</code> refreshes Cornell views for Cornell appearance changes.</span></div>
+						<div class="field"><strong>Rationale</strong><span>Tests anchored to behavior catch the subtle regression where a setting is placed under the right label but still refreshes the wrong surface.</span></div>
+						<div class="field"><strong>Downsides</strong><span>Current tests mostly validate defaults and enum validity, so DOM-level settings tests may need lightweight harness work.</span></div>
+						<div class="field"><strong>Meeting Test</strong><span>Strong because this is the difference between a rename and a reliable settings taxonomy.</span></div>
+					</div>
+				</article>
+
+				<article class="idea" id="idea-6">
+					<div class="idea-head">
+						<div class="idea-title">
+							<span class="rank">6</span>
+							<h3>Leave room for a later Reading View page without doing it now</h3>
+						</div>
+					</div>
+					<div class="idea-meta">
+						<span class="badge">Axis: Cross-view review toggles</span>
+						<span class="badge">Confidence: 72%</span>
+						<span class="badge">Complexity: Low now, Medium later</span>
+					</div>
+					<p><strong>Description:</strong> Keep Reading mode controls in <code>Note format</code> for this slice, but name the code so a future <code>Reading View</code> split is obvious. The current request is specifically about Editing View-only settings, so moving Reading mode now would broaden scope.</p>
+					<div class="idea-grid">
+						<div class="field"><strong>Basis</strong><span>direct: <code>src/settings.ts:1156-1189</code> contains Reading mode visibility and display controls, while the user specifically asked for a new page for changes that affect Editing View and not Cornell View.</span></div>
+						<div class="field"><strong>Rationale</strong><span>This keeps the implementation small and respects the user's requested boundary, while avoiding code names that make the next split harder.</span></div>
+						<div class="field"><strong>Downsides</strong><span>The leftover <code>Note format</code> page remains imperfect until a later Reading/review settings cleanup.</span></div>
+						<div class="field"><strong>Meeting Test</strong><span>Useful as a scope guard rather than a feature commitment.</span></div>
+					</div>
+				</article>
+			</div>
+		</section>
+
+		<section id="rejection-summary">
+			<h2>Rejection Summary</h2>
+			<div class="rejection-wrap">
+				<table>
+					<thead>
+						<tr>
+							<th>#</th>
+							<th>Idea</th>
+							<th>Reason Rejected</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td>1</td>
+							<td>Rename <code>Note format</code> to <code>Editing View</code></td>
+							<td>Scope mismatch: Reading mode, Section Lens, Note Brief, and Cornell mobile folding are not Editing View-only.</td>
+						</tr>
+						<tr>
+							<td>2</td>
+							<td>Keep one Appearance page with Cornell and Editing sections</td>
+							<td>Violates the user's explicit ask for a new Editing View settings page and preserves the ambiguous top-level label.</td>
+						</tr>
+						<tr>
+							<td>3</td>
+							<td>Duplicate rail controls in both Note format and Editing View</td>
+							<td>Creates two places to change one setting; Obsidian settings should avoid duplicated controls with shared persistence.</td>
+						</tr>
+						<tr>
+							<td>4</td>
+							<td>Rename stored settings keys to match page names</td>
+							<td>Too expensive relative to value. The user asked for settings page organization, not a persistence migration.</td>
+						</tr>
+						<tr>
+							<td>5</td>
+							<td>Move Section Lens and Note Brief into Cue generation</td>
+							<td>Partly plausible, but README says turning those displays off does not stop generation. They are display toggles, not generation controls.</td>
+						</tr>
+						<tr>
+							<td>6</td>
+							<td>Create a full Settings IA redesign</td>
+							<td>Scope overrun. The current change can be surgical and should not reopen AI Provider, Study Areas, or Study Mode.</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<footer>
+			Composed 2026-07-02T00:00:00-07:00 by ce-ideate from the prompt "rename Appearance to Cornell View and create Editing View settings." Updated 2026-07-03T00:00:00-07:00 with the strategic premise that Editing View may become the main surface if Cornell View is retired.
+		</footer>
+	</main>
+</body>
+</html>

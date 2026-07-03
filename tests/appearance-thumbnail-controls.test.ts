@@ -161,8 +161,8 @@ describe("renderAppearanceThumbnailGroup", () => {
 	});
 });
 
-describe("Appearance thumbnail option recipes", () => {
-	it("covers every existing Appearance option with a preview recipe", () => {
+describe("Cornell View thumbnail option recipes", () => {
+	it("covers every existing Cornell View option with a preview recipe", () => {
 		expect(cornellDisplayModeThumbnailOptions().map((option) => option.id)).toEqual(
 			CORNELL_DISPLAY_MODES.map((option) => option.id)
 		);
