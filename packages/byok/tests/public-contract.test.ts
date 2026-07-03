@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { z } from "zod/v3";
 import * as byok from "../src";
+import {
+	ProviderError,
+	ProviderRateLimitError,
+} from "../src/providers/types";
 import type {
 	ByokProviderConfig,
 	ByokProviderDefinition,
@@ -195,6 +199,13 @@ describe("BYOK public contract", () => {
 		expect(byok.isByokProviderId("claude")).toBe(false);
 		expect(byok.normalizeProviderId("claude")).toBe("claude-cli");
 		expect(byok.byokProviderDefinition("google").label).toBe("Google (Gemini)");
+	});
+
+	it("keeps provider failures catchable through public error classes", () => {
+		expect(new ProviderError("failed")).toBeInstanceOf(byok.ByokProviderError);
+		expect(new ProviderRateLimitError("rate limited")).toBeInstanceOf(
+			byok.ByokProviderRateLimitError
+		);
 	});
 });
 

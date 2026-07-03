@@ -24,6 +24,7 @@
 	"files": [
 		"dist",
 		"README.md",
+		"API.md",
 		"LICENSE",
 		"package.json"
 	],
