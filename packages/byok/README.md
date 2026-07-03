@@ -262,34 +262,64 @@ const models = await provider.listModels?.();
 
 `ByokModelOption` intentionally contains only `id` and `label`. Provider-specific metadata such as pricing, context length, supported parameters, or recommendation badges belongs in provider-specific APIs or the host app.
 
-### List Claude/Anthropic Models
+### List Models for Non-CLI Providers
 
-Use the provider runtime when you need setup-time model discovery. The `model` field can be the currently selected model while the runtime fetches the account's available model IDs.
+Use the provider runtime when you need setup-time model discovery. All main-entrypoint providers support `listModels()`:
 
-```ts
-import { createByokProvider } from "@cuecraft/byok";
+| Provider | Config |
+| --- | --- |
+| `anthropic` | API key + any current Claude model |
+| `openai` | API key + any current OpenAI model |
+| `google` | API key + any current Gemini model |
+| `xai` | API key + any current xAI model |
+| `openrouter` | API key + any current OpenRouter model ID |
+| `ollama` | Host URL + any installed Ollama model |
 
-const provider = createByokProvider({
-	provider: "anthropic",
-	apiKey: process.env.ANTHROPIC_API_KEY!,
-	model: "claude-sonnet-4-6",
-});
-
-const models = await provider.listModels?.();
-console.log(models);
-```
-
-The same pattern works for other providers that support model discovery:
+The `model` field can be the currently selected model while the runtime fetches the account's available model IDs.
 
 ```ts
-const provider = createByokProvider({
-	provider: "openai",
-	apiKey: process.env.OPENAI_API_KEY!,
-	model: "gpt-4o-mini",
-});
+import { createByokProvider, type ByokCoreProviderConfig } from "@cuecraft/byok";
 
-const models = await provider.listModels?.();
+const configs = [
+	{
+		provider: "anthropic",
+		apiKey: process.env.ANTHROPIC_API_KEY!,
+		model: "claude-sonnet-4-6",
+	},
+	{
+		provider: "openai",
+		apiKey: process.env.OPENAI_API_KEY!,
+		model: "gpt-4o-mini",
+	},
+	{
+		provider: "google",
+		apiKey: process.env.GOOGLE_API_KEY!,
+		model: "gemini-1.5-flash",
+	},
+	{
+		provider: "xai",
+		apiKey: process.env.XAI_API_KEY!,
+		model: "grok-2-latest",
+	},
+	{
+		provider: "openrouter",
+		apiKey: process.env.OPENROUTER_API_KEY!,
+		model: "openai/gpt-4o",
+	},
+	{
+		provider: "ollama",
+		host: "http://localhost:11434",
+		model: "llama3.1:8b",
+	},
+] satisfies ByokCoreProviderConfig[];
+
+for (const config of configs) {
+	const provider = createByokProvider(config);
+	console.log(config.provider, await provider.listModels?.());
+}
 ```
+
+Local CLI providers from `@cuecraft/byok/node` do not expose model discovery because the Codex and Claude command-line tools do not provide a stable model-list API through this package.
 
 ### Use Ollama
 
