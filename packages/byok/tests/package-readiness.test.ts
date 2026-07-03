@@ -86,10 +86,12 @@ describe("BYOK package readiness", () => {
 		expect(manifest.files).toEqual([
 			"dist",
 			"README.md",
+			"API.md",
 			"LICENSE",
 			"package.json",
 		]);
 		expect(existsSync(fromPackage("README.md"))).toBe(true);
+		expect(existsSync(fromPackage("API.md"))).toBe(true);
 		expect(existsSync(fromPackage("LICENSE"))).toBe(true);
 	});
 

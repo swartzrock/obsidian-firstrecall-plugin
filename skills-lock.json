@@ -19,6 +19,12 @@
       "skillPath": "skills/engineering/diagnosing-bugs/SKILL.md",
       "computedHash": "1a993ce9b2aaa653ee441c8d7efb7f27de03493c722be6dfb8137bcb8db1bc72"
     },
+    "documentation": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "engineering/skills/documentation/SKILL.md",
+      "computedHash": "c24a1672a7edad51225859d6549d9a61892f704a4527a65ce3cddd913ca04550"
+    },
     "domain-modeling": {
       "source": "mattpocock/skills",
       "sourceType": "github",
