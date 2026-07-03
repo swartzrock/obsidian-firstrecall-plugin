@@ -1,8 +1,7 @@
 import {
 	normalizeStringId,
-	sortByokModelOptions,
+	sortModelOptions,
 	type ModelOption,
-	type ModelOptionSource,
 } from "@cuecraft/byok";
 
 let nextComboboxId = 0;
@@ -10,7 +9,6 @@ let nextComboboxId = 0;
 export function buildModelComboboxOptions(opts: {
 	options: ModelOption[];
 	currentModelId: string;
-	source: ModelOptionSource;
 }): ModelOption[] {
 	const byId = new Map<string, ModelOption>();
 	for (const option of opts.options) {
@@ -18,21 +16,15 @@ export function buildModelComboboxOptions(opts: {
 	}
 	const currentModelId = opts.currentModelId.trim();
 	if (currentModelId && !byId.has(currentModelId)) {
-		byId.set(currentModelId, normalizeStringId(currentModelId, opts.source));
+		byId.set(currentModelId, normalizeStringId(currentModelId));
 	}
-	return sortByokModelOptions([...byId.values()], currentModelId);
+	return sortModelOptions([...byId.values()], currentModelId);
 }
 
-export function modelOptionSearchText(
-	option: ModelOption,
-	badges: string[] = []
-): string {
+export function modelOptionSearchText(option: ModelOption): string {
 	return [
 		option.id,
 		option.label,
-		option.provider,
-		option.source,
-		...badges,
 	]
 		.filter(Boolean)
 		.join(" ")
@@ -41,15 +33,12 @@ export function modelOptionSearchText(
 
 export function filterModelOptions(
 	options: ModelOption[],
-	query: string,
-	badgesForOption: (option: ModelOption) => string[] = () => []
+	query: string
 ): ModelOption[] {
 	const normalizedQuery = query.trim().toLowerCase();
 	if (!normalizedQuery) return options;
 	return options.filter((option) =>
-		modelOptionSearchText(option, badgesForOption(option)).includes(
-			normalizedQuery
-		)
+		modelOptionSearchText(option).includes(normalizedQuery)
 	);
 }
 
@@ -57,17 +46,13 @@ export function buildModelComboboxSuggestions(opts: {
 	options: ModelOption[];
 	selectedModelId: string;
 	query: string;
-	source: ModelOptionSource;
-	badgesForOption?: (option: ModelOption) => string[];
 }): ModelOption[] {
 	return filterModelOptions(
 		buildModelComboboxOptions({
 			options: opts.options,
 			currentModelId: opts.selectedModelId,
-			source: opts.source,
 		}),
-		opts.query,
-		opts.badgesForOption
+		opts.query
 	);
 }
 
@@ -75,18 +60,15 @@ export function renderModelCombobox(opts: {
 	containerEl: HTMLElement;
 	value: string;
 	options: ModelOption[];
-	source: ModelOptionSource;
 	placeholder: string;
 	emptyMessage: string;
 	onCommit: (value: string) => void | Promise<void>;
 	renderToggleIcon?: (containerEl: HTMLElement) => void;
-	badgesForOption?: (option: ModelOption) => string[];
 	pinnedOptionIds?: string[];
 	suggestionsLabel?: string;
 }): void {
 	const comboboxId = `cuecraft-model-combobox-${++nextComboboxId}`;
 	const listboxId = `${comboboxId}-list`;
-	const badgesForOption = opts.badgesForOption ?? (() => []);
 	let isOpen = false;
 	let activeIndex = -1;
 	let committedModelId = opts.value.trim();
@@ -133,8 +115,6 @@ export function renderModelCombobox(opts: {
 			options: opts.options,
 			selectedModelId: committedModelId,
 			query: inputEl.value,
-			source: opts.source,
-			badgesForOption,
 		});
 		if (!pinnedRank.size) return suggestions;
 		return [...suggestions].sort((a, b) => {
@@ -223,18 +203,6 @@ export function renderModelCombobox(opts: {
 					cls: "cuecraft-model-combobox-option-detail",
 					text: detailText,
 				});
-			}
-			const badges = badgesForOption(option);
-			if (badges.length > 0) {
-				const badgeRow = optionEl.createDiv({
-					cls: "cuecraft-model-combobox-badges",
-				});
-				for (const badge of badges) {
-					badgeRow.createSpan({
-						cls: "cuecraft-model-combobox-badge",
-						text: badge,
-					});
-				}
 			}
 			optionEl.addEventListener("mousedown", (event) => {
 				event.preventDefault();

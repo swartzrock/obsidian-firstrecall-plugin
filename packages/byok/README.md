@@ -14,7 +14,7 @@ This package currently lives inside the CueCraft workspace and is not published 
 - App-supplied `fetch` and HTTP transports so callers can run in Node, Electron, Obsidian, browsers, tests, or custom runtimes.
 - Provider metadata for settings UIs: labels, credential fields, model fields, icons, setup requirements, and model-list capability flags.
 - Connection testing with user-readable provider errors and rate-limit retry handling for AI SDK providers.
-- Model discovery helpers, normalized model option metadata, OpenRouter compatibility badges, and Anthropic model-selection helpers.
+- Model discovery helpers, portable model options, and Anthropic model-selection helpers.
 - Plain text generation for every provider runtime.
 - Optional structured-object generation for AI SDK providers that expose `generateObject`.
 - Setup-state helpers for determining whether credentials, model selection, and verification snapshots are current.
@@ -180,7 +180,7 @@ Providers with model-list support expose `listModels()`.
 const models = await provider.listModels?.();
 ```
 
-OpenRouter returns rich `ByokModelOption` values. Most other providers return string model IDs. Anthropic model helpers are available for CueCraft-style account model selection and display.
+Model discovery returns portable `ByokModelOption` values with `id` and `label`. Provider-specific metadata such as pricing, context length, supported parameters, or recommendation badges belongs in provider-specific APIs or the host app.
 
 ### Generate Text
 
@@ -232,6 +232,17 @@ const report = await provider.generateObject({
 	schema,
 });
 ```
+
+## Model Discovery
+
+Providers with model-list support return portable model options:
+
+```ts
+const models = await provider.listModels?.();
+// [{ id: "gpt-4o-mini", label: "gpt-4o-mini" }]
+```
+
+`ByokModelOption` intentionally contains only `id` and `label`. Provider-specific metadata such as pricing, context length, supported parameters, or recommendation badges belongs in provider-specific APIs or the host app.
 
 ### Use Ollama
 
@@ -314,7 +325,6 @@ See [API.md](./API.md) for the full public API reference, including exported fun
 The current API is usable, but a few changes would make the extracted package easier for backend developers:
 
 - Add a small `createByokNodeDeps()` helper so Node consumers do not have to write the same `fetch`/`ByokHttpClient` adapter before first success.
-- Normalize `listModels()` return values across providers before a public v1. The public runtime type is `ByokListedModel[]`, while Anthropic currently needs extra helper handling in CueCraft to turn account model records into `ByokModelOption` values.
 - Consider a higher-level SDK facade such as `createByokClient({ provider, credential, model })` for common backend cases, while keeping the lower-level factory for custom transports.
 - Make structured output capability explicit in provider metadata. Today callers infer it by checking whether `runtime.generateObject` exists.
 - Replace OpenRouter's local Zod-to-JSON-schema subset with a more complete schema conversion path before documenting broad schema support.

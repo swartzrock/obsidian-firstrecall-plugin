@@ -818,29 +818,6 @@
 	padding: 8px;
 }
 
-.cuecraft-model-combobox-badges {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	margin-top: 4px;
-}
-
-.cuecraft-model-combobox-badge {
-	border-radius: var(--radius-s);
-	background: var(--background-modifier-hover);
-	color: var(--text-muted);
-	font-size: var(--font-smallest);
-	line-height: 1.2;
-	padding: 2px 5px;
-}
-
-.cuecraft-model-compatibility-warning {
-	margin-top: 6px;
-	color: var(--text-warning);
-	font-size: var(--font-ui-smaller);
-	line-height: 1.35;
-}
-
 @media (max-width: 700px) {
 	.cuecraft-settings-nav > .setting-item {
 		padding-inline: 12px;

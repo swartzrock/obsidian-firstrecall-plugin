@@ -27,23 +27,11 @@ export {
 	sortFetchedModelIds,
 } from "./models/fetched-model-sorting";
 export {
-	isLargeContextModel,
-	isLowCostModel,
-	modelCompatibilityBadges,
-	modelCompatibilityWarning,
-	modelStructuredOutputSupport,
-	sortByokModelOptions,
-	type StructuredOutputSupport,
-} from "./models/model-compatibility";
-export {
 	isModelOption,
 	normalizeModelIds,
-	normalizeOpenRouterModel,
 	normalizeStringId,
 	sortModelOptions,
 	type ModelOption,
-	type ModelOptionSource,
-	type OpenRouterRawModel,
 } from "./models/model-options";
 export { createByokProvider } from "./providers/provider-factory";
 export {
@@ -67,11 +55,9 @@ export type {
 	ByokHttpClient,
 	ByokHttpRequest,
 	ByokHttpResponse,
-	ByokListedModel,
 	ByokModelBehavior,
 	ByokModelFieldDefinition,
 	ByokModelOption,
-	ByokModelOptionSource,
 	ByokModelRefreshResult,
 	ByokObjectGenerationInput,
 	ByokOllamaProviderConfig,

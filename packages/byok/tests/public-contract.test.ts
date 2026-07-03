@@ -39,26 +39,40 @@ describe("BYOK public contract", () => {
 			"formatAnthropicUnavailableModelMessage",
 			"isAnthropicCustomModelSelection",
 			"isByokProviderId",
-			"isLargeContextModel",
-			"isLowCostModel",
 			"isModelOption",
-			"modelCompatibilityBadges",
-			"modelCompatibilityWarning",
-			"modelStructuredOutputSupport",
 			"normalizeAnthropicModelSelection",
 			"normalizeModelIds",
-			"normalizeOpenRouterModel",
 			"normalizeProviderId",
 			"normalizeStringId",
 			"providerCredentialFingerprint",
 			"recordProviderConnectionSuccess",
 			"refreshAnthropicModelOptions",
-			"sortByokModelOptions",
 			"sortFetchedModelIds",
 			"sortModelOptions",
 		]);
 		expect("createByokNodeProvider" in byok).toBe(false);
 		expect("LocalCommandRunner" in byok).toBe(false);
+	});
+
+	it("does not expose removed provider-specific type-only model APIs", () => {
+		const indexSource = readFileSync(join(PACKAGE_ROOT, "src", "index.ts"), "utf8");
+		for (const forbiddenName of [
+			"ByokListedModel",
+			"ByokModelOptionSource",
+			"ModelOptionSource",
+			"OpenRouterRawModel",
+			"StructuredOutputSupport",
+		]) {
+			expect(indexSource, forbiddenName).not.toContain(forbiddenName);
+		}
+
+		const typesSource = readFileSync(join(PACKAGE_ROOT, "src", "types.ts"), "utf8");
+		const modelOptionMatch = typesSource.match(
+			/export interface ByokModelOption \{([\s\S]*?)\n\}/
+		);
+		expect(modelOptionMatch?.[1]).toBe(
+			"\n\tid: string;\n\tlabel: string;"
+		);
 	});
 
 	it("keeps BYOK free of app and storage imports", () => {
@@ -113,7 +127,7 @@ describe("BYOK public contract", () => {
 				return { ok: true, message: "Connected." };
 			},
 			async listModels() {
-				return ["gpt-4o-mini"];
+				return [{ id: "gpt-4o-mini", label: "gpt-4o-mini" }];
 			},
 			async generateText() {
 				return { text: "Plain response." };
@@ -127,7 +141,9 @@ describe("BYOK public contract", () => {
 			ok: true,
 			message: "Connected.",
 		});
-		await expect(runtime.listModels?.()).resolves.toEqual(["gpt-4o-mini"]);
+		await expect(runtime.listModels?.()).resolves.toEqual([
+			{ id: "gpt-4o-mini", label: "gpt-4o-mini" },
+		]);
 		await expect(runtime.generateText({ prompt: "Hi" })).resolves.toEqual({
 			text: "Plain response.",
 		});

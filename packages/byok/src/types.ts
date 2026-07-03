@@ -39,7 +39,6 @@ export interface ByokModelFieldDefinition {
 	listModelsLabel?: string;
 	listModelsDescription?: string;
 	emptyListMessage?: string;
-	optionSource?: ByokModelOptionSource;
 }
 
 export interface ByokProviderDefinition {
@@ -146,23 +145,9 @@ export interface ByokSetupStatus {
 	testedAt?: string;
 }
 
-export type ByokModelOptionSource =
-	| "openrouter"
-	| "openai"
-	| "google"
-	| "xai"
-	| "ollama"
-	| "anthropic"
-	| "string";
-
 export interface ByokModelOption {
 	id: string;
 	label: string;
-	provider: string;
-	contextLength: number | null;
-	pricing: { prompt: number; completion: number } | null;
-	supportedParameters: string[] | null;
-	source: ByokModelOptionSource;
 }
 
 export interface ByokProviderStoredSettings {
@@ -190,8 +175,6 @@ export interface ByokModelRefreshResult {
 	message: string;
 }
 
-export type ByokListedModel = string | ByokModelOption;
-
 export interface ByokTextGenerationInput {
 	prompt: string;
 	/** Ask providers with native support to constrain the response to JSON text. */
@@ -216,7 +199,7 @@ export interface ByokProviderRuntime {
 	requiresDownload: boolean;
 	sectionConcurrencyLimit?: number;
 	testConnection(): Promise<ByokProviderStatus>;
-	listModels?(): Promise<ByokListedModel[]>;
+	listModels?(): Promise<ByokModelOption[]>;
 	generateText(
 		input: ByokTextGenerationInput,
 		signal?: AbortSignal

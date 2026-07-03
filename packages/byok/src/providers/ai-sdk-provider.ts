@@ -14,6 +14,7 @@ import {
 	TextGenerationInput,
 	TextGenerationOutput,
 } from "./types";
+import type { ByokModelOption } from "../types";
 
 /** Injectable structured-output call so the provider can be unit-tested. */
 export type ObjectGenerator = <T>(opts: {
@@ -45,7 +46,7 @@ export interface AiSdkProviderConfig {
 	/** Text-generation call; the real one wraps the AI SDK, tests inject a mock. */
 	generateText: TextGenerator;
 	/** Optional model-list call for providers that expose discoverable models. */
-	listModels?: () => Promise<unknown[]>;
+	listModels?: () => Promise<ByokModelOption[]>;
 }
 
 function errorMessage(e: unknown): string {
@@ -125,7 +126,7 @@ export class AiSdkProvider implements AiProvider {
 	protected readonly model: string;
 	private readonly objectGenerator: ObjectGenerator;
 	private readonly textGenerator: TextGenerator;
-	private readonly listModelsImpl?: () => Promise<unknown[]>;
+	private readonly listModelsImpl?: () => Promise<ByokModelOption[]>;
 
 	constructor(config: AiSdkProviderConfig) {
 		this.id = config.id;
@@ -232,7 +233,7 @@ export class AiSdkProvider implements AiProvider {
 		}
 	}
 
-	async listModels(): Promise<unknown[]> {
+	async listModels(): Promise<ByokModelOption[]> {
 		if (!this.listModelsImpl) return [];
 		return this.listModelsImpl();
 	}

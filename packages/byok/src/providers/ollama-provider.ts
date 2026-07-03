@@ -7,6 +7,7 @@ import {
 	TextGenerationInput,
 	TextGenerationOutput,
 } from "./types";
+import { normalizeModelIds, type ModelOption } from "../models/model-options";
 
 /** Pull Ollama's `{ "error": "..." }` body out of a failed response. */
 function extractServerError(res: HttpResponse): string {
@@ -49,7 +50,7 @@ export class OllamaProvider implements AiProvider {
 	async testConnection(): Promise<ProviderStatus> {
 		let models: string[];
 		try {
-			models = await this.listModels();
+			models = await this.listModelIds();
 		} catch {
 			return {
 				ok: false,
@@ -70,7 +71,11 @@ export class OllamaProvider implements AiProvider {
 		};
 	}
 
-	async listModels(): Promise<string[]> {
+	async listModels(): Promise<ModelOption[]> {
+		return normalizeModelIds(await this.listModelIds());
+	}
+
+	private async listModelIds(): Promise<string[]> {
 		const { Ollama } = await import("ollama/browser");
 		const client = new Ollama({
 			host: this.host,

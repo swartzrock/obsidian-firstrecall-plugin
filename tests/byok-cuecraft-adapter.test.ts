@@ -78,11 +78,6 @@ const fetchImpl = (async () => new Response("{}")) as typeof fetch;
 const openrouterOption: ByokModelOption = {
 	id: "anthropic/claude-sonnet-4",
 	label: "Claude Sonnet 4",
-	provider: "Anthropic",
-	contextLength: 200000,
-	pricing: null,
-	supportedParameters: ["tools"],
-	source: "openrouter",
 };
 
 function fakeCredentialStore(opts: {
@@ -389,18 +384,22 @@ describe("CueCraft fetched model adapters", () => {
 		expect(stored.modelRefreshMessage).toBe("Enter an OpenRouter key.");
 	});
 
-	it("persists listed string models and rich OpenRouter model options", () => {
+	it("persists listed model options", () => {
 		const s = settings();
+		const openAiOption = { id: "gpt-4o-mini", label: "gpt-4o-mini" };
 
 		expect(
-			applyCueCraftListedModels(s, "openai", ["gpt-4o-mini"], "No models.")
+			applyCueCraftListedModels(s, "openai", [openAiOption], "No models.")
 		).toEqual({
 			models: ["gpt-4o-mini"],
-			options: [],
+			options: [openAiOption],
 			message: "",
 		});
 		expect(cueCraftProviderSettings(s, "openai").availableModels).toEqual([
 			"gpt-4o-mini",
+		]);
+		expect(cueCraftProviderSettings(s, "openai").modelOptions).toEqual([
+			openAiOption,
 		]);
 		expect(cueCraftProviderSettings(s, "openai").hasFetchedModels).toBe(true);
 

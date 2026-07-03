@@ -66,7 +66,6 @@ import {
 } from "./editor-hook-card-style";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
-	anthropicModelInfoToByokModelOption,
 	buildAnthropicModelOptions,
 	byokProviderDefinition,
 	byokProviderDefinitions,
@@ -75,16 +74,11 @@ import {
 	formatAnthropicUnavailableModelMessage,
 	isByokProviderId,
 	isAnthropicCustomModelSelection,
-	refreshAnthropicModelOptions,
-	modelCompatibilityBadges,
-	modelCompatibilityWarning,
 	normalizeModelIds,
-	sortFetchedModelIds,
 	type ByokProviderDefinition,
 	type ByokProviderId,
 	type ByokStoredSettings,
 	type ModelOption,
-	type ModelOptionSource,
 } from "@cuecraft/byok";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
 import {
@@ -111,10 +105,8 @@ import {
 import { isCueCraftCloudCredentialProvider } from "./secure-credential-store";
 import { resolveModelRefreshDescription } from "./model-refresh";
 import {
-	buildModelComboboxOptions,
 	renderModelCombobox,
 } from "./model-combobox";
-import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import {
 	DEFAULT_STUDY_AREAS,
 	ENTIRE_VAULT_STUDY_AREA_LABEL,
@@ -962,8 +954,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			renderModelCombobox({
 				containerEl: parentFolderSetting.controlEl,
 				value: "",
-				options: normalizeModelIds(availableScopes, "string"),
-				source: "string",
+				options: normalizeModelIds(availableScopes),
 				placeholder: availableScopes.length
 					? "Choose a scope..."
 					: "No unassigned folders",
@@ -1502,7 +1493,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			),
 			modelPlaceholder: field.placeholder,
 			availableModels: stored.availableModels,
-			modelOptionSource: field.optionSource ?? "ollama",
 			getModel: () => cueCraftProviderModel(s, "ollama"),
 			setModel: (value) => setCueCraftProviderModel(s, "ollama", value),
 		});
@@ -1591,7 +1581,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const storedModels =
 			stored.modelOptions.length > 0
 				? stored.modelOptions
-				: normalizeModelIds(stored.availableModels, "anthropic");
+				: normalizeModelIds(stored.availableModels);
 		const isCustomSelection = isAnthropicCustomModelSelection({
 			anthropicModel: model,
 			anthropicModelSelection: stored.modelSelection,
@@ -1689,33 +1679,36 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Notice(formatCueCraftNotice(error instanceof Error ? error.message : String(error)));
 			return;
 		}
-		const stored = cueCraftProviderSettings(s, "anthropic");
-		stored.hasFetchedModels = true;
 		if (provider.id !== "anthropic" || !provider.listModels) {
-			stored.availableModels = [];
-			stored.modelOptions = [];
-			stored.modelRefreshMessage =
-				"CueCraft: Anthropic model fetch is unavailable. You can still enter a custom model ID.";
+			applyCueCraftModelRefreshFailure(
+				s,
+				"anthropic",
+				"CueCraft: Anthropic model fetch is unavailable. You can still enter a custom model ID."
+			);
 			this.syncAnthropicModelSelection();
 			await this.plugin.saveSettings();
 			this.display();
 			return;
 		}
-		const result = await refreshAnthropicModelOptions({
-			listModels: async () =>
-				(await provider.listModels?.()) as unknown as ModelInfo[],
-		});
-		stored.availableModels = result.availableModels.map((model) => model.id);
-		stored.modelOptions = result.availableModels.map(
-			anthropicModelInfoToByokModelOption
-		);
-		stored.hasFetchedModels = true;
-		stored.modelRefreshMessage =
-			result.availableModels.length > 0 ? "" : result.message;
+		let message: string;
+		try {
+			const modelOptions = await provider.listModels();
+			message =
+				modelOptions.length > 0
+					? `Fetched ${modelOptions.length} Anthropic model${modelOptions.length === 1 ? "" : "s"} from your account.`
+					: "No Anthropic models were returned for this account. You can still enter a custom model ID.";
+			applyCueCraftListedModels(s, "anthropic", modelOptions, message);
+		} catch (error) {
+			const detail = error instanceof Error ? error.message : String(error);
+			message = detail
+				? `Could not fetch Anthropic models (${detail}). You can still enter a custom model ID.`
+				: "Could not fetch Anthropic models. You can still enter a custom model ID.";
+			applyCueCraftModelRefreshFailure(s, "anthropic", message);
+		}
 		this.syncAnthropicModelSelection();
 		await this.plugin.saveSettings();
 		this.display();
-		new Notice(`CueCraft: ${result.message}`);
+		new Notice(`CueCraft: ${message}`);
 	}
 
 	private renderProviderCredentialSettings(containerEl: HTMLElement): void {
@@ -2069,7 +2062,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			modelPlaceholder: string;
 			availableModels: string[];
 			modelOptions?: ModelOption[];
-			modelOptionSource: ModelOptionSource;
 			getModel: () => string;
 			setModel: (v: string) => void;
 		}
@@ -2078,35 +2070,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const modelOptions =
 			opts.modelOptions && opts.modelOptions.length > 0
 				? opts.modelOptions
-				: normalizeModelIds(
-					sortFetchedModelIds(opts.availableModels),
-					opts.modelOptionSource
-				);
-		const selectedOption = buildModelComboboxOptions({
-			options: modelOptions,
-			currentModelId: currentModel,
-			source: opts.modelOptionSource,
-		}).find((option) => option.id === currentModel.trim()) ?? null;
-
+				: normalizeModelIds(opts.availableModels);
 		const modelSetting = new Setting(containerEl)
 			.setName(opts.modelLabel)
 			.setDesc(opts.modelDesc);
 		modelSetting.settingEl.addClass("cuecraft-model-setting");
-		const warning =
-			opts.modelOptionSource === "openrouter"
-				? modelCompatibilityWarning(selectedOption)
-				: "";
-		if (warning) {
-			modelSetting.descEl.createDiv({
-				cls: "cuecraft-model-compatibility-warning",
-				text: warning,
-			});
-		}
 		renderModelCombobox({
 			containerEl: modelSetting.controlEl,
 			value: currentModel,
 			options: modelOptions,
-			source: opts.modelOptionSource,
 			placeholder: opts.modelPlaceholder,
 			emptyMessage: "No fetched models match. Press Enter or leave the field to keep a custom model ID.",
 			onCommit: async (value) => {
@@ -2116,7 +2088,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				if (value !== previousValue) this.display();
 			},
 			renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
-			badgesForOption: modelCompatibilityBadges,
 		});
 		return modelSetting;
 	}
@@ -2145,7 +2116,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			modelPlaceholder: modelField.placeholder,
 			availableModels: opts.getAvailableModels(),
 			modelOptions: opts.getModelOptions?.(),
-			modelOptionSource: modelField.optionSource ?? opts.provider,
 			getModel: opts.getModel,
 			setModel: opts.setModel,
 		});
