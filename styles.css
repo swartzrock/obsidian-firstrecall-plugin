@@ -932,8 +932,8 @@
 }
 
 .cuecraft-preview-editor-display-threaded-margin-notes .cuecraft-preview-editor-scene::before {
-	inset-block: 12%;
-	inset-inline-start: 10%;
+	inset-block: 8%;
+	inset-inline-start: 13%;
 	background: color-mix(in srgb, var(--color-orange) 58%, var(--background-modifier-border));
 }
 
@@ -943,16 +943,17 @@
 
 .cuecraft-preview-editor-thread-dot {
 	position: absolute;
-	inset-inline-start: 3%;
-	width: 13%;
+	inset-inline-start: 7%;
+	width: 11%;
 	aspect-ratio: 1;
 	border: 2px solid;
 	border-radius: 50%;
 	background: var(--background-primary);
+	z-index: 2;
 }
 
 .cuecraft-preview-editor-thread-dot-first {
-	inset-block-start: 18%;
+	inset-block-start: 22%;
 }
 
 .cuecraft-preview-editor-thread-dot-second {
@@ -967,18 +968,29 @@
 	border-color: var(--color-orange);
 }
 
+.cuecraft-preview-editor-display-threaded-margin-notes .cuecraft-preview-editor-thread-dot-second {
+	display: none;
+}
+
 .cuecraft-preview-editor-thread-note {
 	position: absolute;
-	inset-block-start: 16%;
-	inset-inline-start: 17%;
-	width: 50%;
-	height: 43%;
+	inset-block-start: 20%;
+	inset-inline-start: 24%;
+	width: 60%;
+	height: 54%;
 	border-left: 3px solid var(--color-orange);
 	border-radius: 4px;
 	background: var(--background-primary);
 	box-shadow:
 		inset 0 0 0 1px var(--background-modifier-border),
-		0 2px 5px rgb(0 0 0 / 0.1);
+		0 2px 0 rgb(0 0 0 / 0.14),
+		0 8px 18px rgb(0 0 0 / 0.08);
+}
+
+.cuecraft-preview-editor-display-threaded-margin-notes .cuecraft-preview-editor-cue-question {
+	inset: 24% 12% auto 12%;
+	font-size: 6.6px;
+	-webkit-line-clamp: 3;
 }
 
 .cuecraft-preview-editor-composer-card {
