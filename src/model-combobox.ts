@@ -72,6 +72,7 @@ export function renderModelCombobox(opts: {
 	let isOpen = false;
 	let activeIndex = -1;
 	let committedModelId = opts.value.trim();
+	let searchQuery = "";
 	const suggestionsLabel = opts.suggestionsLabel ?? "model suggestions";
 	const pinnedOptionIds = opts.pinnedOptionIds ?? [];
 	const pinnedRank = new Map(
@@ -114,7 +115,7 @@ export function renderModelCombobox(opts: {
 		const suggestions = buildModelComboboxSuggestions({
 			options: opts.options,
 			selectedModelId: committedModelId,
-			query: inputEl.value,
+			query: searchQuery,
 		});
 		if (!pinnedRank.size) return suggestions;
 		return [...suggestions].sort((a, b) => {
@@ -138,6 +139,7 @@ export function renderModelCombobox(opts: {
 
 	const commitValue = (value: string) => {
 		const nextValue = value.trim();
+		searchQuery = "";
 		if (nextValue === committedModelId) {
 			inputEl.value = nextValue;
 			return;
@@ -222,17 +224,20 @@ export function renderModelCombobox(opts: {
 		}
 		isOpen = true;
 		activeIndex = -1;
+		searchQuery = "";
 		renderList();
 		inputEl.focus();
 	});
 	inputEl.addEventListener("focus", () => {
 		isOpen = true;
 		activeIndex = -1;
+		searchQuery = "";
 		renderList();
 	});
 	inputEl.addEventListener("input", () => {
 		isOpen = true;
 		activeIndex = -1;
+		searchQuery = inputEl.value;
 		renderList();
 	});
 	inputEl.addEventListener("keydown", (event) => {

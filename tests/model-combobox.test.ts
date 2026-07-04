@@ -211,6 +211,73 @@ describe("modelOptionSearchText", () => {
 });
 
 describe("renderModelCombobox", () => {
+	it("shows all options on open when a selected model is displayed", () => {
+		const dom = setupComboboxDom();
+		const container = dom.window.document.getElementById("root");
+		if (!container) throw new Error("Missing test root");
+
+		renderModelCombobox({
+			containerEl: container,
+			value: "claude-sonnet-5",
+			options: [
+				normalizeStringId("claude-fable-5"),
+				normalizeStringId("claude-haiku-4-5"),
+				normalizeStringId("claude-opus-4-8"),
+				normalizeStringId("claude-sonnet-5"),
+			],
+			placeholder: "Choose a model...",
+			emptyMessage: "No matching models.",
+			onCommit: () => {},
+		});
+
+		const input = container.querySelector<HTMLInputElement>("input");
+		if (!input) throw new Error("Missing combobox input");
+		input.dispatchEvent(new dom.window.Event("focus"));
+
+		expect(
+			[...container.querySelectorAll<HTMLButtonElement>("[role='option']")].map(
+				(option) => option.textContent
+			)
+		).toEqual([
+			"claude-sonnet-5",
+			"claude-fable-5",
+			"claude-haiku-4-5",
+			"claude-opus-4-8",
+		]);
+	});
+
+	it("filters options after the user types in the model input", () => {
+		const dom = setupComboboxDom();
+		const container = dom.window.document.getElementById("root");
+		if (!container) throw new Error("Missing test root");
+
+		renderModelCombobox({
+			containerEl: container,
+			value: "claude-sonnet-5",
+			options: [
+				normalizeStringId("claude-fable-5"),
+				normalizeStringId("claude-haiku-4-5"),
+				normalizeStringId("claude-opus-4-8"),
+				normalizeStringId("claude-sonnet-5"),
+			],
+			placeholder: "Choose a model...",
+			emptyMessage: "No matching models.",
+			onCommit: () => {},
+		});
+
+		const input = container.querySelector<HTMLInputElement>("input");
+		if (!input) throw new Error("Missing combobox input");
+		input.dispatchEvent(new dom.window.Event("focus"));
+		input.value = "opus";
+		input.dispatchEvent(new dom.window.Event("input"));
+
+		expect(
+			[...container.querySelectorAll<HTMLButtonElement>("[role='option']")].map(
+				(option) => option.textContent
+			)
+		).toEqual(["claude-opus-4-8"]);
+	});
+
 	it("does not preselect the first option when the menu opens", () => {
 		const dom = setupComboboxDom();
 		const container = dom.window.document.getElementById("root");
