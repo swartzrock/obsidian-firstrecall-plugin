@@ -1539,32 +1539,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		setting.settingEl.addClass("cuecraft-cli-text-setting");
 	}
 
-	private renderCliModelSettings(
-		containerEl: HTMLElement,
-		opts: {
-			label: string;
-			description: string;
-			modelPlaceholder: string;
-			getModel: () => string;
-			setModel: (value: string) => void;
-		}
-	): void {
-		const setting = new Setting(containerEl)
-			.setName(opts.label)
-			.setDesc(opts.description)
-			.addText((text) => {
-				text.inputEl.addClass("cuecraft-cli-text-input");
-				text
-					.setPlaceholder(opts.modelPlaceholder)
-					.setValue(opts.getModel())
-					.onChange(async (value) => {
-						opts.setModel(value.trim());
-						await this.plugin.saveSettings();
-					});
-			});
-		setting.settingEl.addClass("cuecraft-cli-text-setting");
-	}
-
 	private renderAnthropicCredentialSettings(containerEl: HTMLElement): void {
 		const field = byokProviderDefinition(ByokProvider.Anthropic).credentialField;
 		this.renderCloudCredentialSettings(containerEl, {
@@ -1796,8 +1770,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					description: definition.credentialField.description,
 					commandPlaceholder: definition.credentialField.placeholder,
 					getCommand: () => cueCraftProviderCredential(s, ByokProvider.ClaudeCli),
-					setCommand: (value) =>
-						setCueCraftProviderCredential(s, ByokProvider.ClaudeCli, value),
+					setCommand: (value) => {
+						setCueCraftProviderCredential(s, ByokProvider.ClaudeCli, value);
+						resetCueCraftFetchedModels(
+							s,
+							ByokProvider.ClaudeCli,
+							definition.credentialField.resetModelsMessage ??
+								definition.credentialField.missingMessage
+						);
+					},
 				});
 				return;
 			}
@@ -1906,13 +1887,22 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			}
 			case "claude-cli": {
 				const definition = byokProviderDefinition(ByokProvider.ClaudeCli);
-				this.renderCliModelSettings(containerEl, {
-					label: definition.modelField.label,
-					description: definition.modelField.description,
-					modelPlaceholder: definition.modelField.placeholder,
+				this.renderCloudModelSettings(containerEl, {
+					provider: ByokProvider.ClaudeCli,
+					definition,
 					getModel: () => cueCraftProviderModel(s, ByokProvider.ClaudeCli),
 					setModel: (value) =>
 						setCueCraftProviderModel(s, ByokProvider.ClaudeCli, value),
+					hasCredential: () =>
+						this.plugin.isProviderCredentialSaved(ByokProvider.ClaudeCli),
+					getAvailableModels: () =>
+						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).availableModels,
+					getModelOptions: () =>
+						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).modelOptions,
+					getHasFetchedModels: () =>
+						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).hasFetchedModels,
+					getRefreshMessage: () =>
+						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).modelRefreshMessage,
 				});
 				return;
 			}

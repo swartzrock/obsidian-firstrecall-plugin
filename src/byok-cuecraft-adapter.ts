@@ -92,7 +92,8 @@ export type CueCraftFetchedModelProvider =
 	| "google"
 	| "xai"
 	| "openrouter"
-	| "codex-cli";
+	| "codex-cli"
+	| "claude-cli";
 
 export interface CueCraftAppliedModelRefresh {
 	models: string[];
@@ -400,7 +401,7 @@ function wrapCueCraftByokRuntime(
 		requiresDownload: runtime.requiresDownload,
 		sectionConcurrencyLimit: runtime.sectionConcurrencyLimit,
 		testConnection: () => runtime.testConnection(),
-		listModels: runtime.listModels ? () => runtime.listModels!() : undefined,
+		listModels: () => runtime.listModels(),
 		generateCue: (input, signal) =>
 			generateFromObject
 				? generateCueFromObjectProvider(runtime, input, signal)
@@ -1060,7 +1061,18 @@ export async function listCueCraftProviderModelsFromStore(
 				},
 				deps
 			);
-			return (await runtime.listModels?.()) ?? [];
+			return runtime.listModels();
+		}
+		case "claude-cli": {
+			const runtime = createByokNodeProvider(
+				{
+					provider: ByokProvider.ClaudeCli,
+					command: stored.credential,
+					model: stored.model,
+				},
+				deps
+			);
+			return runtime.listModels();
 		}
 	}
 	throw cueCraftProviderError("Provider does not support model discovery.");

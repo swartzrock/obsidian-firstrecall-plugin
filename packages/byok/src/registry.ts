@@ -237,16 +237,20 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			description: "Local Claude CLI command.",
 			secret: false,
 			missingMessage: "Enter your Claude CLI command first.",
+			resetModelsMessage: "Enter your Claude CLI command first to fetch models.",
 		},
 		modelBehavior: "optional",
 		modelField: {
 			label: "Claude CLI model override",
 			placeholder: "sonnet",
 			description: "Optional model override.",
+			listModelsLabel: "Claude CLI models",
+			listModelsDescription: "Fetch Anthropic models from OpenRouter.",
+			emptyListMessage: "No Anthropic models were returned by OpenRouter.",
 		},
 		requiresNetwork: true,
 		requiresDownload: false,
-		supportsModelListing: false,
+		supportsModelListing: true,
 	},
 };
 

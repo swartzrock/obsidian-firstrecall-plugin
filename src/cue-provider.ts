@@ -49,7 +49,7 @@ export interface CueCraftCueProviderRuntime {
 	requiresDownload: boolean;
 	sectionConcurrencyLimit?: number;
 	testConnection(): Promise<ByokProviderStatus>;
-	listModels?(): Promise<ByokModelOption[]>;
+	listModels(): Promise<ByokModelOption[]>;
 	generateCue(
 		input: CueCraftCueInput,
 		signal?: AbortSignal

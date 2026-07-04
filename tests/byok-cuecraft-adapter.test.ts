@@ -433,6 +433,24 @@ describe("CueCraft fetched model adapters", () => {
 		expect(cueCraftProviderSettings(s, "codex-cli").modelOptions).toEqual([
 			codexOption,
 		]);
+
+		const claudeOption = {
+			id: "anthropic/claude-sonnet-4",
+			label: "anthropic/claude-sonnet-4",
+		};
+		expect(
+			applyCueCraftListedModels(s, "claude-cli", [claudeOption], "No models.")
+		).toEqual({
+			models: ["anthropic/claude-sonnet-4"],
+			options: [claudeOption],
+			message: "",
+		});
+		expect(cueCraftProviderSettings(s, "claude-cli").availableModels).toEqual([
+			"anthropic/claude-sonnet-4",
+		]);
+		expect(cueCraftProviderSettings(s, "claude-cli").modelOptions).toEqual([
+			claudeOption,
+		]);
 	});
 
 	it("persists model refresh failures as fetched-but-empty state", () => {

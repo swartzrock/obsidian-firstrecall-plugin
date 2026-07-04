@@ -5,6 +5,7 @@ import {
 	TextGenerationInput,
 	TextGenerationOutput,
 } from "./types";
+import type { ByokModelOption } from "../types";
 import {
 	defaultLocalCliCwd,
 	LocalCommandRunner,
@@ -25,6 +26,7 @@ const CLAUDE_CLI_ENV: NodeJS.ProcessEnv = {
 };
 const CLAUDE_CLI_AUTH_MESSAGE =
 	"Claude CLI is not authenticated. Run `claude auth login` in your terminal, then try again.";
+const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
 
 const CONNECTION_JSON_SCHEMA = JSON.stringify({
 	type: "object",
@@ -43,6 +45,7 @@ export interface ClaudeCliProviderOptions {
 	cwd?: string;
 	timeoutMs?: number;
 	runner?: CommandRunner;
+	fetchImpl?: typeof fetch;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -129,6 +132,32 @@ function isAuthMissing(output: string): boolean {
 	);
 }
 
+interface OpenRouterModelEntry {
+	id?: unknown;
+}
+
+function modelOptionFromOpenRouterId(id: string): ByokModelOption | null {
+	const trimmed = id.trim();
+	if (!trimmed.includes("anthropic/")) return null;
+	return trimmed ? { id: trimmed, label: trimmed } : null;
+}
+
+function extractOpenRouterAnthropicModels(body: unknown): ByokModelOption[] {
+	const record = asRecord(body);
+	const data = record?.data;
+	if (!Array.isArray(data)) return [];
+	const options: ByokModelOption[] = [];
+	const seen = new Set<string>();
+	for (const entry of data as OpenRouterModelEntry[]) {
+		if (!entry || typeof entry.id !== "string") continue;
+		const option = modelOptionFromOpenRouterId(entry.id);
+		if (!option || seen.has(option.id)) continue;
+		seen.add(option.id);
+		options.push(option);
+	}
+	return options;
+}
+
 export class ClaudeCliProvider implements AiProvider {
 	readonly id = "claude-cli";
 	readonly label = "Claude CLI";
@@ -140,6 +169,7 @@ export class ClaudeCliProvider implements AiProvider {
 	private readonly cwd?: string;
 	private readonly timeoutMs: number;
 	private readonly runner: CommandRunner;
+	private readonly fetchImpl?: typeof fetch;
 
 	constructor(opts: ClaudeCliProviderOptions) {
 		this.command = opts.command.trim() || "claude";
@@ -147,6 +177,7 @@ export class ClaudeCliProvider implements AiProvider {
 		this.cwd = opts.cwd ?? defaultLocalCliCwd();
 		this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 		this.runner = opts.runner ?? new LocalCommandRunner();
+		this.fetchImpl = opts.fetchImpl;
 	}
 
 	async testConnection(): Promise<ProviderStatus> {
@@ -188,6 +219,29 @@ export class ClaudeCliProvider implements AiProvider {
 		return {
 			text: await this.complete(input.prompt, input.jsonSchema, signal),
 		};
+	}
+
+	async listModels(): Promise<ByokModelOption[]> {
+		const fetchFn = this.fetchImpl ?? globalThis.fetch;
+		if (!fetchFn) {
+			throw new ProviderError("Claude CLI model fetch requires a fetch implementation.");
+		}
+		let response: Response;
+		try {
+			response = await fetchFn(OPENROUTER_MODELS_URL, { method: "GET" });
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			throw new ProviderError(`Claude CLI model fetch failed: ${message}`);
+		}
+		if (!response.ok) {
+			const detail = (await response.text()).trim();
+			throw new ProviderError(
+				detail
+					? `Claude CLI model fetch failed (${response.status}): ${detail}`
+					: `Claude CLI model fetch failed (${response.status}).`
+			);
+		}
+		return extractOpenRouterAnthropicModels(await response.json());
 	}
 
 	private commandArgs(schema?: string): string[] {

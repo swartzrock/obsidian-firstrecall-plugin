@@ -56,7 +56,7 @@ export interface AiProvider {
 	requiresDownload: boolean;
 	sectionConcurrencyLimit?: number;
 	testConnection(): Promise<ProviderStatus>;
-	listModels?(): Promise<ByokModelOption[]>;
+	listModels(): Promise<ByokModelOption[]>;
 	generateText(
 		input: TextGenerationInput,
 		signal?: AbortSignal

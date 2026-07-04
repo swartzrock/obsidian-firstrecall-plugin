@@ -96,6 +96,7 @@ describe("makeCueCraftByokProvider", () => {
 			{ fetchImpl, http }
 		);
 		expect(provider.id).toBe("claude-cli");
+		expect(typeof provider.listModels).toBe("function");
 		expect(typeof provider.generateCue).toBe("function");
 		expect(typeof provider.generateCues).toBe("function");
 		expect(typeof provider.generateSummary).toBe("function");

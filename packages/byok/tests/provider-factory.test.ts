@@ -134,5 +134,6 @@ describe("createByokProvider", () => {
 
 		expect(provider.id).toBe("claude-cli");
 		expect(provider.label).toBe("Claude CLI");
+		expect(typeof provider.listModels).toBe("function");
 	});
 });

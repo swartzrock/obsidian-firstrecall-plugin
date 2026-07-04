@@ -14,7 +14,11 @@ function result(stdout: string, stderr = ""): LocalCommandResult {
 	return { stdout, stderr, exitCode: 0 };
 }
 
-function makeProvider(responses: Array<LocalCommandResult | Error>, model = ""): {
+function makeProvider(
+	responses: Array<LocalCommandResult | Error>,
+	model = "",
+	fetchImpl?: typeof fetch
+): {
 	provider: ClaudeCliProvider;
 	run: ReturnType<typeof vi.fn<[LocalCommandRequest], Promise<LocalCommandResult>>>;
 } {
@@ -33,6 +37,7 @@ function makeProvider(responses: Array<LocalCommandResult | Error>, model = ""):
 			cwd: "/tmp/byok-empty",
 			timeoutMs: 50,
 			runner: { run },
+			fetchImpl,
 		}),
 		run,
 	};
@@ -339,5 +344,46 @@ describe("ClaudeCliProvider", () => {
 		]);
 		await withoutModel.provider.generateText({ prompt: "Hi" });
 		expect(withoutModel.run.mock.calls[0][0].args).not.toContain("--model");
+	});
+
+	it("lists Anthropic models from OpenRouter public models", async () => {
+		const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
+			expect(input).toBe("https://openrouter.ai/api/v1/models");
+			expect(init).toMatchObject({ method: "GET" });
+			return new Response(
+				JSON.stringify({
+					data: [
+						{ id: "anthropic/claude-sonnet-4" },
+						{ id: "openai/gpt-4o" },
+						{ id: "anthropic/claude-opus-4" },
+					],
+				}),
+				{ status: 200 }
+			);
+		});
+		const { provider, run } = makeProvider([], "", fetchImpl);
+
+		await expect(provider.listModels()).resolves.toEqual([
+			{
+				id: "anthropic/claude-sonnet-4",
+				label: "anthropic/claude-sonnet-4",
+			},
+			{
+				id: "anthropic/claude-opus-4",
+				label: "anthropic/claude-opus-4",
+			},
+		]);
+		expect(run).not.toHaveBeenCalled();
+	});
+
+	it("reports OpenRouter model-list failures", async () => {
+		const fetchImpl = vi.fn<typeof fetch>(async () =>
+			new Response("temporarily unavailable", { status: 503 })
+		);
+		const { provider } = makeProvider([], "", fetchImpl);
+
+		await expect(provider.listModels()).rejects.toThrow(
+			/Claude CLI model fetch failed \(503\): temporarily unavailable/
+		);
 	});
 });

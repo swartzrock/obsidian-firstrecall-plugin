@@ -79,7 +79,7 @@ const provider = createByokNodeProvider(
 );
 
 const status = await provider.testConnection();
-const models = await provider.listModels?.();
+const models = await provider.listModels();
 const { text } = await provider.generateText({
 	prompt: "Explain agentic AI in two sentences.",
 });
