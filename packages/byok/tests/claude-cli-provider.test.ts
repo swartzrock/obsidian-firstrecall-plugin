@@ -346,6 +346,20 @@ describe("ClaudeCliProvider", () => {
 		expect(withoutModel.run.mock.calls[0][0].args).not.toContain("--model");
 	});
 
+	it("strips OpenRouter Anthropic prefixes from model overrides", async () => {
+		const { provider, run } = makeProvider([
+			result(JSON.stringify({ type: "result", result: "ok" })),
+		], "~anthropic/claude-opus-latest");
+
+		await provider.generateText({ prompt: "Hi" });
+
+		expect(run.mock.calls[0][0].args).toContain("--model");
+		expect(run.mock.calls[0][0].args).toContain("claude-opus-latest");
+		expect(run.mock.calls[0][0].args).not.toContain(
+			"~anthropic/claude-opus-latest"
+		);
+	});
+
 	it("lists Anthropic models from OpenRouter public models", async () => {
 		const fetchImpl = vi.fn<typeof fetch>(async (input, init) => {
 			expect(input).toBe("https://openrouter.ai/api/v1/models");
@@ -365,12 +379,12 @@ describe("ClaudeCliProvider", () => {
 
 		await expect(provider.listModels()).resolves.toEqual([
 			{
-				id: "anthropic/claude-sonnet-4",
-				label: "anthropic/claude-sonnet-4",
+				id: "claude-sonnet-4",
+				label: "claude-sonnet-4",
 			},
 			{
-				id: "anthropic/claude-opus-4",
-				label: "anthropic/claude-opus-4",
+				id: "claude-opus-4",
+				label: "claude-opus-4",
 			},
 		]);
 		expect(run).not.toHaveBeenCalled();

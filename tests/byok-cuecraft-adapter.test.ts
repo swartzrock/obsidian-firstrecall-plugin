@@ -435,18 +435,18 @@ describe("CueCraft fetched model adapters", () => {
 		]);
 
 		const claudeOption = {
-			id: "anthropic/claude-sonnet-4",
-			label: "anthropic/claude-sonnet-4",
+			id: "claude-sonnet-4",
+			label: "claude-sonnet-4",
 		};
 		expect(
 			applyCueCraftListedModels(s, "claude-cli", [claudeOption], "No models.")
 		).toEqual({
-			models: ["anthropic/claude-sonnet-4"],
+			models: ["claude-sonnet-4"],
 			options: [claudeOption],
 			message: "",
 		});
 		expect(cueCraftProviderSettings(s, "claude-cli").availableModels).toEqual([
-			"anthropic/claude-sonnet-4",
+			"claude-sonnet-4",
 		]);
 		expect(cueCraftProviderSettings(s, "claude-cli").modelOptions).toEqual([
 			claudeOption,

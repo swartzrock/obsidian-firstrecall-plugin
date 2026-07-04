@@ -32,7 +32,7 @@ This package currently lives inside the CueCraft workspace and is not published 
 | `openrouter` | API key + model | `@cuecraft/byok` | Portable model options | Text and object-like JSON parsing |
 | `ollama` | Host + model | `@cuecraft/byok` | Installed local models | Text |
 | `codex-cli` | Local command, optional model | `@cuecraft/byok/node` | Codex CLI model IDs | Text |
-| `claude-cli` | Local command, optional model | `@cuecraft/byok/node` | Anthropic model IDs from OpenRouter | Text, with JSON-schema hints through `generateText` |
+| `claude-cli` | Local command, optional model | `@cuecraft/byok/node` | Anthropic model IDs from OpenRouter, without the provider prefix | Text, with JSON-schema hints through `generateText` |
 
 The main entrypoint avoids Node-only process APIs. Use `@cuecraft/byok/node` only from trusted Node or desktop backends that are allowed to spawn local commands.
 
@@ -282,7 +282,7 @@ const models = await listModels({
 
 `ByokProvider.Anthropic`, `ByokProvider.OpenAI`, `ByokProvider.Google`, `ByokProvider.Xai`, and `ByokProvider.OpenRouter` use the same API-key shape. `ByokProvider.Ollama` uses `{ provider: ByokProvider.Ollama, host: "http://localhost:11434" }`.
 
-CLI model discovery is available from the `@cuecraft/byok/node` runtime provider. Codex CLI uses `codex debug models`; Claude CLI fetches Anthropic model IDs from OpenRouter's public model list.
+CLI model discovery is available from the `@cuecraft/byok/node` runtime provider. Codex CLI uses `codex debug models`; Claude CLI fetches Anthropic model IDs from OpenRouter's public model list and strips the OpenRouter provider prefix.
 
 ### Use Ollama
 

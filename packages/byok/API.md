@@ -95,7 +95,7 @@ const models = await listModels({
 
 Cloud providers use `{ provider, apiKey }`. Ollama uses `{ provider: ByokProvider.Ollama, host }`. Both forms accept optional `deps`.
 
-CLI model discovery is available from the Node runtime provider. Codex CLI shells out to `codex debug models`; Claude CLI fetches Anthropic model IDs from OpenRouter's public model list.
+CLI model discovery is available from the Node runtime provider. Codex CLI shells out to `codex debug models`; Claude CLI fetches Anthropic model IDs from OpenRouter's public model list and strips the OpenRouter provider prefix.
 
 ## Node Runtime
 

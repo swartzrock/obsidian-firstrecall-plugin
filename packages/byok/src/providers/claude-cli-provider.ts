@@ -136,10 +136,18 @@ interface OpenRouterModelEntry {
 	id?: unknown;
 }
 
+function normalizeClaudeCliModelOverride(model: string): string {
+	return model.trim().replace(/^~?anthropic\//, "");
+}
+
 function modelOptionFromOpenRouterId(id: string): ByokModelOption | null {
 	const trimmed = id.trim();
-	if (!trimmed.includes("anthropic/")) return null;
-	return trimmed ? { id: trimmed, label: trimmed } : null;
+	const markerIndex = trimmed.indexOf("anthropic/");
+	if (markerIndex === -1) return null;
+	const claudeModelId = trimmed.slice(markerIndex + "anthropic/".length).trim();
+	return claudeModelId
+		? { id: claudeModelId, label: claudeModelId }
+		: null;
 }
 
 function extractOpenRouterAnthropicModels(body: unknown): ByokModelOption[] {
@@ -173,7 +181,7 @@ export class ClaudeCliProvider implements AiProvider {
 
 	constructor(opts: ClaudeCliProviderOptions) {
 		this.command = opts.command.trim() || "claude";
-		this.model = opts.model?.trim() ?? "";
+		this.model = normalizeClaudeCliModelOverride(opts.model ?? "");
 		this.cwd = opts.cwd ?? defaultLocalCliCwd();
 		this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 		this.runner = opts.runner ?? new LocalCommandRunner();
