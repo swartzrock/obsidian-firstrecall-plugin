@@ -4,12 +4,16 @@ import { CUE_ACCENTS } from "../src/cornell-accent";
 import { CORNELL_DISPLAY_MODES } from "../src/cornell-display";
 import { CUE_COLUMN_WIDTHS, CUE_FONT_SIZES } from "../src/cornell-layout";
 import { CORNELL_STYLES } from "../src/cornell-style";
+import { EDITOR_CUE_DISPLAY_OPTIONS } from "../src/editor-cue-display";
+import { EDITOR_HOOK_CARD_STYLE_OPTIONS } from "../src/editor-hook-card-style";
 import {
 	cornellDisplayModeThumbnailOptions,
 	cornellStyleThumbnailOptions,
 	cueAccentThumbnailOptions,
 	cueColumnWidthThumbnailOptions,
 	cueFontSizeThumbnailOptions,
+	editorCueDisplayThumbnailOptions,
+	editorHookCardStyleThumbnailOptions,
 	renderAppearanceThumbnailGroup,
 	type AppearanceThumbnailOption,
 } from "../src/appearance-thumbnail-controls";
@@ -268,5 +272,59 @@ describe("Cornell View thumbnail option recipes", () => {
 			expect(button?.textContent).toContain("organizations");
 			expect(button?.textContent).toContain("workflows");
 		}
+	});
+});
+
+describe("Editing View thumbnail option recipes", () => {
+	it("covers every existing Editing View option with a preview recipe", () => {
+		expect(editorCueDisplayThumbnailOptions().map((option) => option.id)).toEqual(
+			EDITOR_CUE_DISPLAY_OPTIONS.map((option) => option.id)
+		);
+		expect(
+			editorHookCardStyleThumbnailOptions().map((option) => option.id)
+		).toEqual(EDITOR_HOOK_CARD_STYLE_OPTIONS.map((option) => option.id));
+	});
+
+	it("renders editor-truth display previews with stable placement classes", () => {
+		const root = setupDom();
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: editorCueDisplayThumbnailOptions(),
+			value: "inline-cues",
+			onSelect: vi.fn(),
+		});
+
+		for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
+			expect(
+				root.querySelector(`.cuecraft-preview-editor-display-${option.id}`)
+			).not.toBeNull();
+		}
+		expect(root.querySelectorAll(".cuecraft-preview-editor-scene")).toHaveLength(
+			EDITOR_CUE_DISPLAY_OPTIONS.length
+		);
+		expect(root.querySelector(".cuecraft-preview-display-classic")).toBeNull();
+		expect(root.textContent).toContain("Inline cues");
+		expect(root.textContent).toContain("Hook minimap");
+	});
+
+	it("renders rail card background previews without changing display placement", () => {
+		const root = setupDom();
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: editorHookCardStyleThumbnailOptions(),
+			value: "classic",
+			onSelect: vi.fn(),
+		});
+
+		for (const option of EDITOR_HOOK_CARD_STYLE_OPTIONS) {
+			expect(
+				root.querySelector(`.cuecraft-preview-editor-card-style-${option.id}`)
+			).not.toBeNull();
+		}
+		expect(
+			root.querySelectorAll(".cuecraft-preview-editor-card-style")
+		).toHaveLength(EDITOR_HOOK_CARD_STYLE_OPTIONS.length);
+		expect(root.textContent).toContain("Classic warm/cool");
+		expect(root.textContent).toContain("Soft gradients");
 	});
 });

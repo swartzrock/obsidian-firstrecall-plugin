@@ -13,6 +13,14 @@ import {
 	type CueColumnWidth,
 	type CueFontSize,
 } from "./cornell-layout";
+import {
+	EDITOR_CUE_DISPLAY_OPTIONS,
+	type EditorCueDisplay,
+} from "./editor-cue-display";
+import {
+	EDITOR_HOOK_CARD_STYLE_OPTIONS,
+	type EditorHookCardStyle,
+} from "./editor-hook-card-style";
 
 export interface AppearanceThumbnailOption<T extends string> {
 	id: T;
@@ -229,6 +237,32 @@ export function cueAccentThumbnailOptions(): AppearanceThumbnailOption<CueAccent
 	}));
 }
 
+export function editorCueDisplayThumbnailOptions(): AppearanceThumbnailOption<
+	EditorCueDisplay
+>[] {
+	return EDITOR_CUE_DISPLAY_OPTIONS.map((option) => ({
+		id: option.id,
+		label: option.label,
+		description: option.description,
+		renderPreview: (previewEl) => {
+			renderEditorCueDisplayPreview(previewEl, option.id);
+		},
+	}));
+}
+
+export function editorHookCardStyleThumbnailOptions(): AppearanceThumbnailOption<
+	EditorHookCardStyle
+>[] {
+	return EDITOR_HOOK_CARD_STYLE_OPTIONS.map((option) => ({
+		id: option.id,
+		label: option.label,
+		description: option.description,
+		renderPreview: (previewEl) => {
+			renderEditorCardStylePreview(previewEl, option.id);
+		},
+	}));
+}
+
 function renderCuePreview(
 	previewEl: HTMLElement,
 	classes: string[],
@@ -284,4 +318,173 @@ function renderCuePreview(
 	}
 
 	previewEl.appendChild(surface);
+}
+
+function renderEditorCueDisplayPreview(
+	previewEl: HTMLElement,
+	display: EditorCueDisplay
+): void {
+	const doc = previewEl.ownerDocument;
+	const surface = editorPreviewSurface(doc, [
+		"cuecraft-preview-editor-display",
+		`cuecraft-preview-editor-display-${display}`,
+	]);
+	const scene = editorScene(doc);
+	surface.appendChild(scene);
+
+	switch (display) {
+		case "inline-cues":
+			scene.appendChild(editorInlineCue(doc));
+			break;
+		case "anchored-card-rail":
+			scene.appendChild(editorHookCard(doc, "warm", "first"));
+			scene.appendChild(editorHookCard(doc, "cool", "second"));
+			break;
+		case "collapsed-tabs":
+			scene.appendChild(editorTab(doc, "warm", "first"));
+			scene.appendChild(editorTab(doc, "cool", "second"));
+			scene.appendChild(editorPeek(doc));
+			break;
+		case "threaded-margin-notes":
+			scene.appendChild(editorThread(doc));
+			scene.appendChild(editorThreadDot(doc, "cool", "first"));
+			scene.appendChild(editorThreadDot(doc, "warm", "second"));
+			break;
+		case "active-section-composer":
+			scene.appendChild(editorComposerCard(doc));
+			break;
+		case "hook-minimap":
+			scene.appendChild(editorMinimap(doc));
+			scene.appendChild(editorMinimapPopout(doc));
+			break;
+		default:
+			assertNever(display);
+	}
+
+	previewEl.appendChild(surface);
+}
+
+function renderEditorCardStylePreview(
+	previewEl: HTMLElement,
+	style: EditorHookCardStyle
+): void {
+	const doc = previewEl.ownerDocument;
+	const surface = editorPreviewSurface(doc, [
+		"cuecraft-preview-editor-card-style",
+		`cuecraft-preview-editor-card-style-${style}`,
+	]);
+	const scene = editorScene(doc);
+	switch (style) {
+		case "classic":
+			scene.appendChild(editorHookCard(doc, "warm", "first"));
+			scene.appendChild(editorHookCard(doc, "cool", "second"));
+			break;
+		case "gradient":
+			scene.appendChild(editorHookCard(doc, "gradient", "first"));
+			scene.appendChild(editorHookCard(doc, "gradient-alt", "second"));
+			break;
+		default:
+			assertNever(style);
+	}
+	surface.appendChild(scene);
+	previewEl.appendChild(surface);
+}
+
+function editorPreviewSurface(doc: Document, classes: string[]): HTMLElement {
+	const surface = doc.createElement("div");
+	surface.className = ["cuecraft-preview-editor-surface", ...classes].join(" ");
+	return surface;
+}
+
+function editorScene(doc: Document): HTMLElement {
+	const scene = doc.createElement("div");
+	scene.className = "cuecraft-preview-editor-scene";
+	for (const variant of ["short", "long", "medium"] as const) {
+		const line = doc.createElement("span");
+		line.className = `cuecraft-preview-editor-line cuecraft-preview-editor-line-${variant}`;
+		scene.appendChild(line);
+	}
+	return scene;
+}
+
+function editorInlineCue(doc: Document): HTMLElement {
+	const cue = doc.createElement("span");
+	cue.className = "cuecraft-preview-editor-inline-cue";
+	return cue;
+}
+
+function editorHookCard(
+	doc: Document,
+	tone: "warm" | "cool" | "gradient" | "gradient-alt",
+	slot: "first" | "second"
+): HTMLElement {
+	const card = doc.createElement("span");
+	card.className = [
+		"cuecraft-preview-editor-hook-card",
+		`cuecraft-preview-editor-hook-card-${tone}`,
+		`cuecraft-preview-editor-hook-card-${slot}`,
+	].join(" ");
+	return card;
+}
+
+function editorTab(
+	doc: Document,
+	tone: "warm" | "cool",
+	slot: "first" | "second"
+): HTMLElement {
+	const tab = doc.createElement("span");
+	tab.className = [
+		"cuecraft-preview-editor-tab",
+		`cuecraft-preview-editor-tab-${tone}`,
+		`cuecraft-preview-editor-tab-${slot}`,
+	].join(" ");
+	return tab;
+}
+
+function editorPeek(doc: Document): HTMLElement {
+	const peek = doc.createElement("span");
+	peek.className = "cuecraft-preview-editor-peek";
+	return peek;
+}
+
+function editorThread(doc: Document): HTMLElement {
+	const thread = doc.createElement("span");
+	thread.className = "cuecraft-preview-editor-thread";
+	return thread;
+}
+
+function editorThreadDot(
+	doc: Document,
+	tone: "warm" | "cool",
+	slot: "first" | "second"
+): HTMLElement {
+	const dot = doc.createElement("span");
+	dot.className = [
+		"cuecraft-preview-editor-thread-dot",
+		`cuecraft-preview-editor-thread-dot-${tone}`,
+		`cuecraft-preview-editor-thread-dot-${slot}`,
+	].join(" ");
+	return dot;
+}
+
+function editorComposerCard(doc: Document): HTMLElement {
+	const card = doc.createElement("span");
+	card.className = "cuecraft-preview-editor-composer-card";
+	return card;
+}
+
+function editorMinimap(doc: Document): HTMLElement {
+	const minimap = doc.createElement("span");
+	minimap.className = "cuecraft-preview-editor-minimap";
+	return minimap;
+}
+
+function editorMinimapPopout(doc: Document): HTMLElement {
+	const popout = doc.createElement("span");
+	popout.className = "cuecraft-preview-editor-minimap-popout";
+	return popout;
+}
+
+function assertNever(_value: never): never {
+	throw new Error("Unhandled editor thumbnail variant");
 }

@@ -43,6 +43,8 @@ import {
 	cueAccentThumbnailOptions,
 	cueColumnWidthThumbnailOptions,
 	cueFontSizeThumbnailOptions,
+	editorCueDisplayThumbnailOptions,
+	editorHookCardStyleThumbnailOptions,
 	renderAppearanceThumbnailGroup,
 	type AppearanceThumbnailGroup,
 	type AppearanceThumbnailOption,
@@ -54,13 +56,11 @@ import {
 } from "./reading-cues";
 import {
 	DEFAULT_EDITOR_CUE_DISPLAY,
-	EDITOR_CUE_DISPLAY_OPTIONS,
 	editorCueDisplayOption,
 	type EditorCueDisplay,
 } from "./editor-cue-display";
 import {
 	DEFAULT_EDITOR_HOOK_CARD_STYLE,
-	EDITOR_HOOK_CARD_STYLE_OPTIONS,
 	editorHookCardStyleOption,
 	type EditorHookCardStyle,
 } from "./editor-hook-card-style";
@@ -1245,46 +1245,32 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Setting(containerEl).setName("Editing View").setHeading();
 		}
 
-		const editorDisplaySetting = new Setting(containerEl)
-			.setName("Editor cue display")
-			.addDropdown((dd) => {
-				for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
-					dd.addOption(option.id, option.label);
-				}
-				dd.setValue(this.plugin.settings.editorCueDisplay).onChange(
-					async (value) => {
-						this.plugin.settings.editorCueDisplay =
-							value as EditorCueDisplay;
-						await this.plugin.saveSettings();
-						this.plugin.refreshEditorCues();
-						editorDisplaySetting.setDesc(editorDisplayDesc());
-					}
-				);
-			});
 		const editorDisplayDesc = (): string =>
 			editorCueDisplayOption(this.plugin.settings.editorCueDisplay).description;
-		editorDisplaySetting.setDesc(editorDisplayDesc());
+		this.renderEditingViewThumbnailSetting<EditorCueDisplay>(containerEl, {
+			name: "Editor cue display",
+			description: editorDisplayDesc,
+			options: editorCueDisplayThumbnailOptions(),
+			value: () => this.plugin.settings.editorCueDisplay,
+			setValue: (value) => {
+				this.plugin.settings.editorCueDisplay = value;
+			},
+			className: "cuecraft-thumbnail-group-editor-display",
+		});
 
-		const railCardStyleSetting = new Setting(containerEl)
-			.setName("Rail card background")
-			.addDropdown((dd) => {
-				for (const option of EDITOR_HOOK_CARD_STYLE_OPTIONS) {
-					dd.addOption(option.id, option.label);
-				}
-				dd.setValue(this.plugin.settings.editorHookCardStyle).onChange(
-					async (value) => {
-						this.plugin.settings.editorHookCardStyle =
-							value as EditorHookCardStyle;
-						await this.plugin.saveSettings();
-						this.plugin.refreshEditorCues();
-						railCardStyleSetting.setDesc(railCardStyleDesc());
-					}
-				);
-			});
 		const railCardStyleDesc = (): string =>
 			editorHookCardStyleOption(this.plugin.settings.editorHookCardStyle)
 				.description;
-		railCardStyleSetting.setDesc(railCardStyleDesc());
+		this.renderEditingViewThumbnailSetting<EditorHookCardStyle>(containerEl, {
+			name: "Rail card background",
+			description: railCardStyleDesc,
+			options: editorHookCardStyleThumbnailOptions(),
+			value: () => this.plugin.settings.editorHookCardStyle,
+			setValue: (value) => {
+				this.plugin.settings.editorHookCardStyle = value;
+			},
+			className: "cuecraft-thumbnail-group-editor-card-style",
+		});
 
 		const editorWidthDesc = (): string =>
 			CUE_COLUMN_WIDTHS.find(

@@ -554,6 +554,21 @@ describe("settings defaults", () => {
 		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
 	});
 
+	it("refreshes editor cues for Editing View display and card-style thumbnails", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+
+		tab.display();
+		openSettingsCard(tab, "Editing View");
+		await clickThumbnail(tab.containerEl, "Editor cue display", "hook-minimap");
+		await clickThumbnail(tab.containerEl, "Rail card background", "gradient");
+
+		expect(plugin.settings.editorCueDisplay).toBe("hook-minimap");
+		expect(plugin.settings.editorHookCardStyle).toBe("gradient");
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
+		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
+		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
+	});
+
 	it("refreshes editor cues for Editing View width and font controls", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 
