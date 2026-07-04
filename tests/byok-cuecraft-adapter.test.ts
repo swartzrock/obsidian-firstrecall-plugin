@@ -419,7 +419,7 @@ describe("CueCraft fetched model adapters", () => {
 		expect(cueCraftFetchedModelCount(s, "openrouter")).toBe(1);
 		expect(cueCraftModelRefreshMessage(s, "openrouter")).toBe("");
 
-		const codexOption = { id: "gpt-5.5", label: "GPT-5.5" };
+		const codexOption = { id: "gpt-5.5", label: "gpt-5.5" };
 		expect(
 			applyCueCraftListedModels(s, "codex-cli", [codexOption], "No models.")
 		).toEqual({

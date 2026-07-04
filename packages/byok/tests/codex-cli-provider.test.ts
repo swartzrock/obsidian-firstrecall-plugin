@@ -77,8 +77,8 @@ describe("extractCodexCliModels", () => {
 				})
 			)
 		).toEqual([
-			{ id: "gpt-5.5", label: "GPT-5.5" },
-			{ id: "gpt-5-codex", label: "GPT-5 Codex" },
+			{ id: "gpt-5.5", label: "gpt-5.5" },
+			{ id: "gpt-5-codex", label: "gpt-5-codex" },
 		]);
 	});
 
@@ -180,7 +180,7 @@ describe("CodexCliProvider", () => {
 		]);
 
 		await expect(provider.listModels()).resolves.toEqual([
-			{ id: "gpt-5.5", label: "GPT-5.5" },
+			{ id: "gpt-5.5", label: "gpt-5.5" },
 		]);
 		expect(run).toHaveBeenCalledWith({
 			command: "codex",

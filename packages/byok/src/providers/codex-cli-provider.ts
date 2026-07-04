@@ -73,11 +73,7 @@ function optionFromCodexModel(value: unknown): ByokModelOption | null {
 	if (typeof rawId !== "string") return null;
 	const id = rawId.trim();
 	if (!id) return null;
-	const rawLabel = record.display_name ?? record.label ?? record.name ?? id;
-	const label = typeof rawLabel === "string" && rawLabel.trim()
-		? rawLabel.trim()
-		: id;
-	return { id, label };
+	return { id, label: id };
 }
 
 function dedupeModelOptions(options: ByokModelOption[]): ByokModelOption[] {
