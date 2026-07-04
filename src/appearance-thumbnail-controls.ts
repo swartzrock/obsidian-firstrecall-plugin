@@ -240,7 +240,14 @@ export function cueAccentThumbnailOptions(): AppearanceThumbnailOption<CueAccent
 export function editorCueDisplayThumbnailOptions(): AppearanceThumbnailOption<
 	EditorCueDisplay
 >[] {
-	return EDITOR_CUE_DISPLAY_OPTIONS.map((option) => ({
+	const hiddenDisplays = new Set<EditorCueDisplay>([
+		"collapsed-tabs",
+		"active-section-composer",
+		"hook-minimap",
+	]);
+	return EDITOR_CUE_DISPLAY_OPTIONS.filter(
+		(option) => !hiddenDisplays.has(option.id)
+	).map((option) => ({
 		id: option.id,
 		label: option.label,
 		description: option.description,

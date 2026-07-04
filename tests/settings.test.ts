@@ -561,10 +561,14 @@ describe("settings defaults", () => {
 
 		tab.display();
 		openSettingsCard(tab, "Editing View");
-		await clickThumbnail(tab.containerEl, "Editor cue display", "hook-minimap");
+		await clickThumbnail(
+			tab.containerEl,
+			"Editor cue display",
+			"anchored-card-rail"
+		);
 		await clickThumbnail(tab.containerEl, "Rail card background", "gradient");
 
-		expect(plugin.settings.editorCueDisplay).toBe("hook-minimap");
+		expect(plugin.settings.editorCueDisplay).toBe("anchored-card-rail");
 		expect(plugin.settings.editorHookCardStyle).toBe("gradient");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);

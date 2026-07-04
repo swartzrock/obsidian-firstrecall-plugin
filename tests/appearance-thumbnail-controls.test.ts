@@ -276,9 +276,16 @@ describe("Cornell View thumbnail option recipes", () => {
 });
 
 describe("Editing View thumbnail option recipes", () => {
-	it("covers every existing Editing View option with a preview recipe", () => {
+	const displayedEditorCueDisplayOptions = EDITOR_CUE_DISPLAY_OPTIONS.filter(
+		(option) =>
+			!["collapsed-tabs", "active-section-composer", "hook-minimap"].includes(
+				option.id
+			)
+	);
+
+	it("covers every currently offered Editing View option with a preview recipe", () => {
 		expect(editorCueDisplayThumbnailOptions().map((option) => option.id)).toEqual(
-			EDITOR_CUE_DISPLAY_OPTIONS.map((option) => option.id)
+			displayedEditorCueDisplayOptions.map((option) => option.id)
 		);
 		expect(
 			editorHookCardStyleThumbnailOptions().map((option) => option.id)
@@ -294,13 +301,22 @@ describe("Editing View thumbnail option recipes", () => {
 			onSelect: vi.fn(),
 		});
 
-		for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
+		for (const option of displayedEditorCueDisplayOptions) {
 			expect(
 				root.querySelector(`.cuecraft-preview-editor-display-${option.id}`)
 			).not.toBeNull();
 		}
+		for (const optionId of [
+			"collapsed-tabs",
+			"active-section-composer",
+			"hook-minimap",
+		]) {
+			expect(
+				root.querySelector(`.cuecraft-preview-editor-display-${optionId}`)
+			).toBeNull();
+		}
 		expect(root.querySelectorAll(".cuecraft-preview-editor-scene")).toHaveLength(
-			EDITOR_CUE_DISPLAY_OPTIONS.length - 1
+			displayedEditorCueDisplayOptions.length - 1
 		);
 		expect(
 			root
@@ -308,7 +324,9 @@ describe("Editing View thumbnail option recipes", () => {
 				?.querySelector(".cuecraft-preview-display-classic")
 		).not.toBeNull();
 		expect(root.textContent).toContain("Inline cues");
-		expect(root.textContent).toContain("Hook minimap");
+		expect(root.textContent).not.toContain("Collapsed color tabs");
+		expect(root.textContent).not.toContain("Active-section composer");
+		expect(root.textContent).not.toContain("Hook minimap");
 	});
 
 	it("uses polished question text in key editor-truth previews", () => {
