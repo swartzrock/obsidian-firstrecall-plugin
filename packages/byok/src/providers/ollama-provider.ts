@@ -25,6 +25,18 @@ function describeError(status: number): string {
 	return "";
 }
 
+function isAbortError(error: unknown): boolean {
+	if (typeof DOMException !== "undefined" && error instanceof DOMException) {
+		return error.name === "AbortError";
+	}
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"name" in error &&
+		error.name === "AbortError"
+	);
+}
+
 export interface OllamaProviderOptions {
 	host: string;
 	model: string;
@@ -89,17 +101,18 @@ export class OllamaProvider implements AiProvider {
 
 	async generateText(
 		input: TextGenerationInput,
-		_signal?: AbortSignal
+		signal?: AbortSignal
 	): Promise<TextGenerationOutput> {
 		return {
-			text: await this.complete(input.prompt, input.responseFormat),
+			text: await this.complete(input.prompt, input.responseFormat, signal),
 		};
 	}
 
 	/** POST /api/generate (non-streaming) and return the raw model text. */
 	private async complete(
 		prompt: string,
-		responseFormat: "text" | "json" = "text"
+		responseFormat: "text" | "json" = "text",
+		signal?: AbortSignal
 	): Promise<string> {
 		let res;
 		try {
@@ -107,6 +120,7 @@ export class OllamaProvider implements AiProvider {
 				url: `${this.host}/api/generate`,
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
+				signal,
 				body: JSON.stringify({
 					model: this.model,
 					prompt,
@@ -114,7 +128,8 @@ export class OllamaProvider implements AiProvider {
 					...(responseFormat === "json" ? { format: "json" } : {}),
 				}),
 			});
-		} catch {
+		} catch (e) {
+			if (signal?.aborted || isAbortError(e)) throw e;
 			throw new ProviderError("Ollama server unreachable. Check the host and that Ollama is running.");
 		}
 		if (res.status < 200 || res.status >= 300) {
@@ -146,6 +161,7 @@ export class OllamaProvider implements AiProvider {
 				method: (init?.method as "GET" | "POST" | undefined) ?? "GET",
 				body: (init?.body as string | undefined) ?? undefined,
 				headers,
+				signal: init?.signal ?? undefined,
 			});
 			return new Response(res.text, {
 				status: res.status,

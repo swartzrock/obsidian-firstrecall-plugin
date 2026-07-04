@@ -1,12 +1,10 @@
 import {
 	BYOK_PROVIDER_IDS,
+	ByokProvider,
 	ByokProviderError,
 	byokProviderDefinition,
-	deriveProviderSetupStatus,
-	normalizeAnthropicModelSelection,
+	listModels,
 	normalizeProviderId,
-	recordProviderConnectionSuccess,
-	sortFetchedModelIds,
 	type ByokHttpClient,
 	type ByokModelOption,
 	type ByokProviderConfig,
@@ -20,6 +18,12 @@ import {
 } from "@cuecraft/byok";
 import { createByokNodeProvider } from "@cuecraft/byok/node";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
+import { normalizeAnthropicModelSelection } from "./anthropic-model-options";
+import {
+	deriveProviderSetupStatus,
+	recordProviderConnectionSuccess,
+} from "./byok-setup-status";
+import { sortFetchedModelIds } from "./byok-model-options";
 import {
 	cueDensityGuidance,
 	keywordGuidance,
@@ -607,6 +611,7 @@ function deleteLegacyCloudProviderCredential(
 			delete legacy.openrouterApiKey;
 			return true;
 	}
+	return false;
 }
 
 function legacyProviderModel(
@@ -927,49 +932,49 @@ export function cueCraftProviderConfigFromSettings(
 	switch (provider) {
 		case "anthropic":
 			return {
-				provider: "anthropic",
+				provider: ByokProvider.Anthropic,
 				apiKey: opts.cloudCredentials?.anthropic ?? stored.credential,
 				model: stored.model,
 			};
 		case "openai":
 			return {
-				provider: "openai",
+				provider: ByokProvider.OpenAI,
 				apiKey: opts.cloudCredentials?.openai ?? stored.credential,
 				model: stored.model,
 			};
 		case "google":
 			return {
-				provider: "google",
+				provider: ByokProvider.Google,
 				apiKey: opts.cloudCredentials?.google ?? stored.credential,
 				model: stored.model,
 			};
 		case "xai":
 			return {
-				provider: "xai",
+				provider: ByokProvider.Xai,
 				apiKey: opts.cloudCredentials?.xai ?? stored.credential,
 				model: stored.model,
 			};
 		case "openrouter":
 			return {
-				provider: "openrouter",
+				provider: ByokProvider.OpenRouter,
 				apiKey: opts.cloudCredentials?.openrouter ?? stored.credential,
 				model: stored.model,
 			};
 		case "codex-cli":
 			return {
-				provider: "codex-cli",
+				provider: ByokProvider.CodexCli,
 				command: stored.credential,
 				model: stored.model,
 			};
 		case "claude-cli":
 			return {
-				provider: "claude-cli",
+				provider: ByokProvider.ClaudeCli,
 				command: stored.credential,
 				model: stored.model,
 			};
 		case "ollama":
 			return {
-				provider: "ollama",
+				provider: ByokProvider.Ollama,
 				host: stored.credential,
 				model: stored.model,
 			};
@@ -983,7 +988,7 @@ export function makeCueCraftByokProvider(
 	return wrapCueCraftByokRuntime(
 		createByokNodeProvider(
 			cueCraftProviderConfigFromSettings(settings),
-			withCueCraftAppInfo(deps)
+			deps
 		)
 	);
 }
@@ -996,6 +1001,16 @@ export async function resolveCueCraftProviderConfigFromStore(
 	if (!isCueCraftCloudCredentialProvider(provider)) {
 		return cueCraftProviderConfigFromSettings(settings);
 	}
+	const apiKey = await readCueCraftCloudCredential(provider, credentialStore);
+	return cueCraftProviderConfigFromSettings(settings, {
+		cloudCredentials: { [provider]: apiKey },
+	});
+}
+
+async function readCueCraftCloudCredential(
+	provider: CueCraftCloudCredentialProvider,
+	credentialStore: SecureCredentialStore
+): Promise<string> {
 	const result = await credentialStore.read(provider);
 	if (!result.ok || !result.value) {
 		const providerName = cueCraftProviderLabel(provider);
@@ -1006,9 +1021,37 @@ export async function resolveCueCraftProviderConfigFromStore(
 				`CueCraft: ${providerName} API key is not available from secure storage.`
 		);
 	}
-	return cueCraftProviderConfigFromSettings(settings, {
-		cloudCredentials: { [provider]: result.value },
-	});
+	return result.value;
+}
+
+export async function listCueCraftProviderModelsFromStore(
+	settings: CueCraftSettings,
+	provider: CueCraftFetchedModelProvider,
+	deps: CueCraftProviderFactoryDeps,
+	credentialStore: SecureCredentialStore
+): Promise<ByokModelOption[]> {
+	const stored = cueCraftProviderSettings(settings, provider);
+	switch (provider) {
+		case "ollama":
+			return listModels({
+				provider: ByokProvider.Ollama,
+				host: stored.credential,
+				deps,
+			});
+		case "anthropic":
+		case "openai":
+		case "google":
+		case "xai":
+		case "openrouter": {
+			const apiKey = await readCueCraftCloudCredential(provider, credentialStore);
+			return listModels({
+				provider,
+				apiKey,
+				deps,
+			});
+		}
+	}
+	throw cueCraftProviderError("Provider does not support model discovery.");
 }
 
 export async function makeCueCraftByokProviderFromStore(
@@ -1019,19 +1062,9 @@ export async function makeCueCraftByokProviderFromStore(
 	return wrapCueCraftByokRuntime(
 		createByokNodeProvider(
 			await resolveCueCraftProviderConfigFromStore(settings, credentialStore),
-			withCueCraftAppInfo(deps)
+			deps
 		)
 	);
-}
-
-function withCueCraftAppInfo(deps: CueCraftProviderFactoryDeps): CueCraftProviderFactoryDeps {
-	return {
-		...deps,
-		appInfo: deps.appInfo ?? {
-			name: "CueCraft",
-			url: "https://github.com/swartzrock/obsidian-cuecraft-plugin",
-		},
-	};
 }
 
 export function isCueCraftLocalCliProvider(provider: ByokProviderId): boolean {

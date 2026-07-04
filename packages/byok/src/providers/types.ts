@@ -11,6 +11,7 @@ export interface HttpRequest {
 	method: "GET" | "POST";
 	body?: string;
 	headers?: Record<string, string>;
+	signal?: AbortSignal;
 }
 
 export interface HttpResponse {

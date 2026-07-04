@@ -11,7 +11,7 @@ import {
 	isAnthropicCustomModelSelection,
 	normalizeAnthropicModelSelection,
 	refreshAnthropicModelOptions,
-} from "../src";
+} from "../src/models/anthropic-models";
 
 function modelInfo(id: string, display_name: string): ModelInfo {
 	return {

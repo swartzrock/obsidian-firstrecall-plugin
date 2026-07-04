@@ -5,7 +5,7 @@ import {
 	isModelOption,
 	sortModelOptions,
 	type ModelOption,
-} from "../src";
+} from "../src/models/model-options";
 
 describe("normalizeStringId", () => {
 	it("normalizes a plain model ID from a string-only provider", () => {

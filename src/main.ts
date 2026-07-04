@@ -40,8 +40,10 @@ import {
 	markCueCraftCloudCredentialSaved,
 	migrateCueCraftCloudCredentials,
 	normalizeCueCraftProviderSettings,
+	listCueCraftProviderModelsFromStore,
 	makeCueCraftByokProviderFromStore,
 	type CueCraftByokRuntime,
+	type CueCraftFetchedModelProvider,
 } from "./byok-cuecraft-adapter";
 import {
 	createSecureCredentialStore,
@@ -1044,6 +1046,15 @@ export default class CueCraftPlugin extends Plugin {
 	/** Build the provider for the current settings. Public so Settings can test it. */
 	async makeProvider(): Promise<CueCraftByokRuntime> {
 		return makeCueCraftByokProviderFromStore(this.settings, {
+			fetchImpl: this.makeFetch(),
+			http: this.makeHttpClient(),
+		}, this.credentialStore);
+	}
+
+	async listProviderModels(
+		provider: CueCraftFetchedModelProvider
+	) {
+		return listCueCraftProviderModelsFromStore(this.settings, provider, {
 			fetchImpl: this.makeFetch(),
 			http: this.makeHttpClient(),
 		}, this.credentialStore);

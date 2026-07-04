@@ -1,67 +1,33 @@
 export {
-	BYOK_PROVIDER_DEFINITIONS,
 	BYOK_PROVIDER_IDS,
 	byokProviderDefinition,
 	byokProviderDefinitions,
 	isByokProviderId,
 	normalizeProviderId,
 } from "./registry";
-export {
-	ANTHROPIC_CUSTOM_MODEL_ID,
-	anthropicModelInfoToByokModelOption,
-	buildAnthropicModelOptions,
-	describeAnthropicModel,
-	describeAnthropicModelDetails,
-	formatAnthropicModelHint,
-	formatAnthropicUnavailableModelMessage,
-	isAnthropicCustomModelSelection,
-	normalizeAnthropicModelSelection,
-	refreshAnthropicModelOptions,
-	type AnthropicModelHint,
-	type AnthropicModelListSource,
-	type AnthropicModelOption,
-	type AnthropicModelRefreshResult,
-} from "./models/anthropic-models";
-export {
-	compareFetchedModelIds,
-	sortFetchedModelIds,
-} from "./models/fetched-model-sorting";
-export {
-	isModelOption,
-	normalizeModelIds,
-	normalizeStringId,
-	sortModelOptions,
-	type ModelOption,
-} from "./models/model-options";
-export { createByokProvider } from "./providers/provider-factory";
-export {
-	CLI_DEFAULT_MODEL_SENTINEL,
-	deriveProviderSetupStatus,
-	providerCredentialFingerprint,
-	recordProviderConnectionSuccess,
-	type DerivedProviderSetupStatus,
-	type ProviderConnectionSnapshot,
-	type ProviderConnectionStatusMap,
-	type ProviderSetupStatusId,
-	type ProviderSetupStatusSettings,
-} from "./setup-status";
+export { createByok, generateText, listModels } from "./client";
 export type {
 	ByokCliProviderConfig,
+	ByokClient,
+	ByokClientConfig,
+	ByokClientTextGenerationInput,
 	ByokCloudProviderConfig,
 	ByokConnectionState,
 	ByokCoreProviderConfig,
 	ByokCredentialFieldDefinition,
 	ByokCredentialKind,
+	ByokFacadeDeps,
 	ByokHttpClient,
 	ByokHttpRequest,
 	ByokHttpResponse,
+	ByokGenerateTextOptions,
+	ByokListModelsOptions,
 	ByokModelBehavior,
 	ByokModelFieldDefinition,
 	ByokModelOption,
 	ByokModelRefreshResult,
 	ByokObjectGenerationInput,
 	ByokOllamaProviderConfig,
-	ByokProviderAppInfo,
 	ByokProviderConfig,
 	ByokProviderDefinition,
 	ByokProviderDeps,
@@ -79,6 +45,7 @@ export type {
 	ByokVerificationSnapshotMap,
 } from "./types";
 export {
+	ByokProvider,
 	ByokProviderError,
 	ByokProviderRateLimitError,
 } from "./types";

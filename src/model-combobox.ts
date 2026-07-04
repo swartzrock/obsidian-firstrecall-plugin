@@ -2,7 +2,7 @@ import {
 	normalizeStringId,
 	sortModelOptions,
 	type ModelOption,
-} from "@cuecraft/byok";
+} from "./byok-model-options";
 
 let nextComboboxId = 0;
 

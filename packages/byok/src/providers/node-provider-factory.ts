@@ -9,7 +9,7 @@ import type {
 
 export function createByokNodeProvider(
 	config: ByokProviderConfig,
-	deps: ByokProviderDeps
+	deps?: Partial<ByokProviderDeps>
 ): ByokProviderRuntime {
 	switch (config.provider) {
 		case "codex-cli":

@@ -1,23 +1,27 @@
-import type { ByokProviderDefinition, ByokProviderId } from "./types";
+import {
+	ByokProvider,
+	type ByokProviderDefinition,
+	type ByokProviderId,
+} from "./types";
 import { BYOK_PROVIDER_ICONS } from "./provider-icons";
 
 export const BYOK_PROVIDER_IDS = [
-	"anthropic",
-	"openai",
-	"google",
-	"xai",
-	"openrouter",
-	"ollama",
-	"codex-cli",
-	"claude-cli",
+	ByokProvider.Anthropic,
+	ByokProvider.OpenAI,
+	ByokProvider.Google,
+	ByokProvider.Xai,
+	ByokProvider.OpenRouter,
+	ByokProvider.Ollama,
+	ByokProvider.CodexCli,
+	ByokProvider.ClaudeCli,
 ] as const satisfies readonly ByokProviderId[];
 
 export const BYOK_PROVIDER_DEFINITIONS: Record<
 	ByokProviderId,
 	ByokProviderDefinition
 > = {
-	ollama: {
-		id: "ollama",
+	[ByokProvider.Ollama]: {
+		id: ByokProvider.Ollama,
 		label: "Ollama",
 		shortLabel: "Ollama",
 		productLabel: "Ollama",
@@ -45,8 +49,8 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	anthropic: {
-		id: "anthropic",
+	[ByokProvider.Anthropic]: {
+		id: ByokProvider.Anthropic,
 		label: "Anthropic (Claude)",
 		shortLabel: "Anthropic",
 		productLabel: "Claude",
@@ -74,8 +78,8 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	openai: {
-		id: "openai",
+	[ByokProvider.OpenAI]: {
+		id: ByokProvider.OpenAI,
 		label: "OpenAI (ChatGPT)",
 		shortLabel: "OpenAI",
 		productLabel: "ChatGPT",
@@ -103,8 +107,8 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	google: {
-		id: "google",
+	[ByokProvider.Google]: {
+		id: ByokProvider.Google,
 		label: "Google (Gemini)",
 		shortLabel: "Gemini",
 		productLabel: "Gemini",
@@ -132,8 +136,8 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	xai: {
-		id: "xai",
+	[ByokProvider.Xai]: {
+		id: ByokProvider.Xai,
 		label: "xAI (Grok)",
 		shortLabel: "xAI",
 		productLabel: "Grok",
@@ -161,8 +165,8 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	openrouter: {
-		id: "openrouter",
+	[ByokProvider.OpenRouter]: {
+		id: ByokProvider.OpenRouter,
 		label: "OpenRouter",
 		shortLabel: "OpenRouter",
 		productLabel: "OpenRouter",
@@ -190,8 +194,8 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	"codex-cli": {
-		id: "codex-cli",
+	[ByokProvider.CodexCli]: {
+		id: ByokProvider.CodexCli,
 		label: "Codex CLI",
 		shortLabel: "Codex CLI",
 		productLabel: "Codex CLI",
@@ -215,8 +219,8 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 		requiresDownload: false,
 		supportsModelListing: false,
 	},
-	"claude-cli": {
-		id: "claude-cli",
+	[ByokProvider.ClaudeCli]: {
+		id: ByokProvider.ClaudeCli,
 		label: "Claude CLI",
 		shortLabel: "Claude CLI",
 		productLabel: "Claude CLI",
@@ -251,9 +255,9 @@ export function isByokProviderId(value: unknown): value is ByokProviderId {
 
 export function normalizeProviderId(value: unknown): ByokProviderId {
 	if (isByokProviderId(value)) return value;
-	if (value === "codex") return "codex-cli";
-	if (value === "claude") return "claude-cli";
-	return "ollama";
+	if (value === "codex") return ByokProvider.CodexCli;
+	if (value === "claude") return ByokProvider.ClaudeCli;
+	return ByokProvider.Ollama;
 }
 
 export function byokProviderDefinition(
