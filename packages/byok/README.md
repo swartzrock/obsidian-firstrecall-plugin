@@ -282,7 +282,7 @@ const models = await listModels({
 
 `ByokProvider.Anthropic`, `ByokProvider.OpenAI`, `ByokProvider.Google`, `ByokProvider.Xai`, and `ByokProvider.OpenRouter` use the same API-key shape. `ByokProvider.Ollama` uses `{ provider: ByokProvider.Ollama, host: "http://localhost:11434" }`.
 
-Local CLI providers from `@cuecraft/byok/node` do not expose model discovery because the Codex and Claude command-line tools do not provide a stable model-list API through this package.
+Codex CLI model discovery is available from the `@cuecraft/byok/node` runtime provider and uses `codex debug models`. Claude CLI does not expose model discovery through BYOK.
 
 ### Use Ollama
 

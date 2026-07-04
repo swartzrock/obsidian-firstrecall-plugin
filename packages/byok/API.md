@@ -95,7 +95,7 @@ const models = await listModels({
 
 Cloud providers use `{ provider, apiKey }`. Ollama uses `{ provider: ByokProvider.Ollama, host }`. Both forms accept optional `deps`.
 
-Local CLI providers do not expose model discovery through BYOK because Codex CLI and Claude CLI do not provide a stable model-list API through this package.
+Codex CLI model discovery is available from the Node runtime provider and shells out to `codex debug models`. Claude CLI does not expose model discovery through BYOK.
 
 ## Node Runtime
 

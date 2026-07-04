@@ -198,6 +198,7 @@ describe("BYOK public contract", () => {
 			label: "Codex CLI",
 			credentialKind: "command",
 			modelBehavior: "optional",
+			supportsModelListing: true,
 		} satisfies Partial<ByokProviderDefinition>);
 		expect(byId.get("claude-cli")).toMatchObject({
 			label: "Claude CLI",

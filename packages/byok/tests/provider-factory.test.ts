@@ -123,7 +123,7 @@ describe("createByokProvider", () => {
 		const provider = createByokNodeProvider(config, { fetchImpl, http });
 
 		expect(provider.id).toBe("codex-cli");
-		expect("listModels" in provider).toBe(false);
+		expect(typeof provider.listModels).toBe("function");
 	});
 
 	it("creates CLI providers from the Node subpath", () => {

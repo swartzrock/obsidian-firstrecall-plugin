@@ -5,6 +5,7 @@ import {
 	TextGenerationInput,
 	TextGenerationOutput,
 } from "./types";
+import type { ByokModelOption } from "../types";
 import {
 	defaultLocalCliCwd,
 	LocalCommandRunner,
@@ -59,6 +60,51 @@ function textFromEvent(value: unknown): string {
 	if (nested.trim()) return nested;
 	const item = textFromEvent(record.item);
 	return item.trim() ? item : "";
+}
+
+function optionFromCodexModel(value: unknown): ByokModelOption | null {
+	if (typeof value === "string") {
+		const id = value.trim();
+		return id ? { id, label: id } : null;
+	}
+	const record = asRecord(value);
+	if (!record) return null;
+	const rawId = record.slug ?? record.id ?? record.name;
+	if (typeof rawId !== "string") return null;
+	const id = rawId.trim();
+	if (!id) return null;
+	const rawLabel = record.display_name ?? record.label ?? record.name ?? id;
+	const label = typeof rawLabel === "string" && rawLabel.trim()
+		? rawLabel.trim()
+		: id;
+	return { id, label };
+}
+
+function dedupeModelOptions(options: ByokModelOption[]): ByokModelOption[] {
+	const byId = new Map<string, ByokModelOption>();
+	for (const option of options) {
+		if (!byId.has(option.id)) byId.set(option.id, option);
+	}
+	return [...byId.values()];
+}
+
+export function extractCodexCliModels(stdout: string): ByokModelOption[] {
+	const trimmed = stdout.trim();
+	if (!trimmed) return [];
+	try {
+		const parsed = JSON.parse(trimmed);
+		const modelList = Array.isArray(parsed)
+			? parsed
+			: asRecord(parsed)?.models ?? asRecord(parsed)?.data;
+		if (!Array.isArray(modelList)) return [];
+		return dedupeModelOptions(
+			modelList
+				.map(optionFromCodexModel)
+				.filter((option): option is ByokModelOption => option !== null)
+		);
+	} catch {
+		return [];
+	}
 }
 
 export function extractCodexCliOutput(stdout: string): string {
@@ -130,6 +176,23 @@ export class CodexCliProvider implements AiProvider {
 			const message = error instanceof Error ? error.message : String(error);
 			return { ok: false, message };
 		}
+	}
+
+	async listModels(): Promise<ByokModelOption[]> {
+		let result: LocalCommandResult;
+		try {
+			result = await this.runner.run({
+				command: this.command,
+				args: ["debug", "models"],
+				cwd: this.cwd,
+				timeoutMs: STATUS_TIMEOUT_MS,
+			});
+		} catch (error) {
+			if (error instanceof ProviderError) throw error;
+			const message = error instanceof Error ? error.message : String(error);
+			throw new ProviderError(`Codex CLI model fetch failed: ${message}`);
+		}
+		return extractCodexCliModels(result.stdout);
 	}
 
 	async generateText(
