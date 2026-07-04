@@ -208,6 +208,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			description: "Local Codex CLI command.",
 			secret: false,
 			missingMessage: "Enter your Codex CLI command first.",
+			resetModelsMessage: "Enter your Codex CLI command first to fetch models.",
 		},
 		modelBehavior: "optional",
 		modelField: {

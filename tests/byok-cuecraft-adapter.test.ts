@@ -418,6 +418,21 @@ describe("CueCraft fetched model adapters", () => {
 		]);
 		expect(cueCraftFetchedModelCount(s, "openrouter")).toBe(1);
 		expect(cueCraftModelRefreshMessage(s, "openrouter")).toBe("");
+
+		const codexOption = { id: "gpt-5.5", label: "GPT-5.5" };
+		expect(
+			applyCueCraftListedModels(s, "codex-cli", [codexOption], "No models.")
+		).toEqual({
+			models: ["gpt-5.5"],
+			options: [codexOption],
+			message: "",
+		});
+		expect(cueCraftProviderSettings(s, "codex-cli").availableModels).toEqual([
+			"gpt-5.5",
+		]);
+		expect(cueCraftProviderSettings(s, "codex-cli").modelOptions).toEqual([
+			codexOption,
+		]);
 	});
 
 	it("persists model refresh failures as fetched-but-empty state", () => {

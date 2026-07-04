@@ -91,7 +91,8 @@ export type CueCraftFetchedModelProvider =
 	| "openai"
 	| "google"
 	| "xai"
-	| "openrouter";
+	| "openrouter"
+	| "codex-cli";
 
 export interface CueCraftAppliedModelRefresh {
 	models: string[];
@@ -1049,6 +1050,17 @@ export async function listCueCraftProviderModelsFromStore(
 				apiKey,
 				deps,
 			});
+		}
+		case "codex-cli": {
+			const runtime = createByokNodeProvider(
+				{
+					provider: ByokProvider.CodexCli,
+					command: stored.credential,
+					model: stored.model,
+				},
+				deps
+			);
+			return (await runtime.listModels?.()) ?? [];
 		}
 	}
 	throw cueCraftProviderError("Provider does not support model discovery.");
