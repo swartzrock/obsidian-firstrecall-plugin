@@ -198,12 +198,18 @@ describe("BYOK public contract", () => {
 		expect(byId.get("codex-cli")).toMatchObject({
 			label: "Codex CLI",
 			credentialKind: "command",
+			modelField: expect.objectContaining({
+				placeholder: "CLI default",
+			}),
 			modelBehavior: "optional",
 			supportsModelListing: true,
 		} satisfies Partial<ByokProviderDefinition>);
 		expect(byId.get("claude-cli")).toMatchObject({
 			label: "Claude CLI",
 			credentialKind: "command",
+			modelField: expect.objectContaining({
+				placeholder: "CLI default",
+			}),
 			modelBehavior: "optional",
 			supportsModelListing: true,
 		} satisfies Partial<ByokProviderDefinition>);
