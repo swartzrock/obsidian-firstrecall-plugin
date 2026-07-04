@@ -733,11 +733,14 @@
 	background: color-mix(in srgb, var(--text-muted) 32%, transparent);
 }
 
-.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line,
-.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-line {
+.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line {
 	inset-inline-start: 32%;
 	height: 2px;
 	background: color-mix(in srgb, var(--text-muted) 38%, transparent);
+}
+
+.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-line {
+	display: none;
 }
 
 .cuecraft-preview-editor-line-short {
@@ -755,20 +758,17 @@
 	width: 46%;
 }
 
-.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line-short,
-.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-line-short {
+.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line-short {
 	inset-block-start: 18%;
 	width: 38%;
 }
 
-.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line-long,
-.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-line-long {
+.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line-long {
 	inset-block-start: 31%;
 	width: 50%;
 }
 
-.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line-medium,
-.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-line-medium {
+.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line-medium {
 	inset-block-start: 44%;
 	width: 43%;
 }
@@ -834,20 +834,25 @@
 }
 
 .cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-hook-card-first {
-	inset-block-start: 48%;
-	inset-inline-end: 9%;
-	width: 44%;
-	height: 37%;
+	inset-block-start: 18%;
+	inset-inline-end: 14%;
+	width: 72%;
+	height: 64%;
+	border: 1px solid color-mix(in srgb, #633813 26%, var(--background-modifier-border));
+	box-shadow:
+		0 2px 0 rgb(0 0 0 / 0.18),
+		0 8px 18px rgb(0 0 0 / 0.08);
 	z-index: 2;
 }
 
 .cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-hook-card-second {
-	inset-block-start: 60%;
-	inset-inline-end: 12%;
-	width: 40%;
-	height: 30%;
-	z-index: 1;
-	opacity: 0.76;
+	display: none;
+}
+
+.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-cue-question {
+	inset: 28% 12% auto 12%;
+	font-size: 6.8px;
+	-webkit-line-clamp: 3;
 }
 
 .cuecraft-preview-editor-hook-card-first {
