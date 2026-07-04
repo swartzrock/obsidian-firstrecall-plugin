@@ -136,15 +136,28 @@ interface OpenRouterModelEntry {
 	id?: unknown;
 }
 
+function normalizeClaudeCliModelId(model: string): string {
+	return model
+		.trim()
+		.replace(/^~?anthropic\//, "")
+		.split("-")
+		.map((token) =>
+			/^\d+(?:\.\d+)+$/.test(token) ? token.split(".").join("-") : token
+		)
+		.join("-");
+}
+
 function normalizeClaudeCliModelOverride(model: string): string {
-	return model.trim().replace(/^~?anthropic\//, "");
+	return normalizeClaudeCliModelId(model);
 }
 
 function modelOptionFromOpenRouterId(id: string): ByokModelOption | null {
 	const trimmed = id.trim();
 	const markerIndex = trimmed.indexOf("anthropic/");
 	if (markerIndex === -1) return null;
-	const claudeModelId = trimmed.slice(markerIndex + "anthropic/".length).trim();
+	const claudeModelId = normalizeClaudeCliModelId(
+		trimmed.slice(markerIndex + "anthropic/".length)
+	);
 	if (claudeModelId.endsWith("-latest")) return null;
 	return claudeModelId
 		? { id: claudeModelId, label: claudeModelId }

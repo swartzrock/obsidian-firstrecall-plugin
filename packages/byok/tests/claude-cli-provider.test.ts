@@ -346,17 +346,17 @@ describe("ClaudeCliProvider", () => {
 		expect(withoutModel.run.mock.calls[0][0].args).not.toContain("--model");
 	});
 
-	it("strips OpenRouter Anthropic prefixes from model overrides", async () => {
+	it("normalizes OpenRouter Anthropic model overrides for Claude CLI", async () => {
 		const { provider, run } = makeProvider([
 			result(JSON.stringify({ type: "result", result: "ok" })),
-		], "~anthropic/claude-opus-latest");
+		], "~anthropic/claude-opus-4.8");
 
 		await provider.generateText({ prompt: "Hi" });
 
 		expect(run.mock.calls[0][0].args).toContain("--model");
-		expect(run.mock.calls[0][0].args).toContain("claude-opus-latest");
+		expect(run.mock.calls[0][0].args).toContain("claude-opus-4-8");
 		expect(run.mock.calls[0][0].args).not.toContain(
-			"~anthropic/claude-opus-latest"
+			"~anthropic/claude-opus-4.8"
 		);
 	});
 
@@ -375,9 +375,12 @@ describe("ClaudeCliProvider", () => {
 						{ id: "openai/gpt-4o" },
 						{ id: "anthropic/claude-opus-4" },
 						{ id: "anthropic/claude-opus-4.1" },
+						{ id: "anthropic/claude-opus-4.8" },
+						{ id: "anthropic/claude-opus-4.8-fast" },
 						{ id: "anthropic/claude-opus-latest" },
 						{ id: "anthropic/claude-3-haiku-20240307" },
 						{ id: "anthropic/claude-3.5-haiku" },
+						{ id: "anthropic/claude-haiku-4.5" },
 					],
 				}),
 				{ status: 200 }
@@ -391,12 +394,16 @@ describe("ClaudeCliProvider", () => {
 				label: "claude-sonnet-5",
 			},
 			{
-				id: "claude-opus-4.1",
-				label: "claude-opus-4.1",
+				id: "claude-opus-4-8",
+				label: "claude-opus-4-8",
 			},
 			{
-				id: "claude-3.5-haiku",
-				label: "claude-3.5-haiku",
+				id: "claude-opus-4-8-fast",
+				label: "claude-opus-4-8-fast",
+			},
+			{
+				id: "claude-haiku-4-5",
+				label: "claude-haiku-4-5",
 			},
 		]);
 		expect(run).not.toHaveBeenCalled();
