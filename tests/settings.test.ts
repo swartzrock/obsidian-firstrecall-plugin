@@ -187,6 +187,7 @@ type MockPlugin = {
 	refreshEditorCues: ReturnType<typeof vi.fn>;
 	refreshCornellViews: ReturnType<typeof vi.fn>;
 	refreshReadingModeSurface: ReturnType<typeof vi.fn>;
+	noteCueSettingsChanged: ReturnType<typeof vi.fn>;
 	promptForCueSettingsRegeneration: ReturnType<typeof vi.fn>;
 	registerDomEvent: (
 		el: HTMLElement,
@@ -271,6 +272,7 @@ async function setupSettingsTab(): Promise<{
 		refreshEditorCues: vi.fn(),
 		refreshCornellViews: vi.fn(),
 		refreshReadingModeSurface: vi.fn(),
+		noteCueSettingsChanged: vi.fn(),
 		promptForCueSettingsRegeneration: vi.fn(),
 		registerDomEvent: (el, type, handler) => {
 			el.addEventListener(type, handler);
@@ -510,11 +512,11 @@ describe("settings defaults", () => {
 		expect(text).toContain("Fold cue column on mobile");
 		expect(text).not.toContain("Editor cue display");
 		expect(text).not.toContain("Rail card background");
-		expect(text).not.toContain("Show rail questions");
-		expect(text).not.toContain("Show rail support terms");
+		expect(text).not.toContain("Show cue questions");
+		expect(text).not.toContain("Show support terms");
 	});
 
-	it("shows Editing View controls for all editor cue display options", async () => {
+	it("shows Editing View controls for the current editor cue display", async () => {
 		const { tab } = await setupSettingsTab();
 
 		tab.display();
@@ -522,14 +524,24 @@ describe("settings defaults", () => {
 
 		const text = settingText(tab.containerEl);
 		expect(text).toContain("Editor cue display");
-		expect(text).toContain("Rail card background");
+		expect(text).not.toContain("Rail card background");
 		expect(text).toContain("Cue column width");
 		expect(text).toContain("Cue font size");
-		expect(text).toContain("Show rail questions");
-		expect(text).toContain("Show rail support terms");
+		expect(text).toContain("Show cue questions");
+		expect(text).toContain("Show support terms");
 		expect(text).not.toContain("Cornell display mode");
 		expect(text).not.toContain("Cornell view style");
 		expect(text).not.toContain("Cue accent color");
+	});
+
+	it("shows Rail card background only for Anchored card rail", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.editorCueDisplay = "anchored-card-rail";
+
+		tab.display();
+		openSettingsCard(tab, "Editing View");
+
+		expect(settingText(tab.containerEl)).toContain("Rail card background");
 	});
 
 	it("keeps cross-view review controls in Note format", async () => {
@@ -543,8 +555,23 @@ describe("settings defaults", () => {
 		expect(text).toContain("Reading mode display");
 		expect(text).toContain("Show Section Lens");
 		expect(text).toContain("Show Note Brief");
-		expect(text).not.toContain("Show rail questions");
-		expect(text).not.toContain("Show rail support terms");
+		expect(text).not.toContain("Show cue questions");
+		expect(text).not.toContain("Show support terms");
+	});
+
+	it("marks cue content dirty when enabling Note Brief", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.showNoteBrief = false;
+
+		tab.display();
+		await changeToggle(tab.containerEl, "Show Note Brief", true);
+
+		expect(plugin.settings.showNoteBrief).toBe(true);
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
+		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
+		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledTimes(1);
+		expect(plugin.refreshCornellViews).toHaveBeenCalledTimes(1);
 	});
 
 	it("refreshes editor cues for Editing View controls", async () => {
@@ -552,7 +579,7 @@ describe("settings defaults", () => {
 
 		tab.display();
 		openSettingsCard(tab, "Editing View");
-		await changeToggle(tab.containerEl, "Show rail questions", false);
+		await changeToggle(tab.containerEl, "Show cue questions", false);
 
 		expect(plugin.settings.showRailQuestions).toBe(false);
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
@@ -562,20 +589,34 @@ describe("settings defaults", () => {
 
 	it("refreshes editor cues for Editing View display and card-style thumbnails", async () => {
 		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.editorCueDisplay = "anchored-card-rail";
 
 		tab.display();
 		openSettingsCard(tab, "Editing View");
 		await clickThumbnail(
 			tab.containerEl,
 			"Editor cue display",
-			"anchored-card-rail"
+			"threaded-margin-notes"
 		);
+
+		expect(plugin.settings.editorCueDisplay).toBe("threaded-margin-notes");
+		expect(settingText(tab.containerEl)).not.toContain("Rail card background");
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
+		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
+	});
+
+	it("refreshes editor cues for Anchored card rail background thumbnails", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.editorCueDisplay = "anchored-card-rail";
+
+		tab.display();
+		openSettingsCard(tab, "Editing View");
 		await clickThumbnail(tab.containerEl, "Rail card background", "gradient");
 
-		expect(plugin.settings.editorCueDisplay).toBe("anchored-card-rail");
 		expect(plugin.settings.editorHookCardStyle).toBe("gradient");
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
-		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
 	});
 

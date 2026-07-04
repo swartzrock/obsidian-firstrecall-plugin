@@ -244,6 +244,8 @@ function renderCornellCueElement(
 		cornellStyleClass(style),
 	].join(" ");
 	root.dataset.state = state;
+	root.dataset.questionVisible = String(options.showQuestion ?? true);
+	root.dataset.supportTermsVisible = String(options.showSupportTerms ?? true);
 	applyCueLayoutClasses(root, options);
 
 	const card = doc.createElement("div");
@@ -264,15 +266,17 @@ function renderCornellCueElement(
 		card.dataset.confidence = cue.confidence;
 	}
 
-	const q = doc.createElement("div");
-	q.className = "cuecraft-cornell-q";
-	q.textContent = cue.question;
-	card.appendChild(q);
+	if (options.showQuestion ?? true) {
+		const q = doc.createElement("div");
+		q.className = "cuecraft-cornell-q";
+		q.textContent = cue.question;
+		card.appendChild(q);
+	}
 
 	const supports = buildCornellSupportPresentation({
 		keywords: cue.keywords,
 	});
-	if (supports.terms.length) {
+	if ((options.showSupportTerms ?? true) && supports.terms.length) {
 		const kw = doc.createElement("div");
 		kw.className = "cuecraft-cornell-kw";
 		const supportText = doc.createElement("span");
@@ -302,6 +306,8 @@ function renderInlineCueElement(
 ): HTMLElement {
 	const root = cueDocument().createElement("div");
 	root.className = "cuecraft-cue";
+	root.dataset.questionVisible = String(options.showQuestion ?? true);
+	root.dataset.supportTermsVisible = String(options.showSupportTerms ?? true);
 	applyCueLayoutClasses(root, options);
 
 	if (cue.error) {
@@ -318,14 +324,16 @@ function renderInlineCueElement(
 		root.dataset.confidence = cue.confidence;
 	}
 
-	const q = cueDocument().createElement("div");
-	q.className = "cuecraft-cue-question";
-	q.textContent = cue.question;
-	root.appendChild(q);
+	if (options.showQuestion ?? true) {
+		const q = cueDocument().createElement("div");
+		q.className = "cuecraft-cue-question";
+		q.textContent = cue.question;
+		root.appendChild(q);
+	}
 
 	appendSectionLens(root, cue.sectionLens);
 
-	if (cue.keywords.length) {
+	if ((options.showSupportTerms ?? true) && cue.keywords.length) {
 		const kw = cueDocument().createElement("div");
 		kw.className = "cuecraft-cue-keywords";
 		kw.textContent = cue.keywords.join(" · ");

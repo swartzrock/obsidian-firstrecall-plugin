@@ -1224,6 +1224,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showNoteBrief = value;
 						await this.plugin.saveSettings();
+						if (value) this.plugin.noteCueSettingsChanged();
 						this.refreshReviewSurfaces();
 					})
 			);
@@ -1255,22 +1256,25 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			setValue: (value) => {
 				this.plugin.settings.editorCueDisplay = value;
 			},
+			afterSave: () => this.display(),
 			className: "cuecraft-thumbnail-group-editor-display",
 		});
 
-		const railCardStyleDesc = (): string =>
-			editorHookCardStyleOption(this.plugin.settings.editorHookCardStyle)
-				.description;
-		this.renderEditingViewThumbnailSetting<EditorHookCardStyle>(containerEl, {
-			name: "Rail card background",
-			description: railCardStyleDesc,
-			options: editorHookCardStyleThumbnailOptions(),
-			value: () => this.plugin.settings.editorHookCardStyle,
-			setValue: (value) => {
-				this.plugin.settings.editorHookCardStyle = value;
-			},
-			className: "cuecraft-thumbnail-group-editor-card-style",
-		});
+		if (this.plugin.settings.editorCueDisplay === "anchored-card-rail") {
+			const railCardStyleDesc = (): string =>
+				editorHookCardStyleOption(this.plugin.settings.editorHookCardStyle)
+					.description;
+			this.renderEditingViewThumbnailSetting<EditorHookCardStyle>(containerEl, {
+				name: "Rail card background",
+				description: railCardStyleDesc,
+				options: editorHookCardStyleThumbnailOptions(),
+				value: () => this.plugin.settings.editorHookCardStyle,
+				setValue: (value) => {
+					this.plugin.settings.editorHookCardStyle = value;
+				},
+				className: "cuecraft-thumbnail-group-editor-card-style",
+			});
+		}
 
 		const editorWidthDesc = (): string =>
 			CUE_COLUMN_WIDTHS.find(
@@ -1302,8 +1306,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 
 		new Setting(containerEl)
-			.setName("Show rail questions")
-			.setDesc("Show cue questions inside left-side editor rail cards.")
+			.setName("Show cue questions")
+			.setDesc("Show cue questions inside Editing View cue displays.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.showRailQuestions)
@@ -1315,8 +1319,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Show rail support terms")
-			.setDesc("Show generated support terms inside left-side editor rail cards.")
+			.setName("Show support terms")
+			.setDesc("Show generated support terms inside Editing View cue displays.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.showRailSupportTerms)
@@ -1342,6 +1346,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			options: readonly AppearanceThumbnailOption<T>[];
 			value: () => T;
 			setValue: (value: T) => void;
+			afterSave?: () => void;
 			className?: string;
 		}
 	): void {
@@ -1478,6 +1483,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			options: readonly AppearanceThumbnailOption<T>[];
 			value: () => T;
 			setValue: (value: T) => void;
+			afterSave?: () => void;
 			className?: string;
 		}
 	): void {
@@ -1494,6 +1500,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			options: readonly AppearanceThumbnailOption<T>[];
 			value: () => T;
 			setValue: (value: T) => void;
+			afterSave?: () => void;
 			className?: string;
 		},
 		saveChange: (afterSave?: () => void) => Promise<void>
@@ -1515,6 +1522,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					await saveChange(() => {
 						setting.setDesc(config.description());
 						group.setValue(config.value());
+						config.afterSave?.();
 					});
 				},
 			});

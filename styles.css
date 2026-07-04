@@ -1495,6 +1495,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	width: 100%;
 }
 
+.cuecraft-editor-cornell-card[data-question-visible="false"]
+	.cuecraft-cornell-cue::before {
+	content: none;
+}
+
 .cuecraft-editor-hook-inline-fallback {
 	display: none;
 }

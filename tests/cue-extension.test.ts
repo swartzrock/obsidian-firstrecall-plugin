@@ -270,7 +270,7 @@ describe("renderCueElement", () => {
 		});
 	});
 
-	it("hides rail questions and support terms when display settings are off", () => {
+	it("hides hook card questions and support terms when display settings are off", () => {
 		withDocument(() => {
 			const el = renderCueElement(
 				{
@@ -305,6 +305,44 @@ describe("renderCueElement", () => {
 			expect(
 				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
+		});
+	});
+
+	it("hides inline and Cornell cue questions and support terms when display settings are off", () => {
+		withDocument(() => {
+			const cue = {
+				line: 3,
+				heading: "Terms",
+				question: "How do agents differ from chatbots?",
+				keywords: ["agents", "tools"],
+				confidence: "medium" as const,
+				sectionLens: SECTION_LENS,
+				error: null,
+			};
+			const options = {
+				showQuestion: false,
+				showSupportTerms: false,
+			};
+			const inline = renderCueElement(cue, "inline-cues", 0, "upcoming", options);
+			expect(inline.dataset.questionVisible).toBe("false");
+			expect(inline.dataset.supportTermsVisible).toBe("false");
+			expect(inline.querySelector(".cuecraft-cue-question")).toBeNull();
+			expect(inline.querySelector(".cuecraft-cue-keywords")).toBeNull();
+			expect(
+				inline.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+
+			const cornell = renderCueElement(
+				cue,
+				"cornell-exam-prep",
+				0,
+				"upcoming",
+				options
+			);
+			expect(cornell.dataset.questionVisible).toBe("false");
+			expect(cornell.dataset.supportTermsVisible).toBe("false");
+			expect(cornell.querySelector(".cuecraft-cornell-q")).toBeNull();
+			expect(cornell.querySelector(".cuecraft-cornell-kw")).toBeNull();
 		});
 	});
 
