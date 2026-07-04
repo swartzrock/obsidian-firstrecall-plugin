@@ -145,9 +145,71 @@ function modelOptionFromOpenRouterId(id: string): ByokModelOption | null {
 	const markerIndex = trimmed.indexOf("anthropic/");
 	if (markerIndex === -1) return null;
 	const claudeModelId = trimmed.slice(markerIndex + "anthropic/".length).trim();
+	if (claudeModelId.endsWith("-latest")) return null;
 	return claudeModelId
 		? { id: claudeModelId, label: claudeModelId }
 		: null;
+}
+
+function numericVersionToken(token: string): number[] | null {
+	if (/^\d{8}$/.test(token)) return null;
+	if (!/^\d+(?:\.\d+)*$/.test(token)) return null;
+	return token.split(".").map((part) => Number(part));
+}
+
+function compareVersionParts(a: number[], b: number[]): number {
+	const length = Math.max(a.length, b.length);
+	for (let i = 0; i < length; i++) {
+		const diff = (a[i] ?? 0) - (b[i] ?? 0);
+		if (diff !== 0) return diff;
+	}
+	return 0;
+}
+
+function modelFamilyAndVersion(id: string): {
+	family: string;
+	version: number[];
+} {
+	const familyTokens: string[] = [];
+	const version: number[] = [];
+	for (const token of id.split("-")) {
+		const tokenVersion = numericVersionToken(token);
+		if (tokenVersion) {
+			version.push(...tokenVersion);
+			continue;
+		}
+		if (/^\d{8}$/.test(token)) continue;
+		familyTokens.push(token);
+	}
+	return {
+		family: familyTokens.join("-") || id,
+		version,
+	};
+}
+
+function keepLatestClaudeModelVersions(
+	options: ByokModelOption[]
+): ByokModelOption[] {
+	const order: string[] = [];
+	const bestByFamily = new Map<
+		string,
+		{ option: ByokModelOption; version: number[] }
+	>();
+	for (const option of options) {
+		const model = modelFamilyAndVersion(option.id);
+		const existing = bestByFamily.get(model.family);
+		if (!existing) {
+			order.push(model.family);
+			bestByFamily.set(model.family, { option, version: model.version });
+			continue;
+		}
+		if (compareVersionParts(model.version, existing.version) > 0) {
+			bestByFamily.set(model.family, { option, version: model.version });
+		}
+	}
+	return order
+		.map((family) => bestByFamily.get(family)?.option)
+		.filter((option): option is ByokModelOption => option != null);
 }
 
 function extractOpenRouterAnthropicModels(body: unknown): ByokModelOption[] {
@@ -163,7 +225,7 @@ function extractOpenRouterAnthropicModels(body: unknown): ByokModelOption[] {
 		seen.add(option.id);
 		options.push(option);
 	}
-	return options;
+	return keepLatestClaudeModelVersions(options);
 }
 
 export class ClaudeCliProvider implements AiProvider {

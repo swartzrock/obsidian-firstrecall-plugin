@@ -245,7 +245,7 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			placeholder: "sonnet",
 			description: "Optional model override.",
 			listModelsLabel: "Claude CLI models",
-			listModelsDescription: "Fetch Anthropic models from OpenRouter and use Claude CLI model IDs.",
+			listModelsDescription: "Fetch latest Anthropic models from OpenRouter and use Claude CLI model IDs.",
 			emptyListMessage: "No Anthropic models were returned by OpenRouter.",
 		},
 		requiresNetwork: true,

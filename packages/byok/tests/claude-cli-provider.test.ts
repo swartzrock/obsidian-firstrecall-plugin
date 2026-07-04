@@ -368,8 +368,16 @@ describe("ClaudeCliProvider", () => {
 				JSON.stringify({
 					data: [
 						{ id: "anthropic/claude-sonnet-4" },
+						{ id: "anthropic/claude-sonnet-4.5" },
+						{ id: "anthropic/claude-sonnet-4.6" },
+						{ id: "anthropic/claude-sonnet-5" },
+						{ id: "anthropic/claude-sonnet-latest" },
 						{ id: "openai/gpt-4o" },
 						{ id: "anthropic/claude-opus-4" },
+						{ id: "anthropic/claude-opus-4.1" },
+						{ id: "anthropic/claude-opus-latest" },
+						{ id: "anthropic/claude-3-haiku-20240307" },
+						{ id: "anthropic/claude-3.5-haiku" },
 					],
 				}),
 				{ status: 200 }
@@ -379,12 +387,16 @@ describe("ClaudeCliProvider", () => {
 
 		await expect(provider.listModels()).resolves.toEqual([
 			{
-				id: "claude-sonnet-4",
-				label: "claude-sonnet-4",
+				id: "claude-sonnet-5",
+				label: "claude-sonnet-5",
 			},
 			{
-				id: "claude-opus-4",
-				label: "claude-opus-4",
+				id: "claude-opus-4.1",
+				label: "claude-opus-4.1",
+			},
+			{
+				id: "claude-3.5-haiku",
+				label: "claude-3.5-haiku",
 			},
 		]);
 		expect(run).not.toHaveBeenCalled();
