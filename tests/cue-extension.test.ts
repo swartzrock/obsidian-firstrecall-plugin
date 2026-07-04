@@ -694,10 +694,32 @@ describe("cue editor placement", () => {
 	it("renders Cornell display with the Cornell cue card element in rail layout", () => {
 		withDocument(() => {
 			const el = renderCueElement(cues[0], "cornell");
-			expect(el.classList.contains("cuecraft-cue")).toBe(true);
 			expect(el.classList.contains("cuecraft-editor-hook")).toBe(true);
 			expect(el.classList.contains("cuecraft-editor-cornell-card")).toBe(true);
-			expect(el.textContent).toContain("What is A?");
+			expect(el.classList.contains("cuecraft-style-classic")).toBe(true);
+			expect(el.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
+			expect(el.querySelector(".cuecraft-cornell-q")?.textContent).toBe(
+				"What is A?"
+			);
+			expect(el.querySelector(".cuecraft-cornell-support-text")?.textContent).toBe(
+				"alpha"
+			);
+		});
+	});
+
+	it("renders Cornell Exam Prep and Minimal displays with Cornell style classes", () => {
+		withDocument(() => {
+			const examPrep = renderCueElement(cues[0], "cornell-exam-prep");
+			expect(examPrep.classList.contains("cuecraft-editor-hook")).toBe(true);
+			expect(examPrep.classList.contains("cuecraft-style-exam-prep")).toBe(true);
+			expect(examPrep.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
+			expect(examPrep.textContent).toContain("What is A?");
+
+			const minimal = renderCueElement(cues[0], "cornell-minimal");
+			expect(minimal.classList.contains("cuecraft-editor-hook")).toBe(true);
+			expect(minimal.classList.contains("cuecraft-style-minimal")).toBe(true);
+			expect(minimal.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
+			expect(minimal.textContent).toContain("What is A?");
 		});
 	});
 

@@ -28,6 +28,8 @@ import {
 	type CueColumnWidth,
 	type CueFontSize,
 } from "./cornell-layout";
+import { buildCornellSupportPresentation } from "./cornell";
+import { cornellStyleClass, type CornellStyle } from "./cornell-style";
 import {
 	DEFAULT_EDITOR_HOOK_CARD_STYLE,
 	type EditorHookCardStyle,
@@ -213,11 +215,9 @@ export function renderCueElement(
 	state: EditorHookCardState = "upcoming",
 	options: CueRenderOptions = {}
 ): HTMLElement {
-	if (display === "cornell") {
-		const element = renderInlineCueElement(cue, options);
-		element.classList.add("cuecraft-editor-hook", "cuecraft-editor-cornell-card");
-		element.dataset.state = state;
-		return element;
+	const cornellStyle = cornellEditorDisplayStyle(display);
+	if (cornellStyle) {
+		return renderCornellCueElement(cue, cornellStyle, state, options);
 	}
 	if (!isInlineEditorDisplay(display)) {
 		return renderEditorHookElement(
@@ -226,6 +226,74 @@ export function renderCueElement(
 		);
 	}
 	return renderInlineCueElement(cue, options);
+}
+
+function renderCornellCueElement(
+	cue: CueLineData,
+	style: CornellStyle,
+	state: EditorHookCardState,
+	options: CueRenderOptions = {}
+): HTMLElement {
+	const doc = cueDocument();
+	const root = doc.createElement("div");
+	root.className = [
+		"cuecraft-editor-hook",
+		"cuecraft-editor-cornell-card",
+		`cuecraft-editor-cornell-card-${style}`,
+		"cuecraft-cornell",
+		cornellStyleClass(style),
+	].join(" ");
+	root.dataset.state = state;
+	applyCueLayoutClasses(root, options);
+
+	const card = doc.createElement("div");
+	card.className = "cuecraft-cornell-cue";
+	root.appendChild(card);
+
+	if (cue.error) {
+		card.classList.add("cuecraft-cornell-cue-error");
+		card.title = cue.error;
+		const q = doc.createElement("div");
+		q.className = "cuecraft-cornell-q";
+		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
+		card.appendChild(q);
+		return root;
+	}
+
+	if (cue.confidence) {
+		card.dataset.confidence = cue.confidence;
+	}
+
+	const q = doc.createElement("div");
+	q.className = "cuecraft-cornell-q";
+	q.textContent = cue.question;
+	card.appendChild(q);
+
+	const supports = buildCornellSupportPresentation({
+		keywords: cue.keywords,
+	});
+	if (supports.terms.length) {
+		const kw = doc.createElement("div");
+		kw.className = "cuecraft-cornell-kw";
+		const supportText = doc.createElement("span");
+		supportText.className = "cuecraft-cornell-support-text";
+		kw.appendChild(supportText);
+		for (const [index, term] of supports.terms.entries()) {
+			const item = doc.createElement("span");
+			item.className = "cuecraft-cornell-support-term";
+			item.textContent = term;
+			supportText.appendChild(item);
+			if (index < supports.terms.length - 1) {
+				const separator = doc.createElement("span");
+				separator.className = "cuecraft-cornell-support-separator";
+				separator.textContent = "\u00b7";
+				supportText.appendChild(separator);
+			}
+		}
+		card.appendChild(kw);
+	}
+
+	return root;
 }
 
 function renderInlineCueElement(
@@ -554,6 +622,21 @@ function activeCueLine(
 
 function isInlineEditorDisplay(display: EditorCueDisplay): boolean {
 	return display === "inline-cues";
+}
+
+function cornellEditorDisplayStyle(
+	display: EditorCueDisplay
+): CornellStyle | null {
+	switch (display) {
+		case "cornell":
+			return "classic";
+		case "cornell-exam-prep":
+			return "exam-prep";
+		case "cornell-minimal":
+			return "minimal";
+		default:
+			return null;
+	}
 }
 
 function mapCuePayloadThroughChanges(

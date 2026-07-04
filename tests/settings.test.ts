@@ -410,6 +410,8 @@ describe("settings defaults", () => {
 	it("validates persisted editor cue display values", () => {
 		expect(EDITOR_CUE_DISPLAY_OPTIONS.map((option) => option.id)).toEqual([
 			"cornell",
+			"cornell-exam-prep",
+			"cornell-minimal",
 			"inline-cues",
 			"anchored-card-rail",
 			"collapsed-tabs",
@@ -418,6 +420,8 @@ describe("settings defaults", () => {
 			"hook-minimap",
 		]);
 		expect(isEditorCueDisplay("cornell")).toBe(true);
+		expect(isEditorCueDisplay("cornell-exam-prep")).toBe(true);
+		expect(isEditorCueDisplay("cornell-minimal")).toBe(true);
 		expect(isEditorCueDisplay("inline-cues")).toBe(true);
 		expect(isEditorCueDisplay("anchored-card-rail")).toBe(true);
 		expect(isEditorCueDisplay("collapsed-tabs")).toBe(true);

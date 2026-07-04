@@ -315,14 +315,29 @@ describe("Editing View thumbnail option recipes", () => {
 				root.querySelector(`.cuecraft-preview-editor-display-${optionId}`)
 			).toBeNull();
 		}
+		const cornellStyleOptionCount = displayedEditorCueDisplayOptions.filter(
+			(option) => option.id.startsWith("cornell")
+		).length;
 		expect(root.querySelectorAll(".cuecraft-preview-editor-scene")).toHaveLength(
-			displayedEditorCueDisplayOptions.length - 1
+			displayedEditorCueDisplayOptions.length - cornellStyleOptionCount
 		);
 		expect(
 			root
 				.querySelector("[data-option-id='cornell']")
 				?.querySelector(".cuecraft-preview-display-classic")
 		).not.toBeNull();
+		expect(
+			root
+				.querySelector("[data-option-id='cornell-exam-prep']")
+				?.querySelector(".cuecraft-preview-style-exam-prep")
+		).not.toBeNull();
+		expect(
+			root
+				.querySelector("[data-option-id='cornell-minimal']")
+				?.querySelector(".cuecraft-preview-style-minimal")
+		).not.toBeNull();
+		expect(root.textContent).toContain("Cornell Exam Prep");
+		expect(root.textContent).toContain("Cornell Minimal");
 		expect(root.textContent).toContain("Inline cues");
 		expect(root.textContent).not.toContain("Collapsed color tabs");
 		expect(root.textContent).not.toContain("Active-section composer");

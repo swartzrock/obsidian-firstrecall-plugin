@@ -331,15 +331,22 @@ function renderEditorCueDisplayPreview(
 	previewEl: HTMLElement,
 	display: EditorCueDisplay
 ): void {
-	if (display === "cornell") {
+	if (
+		display === "cornell" ||
+		display === "cornell-exam-prep" ||
+		display === "cornell-minimal"
+	) {
+		const cornellStyle = editorCueDisplayCornellStyle(display);
 		renderCuePreview(
 			previewEl,
 			[
 				"cuecraft-preview-display",
-				"cuecraft-preview-display-classic",
+				cornellStyle === "classic" ? "cuecraft-preview-display-classic" : "",
+				"cuecraft-preview-style",
+				`cuecraft-preview-style-${cornellStyle}`,
 				"cuecraft-preview-editor-display",
-				"cuecraft-preview-editor-display-cornell",
-			],
+				`cuecraft-preview-editor-display-${display}`,
+			].filter(Boolean),
 			{
 				question: DISPLAY_SAMPLE_QUESTION,
 				supports: DISPLAY_SAMPLE_SUPPORTS,
@@ -387,6 +394,21 @@ function renderEditorCueDisplayPreview(
 	}
 
 	previewEl.appendChild(surface);
+}
+
+function editorCueDisplayCornellStyle(
+	display: EditorCueDisplay
+): CornellStyle | null {
+	switch (display) {
+		case "cornell":
+			return "classic";
+		case "cornell-exam-prep":
+			return "exam-prep";
+		case "cornell-minimal":
+			return "minimal";
+		default:
+			return null;
+	}
 }
 
 function renderEditorCardStylePreview(

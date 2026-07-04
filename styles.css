@@ -1485,6 +1485,16 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-size: var(--font-ui-medium);
 }
 
+.cuecraft-editor-cornell-card.cuecraft-cornell {
+	padding: 0;
+	overflow: visible;
+}
+
+.cuecraft-editor-cornell-card .cuecraft-cornell-cue {
+	box-sizing: border-box;
+	width: 100%;
+}
+
 .cuecraft-editor-hook-inline-fallback {
 	display: none;
 }
