@@ -33,7 +33,7 @@ export {
 	sortModelOptions,
 	type ModelOption,
 } from "./models/model-options";
-export { createByok, generateText } from "./client";
+export { createByok, generateText, listModels } from "./client";
 export { createByokProvider } from "./providers/provider-factory";
 export {
 	CLI_DEFAULT_MODEL_SENTINEL,
@@ -61,6 +61,7 @@ export type {
 	ByokHttpRequest,
 	ByokHttpResponse,
 	ByokGenerateTextOptions,
+	ByokListModelsOptions,
 	ByokModelBehavior,
 	ByokModelFieldDefinition,
 	ByokModelOption,

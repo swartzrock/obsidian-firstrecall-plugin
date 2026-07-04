@@ -5,7 +5,7 @@ This reference documents the public API exported by `@cuecraft/byok` and `@cuecr
 Use only the public entrypoints:
 
 ```ts
-import { createByok, createByokProvider, generateText } from "@cuecraft/byok";
+import { createByok, createByokProvider, generateText, listModels } from "@cuecraft/byok";
 import { createByokNodeProvider } from "@cuecraft/byok/node";
 ```
 
@@ -91,6 +91,39 @@ const { text } = await generateText({
 BYOK is AI-SDK-shaped, not AI-SDK-compatible. Use AI SDK directly when callers need AI SDK `LanguageModel` objects, middleware semantics, or the full AI SDK result object.
 The function-first API intentionally accepts plain text prompts only; use `createByokProvider` when you need provider-specific text hints such as JSON response formatting.
 
+### `listModels(options)`
+
+Lists portable model options for core non-CLI providers without requiring a selected model.
+
+```ts
+function listModels(
+	options: ByokListModelsOptions
+): Promise<ByokModelOption[]>;
+```
+
+Cloud providers require only provider id, API key, and optional custom deps. Ollama requires only provider id, host, and optional custom deps:
+
+```ts
+type ByokListModelsOptions =
+	| {
+			provider: "anthropic" | "openai" | "google" | "xai" | "openrouter";
+			apiKey: string;
+			deps?: ByokFacadeDeps;
+	  }
+	| {
+			provider: "ollama";
+			host: string;
+			deps?: ByokFacadeDeps;
+	  };
+```
+
+```ts
+const models = await listModels({
+	provider: "anthropic",
+	apiKey,
+});
+```
+
 ### `createByok(config)`
 
 Creates a credential-bound client for repeated text generation.
@@ -113,7 +146,7 @@ const { text } = await ai.generateText({
 });
 ```
 
-`ByokClient` intentionally exposes only `generateText`. Use `createByokProvider` for `testConnection`, `listModels`, or `generateObject`.
+`ByokClient` intentionally exposes only `generateText`. Use `listModels` for model discovery, or `createByokProvider` for `testConnection` and `generateObject`.
 
 ## Provider Factories
 
@@ -187,7 +220,7 @@ interface ByokProviderRuntime {
 Methods:
 
 - `testConnection()` verifies that the provider can be reached and, where possible, that the selected model can generate.
-- `listModels()` returns provider models when model discovery is supported.
+- `listModels()` returns provider models when model discovery is supported and you already have a runtime. Prefer top-level `listModels(options)` for setup-time discovery.
 - `generateText(input, signal?)` returns raw provider text.
 - `generateObject(input, signal?)` returns parsed structured output for providers that expose native or emulated object generation.
 

@@ -194,6 +194,14 @@ export type ByokGenerateTextOptions =
 			signal?: AbortSignal;
 	  });
 
+export type ByokListModelsOptions =
+	| (Omit<ByokCloudProviderConfig, "model"> & {
+			deps?: ByokFacadeDeps;
+	  })
+	| (Omit<ByokOllamaProviderConfig, "model"> & {
+			deps?: ByokFacadeDeps;
+	  });
+
 export type ByokClientConfig =
 	| (Omit<ByokCloudProviderConfig, "model"> & {
 			deps?: ByokFacadeDeps;

@@ -6,8 +6,12 @@ import type {
 	ByokCoreProviderConfig,
 	ByokFacadeDeps,
 	ByokGenerateTextOptions,
+	ByokListModelsOptions,
+	ByokModelOption,
 	ByokTextGenerationOutput,
 } from "./types";
+
+const MODEL_NOT_REQUIRED_FOR_LISTING = "";
 
 function providerConfigFromGenerateTextOptions(
 	options: ByokGenerateTextOptions
@@ -44,6 +48,23 @@ function providerConfigFromClientInput(
 	};
 }
 
+function providerConfigFromListModelsOptions(
+	options: ByokListModelsOptions
+): ByokCoreProviderConfig {
+	if (options.provider === "ollama") {
+		return {
+			provider: "ollama",
+			host: options.host,
+			model: MODEL_NOT_REQUIRED_FOR_LISTING,
+		};
+	}
+	return {
+		provider: options.provider,
+		apiKey: options.apiKey,
+		model: MODEL_NOT_REQUIRED_FOR_LISTING,
+	};
+}
+
 async function generateTextForConfig(
 	config: ByokCoreProviderConfig,
 	input: { prompt: string },
@@ -63,6 +84,16 @@ export async function generateText(
 		deps: options.deps,
 		signal: options.signal,
 	});
+}
+
+export async function listModels(
+	options: ByokListModelsOptions
+): Promise<ByokModelOption[]> {
+	const provider = createByokProvider(
+		providerConfigFromListModelsOptions(options),
+		options.deps
+	);
+	return (await provider.listModels?.()) ?? [];
 }
 
 export function createByok(config: ByokClientConfig): ByokClient {

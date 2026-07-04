@@ -42,6 +42,7 @@ describe("BYOK public contract", () => {
 			"isAnthropicCustomModelSelection",
 			"isByokProviderId",
 			"isModelOption",
+			"listModels",
 			"normalizeAnthropicModelSelection",
 			"normalizeModelIds",
 			"normalizeProviderId",
@@ -108,6 +109,7 @@ describe("BYOK public contract", () => {
 		expect(codeExamples).toContain('from "@cuecraft/byok/node"');
 		expect(codeExamples).toContain("generateText");
 		expect(codeExamples).toContain("createByok");
+		expect(codeExamples).toContain("listModels");
 		expect(codeExamples).not.toMatch(
 			/from\s+["'][^"']*byok\/(?:models|providers|registry|setup-status|types)/
 		);

@@ -98,7 +98,7 @@ BYOK should not clone AI SDK exactly because BYOK's domain includes explicit use
 - KTD2. Keep provider and credential explicit. BYOK should feel familiar to AI SDK users, but it should not hide credentials behind ambient provider conventions because explicit user-owned credentials are the package's reason to exist.
 - KTD3. Make dependency injection optional, not obsolete. Default deps should use `globalThis.fetch` and an internal package-owned HTTP adapter; custom deps remain available for Electron IPC, tests, request instrumentation, and unusual runtimes.
 - KTD4. Put Ollama on the same happy path when `host` is provided. Ollama is already a core provider and only needs the default HTTP adapter to avoid extra ceremony.
-- KTD5. Keep `testConnection`, `listModels`, and `generateObject` on the advanced runtime layer. They are valuable for setup flows, but they should not be required before first text output.
+- KTD5. Keep `testConnection` and `generateObject` on the advanced runtime layer, while exposing model-free `listModels(options)` for setup-time discovery. Runtime `listModels()` remains available for callers that already need a provider runtime.
 - KTD6. Support matrix is documented, not guessed from `fetch`. Node 20 and Electron main are first-class direct-call environments; Electron renderer and browser direct calls depend on provider CORS and host-app security policy; browser apps with app-owned keys should use a backend or custom transport.
 - KTD7. The first `createByok` client should stay narrower than `ByokProviderRuntime`. If a caller wants runtime methods, `createByokProvider` is the named advanced API.
 
@@ -108,6 +108,7 @@ BYOK should not clone AI SDK exactly because BYOK's domain includes explicit use
 flowchart TB
   User["Consumer code"] --> Facade["generateText(options)"]
   User --> Client["createByok(credentials)"]
+  User --> Models["listModels(provider credentials)"]
   Client --> Facade
   Facade --> Deps["resolveByokProviderDeps(optional deps)"]
   Facade --> Config["provider config from options"]
@@ -115,6 +116,7 @@ flowchart TB
   Deps --> Factory
   Factory --> Runtime["ByokProviderRuntime"]
   Runtime --> Text["runtime.generateText(input, signal)"]
+  Models --> Factory
   Runtime -. "advanced callers" .-> Status["testConnection/listModels/generateObject"]
 ```
 
@@ -181,7 +183,7 @@ flowchart TB
 - **Requirements:** R4, R5, R10
 - **Dependencies:** U1, U2
 - **Files:** `packages/byok/src/client.ts`, `packages/byok/src/index.ts`, `packages/byok/src/types.ts`, `packages/byok/tests/client.test.ts`, `packages/byok/tests/public-contract.test.ts`
-- **Approach:** Build a small client facade around the same `generateText` path. The client binds only provider credentials or Ollama host plus optional deps; every `client.generateText` call requires `model` and text input. Do not add runtime-style methods to the client. Callers that need `testConnection`, `listModels`, or `generateObject` should use `createByokProvider`.
+- **Approach:** Build a small client facade around the same `generateText` path. The client binds only provider credentials or Ollama host plus optional deps; every `client.generateText` call requires `model` and text input. Do not add runtime-style methods to the client. Callers that need `testConnection` or `generateObject` should use `createByokProvider`; callers that only need model discovery should use model-free `listModels(options)`.
 - **Patterns to follow:** Existing provider config union naming and runtime factory delegation rather than new provider-specific classes.
 - **Test scenarios:**
   - A credential-bound OpenAI client can generate text with only model and prompt on the per-call input.

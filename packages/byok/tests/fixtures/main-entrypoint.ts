@@ -2,6 +2,7 @@ import {
 	createByok,
 	createByokProvider,
 	generateText,
+	listModels,
 	type ByokCoreProviderConfig,
 	type ByokHttpClient,
 	type ByokProviderDeps,
@@ -46,6 +47,26 @@ const openRouterText = generateText({
 	deps,
 });
 
+const modelOptions = listModels({
+	provider: "openai",
+	apiKey: "sk-test",
+	deps,
+});
+
+void listModels({
+	provider: "ollama",
+	host: "http://localhost:11434",
+	deps,
+});
+
+void listModels({
+	provider: "openai",
+	apiKey: "sk-test",
+	// @ts-expect-error model is not required or accepted for model discovery.
+	model: "gpt-4o-mini",
+	deps,
+});
+
 void generateText({
 	provider: "openrouter",
 	apiKey: "sk-test",
@@ -69,4 +90,5 @@ const clientText = client.generateText({
 
 void text;
 void openRouterText;
+void modelOptions;
 void clientText;

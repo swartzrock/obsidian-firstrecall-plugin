@@ -2,7 +2,7 @@
 
 Function-first text generation, provider runtime, and model discovery for bring-your-own-key AI applications.
 
-`@cuecraft/byok` lets a TypeScript app run against user-supplied AI accounts without owning provider-specific generation code. For first success, call `generateText` with an explicit provider, credential, model, and prompt. When an app needs setup flows, model discovery, structured output, or custom transports, BYOK also exposes the lower-level provider runtime.
+`@cuecraft/byok` lets a TypeScript app run against user-supplied AI accounts without owning provider-specific generation code. For first success, call `generateText` with an explicit provider, credential, model, and prompt. For setup flows, call `listModels` before a model is selected. When an app needs connection testing, structured output, or custom runtime methods, BYOK also exposes the lower-level provider runtime.
 
 This package currently lives inside the CueCraft workspace and is not published yet. The API is shaped for extraction into a standalone public repository for backend, desktop, Electron, and browser-adjacent TypeScript apps.
 
@@ -133,7 +133,7 @@ const { text } = await ai.generateText({
 });
 ```
 
-`createByok` is intentionally narrower than the provider runtime. Use `createByokProvider` when you need connection testing, model discovery, or structured-object generation.
+`createByok` is intentionally narrower than the provider runtime. Use `listModels` for model discovery, or `createByokProvider` when you need connection testing or structured-object generation.
 
 ### List Providers
 
@@ -149,7 +149,7 @@ for (const provider of byokProviderDefinitions()) {
 
 ### Advanced: Create a Runtime
 
-Create a runtime when your app is building a setup screen, fetching models, testing credentials, using structured output, or supplying custom transports.
+Create a runtime when your app is testing credentials, using structured output, or supplying custom transports.
 
 ```ts
 import { createByokProvider } from "@cuecraft/byok";
@@ -192,7 +192,7 @@ For providers with model-list support, `status.models` may include model IDs ret
 
 ### Fetch Models
 
-Providers with model-list support expose `listModels()`.
+Prefer the top-level `listModels` helper for setup-time model discovery. Runtimes also expose `listModels()` when you already have a provider runtime for another advanced operation.
 
 ```ts
 const models = await provider.listModels?.();
@@ -262,60 +262,51 @@ const models = await provider.listModels?.();
 
 `ByokModelOption` intentionally contains only `id` and `label`. Provider-specific metadata such as pricing, context length, supported parameters, or recommendation badges belongs in provider-specific APIs or the host app.
 
-### List Models for Non-CLI Providers
+### List Models
 
-Use the provider runtime when you need setup-time model discovery. All main-entrypoint providers support `listModels()`:
+Use `listModels` when you need setup-time model discovery. All main-entrypoint providers support it, and model discovery does not require a selected model:
 
-| Provider | Config |
+| Provider | Required config |
 | --- | --- |
-| `anthropic` | API key + any current Claude model |
-| `openai` | API key + any current OpenAI model |
-| `google` | API key + any current Gemini model |
-| `xai` | API key + any current xAI model |
-| `openrouter` | API key + any current OpenRouter model ID |
-| `ollama` | Host URL + any installed Ollama model |
-
-The `model` field can be the currently selected model while the runtime fetches the account's available model IDs.
+| `anthropic` | API key |
+| `openai` | API key |
+| `google` | API key |
+| `xai` | API key |
+| `openrouter` | API key |
+| `ollama` | Host URL |
 
 ```ts
-import { createByokProvider, type ByokCoreProviderConfig } from "@cuecraft/byok";
+import { listModels, type ByokListModelsOptions } from "@cuecraft/byok";
 
 const configs = [
 	{
 		provider: "anthropic",
 		apiKey: process.env.ANTHROPIC_API_KEY!,
-		model: "claude-sonnet-4-6",
 	},
 	{
 		provider: "openai",
 		apiKey: process.env.OPENAI_API_KEY!,
-		model: "gpt-4o-mini",
 	},
 	{
 		provider: "google",
 		apiKey: process.env.GOOGLE_API_KEY!,
-		model: "gemini-1.5-flash",
 	},
 	{
 		provider: "xai",
 		apiKey: process.env.XAI_API_KEY!,
-		model: "grok-2-latest",
 	},
 	{
 		provider: "openrouter",
 		apiKey: process.env.OPENROUTER_API_KEY!,
-		model: "openai/gpt-4o",
 	},
 	{
 		provider: "ollama",
 		host: "http://localhost:11434",
-		model: "llama3.1:8b",
 	},
-] satisfies ByokCoreProviderConfig[];
+] satisfies ByokListModelsOptions[];
 
 for (const config of configs) {
-	const provider = createByokProvider(config);
-	console.log(config.provider, await provider.listModels?.());
+	console.log(config.provider, await listModels(config));
 }
 ```
 

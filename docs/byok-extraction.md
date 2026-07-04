@@ -13,6 +13,7 @@ import {
 	deriveProviderSetupStatus,
 	generateText,
 	isByokProviderId,
+	listModels,
 	recordProviderConnectionSuccess,
 	type ByokCoreProviderConfig,
 	type ByokProviderDeps,
@@ -26,6 +27,7 @@ The public surface is:
 - Provider configuration: `ByokCoreProviderConfig` for API-key cloud providers and Ollama host/model on the browser-safe main entrypoint; `ByokProviderConfig` remains the full union for Node consumers.
 - Runtime dependencies: `ByokProviderDeps`, with caller-supplied `fetchImpl` and `http` transports.
 - Function-first generation: `generateText(options)` for one-call text generation with explicit provider credentials, model, prompt, optional `signal`, and optional custom deps.
+- Model discovery: `listModels(options)` for fetching portable model options without requiring a selected model.
 - Repeated-call client: `createByok(config)` for binding one provider credential or Ollama host while supplying `model` per generation call.
 - Runtime creation: `createByokProvider(config, deps): ByokProviderRuntime` from the main entrypoint for core providers.
 - Node-only runtime creation: `createByokNodeProvider(config, deps): ByokProviderRuntime` from `@cuecraft/byok/node` for Codex CLI and Claude CLI providers.
@@ -41,6 +43,15 @@ const { text } = await generateText({
 	apiKey,
 	model: "gpt-4o-mini",
 	prompt: "Explain agentic AI in two sentences.",
+});
+```
+
+Model discovery does not require a generation model:
+
+```ts
+const models = await listModels({
+	provider: "openai",
+	apiKey,
 });
 ```
 
