@@ -264,51 +264,18 @@ const models = await provider.listModels?.();
 
 ### List Models
 
-Use `listModels` when you need setup-time model discovery. All main-entrypoint providers support it, and model discovery does not require a selected model:
-
-| Provider | Required config |
-| --- | --- |
-| `anthropic` | API key |
-| `openai` | API key |
-| `google` | API key |
-| `xai` | API key |
-| `openrouter` | API key |
-| `ollama` | Host URL |
+Use `listModels` when you need setup-time model discovery. Model discovery does not require a selected model:
 
 ```ts
-import { listModels, type ByokListModelsOptions } from "@cuecraft/byok";
+import { listModels } from "@cuecraft/byok";
 
-const configs = [
-	{
-		provider: "anthropic",
-		apiKey: process.env.ANTHROPIC_API_KEY!,
-	},
-	{
-		provider: "openai",
-		apiKey: process.env.OPENAI_API_KEY!,
-	},
-	{
-		provider: "google",
-		apiKey: process.env.GOOGLE_API_KEY!,
-	},
-	{
-		provider: "xai",
-		apiKey: process.env.XAI_API_KEY!,
-	},
-	{
-		provider: "openrouter",
-		apiKey: process.env.OPENROUTER_API_KEY!,
-	},
-	{
-		provider: "ollama",
-		host: "http://localhost:11434",
-	},
-] satisfies ByokListModelsOptions[];
-
-for (const config of configs) {
-	console.log(config.provider, await listModels(config));
-}
+const models = await listModels({
+	provider: "openai",
+	apiKey: process.env.OPENAI_API_KEY!,
+});
 ```
+
+`anthropic`, `openai`, `google`, `xai`, and `openrouter` use the same API-key shape. `ollama` uses `{ provider: "ollama", host: "http://localhost:11434" }`.
 
 Local CLI providers from `@cuecraft/byok/node` do not expose model discovery because the Codex and Claude command-line tools do not provide a stable model-list API through this package.
 
