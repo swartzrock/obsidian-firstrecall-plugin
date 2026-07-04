@@ -8,6 +8,7 @@ Import public BYOK APIs from the barrel:
 
 ```ts
 import {
+	ByokProvider,
 	createByok,
 	createByokProvider,
 	deriveProviderSetupStatus,
@@ -23,7 +24,7 @@ import {
 
 The public surface is:
 
-- Provider identity and metadata: `ByokProviderId`, `ByokProviderDefinition`, `BYOK_PROVIDER_IDS`, `byokProviderDefinition`, `byokProviderDefinitions`, and `isByokProviderId`.
+- Provider identity and metadata: `ByokProvider`, `ByokProviderId`, `ByokProviderDefinition`, `BYOK_PROVIDER_IDS`, `byokProviderDefinition`, `byokProviderDefinitions`, and `isByokProviderId`.
 - Provider configuration: `ByokCoreProviderConfig` for API-key cloud providers and Ollama host/model on the browser-safe main entrypoint; `ByokProviderConfig` remains the full union for Node consumers.
 - Runtime dependencies: `ByokProviderDeps`, with caller-supplied `fetchImpl` and `http` transports.
 - Function-first generation: `generateText(options)` for one-call text generation with explicit provider credentials, model, prompt, optional `signal`, and optional custom deps.
@@ -39,7 +40,7 @@ The first-success API is function-first:
 
 ```ts
 const { text } = await generateText({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey,
 	model: "gpt-4o-mini",
 	prompt: "Explain agentic AI in two sentences.",
@@ -50,7 +51,7 @@ Model discovery does not require a generation model:
 
 ```ts
 const models = await listModels({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey,
 });
 ```
@@ -58,7 +59,7 @@ const models = await listModels({
 For repeated calls, bind the credential once and keep the model per call:
 
 ```ts
-const ai = createByok({ provider: "openai", apiKey });
+const ai = createByok({ provider: ByokProvider.OpenAI, apiKey });
 
 const { text } = await ai.generateText({
 	model: "gpt-4o-mini",
@@ -73,7 +74,7 @@ The provider runtime contract remains the advanced setup/model-discovery layer a
 
 ```ts
 const provider = createByokProvider(
-	{ provider: "openai", apiKey, model: "gpt-4o-mini" },
+	{ provider: ByokProvider.OpenAI, apiKey, model: "gpt-4o-mini" },
 	{
 		fetchImpl,
 		http,
@@ -106,13 +107,14 @@ Local CLI providers are opt-in through the Node-only subpath:
 
 ```ts
 import {
+	ByokProvider,
 	createByokNodeProvider,
 	type ByokProviderConfig,
 	type ByokProviderDeps,
 } from "@cuecraft/byok/node";
 
 const config: ByokProviderConfig = {
-	provider: "codex-cli",
+	provider: ByokProvider.CodexCli,
 	command: "codex",
 };
 

@@ -1,4 +1,5 @@
 import {
+	ByokProvider,
 	createByok,
 	createByokProvider,
 	generateText,
@@ -22,7 +23,7 @@ const deps: ByokProviderDeps = {
 };
 
 const config: ByokCoreProviderConfig = {
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey: "sk-test",
 	model: "gpt-4o-mini",
 };
@@ -32,7 +33,7 @@ const provider: ByokProviderRuntime = createByokProvider(config, deps);
 void provider.testConnection;
 
 const text = generateText({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey: "sk-test",
 	model: "gpt-4o-mini",
 	prompt: "Explain BYOK in one sentence.",
@@ -40,7 +41,7 @@ const text = generateText({
 });
 
 const openRouterText = generateText({
-	provider: "openrouter",
+	provider: ByokProvider.OpenRouter,
 	apiKey: "sk-test",
 	model: "openai/gpt-4o",
 	prompt: "Explain BYOK in one sentence.",
@@ -48,19 +49,19 @@ const openRouterText = generateText({
 });
 
 const modelOptions = listModels({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey: "sk-test",
 	deps,
 });
 
 void listModels({
-	provider: "ollama",
+	provider: ByokProvider.Ollama,
 	host: "http://localhost:11434",
 	deps,
 });
 
 void listModels({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey: "sk-test",
 	// @ts-expect-error model is not required or accepted for model discovery.
 	model: "gpt-4o-mini",
@@ -68,7 +69,7 @@ void listModels({
 });
 
 void generateText({
-	provider: "openrouter",
+	provider: ByokProvider.OpenRouter,
 	apiKey: "sk-test",
 	model: "gpt-4o-mini",
 	prompt: "Explain BYOK in one sentence.",
@@ -78,7 +79,14 @@ void generateText({
 });
 
 const client = createByok({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
+	apiKey: "sk-test",
+	deps,
+});
+
+void listModels({
+	// @ts-expect-error use ByokProvider.OpenAI to avoid typos like this.
+	provider: "oppenai",
 	apiKey: "sk-test",
 	deps,
 });

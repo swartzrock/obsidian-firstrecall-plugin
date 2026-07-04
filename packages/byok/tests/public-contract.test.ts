@@ -23,6 +23,7 @@ describe("BYOK public contract", () => {
 			"ANTHROPIC_CUSTOM_MODEL_ID",
 			"BYOK_PROVIDER_DEFINITIONS",
 			"BYOK_PROVIDER_IDS",
+			"ByokProvider",
 			"ByokProviderError",
 			"ByokProviderRateLimitError",
 			"CLI_DEFAULT_MODEL_SENTINEL",
@@ -110,6 +111,7 @@ describe("BYOK public contract", () => {
 		expect(codeExamples).toContain("generateText");
 		expect(codeExamples).toContain("createByok");
 		expect(codeExamples).toContain("listModels");
+		expect(codeExamples).toContain("ByokProvider");
 		expect(codeExamples).not.toMatch(
 			/from\s+["'][^"']*byok\/(?:models|providers|registry|setup-status|types)/
 		);

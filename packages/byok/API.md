@@ -5,7 +5,7 @@ This reference documents the public API exported by `@cuecraft/byok` and `@cuecr
 Use only the public entrypoints:
 
 ```ts
-import { createByok, createByokProvider, generateText, listModels } from "@cuecraft/byok";
+import { ByokProvider, createByok, createByokProvider, generateText, listModels } from "@cuecraft/byok";
 import { createByokNodeProvider } from "@cuecraft/byok/node";
 ```
 
@@ -60,7 +60,12 @@ Cloud provider options combine provider config, text input, optional custom deps
 ```ts
 type ByokGenerateTextOptions =
 	| {
-			provider: "anthropic" | "openai" | "google" | "xai" | "openrouter";
+			provider:
+				| ByokProvider.Anthropic
+				| ByokProvider.OpenAI
+				| ByokProvider.Google
+				| ByokProvider.Xai
+				| ByokProvider.OpenRouter;
 			apiKey: string;
 			model: string;
 			prompt: string;
@@ -68,7 +73,7 @@ type ByokGenerateTextOptions =
 			deps?: ByokFacadeDeps;
 	  }
 	| {
-			provider: "ollama";
+			provider: ByokProvider.Ollama;
 			host: string;
 			model: string;
 			prompt: string;
@@ -81,7 +86,7 @@ type ByokGenerateTextOptions =
 
 ```ts
 const { text } = await generateText({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey,
 	model: "gpt-4o-mini",
 	prompt: "Explain BYOK in one sentence.",
@@ -106,12 +111,17 @@ Cloud providers require only provider id, API key, and optional custom deps. Oll
 ```ts
 type ByokListModelsOptions =
 	| {
-			provider: "anthropic" | "openai" | "google" | "xai" | "openrouter";
+			provider:
+				| ByokProvider.Anthropic
+				| ByokProvider.OpenAI
+				| ByokProvider.Google
+				| ByokProvider.Xai
+				| ByokProvider.OpenRouter;
 			apiKey: string;
 			deps?: ByokFacadeDeps;
 	  }
 	| {
-			provider: "ollama";
+			provider: ByokProvider.Ollama;
 			host: string;
 			deps?: ByokFacadeDeps;
 	  };
@@ -119,7 +129,7 @@ type ByokListModelsOptions =
 
 ```ts
 const models = await listModels({
-	provider: "anthropic",
+	provider: ByokProvider.Anthropic,
 	apiKey,
 });
 ```
@@ -136,7 +146,7 @@ The client binds provider credentials or Ollama host, but the model is supplied 
 
 ```ts
 const ai = createByok({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey,
 });
 
@@ -241,6 +251,17 @@ interface ByokProviderStatus {
 ### `ByokProviderId`
 
 ```ts
+enum ByokProvider {
+	Ollama = "ollama",
+	Anthropic = "anthropic",
+	OpenAI = "openai",
+	Google = "google",
+	Xai = "xai",
+	OpenRouter = "openrouter",
+	CodexCli = "codex-cli",
+	ClaudeCli = "claude-cli",
+}
+
 type ByokProviderId =
 	| "ollama"
 	| "anthropic"
@@ -252,13 +273,20 @@ type ByokProviderId =
 	| "claude-cli";
 ```
 
+Use `ByokProvider` in application code for autocomplete and typo resistance. Matching string literals remain accepted for backwards compatibility.
+
 ### `ByokCloudProviderConfig`
 
 Configuration for API-key cloud providers.
 
 ```ts
 interface ByokCloudProviderConfig {
-	provider: "anthropic" | "openai" | "google" | "xai" | "openrouter";
+	provider:
+		| ByokProvider.Anthropic
+		| ByokProvider.OpenAI
+		| ByokProvider.Google
+		| ByokProvider.Xai
+		| ByokProvider.OpenRouter;
 	apiKey: string;
 	model: string;
 }
@@ -272,7 +300,7 @@ Configuration for Ollama.
 
 ```ts
 interface ByokOllamaProviderConfig {
-	provider: "ollama";
+	provider: ByokProvider.Ollama;
 	host: string;
 	model: string;
 }
@@ -287,7 +315,7 @@ Configuration for local CLI providers.
 
 ```ts
 interface ByokCliProviderConfig {
-	provider: "codex-cli" | "claude-cli";
+	provider: ByokProvider.CodexCli | ByokProvider.ClaudeCli;
 	command: string;
 	model?: string;
 }

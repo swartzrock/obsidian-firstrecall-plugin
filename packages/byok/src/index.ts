@@ -85,6 +85,7 @@ export type {
 	ByokVerificationSnapshotMap,
 } from "./types";
 export {
+	ByokProvider,
 	ByokProviderError,
 	ByokProviderRateLimitError,
 } from "./types";

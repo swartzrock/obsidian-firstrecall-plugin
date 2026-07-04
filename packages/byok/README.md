@@ -93,13 +93,13 @@ Provider implementation files under `src/providers` and helper files under `src/
 This example generates text with OpenAI in Node 20.
 
 ```ts
-import { generateText } from "@cuecraft/byok";
+import { ByokProvider, generateText } from "@cuecraft/byok";
 
 const apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) throw new Error("Set OPENAI_API_KEY before running this example.");
 
 const { text } = await generateText({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey,
 	model: "gpt-4o-mini",
 	prompt: "Explain retrieval-augmented generation in two sentences.",
@@ -120,10 +120,10 @@ BYOK receives credentials only as call inputs. It does not persist or log API ke
 Use `createByok` when several calls share the same provider credential or Ollama host. The model stays per call.
 
 ```ts
-import { createByok } from "@cuecraft/byok";
+import { ByokProvider, createByok } from "@cuecraft/byok";
 
 const ai = createByok({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey: process.env.OPENAI_API_KEY!,
 });
 
@@ -152,10 +152,10 @@ for (const provider of byokProviderDefinitions()) {
 Create a runtime when your app is testing credentials, using structured output, or supplying custom transports.
 
 ```ts
-import { createByokProvider } from "@cuecraft/byok";
+import { ByokProvider, createByokProvider } from "@cuecraft/byok";
 
 const provider = createByokProvider({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey,
 	model: "gpt-4o-mini",
 });
@@ -166,7 +166,7 @@ Pass custom deps when your host app owns transport behavior:
 ```ts
 const provider = createByokProvider(
 	{
-		provider: "openai",
+		provider: ByokProvider.OpenAI,
 		apiKey,
 		model: "gpt-4o-mini",
 	},
@@ -267,15 +267,15 @@ const models = await provider.listModels?.();
 Use `listModels` when you need setup-time model discovery. Model discovery does not require a selected model:
 
 ```ts
-import { listModels } from "@cuecraft/byok";
+import { ByokProvider, listModels } from "@cuecraft/byok";
 
 const models = await listModels({
-	provider: "openai",
+	provider: ByokProvider.OpenAI,
 	apiKey: process.env.OPENAI_API_KEY!,
 });
 ```
 
-`anthropic`, `openai`, `google`, `xai`, and `openrouter` use the same API-key shape. `ollama` uses `{ provider: "ollama", host: "http://localhost:11434" }`.
+`ByokProvider.Anthropic`, `ByokProvider.OpenAI`, `ByokProvider.Google`, `ByokProvider.Xai`, and `ByokProvider.OpenRouter` use the same API-key shape. `ByokProvider.Ollama` uses `{ provider: ByokProvider.Ollama, host: "http://localhost:11434" }`.
 
 Local CLI providers from `@cuecraft/byok/node` do not expose model discovery because the Codex and Claude command-line tools do not provide a stable model-list API through this package.
 
@@ -284,10 +284,10 @@ Local CLI providers from `@cuecraft/byok/node` do not expose model discovery bec
 Ollama uses a host URL instead of a raw API key.
 
 ```ts
-import { generateText } from "@cuecraft/byok";
+import { ByokProvider, generateText } from "@cuecraft/byok";
 
 const response = await generateText({
-	provider: "ollama",
+	provider: ByokProvider.Ollama,
 	host: "http://localhost:11434",
 	model: "llama3.1:8b",
 	prompt: "Write one sentence about local model inference.",
@@ -301,11 +301,11 @@ BYOK accepts explicit `http:` and `https:` Ollama hosts without embedded credent
 Local CLI providers are available only from the Node subpath.
 
 ```ts
-import { createByokNodeProvider } from "@cuecraft/byok/node";
+import { ByokProvider, createByokNodeProvider } from "@cuecraft/byok/node";
 
 const provider = createByokNodeProvider(
 	{
-		provider: "claude-cli",
+		provider: ByokProvider.ClaudeCli,
 		command: "claude",
 		model: "sonnet",
 	},

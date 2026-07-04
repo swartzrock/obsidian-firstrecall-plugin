@@ -1,14 +1,28 @@
 import type { z } from "zod/v3";
 
-export type ByokProviderId =
-	| "ollama"
+export enum ByokProvider {
+	Ollama = "ollama",
+	Anthropic = "anthropic",
+	OpenAI = "openai",
+	Google = "google",
+	Xai = "xai",
+	OpenRouter = "openrouter",
+	CodexCli = "codex-cli",
+	ClaudeCli = "claude-cli",
+}
+
+export type ByokProviderId = `${ByokProvider}`;
+
+export type ByokCloudProviderId =
 	| "anthropic"
 	| "openai"
 	| "google"
 	| "xai"
-	| "openrouter"
-	| "codex-cli"
-	| "claude-cli";
+	| "openrouter";
+
+export type ByokOllamaProviderId = "ollama";
+
+export type ByokCliProviderId = "codex-cli" | "claude-cli";
 
 export type ByokCredentialKind = "api-key" | "host" | "command";
 
@@ -58,24 +72,19 @@ export interface ByokProviderDefinition {
 }
 
 export interface ByokCloudProviderConfig {
-	provider:
-		| "anthropic"
-		| "openai"
-		| "google"
-		| "xai"
-		| "openrouter";
+	provider: ByokCloudProviderId;
 	apiKey: string;
 	model: string;
 }
 
 export interface ByokOllamaProviderConfig {
-	provider: "ollama";
+	provider: ByokOllamaProviderId;
 	host: string;
 	model: string;
 }
 
 export interface ByokCliProviderConfig {
-	provider: "codex-cli" | "claude-cli";
+	provider: ByokCliProviderId;
 	command: string;
 	model?: string;
 }
