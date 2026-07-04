@@ -972,6 +972,11 @@
 	display: none;
 }
 
+.cuecraft-preview-editor-display-threaded-margin-notes .cuecraft-preview-editor-thread-dot-first {
+	border-color: color-mix(in srgb, #633813 74%, var(--text-normal));
+	background: var(--color-orange);
+}
+
 .cuecraft-preview-editor-thread-note {
 	position: absolute;
 	inset-block-start: 20%;
