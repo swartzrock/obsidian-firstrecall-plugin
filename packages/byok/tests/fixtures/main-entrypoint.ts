@@ -1,13 +1,10 @@
 import {
 	ByokProvider,
 	createByok,
-	createByokProvider,
 	generateText,
 	listModels,
-	type ByokCoreProviderConfig,
 	type ByokHttpClient,
 	type ByokProviderDeps,
-	type ByokProviderRuntime,
 } from "../../src";
 
 const http: ByokHttpClient = async () => ({
@@ -21,16 +18,6 @@ const deps: ByokProviderDeps = {
 	fetchImpl,
 	http,
 };
-
-const config: ByokCoreProviderConfig = {
-	provider: ByokProvider.OpenAI,
-	apiKey: "sk-test",
-	model: "gpt-4o-mini",
-};
-
-const provider: ByokProviderRuntime = createByokProvider(config, deps);
-
-void provider.testConnection;
 
 const text = generateText({
 	provider: ByokProvider.OpenAI,

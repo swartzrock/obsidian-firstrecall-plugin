@@ -69,9 +69,8 @@ Use the main entrypoint for browser/Electron-safe providers and shared types:
 ```ts
 import {
 	createByok,
-	createByokProvider,
 	generateText,
-	type ByokCoreProviderConfig,
+	listModels,
 	type ByokProviderDeps,
 } from "@cuecraft/byok";
 ```
@@ -133,7 +132,7 @@ const { text } = await ai.generateText({
 });
 ```
 
-`createByok` is intentionally narrower than the provider runtime. Use `listModels` for model discovery, or `createByokProvider` when you need connection testing or structured-object generation.
+`createByok` is intentionally narrow: it binds the credential or host, then accepts a model and prompt per call. Use `listModels` for setup-time model discovery.
 
 ### List Providers
 
@@ -147,14 +146,14 @@ for (const provider of byokProviderDefinitions()) {
 }
 ```
 
-### Advanced: Create a Runtime
+### Advanced: Create a Node Runtime
 
 Create a runtime when your app is testing credentials, using structured output, or supplying custom transports.
 
 ```ts
-import { ByokProvider, createByokProvider } from "@cuecraft/byok";
+import { ByokProvider, createByokNodeProvider } from "@cuecraft/byok/node";
 
-const provider = createByokProvider({
+const provider = createByokNodeProvider({
 	provider: ByokProvider.OpenAI,
 	apiKey,
 	model: "gpt-4o-mini",
@@ -164,7 +163,7 @@ const provider = createByokProvider({
 Pass custom deps when your host app owns transport behavior:
 
 ```ts
-const provider = createByokProvider(
+const provider = createByokNodeProvider(
 	{
 		provider: ByokProvider.OpenAI,
 		apiKey,
@@ -192,10 +191,13 @@ For providers with model-list support, `status.models` may include model IDs ret
 
 ### Fetch Models
 
-Prefer the top-level `listModels` helper for setup-time model discovery. Runtimes also expose `listModels()` when you already have a provider runtime for another advanced operation.
+Use the top-level `listModels` helper for setup-time model discovery. It does not require a selected model.
 
 ```ts
-const models = await provider.listModels?.();
+const models = await listModels({
+	provider: ByokProvider.OpenAI,
+	apiKey: process.env.OPENAI_API_KEY!,
+});
 ```
 
 Model discovery returns portable `ByokModelOption` values with `id` and `label`. Provider-specific metadata such as pricing, context length, supported parameters, or recommendation badges belongs in provider-specific APIs or the host app.
@@ -256,7 +258,10 @@ const report = await provider.generateObject({
 Providers with model-list support return portable model options:
 
 ```ts
-const models = await provider.listModels?.();
+const models = await listModels({
+	provider: ByokProvider.OpenAI,
+	apiKey: process.env.OPENAI_API_KEY!,
+});
 // [{ id: "gpt-4o-mini", label: "gpt-4o-mini" }]
 ```
 
@@ -322,29 +327,7 @@ const { text } = await provider.generateText({
 
 CLI providers execute local commands. Only expose them in environments where users expect local process execution.
 
-### Track Setup Status
-
-BYOK does not store credentials, but it can derive setup state from app-owned settings.
-
-```ts
-import {
-	deriveProviderSetupStatus,
-	recordProviderConnectionSuccess,
-	type ByokStoredSettings,
-} from "@cuecraft/byok";
-
-const settings: { byok: ByokStoredSettings } = loadSettings();
-
-const setup = deriveProviderSetupStatus(settings);
-if (setup.connection === "stale") {
-	console.log("The selected credential or model changed since the last test.");
-}
-
-settings.byok.verification = recordProviderConnectionSuccess(settings);
-saveSettings(settings);
-```
-
-Host apps own the actual storage schema, encryption, and migration flow.
+BYOK does not persist credentials, fetched models, or setup verification state. Host apps own the actual storage schema, encryption, migration flow, and UI-specific model sorting.
 
 ## API Reference
 
@@ -356,7 +339,7 @@ Follow-up API design items before a broader public release:
 
 - Make structured output capability explicit in provider metadata. Today callers infer it by checking whether `runtime.generateObject` exists.
 - Replace OpenRouter's local Zod-to-JSON-schema subset with a more complete schema conversion path before documenting broad schema support.
-- Separate app-settings helpers from generation runtime helpers if external consumers do not need CueCraft-style setup-state derivation.
+- Keep app-settings helpers out of the public barrel unless several external consumers need the same storage contract.
 
 These are follow-up API design items, not blockers for documenting the current package.
 

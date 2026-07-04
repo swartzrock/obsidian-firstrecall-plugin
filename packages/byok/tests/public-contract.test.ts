@@ -20,41 +20,20 @@ const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 describe("BYOK public contract", () => {
 	it("exports only the intentional main-entry public API", () => {
 		expect(Object.keys(byok).sort()).toEqual([
-			"ANTHROPIC_CUSTOM_MODEL_ID",
-			"BYOK_PROVIDER_DEFINITIONS",
 			"BYOK_PROVIDER_IDS",
 			"ByokProvider",
 			"ByokProviderError",
 			"ByokProviderRateLimitError",
-			"CLI_DEFAULT_MODEL_SENTINEL",
-			"anthropicModelInfoToByokModelOption",
-			"buildAnthropicModelOptions",
 			"byokProviderDefinition",
 			"byokProviderDefinitions",
-			"compareFetchedModelIds",
 			"createByok",
-			"createByokProvider",
-			"deriveProviderSetupStatus",
-			"describeAnthropicModel",
-			"describeAnthropicModelDetails",
-			"formatAnthropicModelHint",
-			"formatAnthropicUnavailableModelMessage",
 			"generateText",
-			"isAnthropicCustomModelSelection",
 			"isByokProviderId",
-			"isModelOption",
 			"listModels",
-			"normalizeAnthropicModelSelection",
-			"normalizeModelIds",
 			"normalizeProviderId",
-			"normalizeStringId",
-			"providerCredentialFingerprint",
-			"recordProviderConnectionSuccess",
-			"refreshAnthropicModelOptions",
-			"sortFetchedModelIds",
-			"sortModelOptions",
 		]);
 		expect("createByokNodeProvider" in byok).toBe(false);
+		expect("createByokProvider" in byok).toBe(false);
 		expect("LocalCommandRunner" in byok).toBe(false);
 	});
 

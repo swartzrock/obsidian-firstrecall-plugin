@@ -1,51 +1,11 @@
 export {
-	BYOK_PROVIDER_DEFINITIONS,
 	BYOK_PROVIDER_IDS,
 	byokProviderDefinition,
 	byokProviderDefinitions,
 	isByokProviderId,
 	normalizeProviderId,
 } from "./registry";
-export {
-	ANTHROPIC_CUSTOM_MODEL_ID,
-	anthropicModelInfoToByokModelOption,
-	buildAnthropicModelOptions,
-	describeAnthropicModel,
-	describeAnthropicModelDetails,
-	formatAnthropicModelHint,
-	formatAnthropicUnavailableModelMessage,
-	isAnthropicCustomModelSelection,
-	normalizeAnthropicModelSelection,
-	refreshAnthropicModelOptions,
-	type AnthropicModelHint,
-	type AnthropicModelListSource,
-	type AnthropicModelOption,
-	type AnthropicModelRefreshResult,
-} from "./models/anthropic-models";
-export {
-	compareFetchedModelIds,
-	sortFetchedModelIds,
-} from "./models/fetched-model-sorting";
-export {
-	isModelOption,
-	normalizeModelIds,
-	normalizeStringId,
-	sortModelOptions,
-	type ModelOption,
-} from "./models/model-options";
 export { createByok, generateText, listModels } from "./client";
-export { createByokProvider } from "./providers/provider-factory";
-export {
-	CLI_DEFAULT_MODEL_SENTINEL,
-	deriveProviderSetupStatus,
-	providerCredentialFingerprint,
-	recordProviderConnectionSuccess,
-	type DerivedProviderSetupStatus,
-	type ProviderConnectionSnapshot,
-	type ProviderConnectionStatusMap,
-	type ProviderSetupStatusId,
-	type ProviderSetupStatusSettings,
-} from "./setup-status";
 export type {
 	ByokCliProviderConfig,
 	ByokClient,

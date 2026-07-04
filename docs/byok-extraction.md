@@ -10,12 +10,9 @@ Import public BYOK APIs from the barrel:
 import {
 	ByokProvider,
 	createByok,
-	createByokProvider,
-	deriveProviderSetupStatus,
 	generateText,
 	isByokProviderId,
 	listModels,
-	recordProviderConnectionSuccess,
 	type ByokCoreProviderConfig,
 	type ByokProviderDeps,
 	type ByokProviderRuntime,
@@ -30,9 +27,7 @@ The public surface is:
 - Function-first generation: `generateText(options)` for one-call text generation with explicit provider credentials, model, prompt, optional `signal`, and optional custom deps.
 - Model discovery: `listModels(options)` for fetching portable model options without requiring a selected model.
 - Repeated-call client: `createByok(config)` for binding one provider credential or Ollama host while supplying `model` per generation call.
-- Runtime creation: `createByokProvider(config, deps): ByokProviderRuntime` from the main entrypoint for core providers.
-- Node-only runtime creation: `createByokNodeProvider(config, deps): ByokProviderRuntime` from `@cuecraft/byok/node` for Codex CLI and Claude CLI providers.
-- Setup state: verification snapshots, credential fingerprints, `recordProviderConnectionSuccess`, and `deriveProviderSetupStatus`.
+- Node-only runtime creation: `createByokNodeProvider(config, deps): ByokProviderRuntime` from `@cuecraft/byok/node` for connection testing, structured output, and Codex CLI or Claude CLI providers.
 - Model discovery: provider runtimes return portable `ByokModelOption` values with `id` and `label` only. Provider-specific metadata such as OpenRouter pricing, context length, supported parameters, and compatibility badges is intentionally not part of the main public surface.
 - Runtime generation: `ByokProviderRuntime.generateText`, optional `generateObject`, and provider errors such as `ByokProviderError` and `ByokProviderRateLimitError`.
 
@@ -70,10 +65,12 @@ const { text } = await ai.generateText({
 BYOK is AI-SDK-shaped, not AI-SDK-compatible. Consumers that need AI SDK `LanguageModel` objects or full AI SDK result semantics should use AI SDK directly.
 The function-first API accepts plain text prompts only; provider-specific generation hints stay on the lower-level runtime.
 
-The provider runtime contract remains the advanced setup/model-discovery layer and intentionally stays app-agnostic:
+The node provider runtime contract remains the advanced setup/model-discovery layer and intentionally stays app-agnostic:
 
 ```ts
-const provider = createByokProvider(
+import { ByokProvider, createByokNodeProvider } from "@cuecraft/byok/node";
+
+const provider = createByokNodeProvider(
 	{ provider: ByokProvider.OpenAI, apiKey, model: "gpt-4o-mini" },
 	{
 		fetchImpl,
@@ -92,9 +89,9 @@ Structured-output capable providers also expose `generateObject`:
 
 ```ts
 import { z } from "zod/v3";
-import { createByokProvider } from "@cuecraft/byok";
+import { createByokNodeProvider } from "@cuecraft/byok/node";
 
-const provider = createByokProvider(config, deps);
+const provider = createByokNodeProvider(config, deps);
 const result = await provider.generateObject?.({
 	prompt: "Return three user-facing risks of storing API keys.",
 	schema: z.object({
@@ -125,6 +122,8 @@ const provider = createByokNodeProvider(config, deps satisfies ByokProviderDeps)
 
 - Persist host URLs, commands, selected models, fetched model caches, and verification snapshots.
 - Store cloud API keys through app-owned secure storage before passing them to BYOK runtime configs.
+- Derive setup status, verification snapshots, credential fingerprints, and model-refresh UI messages.
+- Sort, cache, and render app-specific model picker options such as Anthropic custom-model affordances.
 - Render Obsidian settings UI and notices.
 - Adapt Obsidian `requestUrl` into BYOK transport dependencies.
 - Parse notes and decide which sections need generation.

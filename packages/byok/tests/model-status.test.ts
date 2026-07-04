@@ -3,7 +3,7 @@ import {
 	CLI_DEFAULT_MODEL_SENTINEL,
 	deriveProviderSetupStatus,
 	recordProviderConnectionSuccess,
-} from "../src";
+} from "../src/setup-status";
 
 describe("BYOK setup status", () => {
 	it("derives CLI setup status with the default-model sentinel", () => {

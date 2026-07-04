@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	ByokProviderError,
-	createByokProvider,
 	type ByokCoreProviderConfig,
 	type ByokHttpClient,
 } from "../src";
+import { createByokProvider } from "../src/providers/provider-factory";
 import {
 	createByokNodeProvider,
 	type ByokProviderConfig,

@@ -5,33 +5,35 @@ This reference documents the public API exported by `@cuecraft/byok` and `@cuecr
 Use only the public entrypoints:
 
 ```ts
-import { ByokProvider, createByok, createByokProvider, generateText, listModels } from "@cuecraft/byok";
+import { ByokProvider, createByok, generateText, listModels } from "@cuecraft/byok";
 import { createByokNodeProvider } from "@cuecraft/byok/node";
 ```
 
-Do not import provider implementation files directly. They are package internals and may change without a public API review.
+Provider implementation files, model sorting helpers, Anthropic picker helpers, and setup-state helpers are package internals.
 
-## Entry Points
+## `@cuecraft/byok`
 
-### `@cuecraft/byok`
+The main entrypoint is the small browser/Electron-safe API for core providers.
 
-The main entrypoint is for browser/Electron-safe core providers and shared helpers.
+Runtime exports:
 
-It exports:
+- `ByokProvider`
+- `BYOK_PROVIDER_IDS`
+- `byokProviderDefinition`
+- `byokProviderDefinitions`
+- `isByokProviderId`
+- `normalizeProviderId`
+- `generateText`
+- `createByok`
+- `listModels`
+- `ByokProviderError`
+- `ByokProviderRateLimitError`
 
-- Function-first text generation helpers.
-- Provider registry constants and helpers.
-- Core provider factory.
-- Setup-status helpers.
-- Portable model option helpers.
-- Anthropic model-selection helpers.
-- Public runtime, config, storage, model, and error types.
+Type exports include the public provider config, provider metadata, transport, model, generation, runtime, verification, and stored-settings types.
 
-It does not export local CLI providers or the local command runner.
+## `@cuecraft/byok/node`
 
-### `@cuecraft/byok/node`
-
-The Node subpath re-exports the main entrypoint and adds local CLI support:
+The Node subpath re-exports the main entrypoint and adds runtime APIs for trusted Node or desktop backends:
 
 - `createByokNodeProvider`
 - `ClaudeCliProvider`
@@ -43,46 +45,11 @@ The Node subpath re-exports the main entrypoint and adds local CLI support:
 
 Use this subpath only where spawning local processes is acceptable.
 
-## Function-First Generation
+## Function-First API
 
 ### `generateText(options)`
 
-Generates text for core providers from one flat options object.
-
-```ts
-function generateText(
-	options: ByokGenerateTextOptions
-): Promise<ByokTextGenerationOutput>;
-```
-
-Cloud provider options combine provider config, text input, optional custom deps, and optional abort signal:
-
-```ts
-type ByokGenerateTextOptions =
-	| {
-			provider:
-				| ByokProvider.Anthropic
-				| ByokProvider.OpenAI
-				| ByokProvider.Google
-				| ByokProvider.Xai
-				| ByokProvider.OpenRouter;
-			apiKey: string;
-			model: string;
-			prompt: string;
-			signal?: AbortSignal;
-			deps?: ByokFacadeDeps;
-	  }
-	| {
-			provider: ByokProvider.Ollama;
-			host: string;
-			model: string;
-			prompt: string;
-			signal?: AbortSignal;
-			deps?: ByokFacadeDeps;
-	  };
-```
-
-`generateText` delegates to `createByokProvider` and returns the same simple output:
+Generates text from one flat options object.
 
 ```ts
 const { text } = await generateText({
@@ -93,56 +60,13 @@ const { text } = await generateText({
 });
 ```
 
-BYOK is AI-SDK-shaped, not AI-SDK-compatible. Use AI SDK directly when callers need AI SDK `LanguageModel` objects, middleware semantics, or the full AI SDK result object.
-The function-first API intentionally accepts plain text prompts only; use `createByokProvider` when you need provider-specific text hints such as JSON response formatting.
+Cloud providers use `{ provider, apiKey, model, prompt }`. Ollama uses `{ provider: ByokProvider.Ollama, host, model, prompt }`. Both forms accept optional `deps` and `signal`.
 
-### `listModels(options)`
-
-Lists portable model options for core non-CLI providers without requiring a selected model.
-
-```ts
-function listModels(
-	options: ByokListModelsOptions
-): Promise<ByokModelOption[]>;
-```
-
-Cloud providers require only provider id, API key, and optional custom deps. Ollama requires only provider id, host, and optional custom deps:
-
-```ts
-type ByokListModelsOptions =
-	| {
-			provider:
-				| ByokProvider.Anthropic
-				| ByokProvider.OpenAI
-				| ByokProvider.Google
-				| ByokProvider.Xai
-				| ByokProvider.OpenRouter;
-			apiKey: string;
-			deps?: ByokFacadeDeps;
-	  }
-	| {
-			provider: ByokProvider.Ollama;
-			host: string;
-			deps?: ByokFacadeDeps;
-	  };
-```
-
-```ts
-const models = await listModels({
-	provider: ByokProvider.Anthropic,
-	apiKey,
-});
-```
+The function-first API intentionally accepts plain text prompts only. Use the node runtime when you need connection testing, JSON response hints, or structured object generation.
 
 ### `createByok(config)`
 
-Creates a credential-bound client for repeated text generation.
-
-```ts
-function createByok(config: ByokClientConfig): ByokClient;
-```
-
-The client binds provider credentials or Ollama host, but the model is supplied per generation call:
+Creates a credential-bound client for repeated text generation. The model remains per call.
 
 ```ts
 const ai = createByok({
@@ -156,99 +80,70 @@ const { text } = await ai.generateText({
 });
 ```
 
-`ByokClient` intentionally exposes only `generateText`. Use `listModels` for model discovery, or `createByokProvider` for `testConnection` and `generateObject`.
+`ByokClient` exposes only `generateText`.
 
-## Provider Factories
+### `listModels(options)`
 
-### `createByokProvider(config, deps?)`
-
-Creates a runtime for the browser/Electron-safe providers.
+Lists portable model options without requiring a selected model.
 
 ```ts
-function createByokProvider(
-	config: ByokCoreProviderConfig,
-	deps?: Partial<ByokProviderDeps>
-): ByokProviderRuntime;
+const models = await listModels({
+	provider: ByokProvider.Anthropic,
+	apiKey,
+});
 ```
 
-Supported provider configs:
+Cloud providers use `{ provider, apiKey }`. Ollama uses `{ provider: ByokProvider.Ollama, host }`. Both forms accept optional `deps`.
 
-- `anthropic`
-- `openai`
-- `google`
-- `xai`
-- `openrouter`
-- `ollama`
+Local CLI providers do not expose model discovery through BYOK because Codex CLI and Claude CLI do not provide a stable model-list API through this package.
 
-Use this factory when your host application provides resolved API keys, selected models, and needs runtime methods. When `deps` is omitted, BYOK uses `globalThis.fetch` and an internal HTTP adapter. Pass custom deps for Electron IPC, tests, request instrumentation, or runtimes without global fetch.
+## Node Runtime
 
 ### `createByokNodeProvider(config, deps?)`
 
-Creates a runtime for every provider, including Node-only CLI providers.
+Creates a provider runtime for every provider, including Node-only CLI providers.
 
 ```ts
-function createByokNodeProvider(
-	config: ByokProviderConfig,
-	deps?: Partial<ByokProviderDeps>
-): ByokProviderRuntime;
+const provider = createByokNodeProvider(
+	{
+		provider: ByokProvider.OpenAI,
+		apiKey,
+		model: "gpt-4o-mini",
+	},
+	{ fetchImpl: fetch, http }
+);
 ```
 
-Supported provider configs:
-
-- Every `createByokProvider` provider.
-- `codex-cli`
-- `claude-cli`
-
-For core providers, this delegates to `createByokProvider`. For CLI providers, it constructs a local command-backed runtime.
-
-## Runtime Contract
-
-### `ByokProviderRuntime`
-
-The common provider interface returned by the factories.
+The runtime exposes connection testing, model listing when supported, text generation, and optional structured object generation:
 
 ```ts
-interface ByokProviderRuntime {
-	id: ByokProviderId;
-	label: string;
-	requiresNetwork: boolean;
-	requiresDownload: boolean;
-	sectionConcurrencyLimit?: number;
-	testConnection(): Promise<ByokProviderStatus>;
-	listModels?(): Promise<ByokModelOption[]>;
-	generateText(
-		input: ByokTextGenerationInput,
-		signal?: AbortSignal
-	): Promise<ByokTextGenerationOutput>;
-	generateObject?<T>(
-		input: ByokObjectGenerationInput<T>,
-		signal?: AbortSignal
-	): Promise<T>;
-}
+const status = await provider.testConnection();
+const models = await provider.listModels?.();
+const { text } = await provider.generateText({
+	prompt: "Explain BYOK in one sentence.",
+});
 ```
 
-Methods:
-
-- `testConnection()` verifies that the provider can be reached and, where possible, that the selected model can generate.
-- `listModels()` returns provider models when model discovery is supported and you already have a runtime. Prefer top-level `listModels(options)` for setup-time discovery.
-- `generateText(input, signal?)` returns raw provider text.
-- `generateObject(input, signal?)` returns parsed structured output for providers that expose native or emulated object generation.
-
-### `ByokProviderStatus`
+AI SDK based providers expose `generateObject`. Check for the method before calling it because Ollama and local CLI providers are text-only.
 
 ```ts
-interface ByokProviderStatus {
-	ok: boolean;
-	message: string;
-	models?: string[];
-}
+import { z } from "zod/v3";
+
+if (!provider.generateObject) throw new Error("Structured output unavailable.");
+
+const report = await provider.generateObject({
+	prompt: "Return three risks of storing API keys in plaintext.",
+	schema: z.object({
+		risks: z.array(z.string()),
+	}),
+});
 ```
 
-`message` is safe to show to users. `models` is optional and is usually present only when a connection test also performs model discovery.
+## Providers
 
-## Provider Config Types
+### `ByokProvider`
 
-### `ByokProviderId`
+Enum of supported provider IDs:
 
 ```ts
 enum ByokProvider {
@@ -261,327 +156,23 @@ enum ByokProvider {
 	CodexCli = "codex-cli",
 	ClaudeCli = "claude-cli",
 }
-
-type ByokProviderId =
-	| "ollama"
-	| "anthropic"
-	| "openai"
-	| "google"
-	| "xai"
-	| "openrouter"
-	| "codex-cli"
-	| "claude-cli";
 ```
 
-Use `ByokProvider` in application code for autocomplete and typo resistance. Matching string literals remain accepted for backwards compatibility.
+### Provider Metadata
 
-### `ByokCloudProviderConfig`
-
-Configuration for API-key cloud providers.
+Use registry helpers for settings UIs and allowlists:
 
 ```ts
-interface ByokCloudProviderConfig {
-	provider:
-		| ByokProvider.Anthropic
-		| ByokProvider.OpenAI
-		| ByokProvider.Google
-		| ByokProvider.Xai
-		| ByokProvider.OpenRouter;
-	apiKey: string;
-	model: string;
+for (const provider of byokProviderDefinitions()) {
+	console.log(provider.id, provider.label, provider.supportsModelListing);
 }
 ```
 
-BYOK does not persist `apiKey`. Resolve it from host-owned secure storage before creating the runtime.
-
-### `ByokOllamaProviderConfig`
-
-Configuration for Ollama.
-
-```ts
-interface ByokOllamaProviderConfig {
-	provider: ByokProvider.Ollama;
-	host: string;
-	model: string;
-}
-```
-
-`host` is normalized by trimming trailing slashes.
-BYOK accepts only `http:` and `https:` URLs without embedded credentials. LAN and remote hosts are allowed as explicit caller input; prompts are sent to that configured host.
-
-### `ByokCliProviderConfig`
-
-Configuration for local CLI providers.
-
-```ts
-interface ByokCliProviderConfig {
-	provider: ByokProvider.CodexCli | ByokProvider.ClaudeCli;
-	command: string;
-	model?: string;
-}
-```
-
-CLI providers are Node-only and available through `@cuecraft/byok/node`.
-
-### `ByokProviderConfig`
-
-Union of every provider config.
-
-```ts
-type ByokProviderConfig =
-	| ByokCloudProviderConfig
-	| ByokOllamaProviderConfig
-	| ByokCliProviderConfig;
-```
-
-### `ByokCoreProviderConfig`
-
-Union accepted by the main entrypoint factory.
-
-```ts
-type ByokCoreProviderConfig =
-	| ByokCloudProviderConfig
-	| ByokOllamaProviderConfig;
-```
-
-## Runtime Dependencies
-
-### `ByokFacadeDeps`
-
-Transport overrides accepted by the simple `generateText` and `createByok` APIs.
-
-```ts
-type ByokFacadeDeps = Partial<ByokProviderDeps>;
-```
-
-### `ByokProviderDeps`
-
-Transport dependencies supplied by the host application. All fields are required in the type, but callers may pass `Partial<ByokProviderDeps>` to `createByokProvider` and `createByokNodeProvider`.
-
-```ts
-interface ByokProviderDeps {
-	fetchImpl: typeof fetch;
-	http: ByokHttpClient;
-}
-```
-
-- `fetchImpl` is used by AI SDK and vendor SDK providers.
-- `http` is used by Ollama and by environments that need a custom request adapter.
-
-Default dependency resolution:
-
-- Full deps are used as supplied.
-- Cloud providers may pass only `fetchImpl`.
-- Ollama callers may pass only `http`; when `http` is omitted, BYOK builds an HTTP adapter from `fetchImpl`.
-- When no usable fetch exists for a provider that needs one, BYOK throws a `ByokProviderError`.
-- The default HTTP adapter forwards abort signals where fetch supports them and caps response bodies before JSON parsing.
-
-### `ByokHttpClient`
-
-```ts
-type ByokHttpClient = (
-	request: ByokHttpRequest
-) => Promise<ByokHttpResponse>;
-```
-
-### `ByokHttpRequest`
-
-```ts
-interface ByokHttpRequest {
-	url: string;
-	method: "GET" | "POST";
-	body?: string;
-	headers?: Record<string, string>;
-	signal?: AbortSignal;
-}
-```
-
-### `ByokHttpResponse`
-
-```ts
-interface ByokHttpResponse {
-	status: number;
-	text: string;
-	json: unknown;
-}
-```
-
-## Credential and Runtime Boundaries
-
-BYOK receives plain API keys only after the host app resolves them. It does not persist or log credentials. Direct browser or Electron-renderer usage is suitable for user-entered transient keys only. App-owned keys should stay behind a server, main process, or custom transport controlled by the host app.
-
-## Generation Types
-
-### `ByokTextGenerationInput`
-
-```ts
-interface ByokTextGenerationInput {
-	prompt: string;
-	responseFormat?: "text" | "json";
-	jsonSchema?: string;
-}
-```
-
-`responseFormat` and `jsonSchema` are hints. Support varies by provider. Always validate model output in the host application.
-
-### `ByokTextGenerationOutput`
-
-```ts
-interface ByokTextGenerationOutput {
-	text: string;
-}
-```
-
-### `ByokObjectGenerationInput<T>`
-
-```ts
-interface ByokObjectGenerationInput<T> {
-	prompt: string;
-	schema: z.ZodType<T, z.ZodTypeDef, unknown>;
-}
-```
-
-`generateObject` parses and validates with the supplied Zod schema where supported.
-
-## Provider Registry
-
-### `BYOK_PROVIDER_IDS`
-
-Ordered provider IDs used by registry helpers and UI flows.
-
-```ts
-const BYOK_PROVIDER_IDS: readonly ByokProviderId[];
-```
-
-Current order:
-
-```ts
-[
-	"anthropic",
-	"openai",
-	"google",
-	"xai",
-	"openrouter",
-	"ollama",
-	"codex-cli",
-	"claude-cli",
-]
-```
-
-### `BYOK_PROVIDER_DEFINITIONS`
-
-Provider metadata keyed by provider ID.
-
-```ts
-const BYOK_PROVIDER_DEFINITIONS: Record<
-	ByokProviderId,
-	ByokProviderDefinition
->;
-```
-
-### `byokProviderDefinition(id)`
-
-Returns metadata for one provider.
-
-```ts
-function byokProviderDefinition(
-	id: ByokProviderId
-): ByokProviderDefinition;
-```
-
-### `byokProviderDefinitions()`
-
-Returns provider definitions in `BYOK_PROVIDER_IDS` order.
-
-```ts
-function byokProviderDefinitions(): ByokProviderDefinition[];
-```
-
-### `isByokProviderId(value)`
-
-Type guard for provider IDs.
-
-```ts
-function isByokProviderId(value: unknown): value is ByokProviderId;
-```
-
-### `normalizeProviderId(value)`
-
-Maps unknown values into a supported provider ID.
-
-```ts
-function normalizeProviderId(value: unknown): ByokProviderId;
-```
-
-Special cases:
-
-- `"codex"` becomes `"codex-cli"`.
-- `"claude"` becomes `"claude-cli"`.
-- Unknown values become `"ollama"`.
-
-### `ByokProviderDefinition`
-
-Metadata for settings UIs and capability checks.
-
-```ts
-interface ByokProviderDefinition {
-	id: ByokProviderId;
-	label: string;
-	shortLabel: string;
-	productLabel: string;
-	vendor: string;
-	icon: ByokProviderIconDefinition;
-	credentialKind: ByokCredentialKind;
-	credentialField: ByokCredentialFieldDefinition;
-	modelBehavior: ByokModelBehavior;
-	modelField: ByokModelFieldDefinition;
-	requiresNetwork: boolean;
-	requiresDownload: boolean;
-	supportsModelListing: boolean;
-}
-```
-
-Related types:
-
-- `ByokCredentialKind` is `"api-key" | "host" | "command"`.
-- `ByokModelBehavior` is `"required" | "optional"`.
-- `ByokProviderIconSource` is `"svgl" | "custom"`.
-- `ByokProviderIconDefinition` describes SVG icon metadata.
-- `ByokCredentialFieldDefinition` describes credential field labels and copy.
-- `ByokModelFieldDefinition` describes model field labels and copy.
-
-```ts
-interface ByokProviderIconDefinition {
-	source: ByokProviderIconSource;
-	sourceUrl: string;
-	viewBox: string;
-	svg: string;
-}
-
-interface ByokCredentialFieldDefinition {
-	label: string;
-	placeholder: string;
-	description: string;
-	secret: boolean;
-	missingMessage: string;
-	resetModelsMessage?: string;
-}
-
-interface ByokModelFieldDefinition {
-	label: string;
-	placeholder: string;
-	description: string;
-	listModelsLabel?: string;
-	listModelsDescription?: string;
-	emptyListMessage?: string;
-}
-```
+`BYOK_PROVIDER_IDS` contains provider IDs in display order. `byokProviderDefinition(id)` returns metadata for one provider. The raw provider-definition map is not exported.
 
 ## Model Options
 
-### `ByokModelOption`
-
-Portable model choice returned by provider model discovery.
+`listModels` and runtime `listModels()` return portable model options:
 
 ```ts
 interface ByokModelOption {
@@ -590,595 +181,10 @@ interface ByokModelOption {
 }
 ```
 
-Provider-specific metadata such as pricing, context length, supported parameters, or recommendation badges is intentionally not part of the main model option contract.
+Provider-specific metadata such as pricing, context length, supported parameters, or recommendation badges is intentionally not part of the public model option contract.
 
-### `ModelOption`
+## Storage And Setup State
 
-Alias exported for model helper users:
+BYOK does not persist credentials, fetched model caches, setup verification, or app settings. Host apps own storage, encryption, migration, setup-state derivation, and UI-specific model sorting.
 
-```ts
-type ModelOption = ByokModelOption;
-```
-
-### `normalizeStringId(id)`
-
-Converts a string model ID into a `ModelOption`.
-
-```ts
-function normalizeStringId(id: string): ModelOption;
-```
-
-### `normalizeModelIds(ids)`
-
-Converts an array of string model IDs into `ModelOption` values.
-
-```ts
-function normalizeModelIds(ids: string[]): ModelOption[];
-```
-
-### `isModelOption(value)`
-
-Type guard for `ModelOption`.
-
-```ts
-function isModelOption(value: unknown): value is ModelOption;
-```
-
-### `sortModelOptions(options, currentModelId?)`
-
-Sorts model options with the current model first, then natural model-ID order.
-
-```ts
-function sortModelOptions(
-	options: ModelOption[],
-	currentModelId?: string
-): ModelOption[];
-```
-
-### `compareFetchedModelIds(left, right)`
-
-Natural string comparator for fetched model IDs.
-
-```ts
-function compareFetchedModelIds(left: string, right: string): number;
-```
-
-### `sortFetchedModelIds(modelIds)`
-
-Sorts model IDs with natural collation.
-
-```ts
-function sortFetchedModelIds(modelIds: string[]): string[];
-```
-
-## Anthropic Model Helpers
-
-These helpers support account-model selection, custom Anthropic model IDs, and user-facing model descriptions.
-
-### `ANTHROPIC_CUSTOM_MODEL_ID`
-
-Sentinel used when a user enters a custom Anthropic model ID.
-
-```ts
-const ANTHROPIC_CUSTOM_MODEL_ID = "__custom__";
-```
-
-### `AnthropicModelHint`
-
-```ts
-interface AnthropicModelHint {
-	quality: string;
-	speed: string;
-	cost: string;
-	context: string;
-	generationHint: string;
-}
-```
-
-### `AnthropicModelOption`
-
-```ts
-interface AnthropicModelOption {
-	id: string;
-	label: string;
-	description: string;
-	hint: AnthropicModelHint;
-}
-```
-
-### `AnthropicModelListSource`
-
-```ts
-interface AnthropicModelListSource {
-	listModels(): Promise<ByokModelOption[]>;
-}
-```
-
-### `AnthropicModelRefreshResult`
-
-```ts
-interface AnthropicModelRefreshResult {
-	availableModels: ByokModelOption[];
-	options: AnthropicModelOption[];
-	message: string;
-}
-```
-
-### `anthropicModelInfoToByokModelOption(model)`
-
-Converts Anthropic SDK model metadata into `ByokModelOption`.
-
-```ts
-function anthropicModelInfoToByokModelOption(
-	model: ModelInfo
-): ByokModelOption;
-```
-
-### `buildAnthropicModelOptions(availableModels?)`
-
-Builds sorted Anthropic display options from Anthropic SDK model records or BYOK model options.
-
-```ts
-function buildAnthropicModelOptions(
-	availableModels?: Array<ModelInfo | ByokModelOption>
-): AnthropicModelOption[];
-```
-
-### `isAnthropicCustomModelSelection(settings)`
-
-Returns whether the current Anthropic selection should be treated as a custom model ID.
-
-```ts
-function isAnthropicCustomModelSelection(settings: {
-	anthropicModel: string;
-	anthropicModelSelection?: string;
-	anthropicAvailableModels?: Array<ModelInfo | ByokModelOption>;
-}): boolean;
-```
-
-### `normalizeAnthropicModelSelection(settings)`
-
-Mutates `settings.anthropicModelSelection` when it is missing.
-
-```ts
-function normalizeAnthropicModelSelection(settings: {
-	anthropicModel: string;
-	anthropicModelSelection?: string;
-	anthropicAvailableModels?: Array<ModelInfo | ByokModelOption>;
-}): void;
-```
-
-Known account models select themselves. Unknown models select `ANTHROPIC_CUSTOM_MODEL_ID`.
-
-### `describeAnthropicModel(modelId, availableModels?)`
-
-Returns a display label and raw ID.
-
-```ts
-function describeAnthropicModel(
-	modelId: string,
-	availableModels?: Array<ModelInfo | ByokModelOption>
-): {
-	label: string;
-	rawId: string;
-};
-```
-
-### `describeAnthropicModelDetails(modelId, availableModels?)`
-
-Returns a display label, raw ID, and hint metadata.
-
-```ts
-function describeAnthropicModelDetails(
-	modelId: string,
-	availableModels?: Array<ModelInfo | ByokModelOption>
-): {
-	label: string;
-	rawId: string;
-	hint: AnthropicModelHint;
-};
-```
-
-### `formatAnthropicUnavailableModelMessage(modelId, availableModels?)`
-
-Returns a user-facing message for an inaccessible model.
-
-```ts
-function formatAnthropicUnavailableModelMessage(
-	modelId: string,
-	availableModels?: Array<ModelInfo | ByokModelOption>
-): string;
-```
-
-### `formatAnthropicModelHint(modelId, availableModels?)`
-
-Returns initial helper text when there is no selected model and no fetched models.
-
-```ts
-function formatAnthropicModelHint(
-	modelId: string,
-	availableModels?: Array<ModelInfo | ByokModelOption>
-): string;
-```
-
-### `refreshAnthropicModelOptions(source)`
-
-Fetches Anthropic models through a supplied source and returns normalized display options plus a user-facing result message.
-
-```ts
-function refreshAnthropicModelOptions(
-	source: AnthropicModelListSource | null
-): Promise<AnthropicModelRefreshResult>;
-```
-
-Errors are caught and returned as a refresh message with empty model arrays.
-
-## Setup Status
-
-BYOK setup helpers work with app-owned settings. They do not persist settings or credentials.
-
-### `CLI_DEFAULT_MODEL_SENTINEL`
-
-Model sentinel used when verifying CLI providers without an explicit model override.
-
-```ts
-const CLI_DEFAULT_MODEL_SENTINEL = "__byok_cli_default__";
-```
-
-### `ProviderSetupStatusId`
-
-Alias for `ByokProviderId`.
-
-```ts
-type ProviderSetupStatusId = ByokProviderId;
-```
-
-### `ProviderConnectionSnapshot`
-
-Alias for `ByokVerificationSnapshot`.
-
-```ts
-type ProviderConnectionSnapshot = ByokVerificationSnapshot;
-```
-
-### `ProviderConnectionStatusMap`
-
-Alias for `ByokVerificationSnapshotMap`.
-
-```ts
-type ProviderConnectionStatusMap = ByokVerificationSnapshotMap;
-```
-
-### `ProviderSetupStatusSettings`
-
-Expected wrapper shape for setup helpers.
-
-```ts
-interface ProviderSetupStatusSettings {
-	byok: ByokStoredSettings;
-}
-```
-
-### `DerivedProviderSetupStatus`
-
-Alias for `ByokSetupStatus`.
-
-```ts
-type DerivedProviderSetupStatus = ByokSetupStatus;
-```
-
-### `providerCredentialFingerprint(settings)`
-
-Returns a non-secret fingerprint for the selected provider's current credential state.
-
-```ts
-function providerCredentialFingerprint(
-	settings: ProviderSetupStatusSettings
-): string;
-```
-
-For cloud providers with `credentialSaved`, this returns `credentialUpdatedAt` or `"saved"`. Otherwise it returns a hash of the non-secret credential value.
-
-### `recordProviderConnectionSuccess(settings, testedAt?)`
-
-Returns a new verification map with the selected provider marked as verified for the current credential and model.
-
-```ts
-function recordProviderConnectionSuccess(
-	settings: ProviderSetupStatusSettings,
-	testedAt?: string
-): ProviderConnectionStatusMap;
-```
-
-`testedAt` defaults to the current ISO timestamp.
-
-### `deriveProviderSetupStatus(settings)`
-
-Derives whether the selected provider has a credential, model selection, and fresh verification snapshot.
-
-```ts
-function deriveProviderSetupStatus(
-	settings: ProviderSetupStatusSettings
-): DerivedProviderSetupStatus;
-```
-
-## Settings Types
-
-These types are useful for apps that want CueCraft-style setup-state tracking.
-
-### `ByokConnectionState`
-
-```ts
-type ByokConnectionState = "untested" | "verified" | "stale";
-```
-
-### `ByokVerificationSnapshot`
-
-```ts
-interface ByokVerificationSnapshot {
-	credentialFingerprint: string;
-	credentialToken?: string;
-	modelId: string;
-	testedAt: string;
-}
-```
-
-### `ByokVerificationSnapshotMap`
-
-```ts
-type ByokVerificationSnapshotMap = Partial<
-	Record<ByokProviderId, ByokVerificationSnapshot>
->;
-```
-
-### `ByokSetupStatus`
-
-```ts
-interface ByokSetupStatus {
-	keySaved: boolean;
-	modelSelected: boolean;
-	connection: ByokConnectionState;
-	testedAt?: string;
-}
-```
-
-### `ByokProviderStoredSettings`
-
-```ts
-interface ByokProviderStoredSettings {
-	credential: string;
-	credentialSaved?: boolean;
-	credentialUpdatedAt?: string;
-	credentialLength?: number;
-	model: string;
-	modelSelection?: string;
-	availableModels: string[];
-	modelOptions: ByokModelOption[];
-	hasFetchedModels: boolean;
-	modelRefreshMessage: string;
-}
-```
-
-### `ByokStoredSettings`
-
-```ts
-interface ByokStoredSettings {
-	selectedProvider: ByokProviderId;
-	providers: Partial<Record<ByokProviderId, ByokProviderStoredSettings>>;
-	verification: ByokVerificationSnapshotMap;
-}
-```
-
-## Model Refresh Types
-
-### `ByokModelRefreshResult`
-
-```ts
-interface ByokModelRefreshResult {
-	models: string[];
-	options: ByokModelOption[];
-	message: string;
-}
-```
-
-## Errors
-
-### `ByokProviderError`
-
-Base user-readable provider error.
-
-```ts
-class ByokProviderError extends Error {
-	constructor(message: string);
-}
-```
-
-### `ByokProviderRateLimitError`
-
-Rate-limit error with optional retry delay.
-
-```ts
-class ByokProviderRateLimitError extends ByokProviderError {
-	readonly retryAfterMs: number | null;
-
-	constructor(message: string, retryAfterMs?: number | null);
-}
-```
-
-AI SDK providers retry rate limits before surfacing this error.
-
-## Node Subpath APIs
-
-The following APIs are exported only from `@cuecraft/byok/node`.
-
-### `ClaudeCliProvider`
-
-Local Claude CLI runtime class.
-
-```ts
-class ClaudeCliProvider implements ByokProviderRuntime {
-	constructor(opts: ClaudeCliProviderOptions);
-}
-```
-
-Behavior:
-
-- Runs `claude` with safe non-interactive arguments.
-- Uses `--output-format json` and `--input-format text`.
-- Passes `jsonSchema` from `generateText` to Claude CLI when provided.
-- Does not expose `generateObject`.
-
-### `ClaudeCliProviderOptions`
-
-```ts
-interface ClaudeCliProviderOptions {
-	command: string;
-	model?: string;
-	cwd?: string;
-	timeoutMs?: number;
-	runner?: Pick<LocalCommandRunner, "run">;
-}
-```
-
-### `extractClaudeCliOutput(stdout)`
-
-Extracts final text from Claude CLI JSON or raw stdout.
-
-```ts
-function extractClaudeCliOutput(stdout: string): string;
-```
-
-### `CodexCliProvider`
-
-Local Codex CLI runtime class.
-
-```ts
-class CodexCliProvider implements ByokProviderRuntime {
-	constructor(opts: CodexCliProviderOptions);
-}
-```
-
-Behavior:
-
-- Runs `codex exec --skip-git-repo-check --sandbox read-only --json`.
-- Passes `--model` when a model override is configured.
-- Does not expose `generateObject`.
-
-### `CodexCliProviderOptions`
-
-```ts
-interface CodexCliProviderOptions {
-	command: string;
-	model?: string;
-	cwd?: string;
-	timeoutMs?: number;
-	runner?: Pick<LocalCommandRunner, "run">;
-}
-```
-
-### `extractCodexCliOutput(stdout)`
-
-Extracts final text from Codex CLI JSON event output or raw stdout.
-
-```ts
-function extractCodexCliOutput(stdout: string): string;
-```
-
-### `LocalCommandRunner`
-
-Command runner used by local CLI providers.
-
-```ts
-class LocalCommandRunner {
-	constructor(
-		spawnProcess?: LocalProcessSpawner,
-		env?: NodeJS.ProcessEnv,
-		logger?: Pick<Console, "warn">,
-		loadLoginShellPath?: LoginShellPathLoader
-	);
-
-	run(request: LocalCommandRequest): Promise<LocalCommandResult>;
-}
-```
-
-The runner:
-
-- Spawns commands with `shell: false`.
-- Writes `stdin` and captures stdout/stderr.
-- Applies timeouts.
-- Handles abort signals.
-- Merges login-shell `PATH` for bare commands on non-Windows platforms.
-- Maps process errors to `ByokProviderError`-compatible provider errors.
-
-### `defaultLocalCliCwd()`
-
-Returns the default current working directory for local CLI execution.
-
-```ts
-function defaultLocalCliCwd(): string;
-```
-
-Currently this is the operating system temporary directory.
-
-### `LocalCommandRequest`
-
-```ts
-interface LocalCommandRequest {
-	command: string;
-	args?: string[];
-	stdin?: string;
-	cwd?: string;
-	env?: NodeJS.ProcessEnv;
-	timeoutMs?: number;
-	signal?: AbortSignal;
-}
-```
-
-### `LocalCommandResult`
-
-```ts
-interface LocalCommandResult {
-	stdout: string;
-	stderr: string;
-	exitCode: number;
-}
-```
-
-### `LocalProcess`
-
-Minimal process interface used for command-runner injection in tests.
-
-```ts
-interface LocalProcess {
-	stdout: Readable;
-	stderr: Readable;
-	stdin: Writable;
-	once(event: "close", listener: (code: number | null) => void): this;
-	once(event: "error", listener: (error: NodeJS.ErrnoException) => void): this;
-	kill(signal?: NodeJS.Signals): boolean;
-}
-```
-
-### `LocalProcessSpawner`
-
-```ts
-type LocalProcessSpawner = (
-	command: string,
-	args: string[],
-	options: { cwd?: string; shell: false; env?: NodeJS.ProcessEnv }
-) => LocalProcess;
-```
-
-### `LoginShellPathLoader`
-
-```ts
-type LoginShellPathLoader = (
-	env: NodeJS.ProcessEnv
-) => string | Promise<string>;
-```
-
-## API Caveats Before Public v1
-
-- `ByokProviderDeps.http` is required even for cloud-only usage. A Node convenience helper would reduce setup code.
-- Structured-output support is currently indicated by the optional `generateObject` method, not by provider metadata.
-- `ByokStoredSettings` is useful for CueCraft-style setup state, but many backend apps will prefer a smaller credential/model verification abstraction.
+The package still exports public types such as `ByokStoredSettings`, `ByokVerificationSnapshot`, and `ByokSetupStatus` so apps can describe their own state, but mutation helpers are not part of the main public API.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAnthropicUnavailableModelMessage } from "@cuecraft/byok";
+import { formatAnthropicUnavailableModelMessage } from "../src/anthropic-model-options";
 import { formatCueCraftNotice } from "../src/notice";
 
 describe("formatCueCraftNotice", () => {

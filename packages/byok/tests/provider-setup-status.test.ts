@@ -3,9 +3,11 @@ import {
 	CLI_DEFAULT_MODEL_SENTINEL,
 	deriveProviderSetupStatus,
 	recordProviderConnectionSuccess,
-	type ByokProviderId,
-	type ByokProviderStoredSettings,
 	type ProviderSetupStatusSettings,
+} from "../src/setup-status";
+import type {
+	ByokProviderId,
+	ByokProviderStoredSettings,
 } from "../src";
 
 function providerSettings(
