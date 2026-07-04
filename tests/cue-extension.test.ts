@@ -665,6 +665,34 @@ describe("cue editor placement", () => {
 		expect(positions).toEqual([state.doc.line(1).to, state.doc.line(3).to]);
 	});
 
+	it("renders Cornell display cues as body block widgets without gutter markers", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const widgets = buildCueWidgetDecorations(state, {
+			cues,
+			display: "cornell",
+		});
+		const positions: number[] = [];
+		widgets.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([state.doc.line(1).to, state.doc.line(3).to]);
+
+		const markers = buildCueGutterMarkers(state, {
+			cues,
+			display: "cornell",
+		});
+		expect(markers.size).toBe(0);
+	});
+
+	it("renders Cornell display with the editor cue card element", () => {
+		withDocument(() => {
+			const el = renderCueElement(cues[0], "cornell");
+			expect(el.classList.contains("cuecraft-cue")).toBe(true);
+			expect(el.classList.contains("cuecraft-editor-hook")).toBe(false);
+			expect(el.textContent).toContain("What is A?");
+		});
+	});
+
 	it("applies cue width and font settings to every editor cue display", () => {
 		withDocument(() => {
 			for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {

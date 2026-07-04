@@ -324,6 +324,23 @@ function renderEditorCueDisplayPreview(
 	previewEl: HTMLElement,
 	display: EditorCueDisplay
 ): void {
+	if (display === "cornell") {
+		renderCuePreview(
+			previewEl,
+			[
+				"cuecraft-preview-display",
+				"cuecraft-preview-display-classic",
+				"cuecraft-preview-editor-display",
+				"cuecraft-preview-editor-display-cornell",
+			],
+			{
+				question: DISPLAY_SAMPLE_QUESTION,
+				supports: DISPLAY_SAMPLE_SUPPORTS,
+			}
+		);
+		return;
+	}
+
 	const doc = previewEl.ownerDocument;
 	const surface = editorPreviewSurface(doc, [
 		"cuecraft-preview-editor-display",

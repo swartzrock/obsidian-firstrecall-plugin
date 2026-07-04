@@ -393,7 +393,9 @@ export default class CueCraftPlugin extends Plugin {
 				: [];
 		this.updateEditorHookLayout(
 			cm,
-			cues.length > 0 && this.settings.editorCueDisplay !== "inline-cues"
+			cues.length > 0 &&
+				this.settings.editorCueDisplay !== "inline-cues" &&
+				this.settings.editorCueDisplay !== "cornell"
 		);
 		cm.dispatch({
 			effects: setCuesEffect.of({

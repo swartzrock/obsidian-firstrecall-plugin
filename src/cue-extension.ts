@@ -143,7 +143,7 @@ class CueWidget extends WidgetType {
 			"upcoming",
 			this.options
 		);
-		if (this.display !== "inline-cues") {
+		if (!isInlineEditorDisplay(this.display)) {
 			element.classList.add("cuecraft-editor-hook-inline-fallback");
 		}
 		return element;
@@ -213,7 +213,7 @@ export function renderCueElement(
 	state: EditorHookCardState = "upcoming",
 	options: CueRenderOptions = {}
 ): HTMLElement {
-	if (display !== "inline-cues") {
+	if (!isInlineEditorDisplay(display)) {
 		return renderEditorHookElement(
 			buildEditorHookCard(cue, display, index, state, options),
 			options
@@ -456,7 +456,7 @@ export function buildCueWidgetDecorations(
 		);
 	}
 
-	if (payload.display !== "inline-cues") {
+	if (!isInlineEditorDisplay(payload.display)) {
 		return ranges.length ? Decoration.set(ranges, true) : Decoration.none;
 	}
 
@@ -479,7 +479,7 @@ export function buildCueGutterMarkers(
 	state: EditorState,
 	payload: CueEditorRenderState
 ): RangeSet<GutterMarker> {
-	if (payload.display === "inline-cues") return emptyCueGutterMarkers;
+	if (isInlineEditorDisplay(payload.display)) return emptyCueGutterMarkers;
 
 	const builder = new RangeSetBuilder<GutterMarker>();
 	const doc = state.doc;
@@ -544,6 +544,10 @@ function activeCueLine(
 		current = cue.line;
 	}
 	return current;
+}
+
+function isInlineEditorDisplay(display: EditorCueDisplay): boolean {
+	return display === "inline-cues" || display === "cornell";
 }
 
 function mapCuePayloadThroughChanges(

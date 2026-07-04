@@ -1,4 +1,5 @@
 export type EditorCueDisplay =
+	| "cornell"
 	| "inline-cues"
 	| "anchored-card-rail"
 	| "collapsed-tabs"
@@ -15,6 +16,11 @@ export interface EditorCueDisplayOption {
 export const DEFAULT_EDITOR_CUE_DISPLAY: EditorCueDisplay = "inline-cues";
 
 export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
+	{
+		id: "cornell",
+		label: "Cornell",
+		description: "Show Cornell-style cue cards beneath their headings in the editor.",
+	},
 	{
 		id: "inline-cues",
 		label: "Inline cues",

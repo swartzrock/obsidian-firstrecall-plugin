@@ -300,9 +300,13 @@ describe("Editing View thumbnail option recipes", () => {
 			).not.toBeNull();
 		}
 		expect(root.querySelectorAll(".cuecraft-preview-editor-scene")).toHaveLength(
-			EDITOR_CUE_DISPLAY_OPTIONS.length
+			EDITOR_CUE_DISPLAY_OPTIONS.length - 1
 		);
-		expect(root.querySelector(".cuecraft-preview-display-classic")).toBeNull();
+		expect(
+			root
+				.querySelector("[data-option-id='cornell']")
+				?.querySelector(".cuecraft-preview-display-classic")
+		).not.toBeNull();
 		expect(root.textContent).toContain("Inline cues");
 		expect(root.textContent).toContain("Hook minimap");
 	});
