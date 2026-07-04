@@ -213,6 +213,12 @@ export function renderCueElement(
 	state: EditorHookCardState = "upcoming",
 	options: CueRenderOptions = {}
 ): HTMLElement {
+	if (display === "cornell") {
+		const element = renderInlineCueElement(cue, options);
+		element.classList.add("cuecraft-editor-hook", "cuecraft-editor-cornell-card");
+		element.dataset.state = state;
+		return element;
+	}
 	if (!isInlineEditorDisplay(display)) {
 		return renderEditorHookElement(
 			buildEditorHookCard(cue, display, index, state, options),
@@ -547,7 +553,7 @@ function activeCueLine(
 }
 
 function isInlineEditorDisplay(display: EditorCueDisplay): boolean {
-	return display === "inline-cues" || display === "cornell";
+	return display === "inline-cues";
 }
 
 function mapCuePayloadThroughChanges(

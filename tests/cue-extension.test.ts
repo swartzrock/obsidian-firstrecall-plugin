@@ -665,30 +665,38 @@ describe("cue editor placement", () => {
 		expect(positions).toEqual([state.doc.line(1).to, state.doc.line(3).to]);
 	});
 
-	it("renders Cornell display cues as body block widgets without gutter markers", () => {
+	it("renders Cornell display cues in the left gutter", () => {
 		const state = EditorState.create({ doc: NOTE });
 		const widgets = buildCueWidgetDecorations(state, {
 			cues,
 			display: "cornell",
 		});
-		const positions: number[] = [];
+		const widgetPositions: number[] = [];
 		widgets.between(0, state.doc.length, (from) => {
-			positions.push(from);
+			widgetPositions.push(from);
 		});
-		expect(positions).toEqual([state.doc.line(1).to, state.doc.line(3).to]);
+		expect(widgetPositions).toEqual([]);
 
 		const markers = buildCueGutterMarkers(state, {
 			cues,
 			display: "cornell",
 		});
-		expect(markers.size).toBe(0);
+		const markerPositions: number[] = [];
+		markers.between(0, state.doc.length, (from) => {
+			markerPositions.push(from);
+		});
+		expect(markerPositions).toEqual([
+			state.doc.line(1).from,
+			state.doc.line(3).from,
+		]);
 	});
 
-	it("renders Cornell display with the editor cue card element", () => {
+	it("renders Cornell display with the Cornell cue card element in rail layout", () => {
 		withDocument(() => {
 			const el = renderCueElement(cues[0], "cornell");
 			expect(el.classList.contains("cuecraft-cue")).toBe(true);
-			expect(el.classList.contains("cuecraft-editor-hook")).toBe(false);
+			expect(el.classList.contains("cuecraft-editor-hook")).toBe(true);
+			expect(el.classList.contains("cuecraft-editor-cornell-card")).toBe(true);
 			expect(el.textContent).toContain("What is A?");
 		});
 	});
