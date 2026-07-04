@@ -703,6 +703,14 @@
 	box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
 }
 
+.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-scene,
+.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-scene,
+.cuecraft-preview-editor-display-threaded-margin-notes .cuecraft-preview-editor-scene {
+	width: 86%;
+	height: 74%;
+	background: var(--background-primary);
+}
+
 .cuecraft-preview-editor-scene::before {
 	position: absolute;
 	inset-block: 16%;
@@ -712,12 +720,24 @@
 	content: "";
 }
 
+.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-scene::before,
+.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-scene::before {
+	display: none;
+}
+
 .cuecraft-preview-editor-line {
 	position: absolute;
 	inset-inline-start: 27%;
 	height: 3px;
 	border-radius: 999px;
 	background: color-mix(in srgb, var(--text-muted) 32%, transparent);
+}
+
+.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line,
+.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-line {
+	inset-inline-start: 32%;
+	height: 2px;
+	background: color-mix(in srgb, var(--text-muted) 38%, transparent);
 }
 
 .cuecraft-preview-editor-line-short {
@@ -735,11 +755,29 @@
 	width: 46%;
 }
 
+.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line-short,
+.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-line-short {
+	inset-block-start: 18%;
+	width: 38%;
+}
+
+.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line-long,
+.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-line-long {
+	inset-block-start: 31%;
+	width: 50%;
+}
+
+.cuecraft-preview-editor-display-inline-cues .cuecraft-preview-editor-line-medium,
+.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-line-medium {
+	inset-block-start: 44%;
+	width: 43%;
+}
+
 .cuecraft-preview-editor-inline-cue {
 	position: absolute;
-	inset-inline: 25% 8%;
-	inset-block-end: 7%;
-	height: 33%;
+	inset-inline: 17% 17%;
+	inset-block-end: 8%;
+	height: 36%;
 	border-left: 3px solid #22c55e;
 	border-radius: 3px;
 	background: color-mix(in srgb, var(--background-secondary) 45%, var(--background-primary));
@@ -774,11 +812,11 @@
 
 .cuecraft-preview-editor-cue-question {
 	position: absolute;
-	inset: 18% 11% auto 11%;
+	inset: 22% 10% auto 10%;
 	display: -webkit-box;
 	overflow: hidden;
 	color: var(--text-normal);
-	font-size: 5.7px;
+	font-size: 6.5px;
 	font-weight: var(--font-semibold);
 	line-height: 1.08;
 	text-align: left;
@@ -793,6 +831,23 @@
 	height: 39%;
 	border-radius: 4px;
 	box-shadow: 0 2px 5px rgb(0 0 0 / 0.12);
+}
+
+.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-hook-card-first {
+	inset-block-start: 48%;
+	inset-inline-end: 9%;
+	width: 44%;
+	height: 37%;
+	z-index: 2;
+}
+
+.cuecraft-preview-editor-display-anchored-card-rail .cuecraft-preview-editor-hook-card-second {
+	inset-block-start: 60%;
+	inset-inline-end: 12%;
+	width: 40%;
+	height: 30%;
+	z-index: 1;
+	opacity: 0.76;
 }
 
 .cuecraft-preview-editor-hook-card-first {
@@ -871,6 +926,16 @@
 	background: color-mix(in srgb, var(--color-orange) 72%, var(--background-modifier-border));
 }
 
+.cuecraft-preview-editor-display-threaded-margin-notes .cuecraft-preview-editor-scene::before {
+	inset-block: 12%;
+	inset-inline-start: 10%;
+	background: color-mix(in srgb, var(--color-orange) 58%, var(--background-modifier-border));
+}
+
+.cuecraft-preview-editor-display-threaded-margin-notes .cuecraft-preview-editor-thread {
+	display: none;
+}
+
 .cuecraft-preview-editor-thread-dot {
 	position: absolute;
 	inset-inline-start: 3%;
@@ -901,8 +966,8 @@
 	position: absolute;
 	inset-block-start: 16%;
 	inset-inline-start: 17%;
-	width: 45%;
-	height: 38%;
+	width: 50%;
+	height: 43%;
 	border-left: 3px solid var(--color-orange);
 	border-radius: 4px;
 	background: var(--background-primary);
