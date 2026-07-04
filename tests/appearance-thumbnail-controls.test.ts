@@ -307,6 +307,32 @@ describe("Editing View thumbnail option recipes", () => {
 		expect(root.textContent).toContain("Hook minimap");
 	});
 
+	it("uses polished question text in key editor-truth previews", () => {
+		const root = setupDom();
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: editorCueDisplayThumbnailOptions(),
+			value: "inline-cues",
+			onSelect: vi.fn(),
+		});
+
+		for (const optionId of [
+			"inline-cues",
+			"anchored-card-rail",
+			"threaded-margin-notes",
+		]) {
+			const button = root.querySelector<HTMLElement>(
+				`[data-option-id='${optionId}']`
+			);
+			expect(
+				button?.querySelector(".cuecraft-preview-editor-cue-question")
+					?.textContent
+			).toBe(
+				"How does org-trained AI help upskill employees and improve agent reusability?"
+			);
+		}
+	});
+
 	it("renders rail card background previews without changing display placement", () => {
 		const root = setupDom();
 		renderAppearanceThumbnailGroup({

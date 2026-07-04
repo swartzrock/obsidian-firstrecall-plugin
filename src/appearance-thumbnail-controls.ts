@@ -337,7 +337,7 @@ function renderEditorCueDisplayPreview(
 			scene.appendChild(editorInlineCue(doc));
 			break;
 		case "anchored-card-rail":
-			scene.appendChild(editorHookCard(doc, "warm", "first"));
+			scene.appendChild(editorHookCard(doc, "warm", "first", true));
 			scene.appendChild(editorHookCard(doc, "cool", "second"));
 			break;
 		case "collapsed-tabs":
@@ -348,6 +348,7 @@ function renderEditorCueDisplayPreview(
 		case "threaded-margin-notes":
 			scene.appendChild(editorThread(doc));
 			scene.appendChild(editorThreadDot(doc, "cool", "first"));
+			scene.appendChild(editorThreadNote(doc));
 			scene.appendChild(editorThreadDot(doc, "warm", "second"));
 			break;
 		case "active-section-composer":
@@ -410,13 +411,15 @@ function editorScene(doc: Document): HTMLElement {
 function editorInlineCue(doc: Document): HTMLElement {
 	const cue = doc.createElement("span");
 	cue.className = "cuecraft-preview-editor-inline-cue";
+	appendEditorCueText(doc, cue);
 	return cue;
 }
 
 function editorHookCard(
 	doc: Document,
 	tone: "warm" | "cool" | "gradient" | "gradient-alt",
-	slot: "first" | "second"
+	slot: "first" | "second",
+	showText = false
 ): HTMLElement {
 	const card = doc.createElement("span");
 	card.className = [
@@ -424,6 +427,9 @@ function editorHookCard(
 		`cuecraft-preview-editor-hook-card-${tone}`,
 		`cuecraft-preview-editor-hook-card-${slot}`,
 	].join(" ");
+	if (showText) {
+		appendEditorCueText(doc, card);
+	}
 	return card;
 }
 
@@ -467,6 +473,13 @@ function editorThreadDot(
 	return dot;
 }
 
+function editorThreadNote(doc: Document): HTMLElement {
+	const note = doc.createElement("span");
+	note.className = "cuecraft-preview-editor-thread-note";
+	appendEditorCueText(doc, note);
+	return note;
+}
+
 function editorComposerCard(doc: Document): HTMLElement {
 	const card = doc.createElement("span");
 	card.className = "cuecraft-preview-editor-composer-card";
@@ -483,6 +496,14 @@ function editorMinimapPopout(doc: Document): HTMLElement {
 	const popout = doc.createElement("span");
 	popout.className = "cuecraft-preview-editor-minimap-popout";
 	return popout;
+}
+
+function appendEditorCueText(doc: Document, parent: HTMLElement): void {
+	parent.classList.add("cuecraft-preview-editor-cue-text-card");
+	const question = doc.createElement("span");
+	question.className = "cuecraft-preview-editor-cue-question";
+	question.textContent = SAMPLE_QUESTION;
+	parent.appendChild(question);
 }
 
 function assertNever(_value: never): never {
