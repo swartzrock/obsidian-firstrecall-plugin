@@ -149,6 +149,10 @@ type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
 type CueCraftSettingsSubpage =
 	| SettingsSubpage
 	| "study-areas";
+const CLI_DEFAULT_MODEL_OPTION: ModelOption = {
+	id: "",
+	label: "CLI Default",
+};
 const SVG_NS = "http://www.w3.org/2000/svg";
 const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 	"clip-rule",
@@ -1878,6 +1882,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						cueCraftProviderSettings(s, ByokProvider.CodexCli).availableModels,
 					getModelOptions: () =>
 						cueCraftProviderSettings(s, ByokProvider.CodexCli).modelOptions,
+					leadingOption: CLI_DEFAULT_MODEL_OPTION,
 					getHasFetchedModels: () =>
 						cueCraftProviderSettings(s, ByokProvider.CodexCli).hasFetchedModels,
 					getRefreshMessage: () =>
@@ -1899,6 +1904,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).availableModels,
 					getModelOptions: () =>
 						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).modelOptions,
+					leadingOption: CLI_DEFAULT_MODEL_OPTION,
 					getHasFetchedModels: () =>
 						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).hasFetchedModels,
 					getRefreshMessage: () =>
@@ -2054,6 +2060,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			modelPlaceholder: string;
 			availableModels: string[];
 			modelOptions?: ModelOption[];
+			leadingOption?: ModelOption;
 			getModel: () => string;
 			setModel: (v: string) => void;
 		}
@@ -2073,6 +2080,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			options: modelOptions,
 			placeholder: opts.modelPlaceholder,
 			emptyMessage: "No fetched models match. Press Enter or leave the field to keep a custom model ID.",
+			leadingOption: opts.leadingOption,
 			onCommit: async (value) => {
 				const previousValue = opts.getModel().trim();
 				opts.setModel(value);
@@ -2094,6 +2102,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			hasCredential: () => boolean;
 			getAvailableModels: () => string[];
 			getModelOptions?: () => ModelOption[];
+			leadingOption?: ModelOption;
 			getHasFetchedModels: () => boolean;
 			getRefreshMessage: () => string;
 		}
@@ -2108,6 +2117,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			modelPlaceholder: modelField.placeholder,
 			availableModels: opts.getAvailableModels(),
 			modelOptions: opts.getModelOptions?.(),
+			leadingOption: opts.leadingOption,
 			getModel: opts.getModel,
 			setModel: opts.setModel,
 		});

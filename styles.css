@@ -793,6 +793,12 @@
 	color: var(--text-normal);
 }
 
+.cuecraft-model-combobox-divider {
+	height: 1px;
+	margin: 4px 0;
+	background: var(--background-modifier-border);
+}
+
 .cuecraft-model-combobox-option-label {
 	width: 100%;
 	overflow: hidden;

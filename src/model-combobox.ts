@@ -66,6 +66,7 @@ export function renderModelCombobox(opts: {
 	renderToggleIcon?: (containerEl: HTMLElement) => void;
 	pinnedOptionIds?: string[];
 	suggestionsLabel?: string;
+	leadingOption?: ModelOption;
 }): void {
 	const comboboxId = `cuecraft-model-combobox-${++nextComboboxId}`;
 	const listboxId = `${comboboxId}-list`;
@@ -117,15 +118,23 @@ export function renderModelCombobox(opts: {
 			selectedModelId: committedModelId,
 			query: searchQuery,
 		});
-		if (!pinnedRank.size) return suggestions;
-		return [...suggestions].sort((a, b) => {
-			const aRank = pinnedRank.get(a.id);
-			const bRank = pinnedRank.get(b.id);
-			if (aRank != null && bRank != null) return aRank - bRank;
-			if (aRank != null) return -1;
-			if (bRank != null) return 1;
-			return 0;
-		});
+		const sortedSuggestions = !pinnedRank.size
+			? suggestions
+			: [...suggestions].sort((a, b) => {
+				const aRank = pinnedRank.get(a.id);
+				const bRank = pinnedRank.get(b.id);
+				if (aRank != null && bRank != null) return aRank - bRank;
+				if (aRank != null) return -1;
+				if (bRank != null) return 1;
+				return 0;
+			});
+		if (!opts.leadingOption) return sortedSuggestions;
+		return [
+			opts.leadingOption,
+			...sortedSuggestions.filter(
+				(option) => option.id !== opts.leadingOption?.id
+			),
+		];
 	};
 
 	const closeList = () => {
@@ -210,6 +219,17 @@ export function renderModelCombobox(opts: {
 				event.preventDefault();
 				chooseOption(option);
 			});
+			if (
+				opts.leadingOption &&
+				index === 0 &&
+				option.id === opts.leadingOption.id &&
+				visibleOptions.length > 1
+			) {
+				listEl.createDiv({
+					cls: "cuecraft-model-combobox-divider",
+					attr: { role: "separator" },
+				});
+			}
 		}
 	};
 
