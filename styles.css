@@ -1500,6 +1500,63 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	content: none;
 }
 
+.cuecraft-editor-rail-card {
+	--cuecraft-rail-collapsed-max-height: 176px;
+	--cuecraft-rail-fade-background: var(--background-secondary);
+}
+
+.cuecraft-editor-rail-card-content {
+	position: relative;
+}
+
+.cuecraft-editor-rail-card[data-overflowing="true"][data-expanded="false"]
+	.cuecraft-editor-rail-card-content {
+	max-height: var(--cuecraft-rail-collapsed-max-height);
+	overflow: hidden;
+}
+
+.cuecraft-editor-rail-card[data-overflowing="true"][data-expanded="false"]
+	.cuecraft-editor-rail-card-content::after {
+	content: "";
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	height: 2.35rem;
+	pointer-events: none;
+	background: linear-gradient(
+		to bottom,
+		transparent,
+		var(--cuecraft-rail-fade-background)
+	);
+}
+
+.cuecraft-editor-rail-card[data-expanded="true"]
+	.cuecraft-editor-rail-card-content {
+	max-height: none;
+	overflow: visible;
+}
+
+.cuecraft-editor-rail-card-toggle {
+	position: relative;
+	z-index: 3;
+	display: none;
+	margin: 0.55em 0 0;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--interactive-accent);
+	cursor: pointer;
+	font-size: var(--font-smallest);
+	font-weight: var(--font-semibold);
+	line-height: 1.2;
+}
+
+.cuecraft-editor-rail-card[data-overflowing="true"]
+	> .cuecraft-editor-rail-card-toggle:not([hidden]) {
+	display: inline-flex;
+}
+
 .cuecraft-editor-hook-inline-fallback {
 	display: none;
 }
@@ -1517,6 +1574,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-editor-hook-anchored-card-rail {
+	--cuecraft-rail-fade-background: color-mix(
+		in srgb,
+		var(--color-yellow) 42%,
+		var(--background-primary)
+	);
 	position: relative;
 	max-width: min(22rem, 100%);
 	margin: 0.45em 0 0.75em;
@@ -1539,6 +1601,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-editor-hook-anchored-card-rail[data-tone="cool"] {
+	--cuecraft-rail-fade-background: color-mix(
+		in srgb,
+		var(--color-cyan) 34%,
+		var(--background-primary)
+	);
 	background:
 		radial-gradient(
 			circle at 92% 84%,
@@ -1553,6 +1620,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"] {
+	--cuecraft-rail-fade-background: var(--cuecraft-hook-gradient-end);
 	border: 1px solid var(--cuecraft-hook-gradient-border);
 	background: linear-gradient(
 		135deg,
@@ -1762,6 +1830,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-editor-hook-threaded-margin-notes {
 	--cuecraft-thread-color: var(--interactive-accent);
+	--cuecraft-rail-fade-background: color-mix(
+		in srgb,
+		var(--background-secondary) 88%,
+		transparent
+	);
 	position: relative;
 	max-width: min(20rem, 100%);
 	margin: 0.25em 0 0.85em;
