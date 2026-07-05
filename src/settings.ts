@@ -43,6 +43,8 @@ import {
 	cueAccentThumbnailOptions,
 	cueColumnWidthThumbnailOptions,
 	cueFontSizeThumbnailOptions,
+	editorCueDisplayThumbnailOptions,
+	editorHookCardStyleThumbnailOptions,
 	renderAppearanceThumbnailGroup,
 	type AppearanceThumbnailGroup,
 	type AppearanceThumbnailOption,
@@ -54,16 +56,18 @@ import {
 } from "./reading-cues";
 import {
 	DEFAULT_EDITOR_CUE_DISPLAY,
-	EDITOR_CUE_DISPLAY_OPTIONS,
 	editorCueDisplayOption,
 	type EditorCueDisplay,
 } from "./editor-cue-display";
 import {
 	DEFAULT_EDITOR_HOOK_CARD_STYLE,
-	EDITOR_HOOK_CARD_STYLE_OPTIONS,
 	editorHookCardStyleOption,
 	type EditorHookCardStyle,
 } from "./editor-hook-card-style";
+import {
+	cornellViewSettingsSummary,
+	editingViewSettingsSummary,
+} from "./settings-summaries";
 import {
 	ByokProvider,
 	byokProviderDefinition,
@@ -145,7 +149,12 @@ import {
  */
 export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
-type SettingsSubpage = "home" | "ai-model" | "cue-generation" | "appearance";
+type SettingsSubpage =
+	| "home"
+	| "ai-model"
+	| "cue-generation"
+	| "cornell-view"
+	| "editing-view";
 type CueCraftSettingsSubpage =
 	| SettingsSubpage
 	| "study-areas";
@@ -286,13 +295,21 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				);
 				this.renderCueGenerationSection(containerEl, false);
 				break;
-			case "appearance":
+			case "cornell-view":
 				this.renderSubpageHeader(
 					containerEl,
-					"Appearance",
-					"Cornell view styling, layout, cue accents, and visual density."
+					"Cornell View",
+					"Styling, layout, cue accents, and visual density for the Cornell pane."
 				);
-				this.renderAppearanceSection(containerEl, false);
+				this.renderCornellViewSection(containerEl, false);
+				break;
+			case "editing-view":
+				this.renderSubpageHeader(
+					containerEl,
+					"Editing View",
+					"Tune the editor cue rail as CueCraft's likely main review surface."
+				);
+				this.renderEditingViewSection(containerEl, false);
 				break;
 			case "study-areas":
 				this.renderSubpageHeader(
@@ -341,10 +358,16 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			onOpen: () => this.openSubpage("cue-generation"),
 		});
 		this.renderSettingsNavCard(navEl, {
-			title: "Appearance",
-			description: "Adjust Cornell view styling, sizing, accents, and compact display options.",
-			summary: this.appearanceSummary(),
-			onOpen: () => this.openSubpage("appearance"),
+			title: "Cornell View",
+			description: "Adjust Cornell pane styling, sizing, accents, and compact display options.",
+			summary: this.cornellViewSummary(),
+			onOpen: () => this.openSubpage("cornell-view"),
+		});
+		this.renderSettingsNavCard(navEl, {
+			title: "Editing View",
+			description: "Tune the editor cue rail and card details for the main study surface.",
+			summary: this.editingViewSummary(),
+			onOpen: () => this.openSubpage("editing-view"),
 		});
 
 		this.renderNoteFormatSection(containerEl, true);
@@ -456,21 +479,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		)} density · ${this.plugin.settings.questionStyle} questions`;
 	}
 
-	private appearanceSummary(): string {
-		const editorDisplay = editorCueDisplayOption(
-			this.plugin.settings.editorCueDisplay
-		).label;
-		const hookCardStyle = editorHookCardStyleOption(
-			this.plugin.settings.editorHookCardStyle
-		).label;
-		const mode = cornellDisplayModeOption(
-			this.plugin.settings.cornellDisplayMode
-		).label;
-		const style =
-			CORNELL_STYLES.find(
-				(item) => item.id === this.plugin.settings.cornellStyle
-			)?.label ?? "Custom";
-		return `${editorDisplay} · ${hookCardStyle} · ${mode} · ${style} · ${this.plugin.settings.cueColumnWidth} width · ${this.plugin.settings.cueFontSize} text`;
+	private cornellViewSummary(): string {
+		return cornellViewSettingsSummary(this.plugin.settings);
+	}
+
+	private editingViewSummary(): string {
+		return editingViewSettingsSummary(this.plugin.settings);
 	}
 
 	private studyAreasSummary(): string {
@@ -1207,13 +1221,90 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showNoteBrief = value;
 						await this.plugin.saveSettings();
+						if (value) this.plugin.noteCueSettingsChanged();
 						this.refreshReviewSurfaces();
 					})
 			);
 
+	}
+
+	private refreshReviewSurfaces(): void {
+		this.plugin.refreshEditorCues();
+		this.plugin.refreshReadingModeSurface();
+		this.plugin.refreshCornellViews();
+	}
+
+	// ── Editing View ──────────────────────────────────────────────────────
+	private renderEditingViewSection(
+		containerEl: HTMLElement,
+		showHeading: boolean
+	): void {
+		if (showHeading) {
+			new Setting(containerEl).setName("Editing View").setHeading();
+		}
+
+		const editorDisplayDesc = (): string =>
+			editorCueDisplayOption(this.plugin.settings.editorCueDisplay).description;
+		this.renderEditingViewThumbnailSetting<EditorCueDisplay>(containerEl, {
+			name: "Editor cue display",
+			description: editorDisplayDesc,
+			options: editorCueDisplayThumbnailOptions(),
+			value: () => this.plugin.settings.editorCueDisplay,
+			setValue: (value) => {
+				this.plugin.settings.editorCueDisplay = value;
+			},
+			afterSave: () => this.display(),
+			className: "cuecraft-thumbnail-group-editor-display",
+		});
+
+		if (this.plugin.settings.editorCueDisplay === "anchored-card-rail") {
+			const railCardStyleDesc = (): string =>
+				editorHookCardStyleOption(this.plugin.settings.editorHookCardStyle)
+					.description;
+			this.renderEditingViewThumbnailSetting<EditorHookCardStyle>(containerEl, {
+				name: "Rail card background",
+				description: railCardStyleDesc,
+				options: editorHookCardStyleThumbnailOptions(),
+				value: () => this.plugin.settings.editorHookCardStyle,
+				setValue: (value) => {
+					this.plugin.settings.editorHookCardStyle = value;
+				},
+				className: "cuecraft-thumbnail-group-editor-card-style",
+			});
+		}
+
+		const editorWidthDesc = (): string =>
+			CUE_COLUMN_WIDTHS.find(
+				(w) => w.id === this.plugin.settings.cueColumnWidth
+			)?.description ?? "Width of editor cue cards and inline cue blocks.";
+		this.renderEditingViewThumbnailSetting<CueColumnWidth>(containerEl, {
+			name: "Cue column width",
+			description: editorWidthDesc,
+			options: cueColumnWidthThumbnailOptions(),
+			value: () => this.plugin.settings.cueColumnWidth,
+			setValue: (value) => {
+				this.plugin.settings.cueColumnWidth = value;
+			},
+			className: "cuecraft-thumbnail-group-cue-width",
+		});
+
+		const editorFontDesc = (): string =>
+			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
+				?.description ?? "Font size of editor cue text.";
+		this.renderEditingViewThumbnailSetting<CueFontSize>(containerEl, {
+			name: "Cue font size",
+			description: editorFontDesc,
+			options: cueFontSizeThumbnailOptions(),
+			value: () => this.plugin.settings.cueFontSize,
+			setValue: (value) => {
+				this.plugin.settings.cueFontSize = value;
+			},
+			className: "cuecraft-thumbnail-group-cue-font",
+		});
+
 		new Setting(containerEl)
-			.setName("Show rail questions")
-			.setDesc("Show cue questions inside left-side editor rail cards.")
+			.setName("Show cue questions")
+			.setDesc("Show cue questions inside Editing View cue displays.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.showRailQuestions)
@@ -1225,8 +1316,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 
 		new Setting(containerEl)
-			.setName("Show rail support terms")
-			.setDesc("Show generated support terms inside left-side editor rail cards.")
+			.setName("Show support terms")
+			.setDesc("Show generated support terms inside Editing View cue displays.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.showRailSupportTerms)
@@ -1236,80 +1327,44 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						this.plugin.refreshEditorCues();
 					})
 			);
-
-		new Setting(containerEl)
-			.setName("Fold cue column on mobile")
-			.setDesc("Collapse the left cue column into a tap-to-expand panel on narrow screens.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.foldCueColumnOnMobile)
-					.onChange(async (value) => {
-						this.plugin.settings.foldCueColumnOnMobile = value;
-						await this.plugin.saveSettings();
-					})
-			);
 	}
 
-	private refreshReviewSurfaces(): void {
+	private async saveEditingViewChange(afterSave?: () => void): Promise<void> {
+		await this.plugin.saveSettings();
 		this.plugin.refreshEditorCues();
-		this.plugin.refreshReadingModeSurface();
-		this.plugin.refreshCornellViews();
+		afterSave?.();
 	}
 
-	// ── Appearance ────────────────────────────────────────────────────────
-	private renderAppearanceSection(
+	private renderEditingViewThumbnailSetting<T extends string>(
+		containerEl: HTMLElement,
+		config: {
+			name: string;
+			description: () => string;
+			options: readonly AppearanceThumbnailOption<T>[];
+			value: () => T;
+			setValue: (value: T) => void;
+			afterSave?: () => void;
+			className?: string;
+		}
+	): void {
+		this.renderCueThumbnailSetting(containerEl, config, (afterSave) =>
+			this.saveEditingViewChange(afterSave)
+		);
+	}
+
+	// ── Cornell View ──────────────────────────────────────────────────────
+	private renderCornellViewSection(
 		containerEl: HTMLElement,
 		showHeading: boolean
 	): void {
 		if (showHeading) {
-			new Setting(containerEl).setName("Appearance").setHeading();
+			new Setting(containerEl).setName("Cornell View").setHeading();
 		}
-
-		const editorDisplaySetting = new Setting(containerEl)
-			.setName("Editor cue display")
-			.addDropdown((dd) => {
-				for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
-					dd.addOption(option.id, option.label);
-				}
-				dd.setValue(this.plugin.settings.editorCueDisplay).onChange(
-					async (value) => {
-						this.plugin.settings.editorCueDisplay =
-							value as EditorCueDisplay;
-						await this.plugin.saveSettings();
-						this.plugin.refreshEditorCues();
-						editorDisplaySetting.setDesc(editorDisplayDesc());
-					}
-				);
-			});
-		const editorDisplayDesc = (): string =>
-			editorCueDisplayOption(this.plugin.settings.editorCueDisplay).description;
-		editorDisplaySetting.setDesc(editorDisplayDesc());
-
-		const railCardStyleSetting = new Setting(containerEl)
-			.setName("Rail card background")
-			.addDropdown((dd) => {
-				for (const option of EDITOR_HOOK_CARD_STYLE_OPTIONS) {
-					dd.addOption(option.id, option.label);
-				}
-				dd.setValue(this.plugin.settings.editorHookCardStyle).onChange(
-					async (value) => {
-						this.plugin.settings.editorHookCardStyle =
-							value as EditorHookCardStyle;
-						await this.plugin.saveSettings();
-						this.plugin.refreshEditorCues();
-						railCardStyleSetting.setDesc(railCardStyleDesc());
-					}
-				);
-			});
-		const railCardStyleDesc = (): string =>
-			editorHookCardStyleOption(this.plugin.settings.editorHookCardStyle)
-				.description;
-		railCardStyleSetting.setDesc(railCardStyleDesc());
 
 		const displayDesc = (): string =>
 			cornellDisplayModeOption(this.plugin.settings.cornellDisplayMode)
 				.description;
-		this.renderAppearanceThumbnailSetting<CornellDisplayMode>(containerEl, {
+		this.renderCornellViewThumbnailSetting<CornellDisplayMode>(containerEl, {
 			name: "Cornell display mode",
 			description: displayDesc,
 			options: cornellDisplayModeThumbnailOptions(),
@@ -1323,7 +1378,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const styleDesc = (): string =>
 			CORNELL_STYLES.find((s) => s.id === this.plugin.settings.cornellStyle)
 				?.description ?? "Visual preset for the Cornell view.";
-		this.renderAppearanceThumbnailSetting<CornellStyle>(containerEl, {
+		this.renderCornellViewThumbnailSetting<CornellStyle>(containerEl, {
 			name: "Cornell view style",
 			description: styleDesc,
 			options: cornellStyleThumbnailOptions(),
@@ -1338,7 +1393,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			CUE_COLUMN_WIDTHS.find(
 				(w) => w.id === this.plugin.settings.cueColumnWidth
 			)?.description ?? "Width of the Cornell cue rail.";
-		this.renderAppearanceThumbnailSetting<CueColumnWidth>(containerEl, {
+		this.renderCornellViewThumbnailSetting<CueColumnWidth>(containerEl, {
 			name: "Cue column width",
 			description: widthDesc,
 			options: cueColumnWidthThumbnailOptions(),
@@ -1352,7 +1407,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const fontDesc = (): string =>
 			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
 				?.description ?? "Font size of the Cornell cue text.";
-		this.renderAppearanceThumbnailSetting<CueFontSize>(containerEl, {
+		this.renderCornellViewThumbnailSetting<CueFontSize>(containerEl, {
 			name: "Cue font size",
 			description: fontDesc,
 			options: cueFontSizeThumbnailOptions(),
@@ -1363,7 +1418,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			className: "cuecraft-thumbnail-group-cue-font",
 		});
 
-		this.renderAppearanceThumbnailSetting<CueAccent>(containerEl, {
+		this.renderCornellViewThumbnailSetting<CueAccent>(containerEl, {
 			name: "Cue accent color",
 			description: () => "Accent used for the cue rail and support text.",
 			options: cueAccentThumbnailOptions(),
@@ -1382,7 +1437,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.showCueBorder)
 					.onChange(async (value) => {
 						this.plugin.settings.showCueBorder = value;
-						await this.saveAppearanceChange();
+						await this.saveCornellViewChange();
 					})
 			);
 
@@ -1394,18 +1449,30 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.compactChips)
 					.onChange(async (value) => {
 						this.plugin.settings.compactChips = value;
-						await this.saveAppearanceChange();
+						await this.saveCornellViewChange();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Fold cue column on mobile")
+			.setDesc("Collapse the left cue column into a tap-to-expand panel on narrow screens.")
+			.addToggle((tg) =>
+				tg
+					.setValue(this.plugin.settings.foldCueColumnOnMobile)
+					.onChange(async (value) => {
+						this.plugin.settings.foldCueColumnOnMobile = value;
+						await this.saveCornellViewChange();
 					})
 			);
 	}
 
-	private async saveAppearanceChange(afterSave?: () => void): Promise<void> {
+	private async saveCornellViewChange(afterSave?: () => void): Promise<void> {
 		await this.plugin.saveSettings();
 		this.plugin.refreshCornellViews();
 		afterSave?.();
 	}
 
-	private renderAppearanceThumbnailSetting<T extends string>(
+	private renderCornellViewThumbnailSetting<T extends string>(
 		containerEl: HTMLElement,
 		config: {
 			name: string;
@@ -1413,8 +1480,27 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			options: readonly AppearanceThumbnailOption<T>[];
 			value: () => T;
 			setValue: (value: T) => void;
+			afterSave?: () => void;
 			className?: string;
 		}
+	): void {
+		this.renderCueThumbnailSetting(containerEl, config, (afterSave) =>
+			this.saveCornellViewChange(afterSave)
+		);
+	}
+
+	private renderCueThumbnailSetting<T extends string>(
+		containerEl: HTMLElement,
+		config: {
+			name: string;
+			description: () => string;
+			options: readonly AppearanceThumbnailOption<T>[];
+			value: () => T;
+			setValue: (value: T) => void;
+			afterSave?: () => void;
+			className?: string;
+		},
+		saveChange: (afterSave?: () => void) => Promise<void>
 	): void {
 		const setting = new Setting(containerEl)
 			.setName(config.name)
@@ -1430,9 +1516,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				className: config.className,
 				onSelect: async (value) => {
 					config.setValue(value);
-					await this.saveAppearanceChange(() => {
+					await saveChange(() => {
 						setting.setDesc(config.description());
 						group.setValue(config.value());
+						config.afterSave?.();
 					});
 				},
 			});

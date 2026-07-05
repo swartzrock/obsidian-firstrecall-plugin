@@ -14,7 +14,7 @@ Use a note with at least five eligible sections:
 
 ## Display Modes
 
-Check these settings under Appearance -> Editor cue display:
+Check these settings under Editing View -> Editor cue display:
 
 - Inline cues
 - Anchored card rail

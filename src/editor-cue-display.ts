@@ -1,4 +1,7 @@
 export type EditorCueDisplay =
+	| "cornell"
+	| "cornell-exam-prep"
+	| "cornell-minimal"
 	| "inline-cues"
 	| "anchored-card-rail"
 	| "collapsed-tabs"
@@ -15,6 +18,21 @@ export interface EditorCueDisplayOption {
 export const DEFAULT_EDITOR_CUE_DISPLAY: EditorCueDisplay = "inline-cues";
 
 export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
+	{
+		id: "cornell",
+		label: "Cornell",
+		description: "Show Cornell-style cue cards beside their editor sections.",
+	},
+	{
+		id: "cornell-exam-prep",
+		label: "Cornell Exam Prep",
+		description: "Show boxed Cornell cue cards tuned for review.",
+	},
+	{
+		id: "cornell-minimal",
+		label: "Cornell Minimal",
+		description: "Show quiet Cornell cues that stay out of the way.",
+	},
 	{
 		id: "inline-cues",
 		label: "Inline cues",

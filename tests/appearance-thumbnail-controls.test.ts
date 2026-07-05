@@ -4,12 +4,16 @@ import { CUE_ACCENTS } from "../src/cornell-accent";
 import { CORNELL_DISPLAY_MODES } from "../src/cornell-display";
 import { CUE_COLUMN_WIDTHS, CUE_FONT_SIZES } from "../src/cornell-layout";
 import { CORNELL_STYLES } from "../src/cornell-style";
+import { EDITOR_CUE_DISPLAY_OPTIONS } from "../src/editor-cue-display";
+import { EDITOR_HOOK_CARD_STYLE_OPTIONS } from "../src/editor-hook-card-style";
 import {
 	cornellDisplayModeThumbnailOptions,
 	cornellStyleThumbnailOptions,
 	cueAccentThumbnailOptions,
 	cueColumnWidthThumbnailOptions,
 	cueFontSizeThumbnailOptions,
+	editorCueDisplayThumbnailOptions,
+	editorHookCardStyleThumbnailOptions,
 	renderAppearanceThumbnailGroup,
 	type AppearanceThumbnailOption,
 } from "../src/appearance-thumbnail-controls";
@@ -161,8 +165,8 @@ describe("renderAppearanceThumbnailGroup", () => {
 	});
 });
 
-describe("Appearance thumbnail option recipes", () => {
-	it("covers every existing Appearance option with a preview recipe", () => {
+describe("Cornell View thumbnail option recipes", () => {
+	it("covers every existing Cornell View option with a preview recipe", () => {
 		expect(cornellDisplayModeThumbnailOptions().map((option) => option.id)).toEqual(
 			CORNELL_DISPLAY_MODES.map((option) => option.id)
 		);
@@ -268,5 +272,122 @@ describe("Appearance thumbnail option recipes", () => {
 			expect(button?.textContent).toContain("organizations");
 			expect(button?.textContent).toContain("workflows");
 		}
+	});
+});
+
+describe("Editing View thumbnail option recipes", () => {
+	const displayedEditorCueDisplayOptions = EDITOR_CUE_DISPLAY_OPTIONS.filter(
+		(option) =>
+			!["collapsed-tabs", "active-section-composer", "hook-minimap"].includes(
+				option.id
+			)
+	);
+
+	it("covers every currently offered Editing View option with a preview recipe", () => {
+		expect(editorCueDisplayThumbnailOptions().map((option) => option.id)).toEqual(
+			displayedEditorCueDisplayOptions.map((option) => option.id)
+		);
+		expect(
+			editorHookCardStyleThumbnailOptions().map((option) => option.id)
+		).toEqual(EDITOR_HOOK_CARD_STYLE_OPTIONS.map((option) => option.id));
+	});
+
+	it("renders editor-truth display previews with stable placement classes", () => {
+		const root = setupDom();
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: editorCueDisplayThumbnailOptions(),
+			value: "inline-cues",
+			onSelect: vi.fn(),
+		});
+
+		for (const option of displayedEditorCueDisplayOptions) {
+			expect(
+				root.querySelector(`.cuecraft-preview-editor-display-${option.id}`)
+			).not.toBeNull();
+		}
+		for (const optionId of [
+			"collapsed-tabs",
+			"active-section-composer",
+			"hook-minimap",
+		]) {
+			expect(
+				root.querySelector(`.cuecraft-preview-editor-display-${optionId}`)
+			).toBeNull();
+		}
+		const cornellStyleOptionCount = displayedEditorCueDisplayOptions.filter(
+			(option) => option.id.startsWith("cornell")
+		).length;
+		expect(root.querySelectorAll(".cuecraft-preview-editor-scene")).toHaveLength(
+			displayedEditorCueDisplayOptions.length - cornellStyleOptionCount
+		);
+		expect(
+			root
+				.querySelector("[data-option-id='cornell']")
+				?.querySelector(".cuecraft-preview-display-classic")
+		).not.toBeNull();
+		expect(
+			root
+				.querySelector("[data-option-id='cornell-exam-prep']")
+				?.querySelector(".cuecraft-preview-style-exam-prep")
+		).not.toBeNull();
+		expect(
+			root
+				.querySelector("[data-option-id='cornell-minimal']")
+				?.querySelector(".cuecraft-preview-style-minimal")
+		).not.toBeNull();
+		expect(root.textContent).toContain("Cornell Exam Prep");
+		expect(root.textContent).toContain("Cornell Minimal");
+		expect(root.textContent).toContain("Inline cues");
+		expect(root.textContent).not.toContain("Collapsed color tabs");
+		expect(root.textContent).not.toContain("Active-section composer");
+		expect(root.textContent).not.toContain("Hook minimap");
+	});
+
+	it("uses polished question text in key editor-truth previews", () => {
+		const root = setupDom();
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: editorCueDisplayThumbnailOptions(),
+			value: "inline-cues",
+			onSelect: vi.fn(),
+		});
+
+		for (const optionId of [
+			"inline-cues",
+			"anchored-card-rail",
+			"threaded-margin-notes",
+		]) {
+			const button = root.querySelector<HTMLElement>(
+				`[data-option-id='${optionId}']`
+			);
+			expect(
+				button?.querySelector(".cuecraft-preview-editor-cue-question")
+					?.textContent
+			).toBe(
+				"How does org-trained AI help upskill employees and improve agent reusability?"
+			);
+		}
+	});
+
+	it("renders rail card background previews without changing display placement", () => {
+		const root = setupDom();
+		renderAppearanceThumbnailGroup({
+			parentEl: root,
+			options: editorHookCardStyleThumbnailOptions(),
+			value: "classic",
+			onSelect: vi.fn(),
+		});
+
+		for (const option of EDITOR_HOOK_CARD_STYLE_OPTIONS) {
+			expect(
+				root.querySelector(`.cuecraft-preview-editor-card-style-${option.id}`)
+			).not.toBeNull();
+		}
+		expect(
+			root.querySelectorAll(".cuecraft-preview-editor-card-style")
+		).toHaveLength(EDITOR_HOOK_CARD_STYLE_OPTIONS.length);
+		expect(root.textContent).toContain("Classic warm/cool");
+		expect(root.textContent).toContain("Soft gradients");
 	});
 });

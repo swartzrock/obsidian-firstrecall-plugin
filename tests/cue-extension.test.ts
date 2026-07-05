@@ -10,6 +10,7 @@ import {
 	renderCueElement,
 	setCuesEffect,
 } from "../src/cue-extension";
+import { EDITOR_CUE_DISPLAY_OPTIONS } from "../src/editor-cue-display";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
@@ -213,7 +214,9 @@ describe("renderCueElement", () => {
 				},
 				"inline-cues"
 			);
-			expect(el.className).toBe("cuecraft-cue");
+			expect(el.classList.contains("cuecraft-cue")).toBe(true);
+			expect(el.classList.contains("cuecraft-cuewidth-medium")).toBe(true);
+			expect(el.classList.contains("cuecraft-cuefont-medium")).toBe(true);
 			expect(el.dataset.confidence).toBe("high");
 			expect(el.querySelector(".cuecraft-cue-question")?.textContent).toBe(
 				"What is an agent?"
@@ -267,7 +270,7 @@ describe("renderCueElement", () => {
 		});
 	});
 
-	it("hides rail questions and support terms when display settings are off", () => {
+	it("hides hook card questions and support terms when display settings are off", () => {
 		withDocument(() => {
 			const el = renderCueElement(
 				{
@@ -301,6 +304,47 @@ describe("renderCueElement", () => {
 			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
 			expect(
 				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+		});
+	});
+
+	it("hides inline and Cornell cue questions and support terms when display settings are off", () => {
+		withDocument(() => {
+			const cue = {
+				line: 3,
+				heading: "Terms",
+				question: "How do agents differ from chatbots?",
+				keywords: ["agents", "tools"],
+				confidence: "medium" as const,
+				sectionLens: SECTION_LENS,
+				error: null,
+			};
+			const options = {
+				showQuestion: false,
+				showSupportTerms: false,
+			};
+			const inline = renderCueElement(cue, "inline-cues", 0, "upcoming", options);
+			expect(inline.dataset.questionVisible).toBe("false");
+			expect(inline.dataset.supportTermsVisible).toBe("false");
+			expect(inline.querySelector(".cuecraft-cue-question")).toBeNull();
+			expect(inline.querySelector(".cuecraft-cue-keywords")).toBeNull();
+			expect(
+				inline.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+
+			const cornell = renderCueElement(
+				cue,
+				"cornell-exam-prep",
+				0,
+				"upcoming",
+				options
+			);
+			expect(cornell.dataset.questionVisible).toBe("false");
+			expect(cornell.dataset.supportTermsVisible).toBe("false");
+			expect(cornell.querySelector(".cuecraft-cornell-q")).toBeNull();
+			expect(cornell.querySelector(".cuecraft-cornell-kw")).toBeNull();
+			expect(
+				cornell.querySelector(".cuecraft-section-lens-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
 		});
 	});
@@ -660,5 +704,85 @@ describe("cue editor placement", () => {
 			positions.push(from);
 		});
 		expect(positions).toEqual([state.doc.line(1).to, state.doc.line(3).to]);
+	});
+
+	it("renders Cornell display cues in the left gutter", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const widgets = buildCueWidgetDecorations(state, {
+			cues,
+			display: "cornell",
+		});
+		const widgetPositions: number[] = [];
+		widgets.between(0, state.doc.length, (from) => {
+			widgetPositions.push(from);
+		});
+		expect(widgetPositions).toEqual([]);
+
+		const markers = buildCueGutterMarkers(state, {
+			cues,
+			display: "cornell",
+		});
+		const markerPositions: number[] = [];
+		markers.between(0, state.doc.length, (from) => {
+			markerPositions.push(from);
+		});
+		expect(markerPositions).toEqual([
+			state.doc.line(1).from,
+			state.doc.line(3).from,
+		]);
+	});
+
+	it("renders Cornell display with the Cornell cue card element in rail layout", () => {
+		withDocument(() => {
+			const el = renderCueElement(cues[0], "cornell");
+			expect(el.classList.contains("cuecraft-editor-hook")).toBe(true);
+			expect(el.classList.contains("cuecraft-editor-cornell-card")).toBe(true);
+			expect(el.classList.contains("cuecraft-style-classic")).toBe(true);
+			expect(el.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
+			expect(el.querySelector(".cuecraft-cornell-q")?.textContent).toBe(
+				"What is A?"
+			);
+			expect(el.querySelector(".cuecraft-cornell-support-text")?.textContent).toBe(
+				"alpha"
+			);
+			expect(
+				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+		});
+	});
+
+	it("renders Cornell Exam Prep and Minimal displays with Cornell style classes", () => {
+		withDocument(() => {
+			const examPrep = renderCueElement(cues[0], "cornell-exam-prep");
+			expect(examPrep.classList.contains("cuecraft-editor-hook")).toBe(true);
+			expect(examPrep.classList.contains("cuecraft-style-exam-prep")).toBe(true);
+			expect(examPrep.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
+			expect(examPrep.textContent).toContain("What is A?");
+			expect(
+				examPrep.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+
+			const minimal = renderCueElement(cues[0], "cornell-minimal");
+			expect(minimal.classList.contains("cuecraft-editor-hook")).toBe(true);
+			expect(minimal.classList.contains("cuecraft-style-minimal")).toBe(true);
+			expect(minimal.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
+			expect(minimal.textContent).toContain("What is A?");
+			expect(
+				minimal.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+		});
+	});
+
+	it("applies cue width and font settings to every editor cue display", () => {
+		withDocument(() => {
+			for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
+				const element = renderCueElement(cues[0], option.id, 0, "current", {
+					cueColumnWidth: "wide",
+					cueFontSize: "large",
+				});
+				expect(element.classList.contains("cuecraft-cuewidth-wide")).toBe(true);
+				expect(element.classList.contains("cuecraft-cuefont-large")).toBe(true);
+			}
+		});
 	});
 });

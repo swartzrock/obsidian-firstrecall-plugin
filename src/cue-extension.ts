@@ -23,6 +23,14 @@ import {
 } from "./editor-hook-rail";
 import type { EditorCueDisplay } from "./editor-cue-display";
 import {
+	cueColumnWidthClass,
+	cueFontSizeClass,
+	type CueColumnWidth,
+	type CueFontSize,
+} from "./cornell-layout";
+import { buildCornellSupportPresentation } from "./cornell";
+import { cornellStyleClass, type CornellStyle } from "./cornell-style";
+import {
 	DEFAULT_EDITOR_HOOK_CARD_STYLE,
 	type EditorHookCardStyle,
 } from "./editor-hook-card-style";
@@ -56,6 +64,13 @@ export interface CueEditorRenderState {
 	showRailQuestions?: boolean;
 	showRailSupportTerms?: boolean;
 	editorHookCardStyle?: EditorHookCardStyle;
+	cueColumnWidth?: CueColumnWidth;
+	cueFontSize?: CueFontSize;
+}
+
+interface CueRenderOptions extends EditorHookCardOptions {
+	cueColumnWidth?: CueColumnWidth;
+	cueFontSize?: CueFontSize;
 }
 
 /**
@@ -103,7 +118,7 @@ class CueWidget extends WidgetType {
 		private readonly cue: CueLineData,
 		private readonly display: EditorCueDisplay,
 		private readonly index: number,
-		private readonly options: EditorHookCardOptions = {}
+		private readonly options: CueRenderOptions = {}
 	) {
 		super();
 	}
@@ -130,7 +145,7 @@ class CueWidget extends WidgetType {
 			"upcoming",
 			this.options
 		);
-		if (this.display !== "inline-cues") {
+		if (!isInlineEditorDisplay(this.display)) {
 			element.classList.add("cuecraft-editor-hook-inline-fallback");
 		}
 		return element;
@@ -161,7 +176,7 @@ class CueGutterMarker extends GutterMarker {
 		private readonly display: EditorCueDisplay,
 		private readonly index: number,
 		private readonly state: EditorHookCardState = "upcoming",
-		private readonly options: EditorHookCardOptions = {}
+		private readonly options: CueRenderOptions = {}
 	) {
 		super();
 	}
@@ -198,19 +213,104 @@ export function renderCueElement(
 	display: EditorCueDisplay,
 	index = 0,
 	state: EditorHookCardState = "upcoming",
-	options: EditorHookCardOptions = {}
+	options: CueRenderOptions = {}
 ): HTMLElement {
-	if (display !== "inline-cues") {
+	const cornellStyle = cornellEditorDisplayStyle(display);
+	if (cornellStyle) {
+		return renderCornellCueElement(cue, cornellStyle, state, options);
+	}
+	if (!isInlineEditorDisplay(display)) {
 		return renderEditorHookElement(
-			buildEditorHookCard(cue, display, index, state, options)
+			buildEditorHookCard(cue, display, index, state, options),
+			options
 		);
 	}
-	return renderInlineCueElement(cue);
+	return renderInlineCueElement(cue, options);
 }
 
-function renderInlineCueElement(cue: CueLineData): HTMLElement {
+function renderCornellCueElement(
+	cue: CueLineData,
+	style: CornellStyle,
+	state: EditorHookCardState,
+	options: CueRenderOptions = {}
+): HTMLElement {
+	const doc = cueDocument();
+	const root = doc.createElement("div");
+	root.className = [
+		"cuecraft-editor-hook",
+		"cuecraft-editor-cornell-card",
+		`cuecraft-editor-cornell-card-${style}`,
+		"cuecraft-cornell",
+		cornellStyleClass(style),
+	].join(" ");
+	root.dataset.state = state;
+	root.dataset.questionVisible = String(options.showQuestion ?? true);
+	root.dataset.supportTermsVisible = String(options.showSupportTerms ?? true);
+	applyCueLayoutClasses(root, options);
+
+	const card = doc.createElement("div");
+	card.className = "cuecraft-cornell-cue";
+	root.appendChild(card);
+
+	if (cue.error) {
+		card.classList.add("cuecraft-cornell-cue-error");
+		card.title = cue.error;
+		const q = doc.createElement("div");
+		q.className = "cuecraft-cornell-q";
+		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
+		card.appendChild(q);
+		return root;
+	}
+
+	if (cue.confidence) {
+		card.dataset.confidence = cue.confidence;
+	}
+
+	if (options.showQuestion ?? true) {
+		const q = doc.createElement("div");
+		q.className = "cuecraft-cornell-q";
+		q.textContent = cue.question;
+		card.appendChild(q);
+	}
+
+	appendSectionLens(card, cue.sectionLens);
+
+	const supports = buildCornellSupportPresentation({
+		keywords: cue.keywords,
+	});
+	if ((options.showSupportTerms ?? true) && supports.terms.length) {
+		const kw = doc.createElement("div");
+		kw.className = "cuecraft-cornell-kw";
+		const supportText = doc.createElement("span");
+		supportText.className = "cuecraft-cornell-support-text";
+		kw.appendChild(supportText);
+		for (const [index, term] of supports.terms.entries()) {
+			const item = doc.createElement("span");
+			item.className = "cuecraft-cornell-support-term";
+			item.textContent = term;
+			supportText.appendChild(item);
+			if (index < supports.terms.length - 1) {
+				const separator = doc.createElement("span");
+				separator.className = "cuecraft-cornell-support-separator";
+				separator.textContent = "\u00b7";
+				supportText.appendChild(separator);
+			}
+		}
+		card.appendChild(kw);
+	}
+
+	return root;
+}
+
+function renderInlineCueElement(
+	cue: CueLineData,
+	options: CueRenderOptions = {}
+): HTMLElement {
 	const root = cueDocument().createElement("div");
 	root.className = "cuecraft-cue";
+	root.dataset.questionVisible = String(options.showQuestion ?? true);
+	root.dataset.supportTermsVisible = String(options.showSupportTerms ?? true);
+	applyCueLayoutClasses(root, options);
 
 	if (cue.error) {
 		root.classList.add("cuecraft-cue-error");
@@ -226,14 +326,16 @@ function renderInlineCueElement(cue: CueLineData): HTMLElement {
 		root.dataset.confidence = cue.confidence;
 	}
 
-	const q = cueDocument().createElement("div");
-	q.className = "cuecraft-cue-question";
-	q.textContent = cue.question;
-	root.appendChild(q);
+	if (options.showQuestion ?? true) {
+		const q = cueDocument().createElement("div");
+		q.className = "cuecraft-cue-question";
+		q.textContent = cue.question;
+		root.appendChild(q);
+	}
 
 	appendSectionLens(root, cue.sectionLens);
 
-	if (cue.keywords.length) {
+	if ((options.showSupportTerms ?? true) && cue.keywords.length) {
 		const kw = cueDocument().createElement("div");
 		kw.className = "cuecraft-cue-keywords";
 		kw.textContent = cue.keywords.join(" · ");
@@ -242,9 +344,13 @@ function renderInlineCueElement(cue: CueLineData): HTMLElement {
 	return root;
 }
 
-function renderEditorHookElement(card: EditorHookCard): HTMLElement {
+function renderEditorHookElement(
+	card: EditorHookCard,
+	options: CueRenderOptions = {}
+): HTMLElement {
 	const root = cueDocument().createElement("div");
 	root.className = `cuecraft-editor-hook cuecraft-editor-hook-${card.display}`;
+	applyCueLayoutClasses(root, options);
 	const showSectionLabels = card.display === "anchored-card-rail" && !card.error;
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");
@@ -423,6 +529,7 @@ export function buildCueWidgetDecorations(
 ): DecorationSet {
 	const ranges: Range<Decoration>[] = [];
 	const doc = state.doc;
+	const options = editorCueRenderOptionsFromPayload(payload);
 	if (payload.noteBrief && doc.lines >= 1) {
 		ranges.push(
 			Decoration.widget({
@@ -433,7 +540,7 @@ export function buildCueWidgetDecorations(
 		);
 	}
 
-	if (payload.display !== "inline-cues") {
+	if (!isInlineEditorDisplay(payload.display)) {
 		return ranges.length ? Decoration.set(ranges, true) : Decoration.none;
 	}
 
@@ -443,7 +550,7 @@ export function buildCueWidgetDecorations(
 		// Block widget rendered on its own line just after the heading.
 		ranges.push(
 			Decoration.widget({
-				widget: new CueWidget(cue, payload.display, index),
+				widget: new CueWidget(cue, payload.display, index, options),
 				block: true,
 				side: 1,
 			}).range(headingLine.to)
@@ -456,13 +563,13 @@ export function buildCueGutterMarkers(
 	state: EditorState,
 	payload: CueEditorRenderState
 ): RangeSet<GutterMarker> {
-	if (payload.display === "inline-cues") return emptyCueGutterMarkers;
+	if (isInlineEditorDisplay(payload.display)) return emptyCueGutterMarkers;
 
 	const builder = new RangeSetBuilder<GutterMarker>();
 	const doc = state.doc;
 	const activeLine = doc.lineAt(state.selection.main.head).number;
 	const currentCueLine = activeCueLine(payload.display, payload.cues, activeLine);
-	const options = editorHookCardOptionsFromPayload(payload);
+	const options = editorCueRenderOptionsFromPayload(payload);
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const headingLine = doc.line(cue.line);
@@ -476,22 +583,34 @@ export function buildCueGutterMarkers(
 	return builder.finish();
 }
 
-function editorHookCardOptionsFromPayload(
+function editorCueRenderOptionsFromPayload(
 	payload: CueEditorRenderState
-): EditorHookCardOptions {
+): CueRenderOptions {
 	return {
 		showQuestion: payload.showRailQuestions ?? true,
 		showSupportTerms: payload.showRailSupportTerms ?? true,
 		cardStyle: payload.editorHookCardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
+		cueColumnWidth: payload.cueColumnWidth,
+		cueFontSize: payload.cueFontSize,
 	};
 }
 
-function editorHookCardOptionsKey(options: EditorHookCardOptions): string {
+function editorHookCardOptionsKey(options: CueRenderOptions): string {
 	return [
 		options.showQuestion ?? true,
 		options.showSupportTerms ?? true,
 		options.cardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
+		options.cueColumnWidth ?? "",
+		options.cueFontSize ?? "",
 	].join("\u0001");
+}
+
+function applyCueLayoutClasses(
+	element: HTMLElement,
+	options: CueRenderOptions
+): void {
+	element.classList.add(cueColumnWidthClass(options.cueColumnWidth));
+	element.classList.add(cueFontSizeClass(options.cueFontSize));
 }
 
 function activeCueLine(
@@ -509,6 +628,25 @@ function activeCueLine(
 		current = cue.line;
 	}
 	return current;
+}
+
+function isInlineEditorDisplay(display: EditorCueDisplay): boolean {
+	return display === "inline-cues";
+}
+
+function cornellEditorDisplayStyle(
+	display: EditorCueDisplay
+): CornellStyle | null {
+	switch (display) {
+		case "cornell":
+			return "classic";
+		case "cornell-exam-prep":
+			return "exam-prep";
+		case "cornell-minimal":
+			return "minimal";
+		default:
+			return null;
+	}
 }
 
 function mapCuePayloadThroughChanges(
