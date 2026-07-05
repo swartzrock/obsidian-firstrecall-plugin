@@ -24,9 +24,6 @@ export interface AnthropicProviderOptions {
 }
 
 export class AnthropicProvider extends AiSdkProvider {
-	private readonly apiKey: string;
-	private readonly fetchImpl?: FetchFunction;
-
 	constructor(opts: AnthropicProviderOptions) {
 		super({
 			id: "anthropic",
@@ -37,24 +34,26 @@ export class AnthropicProvider extends AiSdkProvider {
 			generateText:
 				opts.textGenerator ??
 				defaultTextGenerator(opts.apiKey, opts.model, opts.fetchImpl),
+			listModels: () => listAnthropicModelOptions(opts.apiKey, opts.fetchImpl),
 		});
-		this.apiKey = opts.apiKey;
-		this.fetchImpl = opts.fetchImpl;
 	}
+}
 
-	async listModels(): Promise<ByokModelOption[]> {
-		const client = new Anthropic({
-			apiKey: this.apiKey,
-			fetch: this.fetchImpl,
-			dangerouslyAllowBrowser: true,
-		});
-		const models: ByokModelOption[] = [];
-		// eslint-disable-next-line @typescript-eslint/await-thenable -- PagePromise implements AsyncIterable.
-		for await (const model of client.models.list()) {
-			models.push(anthropicModelInfoToByokModelOption(model));
-		}
-		return models;
+async function listAnthropicModelOptions(
+	apiKey: string,
+	fetchImpl?: FetchFunction
+): Promise<ByokModelOption[]> {
+	const client = new Anthropic({
+		apiKey,
+		fetch: fetchImpl,
+		dangerouslyAllowBrowser: true,
+	});
+	const models: ByokModelOption[] = [];
+	// eslint-disable-next-line @typescript-eslint/await-thenable -- PagePromise implements AsyncIterable.
+	for await (const model of client.models.list()) {
+		models.push(anthropicModelInfoToByokModelOption(model));
 	}
+	return models;
 }
 
 /** Build the real AI SDK structured-output caller for a given key/model. */

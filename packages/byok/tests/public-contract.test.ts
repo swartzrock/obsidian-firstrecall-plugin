@@ -137,7 +137,7 @@ describe("BYOK public contract", () => {
 			ok: true,
 			message: "Connected.",
 		});
-		await expect(runtime.listModels?.()).resolves.toEqual([
+		await expect(runtime.listModels()).resolves.toEqual([
 			{ id: "gpt-4o-mini", label: "gpt-4o-mini" },
 		]);
 		await expect(runtime.generateText({ prompt: "Hi" })).resolves.toEqual({
@@ -157,6 +157,7 @@ describe("BYOK public contract", () => {
 
 		expect(definitions).toHaveLength(8);
 		for (const definition of definitions) {
+			expect(definition.supportsModelListing).toBe(true);
 			expect(definition.shortLabel.length).toBeGreaterThan(0);
 			expect(definition.productLabel.length).toBeGreaterThan(0);
 			expect(definition.icon.viewBox.length).toBeGreaterThan(0);
@@ -197,12 +198,20 @@ describe("BYOK public contract", () => {
 		expect(byId.get("codex-cli")).toMatchObject({
 			label: "Codex CLI",
 			credentialKind: "command",
+			modelField: expect.objectContaining({
+				placeholder: "CLI default",
+			}),
 			modelBehavior: "optional",
+			supportsModelListing: true,
 		} satisfies Partial<ByokProviderDefinition>);
 		expect(byId.get("claude-cli")).toMatchObject({
 			label: "Claude CLI",
 			credentialKind: "command",
+			modelField: expect.objectContaining({
+				placeholder: "CLI default",
+			}),
 			modelBehavior: "optional",
+			supportsModelListing: true,
 		} satisfies Partial<ByokProviderDefinition>);
 	});
 

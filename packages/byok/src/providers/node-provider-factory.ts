@@ -21,6 +21,7 @@ export function createByokNodeProvider(
 			return new ClaudeCliProvider({
 				command: config.command,
 				model: config.model,
+				fetchImpl: deps?.fetchImpl,
 			}) as unknown as ByokProviderRuntime;
 		default:
 			return createByokProvider(config, deps);

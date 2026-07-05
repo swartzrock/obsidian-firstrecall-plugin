@@ -95,7 +95,7 @@ const models = await listModels({
 
 Cloud providers use `{ provider, apiKey }`. Ollama uses `{ provider: ByokProvider.Ollama, host }`. Both forms accept optional `deps`.
 
-Local CLI providers do not expose model discovery through BYOK because Codex CLI and Claude CLI do not provide a stable model-list API through this package.
+CLI model discovery is available from the Node runtime provider. Codex CLI shells out to `codex debug models`; Claude CLI fetches Anthropic model IDs from OpenRouter's public model list and strips the OpenRouter provider prefix.
 
 ## Node Runtime
 
@@ -114,11 +114,11 @@ const provider = createByokNodeProvider(
 );
 ```
 
-The runtime exposes connection testing, model listing when supported, text generation, and optional structured object generation:
+The runtime exposes connection testing, model listing, text generation, and optional structured object generation:
 
 ```ts
 const status = await provider.testConnection();
-const models = await provider.listModels?.();
+const models = await provider.listModels();
 const { text } = await provider.generateText({
 	prompt: "Explain BYOK in one sentence.",
 });

@@ -211,6 +211,152 @@ describe("modelOptionSearchText", () => {
 });
 
 describe("renderModelCombobox", () => {
+	it("renders a leading option above a divider", () => {
+		const dom = setupComboboxDom();
+		const container = dom.window.document.getElementById("root");
+		if (!container) throw new Error("Missing test root");
+
+		renderModelCombobox({
+			containerEl: container,
+			value: "claude-sonnet-5",
+			options: [
+				normalizeStringId("claude-opus-4-8"),
+				normalizeStringId("claude-sonnet-5"),
+			],
+			leadingOption: {
+				id: "",
+				label: "CLI Default",
+			},
+			placeholder: "CLI default",
+			emptyMessage: "No matching models.",
+			onCommit: () => {},
+		});
+
+		const input = container.querySelector<HTMLInputElement>("input");
+		if (!input) throw new Error("Missing combobox input");
+		input.dispatchEvent(new dom.window.Event("focus"));
+
+		const listChildren = [
+			...container.querySelector<HTMLElement>("[role='listbox']")!.children,
+		];
+		expect(listChildren.map((child) => child.textContent)).toEqual([
+			"CLI Default",
+			"",
+			"claude-sonnet-5",
+			"claude-opus-4-8",
+		]);
+		expect(
+			listChildren[1].classList.contains("cuecraft-model-combobox-divider")
+		).toBe(true);
+		expect(listChildren[1].getAttribute("role")).toBe("separator");
+	});
+
+	it("commits an empty value when the leading default option is selected", () => {
+		const dom = setupComboboxDom();
+		const container = dom.window.document.getElementById("root");
+		if (!container) throw new Error("Missing test root");
+		const commits: string[] = [];
+
+		renderModelCombobox({
+			containerEl: container,
+			value: "claude-sonnet-5",
+			options: [normalizeStringId("claude-sonnet-5")],
+			leadingOption: {
+				id: "",
+				label: "CLI Default",
+			},
+			placeholder: "CLI default",
+			emptyMessage: "No matching models.",
+			onCommit: (value) => {
+				commits.push(value);
+			},
+		});
+
+		const input = container.querySelector<HTMLInputElement>("input");
+		if (!input) throw new Error("Missing combobox input");
+		input.dispatchEvent(new dom.window.Event("focus"));
+		const defaultOption = container.querySelector<HTMLButtonElement>(
+			"[role='option']"
+		);
+		if (!defaultOption) throw new Error("Missing default option");
+		defaultOption.dispatchEvent(
+			new dom.window.MouseEvent("mousedown", {
+				bubbles: true,
+				cancelable: true,
+			})
+		);
+
+		expect(input.value).toBe("");
+		expect(commits).toEqual([""]);
+	});
+
+	it("shows all options on open when a selected model is displayed", () => {
+		const dom = setupComboboxDom();
+		const container = dom.window.document.getElementById("root");
+		if (!container) throw new Error("Missing test root");
+
+		renderModelCombobox({
+			containerEl: container,
+			value: "claude-sonnet-5",
+			options: [
+				normalizeStringId("claude-fable-5"),
+				normalizeStringId("claude-haiku-4-5"),
+				normalizeStringId("claude-opus-4-8"),
+				normalizeStringId("claude-sonnet-5"),
+			],
+			placeholder: "Choose a model...",
+			emptyMessage: "No matching models.",
+			onCommit: () => {},
+		});
+
+		const input = container.querySelector<HTMLInputElement>("input");
+		if (!input) throw new Error("Missing combobox input");
+		input.dispatchEvent(new dom.window.Event("focus"));
+
+		expect(
+			[...container.querySelectorAll<HTMLButtonElement>("[role='option']")].map(
+				(option) => option.textContent
+			)
+		).toEqual([
+			"claude-sonnet-5",
+			"claude-fable-5",
+			"claude-haiku-4-5",
+			"claude-opus-4-8",
+		]);
+	});
+
+	it("filters options after the user types in the model input", () => {
+		const dom = setupComboboxDom();
+		const container = dom.window.document.getElementById("root");
+		if (!container) throw new Error("Missing test root");
+
+		renderModelCombobox({
+			containerEl: container,
+			value: "claude-sonnet-5",
+			options: [
+				normalizeStringId("claude-fable-5"),
+				normalizeStringId("claude-haiku-4-5"),
+				normalizeStringId("claude-opus-4-8"),
+				normalizeStringId("claude-sonnet-5"),
+			],
+			placeholder: "Choose a model...",
+			emptyMessage: "No matching models.",
+			onCommit: () => {},
+		});
+
+		const input = container.querySelector<HTMLInputElement>("input");
+		if (!input) throw new Error("Missing combobox input");
+		input.dispatchEvent(new dom.window.Event("focus"));
+		input.value = "opus";
+		input.dispatchEvent(new dom.window.Event("input"));
+
+		expect(
+			[...container.querySelectorAll<HTMLButtonElement>("[role='option']")].map(
+				(option) => option.textContent
+			)
+		).toEqual(["claude-opus-4-8"]);
+	});
+
 	it("does not preselect the first option when the menu opens", () => {
 		const dom = setupComboboxDom();
 		const container = dom.window.document.getElementById("root");

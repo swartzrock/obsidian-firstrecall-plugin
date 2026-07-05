@@ -243,7 +243,7 @@ export interface ByokProviderRuntime {
 	requiresDownload: boolean;
 	sectionConcurrencyLimit?: number;
 	testConnection(): Promise<ByokProviderStatus>;
-	listModels?(): Promise<ByokModelOption[]>;
+	listModels(): Promise<ByokModelOption[]>;
 	generateText(
 		input: ByokTextGenerationInput,
 		signal?: AbortSignal

@@ -93,7 +93,7 @@ export async function listModels(
 		providerConfigFromListModelsOptions(options),
 		options.deps
 	);
-	return (await provider.listModels?.()) ?? [];
+	return provider.listModels();
 }
 
 export function createByok(config: ByokClientConfig): ByokClient {

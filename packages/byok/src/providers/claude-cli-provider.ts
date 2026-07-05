@@ -5,6 +5,7 @@ import {
 	TextGenerationInput,
 	TextGenerationOutput,
 } from "./types";
+import type { ByokModelOption } from "../types";
 import {
 	defaultLocalCliCwd,
 	LocalCommandRunner,
@@ -25,6 +26,7 @@ const CLAUDE_CLI_ENV: NodeJS.ProcessEnv = {
 };
 const CLAUDE_CLI_AUTH_MESSAGE =
 	"Claude CLI is not authenticated. Run `claude auth login` in your terminal, then try again.";
+const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
 
 const CONNECTION_JSON_SCHEMA = JSON.stringify({
 	type: "object",
@@ -43,6 +45,7 @@ export interface ClaudeCliProviderOptions {
 	cwd?: string;
 	timeoutMs?: number;
 	runner?: CommandRunner;
+	fetchImpl?: typeof fetch;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -129,6 +132,115 @@ function isAuthMissing(output: string): boolean {
 	);
 }
 
+interface OpenRouterModelEntry {
+	id?: unknown;
+}
+
+function normalizeClaudeCliModelId(model: string): string {
+	return model
+		.trim()
+		.replace(/^~?anthropic\//, "")
+		.split("-")
+		.map((token) =>
+			/^\d+(?:\.\d+)+$/.test(token) ? token.split(".").join("-") : token
+		)
+		.join("-");
+}
+
+function normalizeClaudeCliModelOverride(model: string): string {
+	return normalizeClaudeCliModelId(model);
+}
+
+function modelOptionFromOpenRouterId(id: string): ByokModelOption | null {
+	const trimmed = id.trim();
+	const markerIndex = trimmed.indexOf("anthropic/");
+	if (markerIndex === -1) return null;
+	const claudeModelId = normalizeClaudeCliModelId(
+		trimmed.slice(markerIndex + "anthropic/".length)
+	);
+	if (claudeModelId.endsWith("-latest")) return null;
+	return claudeModelId
+		? { id: claudeModelId, label: claudeModelId }
+		: null;
+}
+
+function numericVersionToken(token: string): number[] | null {
+	if (/^\d{8}$/.test(token)) return null;
+	if (!/^\d+(?:\.\d+)*$/.test(token)) return null;
+	return token.split(".").map((part) => Number(part));
+}
+
+function compareVersionParts(a: number[], b: number[]): number {
+	const length = Math.max(a.length, b.length);
+	for (let i = 0; i < length; i++) {
+		const diff = (a[i] ?? 0) - (b[i] ?? 0);
+		if (diff !== 0) return diff;
+	}
+	return 0;
+}
+
+function modelFamilyAndVersion(id: string): {
+	family: string;
+	version: number[];
+} {
+	const familyTokens: string[] = [];
+	const version: number[] = [];
+	for (const token of id.split("-")) {
+		const tokenVersion = numericVersionToken(token);
+		if (tokenVersion) {
+			version.push(...tokenVersion);
+			continue;
+		}
+		if (/^\d{8}$/.test(token)) continue;
+		familyTokens.push(token);
+	}
+	return {
+		family: familyTokens.join("-") || id,
+		version,
+	};
+}
+
+function keepLatestClaudeModelVersions(
+	options: ByokModelOption[]
+): ByokModelOption[] {
+	const order: string[] = [];
+	const bestByFamily = new Map<
+		string,
+		{ option: ByokModelOption; version: number[] }
+	>();
+	for (const option of options) {
+		const model = modelFamilyAndVersion(option.id);
+		const existing = bestByFamily.get(model.family);
+		if (!existing) {
+			order.push(model.family);
+			bestByFamily.set(model.family, { option, version: model.version });
+			continue;
+		}
+		if (compareVersionParts(model.version, existing.version) > 0) {
+			bestByFamily.set(model.family, { option, version: model.version });
+		}
+	}
+	return order
+		.map((family) => bestByFamily.get(family)?.option)
+		.filter((option): option is ByokModelOption => option != null);
+}
+
+function extractOpenRouterAnthropicModels(body: unknown): ByokModelOption[] {
+	const record = asRecord(body);
+	const data = record?.data;
+	if (!Array.isArray(data)) return [];
+	const options: ByokModelOption[] = [];
+	const seen = new Set<string>();
+	for (const entry of data as OpenRouterModelEntry[]) {
+		if (!entry || typeof entry.id !== "string") continue;
+		const option = modelOptionFromOpenRouterId(entry.id);
+		if (!option || seen.has(option.id)) continue;
+		seen.add(option.id);
+		options.push(option);
+	}
+	return keepLatestClaudeModelVersions(options);
+}
+
 export class ClaudeCliProvider implements AiProvider {
 	readonly id = "claude-cli";
 	readonly label = "Claude CLI";
@@ -140,13 +252,15 @@ export class ClaudeCliProvider implements AiProvider {
 	private readonly cwd?: string;
 	private readonly timeoutMs: number;
 	private readonly runner: CommandRunner;
+	private readonly fetchImpl?: typeof fetch;
 
 	constructor(opts: ClaudeCliProviderOptions) {
 		this.command = opts.command.trim() || "claude";
-		this.model = opts.model?.trim() ?? "";
+		this.model = normalizeClaudeCliModelOverride(opts.model ?? "");
 		this.cwd = opts.cwd ?? defaultLocalCliCwd();
 		this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 		this.runner = opts.runner ?? new LocalCommandRunner();
+		this.fetchImpl = opts.fetchImpl;
 	}
 
 	async testConnection(): Promise<ProviderStatus> {
@@ -188,6 +302,29 @@ export class ClaudeCliProvider implements AiProvider {
 		return {
 			text: await this.complete(input.prompt, input.jsonSchema, signal),
 		};
+	}
+
+	async listModels(): Promise<ByokModelOption[]> {
+		const fetchFn = this.fetchImpl ?? globalThis.fetch;
+		if (!fetchFn) {
+			throw new ProviderError("Claude CLI model fetch requires a fetch implementation.");
+		}
+		let response: Response;
+		try {
+			response = await fetchFn(OPENROUTER_MODELS_URL, { method: "GET" });
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			throw new ProviderError(`Claude CLI model fetch failed: ${message}`);
+		}
+		if (!response.ok) {
+			const detail = (await response.text()).trim();
+			throw new ProviderError(
+				detail
+					? `Claude CLI model fetch failed (${response.status}): ${detail}`
+					: `Claude CLI model fetch failed (${response.status}).`
+			);
+		}
+		return extractOpenRouterAnthropicModels(await response.json());
 	}
 
 	private commandArgs(schema?: string): string[] {
