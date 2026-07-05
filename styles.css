@@ -296,6 +296,10 @@
 	width: 100%;
 }
 
+.cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-info {
+	flex: 0 1 auto;
+}
+
 .cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-control {
 	flex: 0 1 auto;
 	justify-content: flex-start;

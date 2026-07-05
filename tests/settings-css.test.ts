@@ -18,6 +18,11 @@ describe("settings CSS", () => {
 		expect(settingRule).toContain("flex-direction: column");
 		expect(settingRule).toContain("align-items: stretch");
 
+		const infoRule = ruleFor(
+			".cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-info"
+		);
+		expect(infoRule).toContain("flex: 0 1 auto");
+
 		const controlRule = ruleFor(
 			".cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-control"
 		);
