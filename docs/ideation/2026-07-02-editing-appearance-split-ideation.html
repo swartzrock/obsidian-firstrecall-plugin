@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Ideation: Editing Appearance Split</title>
+	<style>
+		:root {
+			color-scheme: light dark;
+			--bg: #f7f7f4;
+			--panel: #ffffff;
+			--panel-soft: #f0f3f6;
+			--ink: #1d232b;
+			--muted: #5f6875;
+			--line: #d8dde5;
+			--accent: #3b82f6;
+			--accent-soft: #e7f0ff;
+			--accent-text: #174ea6;
+			--cornell: #6d4aff;
+			--editor: #0f8b8d;
+			--warn-soft: #fff4db;
+			--warn-text: #73510b;
+			font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		}
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--bg: #11151b;
+				--panel: #191f28;
+				--panel-soft: #222936;
+				--ink: #edf2f7;
+				--muted: #b0bac7;
+				--line: #364153;
+				--accent: #7eb6ff;
+				--accent-soft: #18314f;
+				--accent-text: #c7ddff;
+				--cornell: #a996ff;
+				--editor: #48c6c8;
+				--warn-soft: #3a2c12;
+				--warn-text: #f7d992;
+			}
+		}
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--ink);
+			line-height: 1.55;
+		}
+		a { color: var(--accent-text); }
+		.shell {
+			width: min(960px, calc(100vw - 32px));
+			margin: 0 auto;
+			padding: 40px 0 56px;
+		}
+		header.hero {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			padding: 28px;
+			box-shadow: 0 14px 40px rgba(17, 24, 39, 0.08);
+		}
+		.kicker {
+			margin: 0 0 10px;
+			color: var(--accent-text);
+			font-size: 12px;
+			font-weight: 800;
+			letter-spacing: 0.08em;
+			text-transform: uppercase;
+		}
+		h1 {
+			margin: 0;
+			font-size: clamp(30px, 4vw, 48px);
+			line-height: 1.05;
+			letter-spacing: 0;
+		}
+		.lede {
+			max-width: 72ch;
+			margin: 18px 0 0;
+			color: var(--muted);
+			font-size: 16px;
+		}
+		.meta {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-top: 22px;
+			padding: 0;
+			list-style: none;
+		}
+		.meta li,
+		.badge {
+			display: inline-flex;
+			align-items: center;
+			border-radius: 999px;
+			border: 1px solid var(--line);
+			background: var(--panel-soft);
+			color: var(--muted);
+			padding: 6px 10px;
+			font-size: 12px;
+			font-weight: 650;
+		}
+		section {
+			margin-top: 30px;
+		}
+		.section-card {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			padding: 24px;
+		}
+		h2 {
+			margin: 0 0 14px;
+			font-size: 24px;
+			letter-spacing: 0;
+		}
+		h3 {
+			margin: 0 0 10px;
+			font-size: 18px;
+			letter-spacing: 0;
+		}
+		p { max-width: 74ch; }
+		code {
+			font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+			font-size: 0.92em;
+			background: var(--panel-soft);
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			padding: 1px 5px;
+		}
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+			gap: 14px;
+		}
+		.axis {
+			padding: 14px;
+			border-radius: 10px;
+			background: var(--panel-soft);
+			border: 1px solid var(--line);
+			font-weight: 650;
+		}
+		.idea-nav {
+			margin: 0 0 18px;
+			padding: 14px 18px;
+			background: var(--accent-soft);
+			border-radius: 10px;
+			border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+		}
+		.idea-nav a {
+			color: var(--accent-text);
+			font-weight: 700;
+			text-decoration: none;
+		}
+		.idea {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			padding: 22px;
+			margin-top: 16px;
+		}
+		.idea-head {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: space-between;
+			gap: 10px;
+			margin-bottom: 12px;
+		}
+		.idea-title {
+			display: flex;
+			gap: 10px;
+			align-items: baseline;
+		}
+		.rank {
+			color: var(--accent-text);
+			font-weight: 850;
+		}
+		dl {
+			display: grid;
+			grid-template-columns: minmax(120px, 0.25fr) 1fr;
+			gap: 8px 14px;
+			margin: 16px 0 0;
+		}
+		dt {
+			color: var(--muted);
+			font-size: 12px;
+			font-weight: 800;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+		}
+		dd { margin: 0; }
+		.conf {
+			background: var(--accent-soft);
+			color: var(--accent-text);
+			border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+		}
+		.diagram {
+			margin: 18px 0;
+			padding: 12px;
+			background: var(--panel-soft);
+			border: 1px solid var(--line);
+			border-radius: 12px;
+			overflow: auto;
+		}
+		svg {
+			display: block;
+			max-width: 100%;
+			height: auto;
+		}
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			font-size: 14px;
+		}
+		th, td {
+			border-bottom: 1px solid var(--line);
+			padding: 10px 8px;
+			text-align: left;
+			vertical-align: top;
+		}
+		th {
+			color: var(--muted);
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+		}
+		.callout {
+			background: var(--warn-soft);
+			color: var(--warn-text);
+			border: 1px solid color-mix(in srgb, var(--warn-text) 28%, transparent);
+			border-radius: 10px;
+			padding: 14px 16px;
+			margin-top: 16px;
+			max-width: 74ch;
+		}
+		.sources li { margin: 8px 0; }
+		footer {
+			margin-top: 34px;
+			color: var(--muted);
+			font-size: 13px;
+			border-top: 1px solid var(--line);
+			padding-top: 18px;
+		}
+		@media (max-width: 640px) {
+			.shell { width: min(100% - 20px, 960px); padding-top: 20px; }
+			header.hero, .section-card, .idea { padding: 18px; }
+			dl { grid-template-columns: 1fr; }
+		}
+	</style>
+</head>
+<body>
+	<main class="shell">
+		<header class="hero">
+			<p class="kicker">CueCraft Ideation</p>
+			<h1>Editing Appearance Split</h1>
+			<p class="lede">Fresh ideation for splitting the current mixed Appearance settings surface into Cornell Appearance for the Cornell view and Editing Appearance for regular editing-mode cue display.</p>
+			<ul class="meta" aria-label="Document metadata">
+				<li>Date: <time datetime="2026-07-02">2026-07-02</time></li>
+				<li>Topic: editing-appearance-split</li>
+				<li>Focus: Cornell-only vs editing-only appearance settings</li>
+				<li>Mode: repo-grounded</li>
+			</ul>
+		</header>
+
+		<section id="grounding-context" class="section-card">
+			<h2>Grounding Context</h2>
+			<p>CueCraft is a TypeScript Obsidian plugin that renders study cues in multiple surfaces: a dedicated Cornell view and normal editing mode through CodeMirror decorations and gutters. The current settings tab has one <code>appearance</code> route and one home card, but that page mixes editor-only controls at the top with Cornell-only thumbnail controls below.</p>
+			<p>The split is already visible in the code paths. Editor display changes persist <code>editorCueDisplay</code> or <code>editorHookCardStyle</code> and refresh the active editor cues. Cornell appearance changes persist Cornell display, style, width, font, accent, border, or compact-support settings and refresh Cornell views. External prior art from editor platforms supports this surface boundary: editor overlays, custom views, and document presentation are different renderer contracts.</p>
+			<div class="diagram" aria-label="Current mixed page and proposed split">
+				<svg viewBox="0 0 820 250" role="img" aria-labelledby="split-title split-desc">
+					<title id="split-title">Appearance page split</title>
+					<desc id="split-desc">A single mixed Appearance page splits into Cornell Appearance and Editing Appearance destinations.</desc>
+					<defs>
+						<marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+							<path d="M0,0 L8,3 L0,6 Z" fill="#5f6875"></path>
+						</marker>
+					</defs>
+					<rect x="26" y="58" width="220" height="130" rx="14" fill="#ffffff" stroke="#d8dde5"></rect>
+					<text x="136" y="88" text-anchor="middle" font-size="16" font-weight="700" fill="#1d232b">Appearance</text>
+					<text x="136" y="122" text-anchor="middle" font-size="12" fill="#5f6875">editor display + rail style</text>
+					<text x="136" y="148" text-anchor="middle" font-size="12" fill="#5f6875">Cornell layout + accents</text>
+					<text x="136" y="174" text-anchor="middle" font-size="12" fill="#5f6875">mixed summary</text>
+					<line x1="270" y1="123" x2="370" y2="123" stroke="#5f6875" stroke-width="2" marker-end="url(#arrow)"></line>
+					<rect x="400" y="34" width="250" height="82" rx="14" fill="#f4f0ff" stroke="#6d4aff"></rect>
+					<text x="525" y="65" text-anchor="middle" font-size="16" font-weight="700" fill="#33207a">Cornell Appearance</text>
+					<text x="525" y="92" text-anchor="middle" font-size="12" fill="#4c3a8f">Cornell root classes + Cornell refresh</text>
+					<rect x="400" y="142" width="250" height="82" rx="14" fill="#e8fbfb" stroke="#0f8b8d"></rect>
+					<text x="525" y="173" text-anchor="middle" font-size="16" font-weight="700" fill="#075c5e">Editing Appearance</text>
+					<text x="525" y="200" text-anchor="middle" font-size="12" fill="#0a6466">CodeMirror cue display + editor refresh</text>
+					<text x="726" y="128" text-anchor="middle" font-size="13" font-weight="700" fill="#1d232b">One surface</text>
+					<text x="726" y="148" text-anchor="middle" font-size="13" font-weight="700" fill="#1d232b">per page</text>
+				</svg>
+			</div>
+		</section>
+
+		<section id="topic-axes" class="section-card">
+			<h2>Topic Axes</h2>
+			<div class="grid">
+				<div class="axis">Settings navigation and naming taxonomy</div>
+				<div class="axis">Editing cue appearance control surface</div>
+				<div class="axis">Cornell-only appearance containment</div>
+				<div class="axis">Preview fidelity, responsiveness, and tests</div>
+			</div>
+		</section>
+
+		<section id="ranked-ideas">
+			<div class="section-card">
+				<h2>Ranked Ideas</h2>
+				<ol class="idea-nav">
+					<li><a href="#idea-1">1. Surface-Named Sibling Pages</a></li>
+					<li><a href="#idea-2">2. Editing Appearance As Editor Cue Studio</a></li>
+					<li><a href="#idea-3">3. Editor Mini-Scenes With Shared Button Chassis</a></li>
+					<li><a href="#idea-4">4. Cornell Appearance As View-Class Boundary</a></li>
+					<li><a href="#idea-5">5. Surface-Specific Home Summaries</a></li>
+					<li><a href="#idea-6">6. Cue Content Stays Outside Appearance</a></li>
+					<li><a href="#idea-7">7. Surface Isolation Test Matrix</a></li>
+				</ol>
+			</div>
+
+			<article id="idea-1" class="idea">
+				<div class="idea-head">
+					<div class="idea-title"><span class="rank">1.</span><h3>Surface-Named Sibling Pages</h3></div>
+					<span class="badge conf">Confidence 95% &middot; Complexity Medium</span>
+				</div>
+				<p><strong>Description:</strong> Replace the single Appearance card and route with two sibling destinations: Cornell Appearance and Editing Appearance. The old page becomes Cornell-only, while the new page owns the editor cue display controls currently stranded above Cornell thumbnails. This makes the settings home a surface map instead of a generic theme bucket.</p>
+				<dl>
+					<dt>Axis</dt><dd>Settings navigation and naming taxonomy</dd>
+					<dt>Basis</dt><dd><code>direct:</code> the current settings route and home card are singular, the header copy describes Cornell styling, and the page begins with editor-only controls before Cornell controls in <a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/settings.ts"><code>src/settings.ts</code></a>. <code>external:</code> editor platforms such as VS Code separate editor-facing configuration from broader workbench/custom-view configuration.</dd>
+					<dt>Rationale</dt><dd>The user problem starts at the first click: "Appearance" sounds global, while the dominant visible page is Cornell-specific and the first two controls are editor-specific.</dd>
+					<dt>Downsides</dt><dd>Adding another settings card slightly increases the home grid, so card titles and summaries need to be tight.</dd>
+				</dl>
+			</article>
+
+			<article id="idea-2" class="idea">
+				<div class="idea-head">
+					<div class="idea-title"><span class="rank">2.</span><h3>Editing Appearance As Editor Cue Studio</h3></div>
+					<span class="badge conf">Confidence 82% &middot; Complexity Medium</span>
+				</div>
+				<p><strong>Description:</strong> Build the new Editing Appearance page around editor-rendering inputs: cue display mode and rail card background. Keep the page centered on how generated cues appear in the normal editor, not on Cornell layout and not on cue-generation semantics. Treat rail question/support visibility carefully: those are content-visibility decisions and should remain outside this page unless deliberately reframed later.</p>
+				<dl>
+					<dt>Axis</dt><dd>Editing cue appearance control surface</dd>
+					<dt>Basis</dt><dd><code>direct:</code> <code>editorCueDisplay</code> and <code>editorHookCardStyle</code> already flow through <code>refreshEditorCues()</code> and the CodeMirror render payload in <a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/main.ts"><code>src/main.ts</code></a>, <a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/cue-extension.ts"><code>src/cue-extension.ts</code></a>, and <a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/editor-hook-rail.ts"><code>src/editor-hook-rail.ts</code></a>.</dd>
+					<dt>Rationale</dt><dd>The strongest page boundary is "only settings that change the editor cue render payload belong here."</dd>
+					<dt>Downsides</dt><dd>The first version may feel thin if it only moves two controls, so the preview treatment has to carry the page's value.</dd>
+				</dl>
+			</article>
+
+			<article id="idea-3" class="idea">
+				<div class="idea-head">
+					<div class="idea-title"><span class="rank">3.</span><h3>Editor Mini-Scenes With Shared Button Chassis</h3></div>
+					<span class="badge conf">Confidence 88% &middot; Complexity Medium</span>
+				</div>
+				<p><strong>Description:</strong> Reuse the accessible thumbnail-button primitive, but add editor-specific preview recipes that look like CodeMirror editing: a note line, inline cue, gutter/rail state, anchored card rail, and card finish. Cornell previews keep their Cornell scene; editing previews get their own scene model. This keeps the interaction consistent while preventing Cornell miniatures from becoming misleading proxies for editor behavior.</p>
+				<div class="diagram" aria-label="Shared button primitive with separate preview recipes">
+					<svg viewBox="0 0 820 230" role="img" aria-labelledby="preview-title preview-desc">
+						<title id="preview-title">Shared primitive and separate recipes</title>
+						<desc id="preview-desc">A shared button shell feeds separate Cornell and Editing preview recipes.</desc>
+						<defs>
+							<marker id="arrow2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+								<path d="M0,0 L8,3 L0,6 Z" fill="#5f6875"></path>
+							</marker>
+						</defs>
+						<rect x="42" y="75" width="200" height="80" rx="14" fill="#ffffff" stroke="#d8dde5"></rect>
+						<text x="142" y="107" text-anchor="middle" font-size="15" font-weight="700" fill="#1d232b">Thumbnail Button</text>
+						<text x="142" y="132" text-anchor="middle" font-size="12" fill="#5f6875">selected state, label, focus</text>
+						<line x1="265" y1="115" x2="350" y2="68" stroke="#5f6875" stroke-width="2" marker-end="url(#arrow2)"></line>
+						<line x1="265" y1="115" x2="350" y2="162" stroke="#5f6875" stroke-width="2" marker-end="url(#arrow2)"></line>
+						<rect x="375" y="32" width="230" height="72" rx="14" fill="#f4f0ff" stroke="#6d4aff"></rect>
+						<text x="490" y="62" text-anchor="middle" font-size="15" font-weight="700" fill="#33207a">Cornell Recipes</text>
+						<text x="490" y="86" text-anchor="middle" font-size="12" fill="#4c3a8f">cue column, paper style, accents</text>
+						<rect x="375" y="126" width="230" height="72" rx="14" fill="#e8fbfb" stroke="#0f8b8d"></rect>
+						<text x="490" y="156" text-anchor="middle" font-size="15" font-weight="700" fill="#075c5e">Editing Recipes</text>
+						<text x="490" y="180" text-anchor="middle" font-size="12" fill="#0a6466">inline cue, gutter, rail card</text>
+						<text x="704" y="106" text-anchor="middle" font-size="13" font-weight="700" fill="#1d232b">same mechanics</text>
+						<text x="704" y="126" text-anchor="middle" font-size="13" font-weight="700" fill="#1d232b">different scenes</text>
+					</svg>
+				</div>
+				<dl>
+					<dt>Axis</dt><dd>Preview fidelity, responsiveness, and tests</dd>
+					<dt>Basis</dt><dd><code>direct:</code> <a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/appearance-thumbnail-controls.ts"><code>src/appearance-thumbnail-controls.ts</code></a> already provides the shared button primitive, while existing recipes are Cornell-shaped. Editor hook CSS in <a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/styles.css"><code>styles.css</code></a> already defines a separate visual language for editing-mode rail cards.</dd>
+					<dt>Rationale</dt><dd>Editing Appearance only feels real if the preview looks like the editor surface it controls.</dd>
+					<dt>Downsides</dt><dd>Requires new preview recipe coverage and CSS. Reusing too much Cornell preview CSS would recreate the confusion.</dd>
+				</dl>
+			</article>
+
+			<article id="idea-4" class="idea">
+				<div class="idea-head">
+					<div class="idea-title"><span class="rank">4.</span><h3>Cornell Appearance As View-Class Boundary</h3></div>
+					<span class="badge conf">Confidence 92% &middot; Complexity Small</span>
+				</div>
+				<p><strong>Description:</strong> Rename the existing page to Cornell Appearance and define it as the page for Cornell root classes only: display mode, style, cue width, font size, accent, border, and compact support rendering. Move the low-signal binary controls into a smaller Cornell finishing-details section so they no longer read as global appearance settings. The page should never need the editor cue refresh path.</p>
+				<dl>
+					<dt>Axis</dt><dd>Cornell-only appearance containment</dd>
+					<dt>Basis</dt><dd><code>direct:</code> Cornell display/style/layout/accent settings map to Cornell classes in <a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/cornell-view.ts"><code>src/cornell-view.ts</code></a> and Cornell CSS in <a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/styles.css"><code>styles.css</code></a>, and settings-side Cornell changes call <code>refreshCornellViews()</code>.</dd>
+					<dt>Rationale</dt><dd>This turns "Cornell-only" from explanatory copy into the page's actual eligibility rule.</dd>
+					<dt>Downsides</dt><dd>Some labels may need rewording so "cue column" is clearly Cornell cue column, not editor cue placement.</dd>
+				</dl>
+			</article>
+
+			<article id="idea-5" class="idea">
+				<div class="idea-head">
+					<div class="idea-title"><span class="rank">5.</span><h3>Surface-Specific Home Summaries</h3></div>
+					<span class="badge conf">Confidence 90% &middot; Complexity Small</span>
+				</div>
+				<p><strong>Description:</strong> Replace the blended <code>appearanceSummary()</code> with separate summary builders. Cornell Appearance summarizes Cornell display, style, width, font, accent, and finishing details. Editing Appearance summarizes editor cue display and editor card style only.</p>
+				<dl>
+					<dt>Axis</dt><dd>Settings navigation and naming taxonomy</dd>
+					<dt>Basis</dt><dd><code>direct:</code> the current summary string joins editor and Cornell values together in <a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/settings.ts"><code>src/settings.ts</code></a>.</dd>
+					<dt>Rationale</dt><dd>The settings home should become a boundary validator, not a place where mixed ownership hides in one sentence.</dd>
+					<dt>Downsides</dt><dd>Minor copy work, but it needs tests so future summary edits do not drift back to mixed-surface language.</dd>
+				</dl>
+			</article>
+
+			<article id="idea-6" class="idea">
+				<div class="idea-head">
+					<div class="idea-title"><span class="rank">6.</span><h3>Cue Content Stays Outside Appearance</h3></div>
+					<span class="badge conf">Confidence 78% &middot; Complexity Small</span>
+				</div>
+				<p><strong>Description:</strong> Keep semantic or content-visibility controls out of both Appearance pages, even when they affect what a preview shows. Controls such as rail question/support visibility, Section Lens visibility, Note Brief visibility, or keyword generation should live in Cue Generation, Note format, or another content-oriented section. Appearance pages remain about renderer presentation, not cue content policy.</p>
+				<dl>
+					<dt>Axis</dt><dd>Settings navigation and naming taxonomy</dd>
+					<dt>Basis</dt><dd><code>direct:</code> rail question/support visibility currently maps into the editor render payload, but the verifier found that moving it into Editing Appearance blurs appearance with cue-content semantics. Existing shared review controls already affect multiple surfaces.</dd>
+					<dt>Rationale</dt><dd>This protects the user's requested rule: Cornell Appearance affects Cornell view, Editing Appearance affects regular editing display, and content policy lives elsewhere.</dd>
+					<dt>Downsides</dt><dd>Editing Appearance may initially have fewer controls. The editor preview can still demonstrate states without adding saved preview-only toggles.</dd>
+				</dl>
+			</article>
+
+			<article id="idea-7" class="idea">
+				<div class="idea-head">
+					<div class="idea-title"><span class="rank">7.</span><h3>Surface Isolation Test Matrix</h3></div>
+					<span class="badge conf">Confidence 85% &middot; Complexity Medium</span>
+				</div>
+				<p><strong>Description:</strong> Expand the existing appearance QA into an isolation matrix: editor controls refresh editor cues only, Cornell controls refresh Cornell views only, and neither page renders the other's option recipes. Add responsive, selected-state, keyboard-focus, and dark/light checks for both pages. The split is done when the wrong surface stays unchanged.</p>
+				<dl>
+					<dt>Axis</dt><dd>Preview fidelity, responsiveness, and tests</dd>
+					<dt>Basis</dt><dd><code>direct:</code> tests already cover thumbnail selected state and option coverage; editor and Cornell refresh paths are distinct; manual evaluation docs already cover narrow panes and visual states.</dd>
+					<dt>Rationale</dt><dd>The likely future regression is leakage: a new setting appears on the wrong page, uses the wrong preview recipe, or refreshes the wrong surface.</dd>
+					<dt>Downsides</dt><dd>Some isolation checks may need settings-tab test scaffolding or manual Obsidian review for real CodeMirror layout.</dd>
+				</dl>
+			</article>
+		</section>
+
+		<section id="rejection-summary" class="section-card">
+			<h2>Rejection Summary</h2>
+			<table>
+				<thead>
+					<tr><th>#</th><th>Idea</th><th>Reason Rejected</th></tr>
+				</thead>
+				<tbody>
+					<tr><td>1</td><td>Surface registries / allowlists</td><td>Weak. Useful later, but generating whole pages from registries is an implementation abstraction jump beyond the current split.</td></tr>
+					<tr><td>2</td><td>Preview-only scenario toggles</td><td>Refuted. Adds new UI state, overlaps real persisted settings, and over-scopes the narrow appearance split.</td></tr>
+					<tr><td>3</td><td>Editing display ladder</td><td>Weak as a standalone idea. It is folded into Editing Appearance copy and ordering, not promoted as its own direction.</td></tr>
+					<tr><td>4</td><td>Viewport-switching editing previews</td><td>Weak. Responsive behavior matters, but a visible viewport switcher is more control surface than the evidence justifies.</td></tr>
+					<tr><td>5</td><td>Refresh patch bay</td><td>Weak. The one-refresh-bus rule is valid, but the metaphor is architecture-heavy and better expressed through tests.</td></tr>
+					<tr><td>6</td><td>Raw duplicate page-split variants</td><td>Duplicates stronger ideas around surface-named pages, summaries, Cornell containment, and preview contracts.</td></tr>
+				</tbody>
+			</table>
+		</section>
+
+		<section id="sources" class="section-card">
+			<h2>Sources &amp; References</h2>
+			<ul class="sources">
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/settings.ts"><code>src/settings.ts</code></a> - settings routing, home cards, current mixed Appearance section, and summary generation.</li>
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/cue-extension.ts"><code>src/cue-extension.ts</code></a> - CodeMirror cue widgets, gutter markers, and editor render payload.</li>
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/editor-hook-rail.ts"><code>src/editor-hook-rail.ts</code></a> - editor hook card model and display options.</li>
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/cornell-view.ts"><code>src/cornell-view.ts</code></a> - Cornell view root classes and refresh behavior.</li>
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/appearance-thumbnail-controls.ts"><code>src/appearance-thumbnail-controls.ts</code></a> - shared thumbnail button primitive and current Cornell preview recipes.</li>
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/styles.css"><code>styles.css</code></a> - Cornell preview CSS, editor hook CSS, and responsive rules.</li>
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/docs/plans/2026-06-24-002-feat-appearance-thumbnail-controls-plan.md"><code>docs/plans/2026-06-24-002-feat-appearance-thumbnail-controls-plan.md</code></a> - prior Appearance thumbnail direction and low-signal binary-control notes.</li>
+				<li><a href="https://codemirror.net/examples/gutter/">CodeMirror gutter example</a> and <a href="https://codemirror.net/docs/ref/">CodeMirror reference manual</a> - editor gutters, markers, decorations, and non-document overlay model.</li>
+				<li><a href="https://code.visualstudio.com/docs/configure/settings">VS Code settings documentation</a> - settings scope and editor/workspace organization prior art.</li>
+			</ul>
+		</section>
+
+		<footer class="composition-signal">
+			Composed 2026-07-02T00:00Z by ce-ideate from the user prompt "Start fresh. The Appearance settings page ONLY affects Cornell View, so we need a new one that ONLY affects the Editing view."
+		</footer>
+	</main>
+</body>
+</html>
