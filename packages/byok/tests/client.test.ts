@@ -28,7 +28,6 @@ describe("BYOK client facade", () => {
 
 		const result = await generateText({
 			provider: "ollama",
-			host: "http://localhost:11434",
 			model: "llama3.1:8b",
 			prompt: "Say hi.",
 			deps: { http: ollamaHttp(requests) },
@@ -44,7 +43,7 @@ describe("BYOK client facade", () => {
 		});
 	});
 
-	it("uses the default fetch-backed HTTP adapter for Ollama", async () => {
+	it("uses explicit Ollama URLs with the default fetch-backed HTTP adapter", async () => {
 		let requestUrl: string | URL | Request | undefined;
 		let requestInit: RequestInit | undefined;
 		const controller = new AbortController();
@@ -62,7 +61,7 @@ describe("BYOK client facade", () => {
 
 		const result = await generateText({
 			provider: "ollama",
-			host: "http://localhost:11434/",
+			url: "http://localhost:11434/",
 			model: "llama3.1:8b",
 			prompt: "Say hi.",
 			signal: controller.signal,
@@ -88,7 +87,7 @@ describe("BYOK client facade", () => {
 		await expect(
 			generateText({
 				provider: "ollama",
-				host: "http://localhost:11434",
+				url: "http://localhost:11434",
 				model: "llama3.1:8b",
 				prompt: "Say hi.",
 				deps: {
@@ -106,7 +105,7 @@ describe("BYOK client facade", () => {
 
 		await generateText({
 			provider: "ollama",
-			host: "http://localhost:11434",
+			url: "http://localhost:11434",
 			model: "llama3.1:8b",
 			prompt: "Return JSON.",
 			signal: controller.signal,
@@ -120,7 +119,6 @@ describe("BYOK client facade", () => {
 		const requests: Array<Parameters<ByokHttpClient>[0]> = [];
 		const client = createByok({
 			provider: "ollama",
-			host: "http://localhost:11434",
 			deps: { http: ollamaHttp(requests) },
 		});
 

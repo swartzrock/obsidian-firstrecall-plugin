@@ -19,7 +19,7 @@ function providerConfigFromGenerateTextOptions(
 	if (options.provider === "ollama") {
 		return {
 			provider: "ollama",
-			host: options.host,
+			url: options.url,
 			model: options.model,
 		};
 	}
@@ -37,7 +37,7 @@ function providerConfigFromClientInput(
 	if (config.provider === "ollama") {
 		return {
 			provider: "ollama",
-			host: config.host,
+			url: config.url,
 			model: input.model,
 		};
 	}
@@ -54,7 +54,7 @@ function providerConfigFromListModelsOptions(
 	if (options.provider === "ollama") {
 		return {
 			provider: "ollama",
-			host: options.host,
+			url: options.url,
 			model: MODEL_NOT_REQUIRED_FOR_LISTING,
 		};
 	}

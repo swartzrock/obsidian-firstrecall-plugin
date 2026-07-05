@@ -4,16 +4,16 @@ Function-first text generation, provider runtime, and model discovery for bring-
 
 `@cuecraft/byok` lets a TypeScript app run against user-supplied AI accounts without owning provider-specific generation code. For first success, call `generateText` with an explicit provider, credential, model, and prompt. For setup flows, call `listModels` before a model is selected. When an app needs connection testing, structured output, or custom runtime methods, BYOK also exposes the lower-level provider runtime.
 
-This package currently lives inside the CueCraft workspace and is not published yet. The API is shaped for extraction into a standalone public repository for backend, desktop, Electron, and browser-adjacent TypeScript apps.
+This package currently lives inside the CueCraft workspace and is not published yet. The API is shaped for extraction into a standalone public repository for backend, desktop backend, Electron main-process, and other trusted TypeScript runtimes.
 
 ## Features
 
 - Unified runtime for Anthropic, OpenAI, Google Gemini, xAI, OpenRouter, Ollama, Codex CLI, and Claude CLI.
 - One-call `generateText` helper for core providers with default fetch-based transports.
-- `createByok` client for repeated text generation with one bound credential or Ollama host.
-- Browser/Electron-safe main entrypoint for API-key providers and Ollama.
+- `createByok` client for repeated text generation with one bound credential or Ollama URL.
+- Trusted-runtime main entrypoint for API-key providers and Ollama.
 - Node-only subpath for local CLI providers and command execution.
-- App-supplied `fetch` and HTTP transports so callers can run in Node, Electron, Obsidian, browsers, tests, or custom runtimes.
+- App-supplied `fetch` and HTTP transports so callers can run in trusted Node, desktop backend, Obsidian, test, or custom runtimes.
 - Provider metadata for settings UIs: labels, credential fields, model fields, icons, setup requirements, and model-list capability flags.
 - Connection testing with user-readable provider errors and rate-limit retry handling for AI SDK providers.
 - Model discovery helpers, portable model options, and Anthropic model-selection helpers.
@@ -34,7 +34,7 @@ This package currently lives inside the CueCraft workspace and is not published 
 | `codex-cli` | Local command, optional model | `@cuecraft/byok/node` | Codex CLI model IDs | Text |
 | `claude-cli` | Local command, optional model | `@cuecraft/byok/node` | Anthropic model IDs from OpenRouter, without the provider prefix | Text, with JSON-schema hints through `generateText` |
 
-The main entrypoint avoids Node-only process APIs. Use `@cuecraft/byok/node` only from trusted Node or desktop backends that are allowed to spawn local commands.
+The main entrypoint avoids Node-only process APIs, but it is still intended for trusted host runtimes that can safely receive provider credentials. Use `@cuecraft/byok/node` only from trusted Node or desktop backends that are allowed to spawn local commands.
 
 ## Installation
 
@@ -60,11 +60,11 @@ Inside the CueCraft workspace, the package is consumed through the workspace dep
 }
 ```
 
-Runtime requirement: Node.js 20 or newer for backend usage. Node 20 and Electron main-process usage work with the default fetch transport. Browser and Electron renderer usage depends on provider CORS and host-app security policy; app-owned keys should stay behind a server, main process, or custom transport.
+Runtime requirement: Node.js 24 or newer for backend usage. Browser and Electron renderer UIs should call BYOK through a trusted server, main process, local backend, or custom transport rather than importing BYOK directly with provider credentials.
 
 ## Entry Points
 
-Use the main entrypoint for browser/Electron-safe providers and shared types:
+Use the main entrypoint for trusted-runtime API-key providers, Ollama, and shared types:
 
 ```ts
 import {
@@ -89,7 +89,7 @@ Provider implementation files under `src/providers` and helper files under `src/
 
 ## Quick Start
 
-This example generates text with OpenAI in Node 20.
+This example generates text with OpenAI in Node 24.
 
 ```ts
 import { ByokProvider, generateText } from "@cuecraft/byok";
@@ -110,13 +110,13 @@ console.log(text);
 BYOK is AI-SDK-shaped, not AI-SDK-compatible. If your app needs AI SDK `LanguageModel` objects or AI SDK's full result object semantics, use AI SDK directly. Use BYOK when the app's job is to run against user-owned provider credentials and local providers through one small interface.
 The function-first API accepts plain text prompts only. Use the lower-level runtime when you need provider-specific generation hints such as JSON response formatting.
 
-BYOK receives credentials only as call inputs. It does not persist or log API keys. Direct browser or Electron-renderer calls are appropriate only for user-entered transient keys; app-owned keys should stay behind a server, main process, or custom transport.
+BYOK receives credentials only as call inputs. It does not persist or log API keys. Keep BYOK execution behind a trusted server, main process, local backend, or custom transport; browser and Electron renderer UIs should not import BYOK directly with provider credentials.
 
 ## Basic Usage
 
 ### Reuse a Credential
 
-Use `createByok` when several calls share the same provider credential or Ollama host. The model stays per call.
+Use `createByok` when several calls share the same provider credential or Ollama URL. The model stays per call.
 
 ```ts
 import { ByokProvider, createByok } from "@cuecraft/byok";
@@ -132,7 +132,7 @@ const { text } = await ai.generateText({
 });
 ```
 
-`createByok` is intentionally narrow: it binds the credential or host, then accepts a model and prompt per call. Use `listModels` for setup-time model discovery.
+`createByok` is intentionally narrow: it binds the credential or URL, then accepts a model and prompt per call. Use `listModels` for setup-time model discovery.
 
 ### List Providers
 
@@ -280,26 +280,25 @@ const models = await listModels({
 });
 ```
 
-`ByokProvider.Anthropic`, `ByokProvider.OpenAI`, `ByokProvider.Google`, `ByokProvider.Xai`, and `ByokProvider.OpenRouter` use the same API-key shape. `ByokProvider.Ollama` uses `{ provider: ByokProvider.Ollama, host: "http://localhost:11434" }`.
+`ByokProvider.Anthropic`, `ByokProvider.OpenAI`, `ByokProvider.Google`, `ByokProvider.Xai`, and `ByokProvider.OpenRouter` use the same API-key shape. `ByokProvider.Ollama` defaults to `http://localhost:11434`; pass `url` only for a different Ollama server.
 
 CLI model discovery is available from the `@cuecraft/byok/node` runtime provider. Codex CLI uses `codex debug models`; Claude CLI fetches Anthropic model IDs from OpenRouter's public model list and strips the OpenRouter provider prefix.
 
 ### Use Ollama
 
-Ollama uses a host URL instead of a raw API key.
+Ollama defaults to `http://localhost:11434` instead of using a raw API key.
 
 ```ts
 import { ByokProvider, generateText } from "@cuecraft/byok";
 
 const response = await generateText({
 	provider: ByokProvider.Ollama,
-	host: "http://localhost:11434",
 	model: "llama3.1:8b",
 	prompt: "Write one sentence about local model inference.",
 });
 ```
 
-BYOK accepts explicit `http:` and `https:` Ollama hosts without embedded credentials. Prompts are sent to the configured host; remote or LAN Ollama hosts are caller-approved trust boundaries.
+Pass `url` only when using a non-default local, LAN, or remote Ollama server. BYOK accepts explicit `http:` and `https:` Ollama URLs without embedded credentials; prompts are sent to the configured URL.
 
 ### Use Local CLI Providers
 

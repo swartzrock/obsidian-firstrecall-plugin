@@ -43,7 +43,7 @@ const modelOptions = listModels({
 
 void listModels({
 	provider: ByokProvider.Ollama,
-	host: "http://localhost:11434",
+	url: "http://localhost:11434",
 	deps,
 });
 

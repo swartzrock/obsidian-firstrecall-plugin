@@ -117,13 +117,12 @@ describeForVitest("BYOK cloud client facade", () => {
 	it("lists Ollama models without a caller-supplied model", async () => {
 		await listModels({
 			provider: "ollama",
-			host: "http://localhost:11434",
 		});
 
 		expect(mocks.createByokProvider).toHaveBeenCalledWith(
 			{
 				provider: "ollama",
-				host: "http://localhost:11434",
+				url: undefined,
 				model: "",
 			},
 			undefined

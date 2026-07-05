@@ -20,7 +20,7 @@ describe("createByokProvider", () => {
 	});
 
 	it.each([
-		[{ provider: "ollama", host: "http://localhost:11434", model: "llama3.1:8b" }, "ollama"],
+		[{ provider: "ollama", url: "http://localhost:11434", model: "llama3.1:8b" }, "ollama"],
 		[{ provider: "anthropic", apiKey: "sk-ant-test", model: "claude-sonnet-4-6" }, "anthropic"],
 		[{ provider: "openai", apiKey: "sk-openai-test", model: "gpt-4o-mini" }, "openai"],
 		[{ provider: "google", apiKey: "AIza-test", model: "gemini-1.5-flash" }, "google"],
@@ -53,13 +53,62 @@ describe("createByokProvider", () => {
 		const provider = createByokProvider(
 			{
 				provider: "ollama",
-				host: "http://localhost:11434",
+				url: "http://localhost:11434",
 				model: "llama3.1:8b",
 			},
 			{ http }
 		);
 
 		expect(provider.id).toBe("ollama");
+	});
+
+	it("defaults Ollama to the local server URL", async () => {
+		const requests: Parameters<ByokHttpClient>[0][] = [];
+		const provider = createByokProvider(
+			{
+				provider: "ollama",
+				model: "llama3.1:8b",
+			},
+			{
+				http: async (request) => {
+					requests.push(request);
+					return {
+						status: 200,
+						text: JSON.stringify({ response: "Default local server." }),
+						json: { response: "Default local server." },
+					};
+				},
+			}
+		);
+
+		await provider.generateText({ prompt: "Say hi." });
+
+		expect(requests[0]?.url).toBe("http://localhost:11434/api/generate");
+	});
+
+	it("treats blank Ollama URLs as the default local server URL", async () => {
+		const requests: Parameters<ByokHttpClient>[0][] = [];
+		const provider = createByokProvider(
+			{
+				provider: "ollama",
+				url: " ",
+				model: "llama3.1:8b",
+			},
+			{
+				http: async (request) => {
+					requests.push(request);
+					return {
+						status: 200,
+						text: JSON.stringify({ response: "Default local server." }),
+						json: { response: "Default local server." },
+					};
+				},
+			}
+		);
+
+		await provider.generateText({ prompt: "Say hi." });
+
+		expect(requests[0]?.url).toBe("http://localhost:11434/api/generate");
 	});
 
 	it("throws a readable error when cloud providers have no fetch", () => {
@@ -75,23 +124,23 @@ describe("createByokProvider", () => {
 	});
 
 	it.each(["file:///tmp/ollama.sock", "javascript:alert(1)", "not a url"])(
-		"rejects invalid Ollama host %s",
-		(host) => {
+		"rejects invalid Ollama URL %s",
+		(url) => {
 			expect(() =>
 				createByokProvider(
-					{ provider: "ollama", host, model: "llama3.1:8b" },
+					{ provider: "ollama", url, model: "llama3.1:8b" },
 					{ http }
 				)
 			).toThrow(ByokProviderError);
 		}
 	);
 
-	it("rejects Ollama hosts with embedded credentials", () => {
+	it("rejects Ollama URLs with embedded credentials", () => {
 		expect(() =>
 			createByokProvider(
 				{
 					provider: "ollama",
-					host: "http://user:pass@localhost:11434",
+					url: "http://user:pass@localhost:11434",
 					model: "llama3.1:8b",
 				},
 				{ http }

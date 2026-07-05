@@ -5,7 +5,7 @@ import { OpenAIProvider } from "./openai-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
 import { XaiProvider } from "./xai-provider";
 import {
-	normalizeOllamaHost,
+	normalizeOllamaUrl,
 	resolveByokFetchDeps,
 	resolveOllamaDeps,
 } from "./default-deps";
@@ -63,7 +63,7 @@ export function createByokProvider(
 		case "ollama": {
 			const { http } = resolveOllamaDeps(deps);
 			return new OllamaProvider({
-				host: normalizeOllamaHost(config.host),
+				url: normalizeOllamaUrl(config.url),
 				model: config.model,
 				http,
 			}) as unknown as ByokProviderRuntime;
