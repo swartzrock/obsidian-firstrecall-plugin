@@ -103,7 +103,7 @@ describe("BYOK public contract", () => {
 			{ provider: "google", apiKey: "AIza-test", model: "gemini-1.5-flash" },
 			{ provider: "xai", apiKey: "xai-test", model: "grok-2-latest" },
 			{ provider: "openrouter", apiKey: "sk-or-test", model: "openai/gpt-4o" },
-			{ provider: "ollama", host: "http://localhost:11434", model: "llama3.1:8b" },
+			{ provider: "ollama", model: "llama3.1:8b" },
 			{ provider: "codex-cli", command: "codex" },
 			{ provider: "claude-cli", command: "claude", model: "sonnet" },
 		];
@@ -176,9 +176,9 @@ describe("BYOK public contract", () => {
 			label: "Ollama",
 			shortLabel: "Ollama",
 			productLabel: "Ollama",
-			credentialKind: "host",
+			credentialKind: "url",
 			credentialField: {
-				label: "Ollama host",
+				label: "Ollama URL",
 				secret: false,
 			},
 			requiresNetwork: false,

@@ -977,7 +977,7 @@ export function cueCraftProviderConfigFromSettings(
 		case "ollama":
 			return {
 				provider: ByokProvider.Ollama,
-				host: stored.credential,
+				url: stored.credential,
 				model: stored.model,
 			};
 	}
@@ -1037,7 +1037,7 @@ export async function listCueCraftProviderModelsFromStore(
 		case "ollama":
 			return listModels({
 				provider: ByokProvider.Ollama,
-				host: stored.credential,
+				url: stored.credential,
 				deps,
 			});
 		case "anthropic":

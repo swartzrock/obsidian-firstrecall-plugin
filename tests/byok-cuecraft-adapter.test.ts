@@ -167,7 +167,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			)
 		).toEqual({
 			provider: "ollama",
-			host: "http://localhost:11434",
+			url: "http://localhost:11434",
 			model: "llama3.1:8b",
 		});
 	});
@@ -235,7 +235,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			)
 		).resolves.toEqual({
 			provider: "ollama",
-			host: "http://localhost:11434",
+			url: "http://localhost:11434",
 			model: "llama3.1:8b",
 		});
 		expect(readCount).toBe(0);

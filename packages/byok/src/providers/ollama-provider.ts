@@ -38,7 +38,7 @@ function isAbortError(error: unknown): boolean {
 }
 
 export interface OllamaProviderOptions {
-	host: string;
+	url: string;
 	model: string;
 	http: HttpClient;
 }
@@ -49,12 +49,12 @@ export class OllamaProvider implements AiProvider {
 	readonly requiresNetwork = false;
 	readonly requiresDownload = false;
 
-	private host: string;
+	private url: string;
 	private model: string;
 	private http: HttpClient;
 
 	constructor(opts: OllamaProviderOptions) {
-		this.host = opts.host.replace(/\/+$/, "");
+		this.url = opts.url.replace(/\/+$/, "");
 		this.model = opts.model;
 		this.http = opts.http;
 	}
@@ -66,7 +66,7 @@ export class OllamaProvider implements AiProvider {
 		} catch {
 			return {
 				ok: false,
-				message: "Ollama server unreachable. Check the host and that Ollama is running.",
+				message: "Ollama server unreachable. Check the URL and that Ollama is running.",
 			};
 		}
 		if (this.model && !models.includes(this.model)) {
@@ -90,7 +90,7 @@ export class OllamaProvider implements AiProvider {
 	private async listModelIds(): Promise<string[]> {
 		const { Ollama } = await import("ollama/browser");
 		const client = new Ollama({
-			host: this.host,
+			host: this.url,
 			fetch: this.fetchViaHttp(),
 		});
 		const response = await client.list();
@@ -117,7 +117,7 @@ export class OllamaProvider implements AiProvider {
 		let res;
 		try {
 			res = await this.http({
-				url: `${this.host}/api/generate`,
+				url: `${this.url}/api/generate`,
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				signal,
@@ -130,7 +130,7 @@ export class OllamaProvider implements AiProvider {
 			});
 		} catch (e) {
 			if (signal?.aborted || isAbortError(e)) throw e;
-			throw new ProviderError("Ollama server unreachable. Check the host and that Ollama is running.");
+			throw new ProviderError("Ollama server unreachable. Check the URL and that Ollama is running.");
 		}
 		if (res.status < 200 || res.status >= 300) {
 			throw new ProviderError(

@@ -19,7 +19,7 @@ function generateClient(responses: string[]): HttpClient {
 }
 
 const baseOpts = (http: HttpClient) => ({
-	host: "http://localhost:11434/",
+	url: "http://localhost:11434/",
 	model: "test-model",
 	http,
 });

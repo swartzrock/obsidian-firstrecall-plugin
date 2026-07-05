@@ -24,7 +24,7 @@ export type ByokOllamaProviderId = "ollama";
 
 export type ByokCliProviderId = "codex-cli" | "claude-cli";
 
-export type ByokCredentialKind = "api-key" | "host" | "command";
+export type ByokCredentialKind = "api-key" | "url" | "command";
 
 export type ByokModelBehavior = "required" | "optional";
 
@@ -79,7 +79,7 @@ export interface ByokCloudProviderConfig {
 
 export interface ByokOllamaProviderConfig {
 	provider: ByokOllamaProviderId;
-	host: string;
+	url?: string;
 	model: string;
 }
 

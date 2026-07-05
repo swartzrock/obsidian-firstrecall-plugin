@@ -13,7 +13,7 @@ Provider implementation files, model sorting helpers, Anthropic picker helpers, 
 
 ## `@cuecraft/byok`
 
-The main entrypoint is the small browser/Electron-safe API for core providers.
+The main entrypoint is the small trusted-runtime API for core providers. It avoids Node-only process APIs, but browser and Electron renderer UIs should call it through a trusted host boundary rather than importing BYOK directly with provider credentials.
 
 Runtime exports:
 
@@ -60,7 +60,7 @@ const { text } = await generateText({
 });
 ```
 
-Cloud providers use `{ provider, apiKey, model, prompt }`. Ollama uses `{ provider: ByokProvider.Ollama, host, model, prompt }`. Both forms accept optional `deps` and `signal`.
+Cloud providers use `{ provider, apiKey, model, prompt }`. Ollama uses `{ provider: ByokProvider.Ollama, model, prompt }` and accepts optional `url` for non-default Ollama servers. Both forms accept optional `deps` and `signal`.
 
 The function-first API intentionally accepts plain text prompts only. Use the node runtime when you need connection testing, JSON response hints, or structured object generation.
 
@@ -93,7 +93,7 @@ const models = await listModels({
 });
 ```
 
-Cloud providers use `{ provider, apiKey }`. Ollama uses `{ provider: ByokProvider.Ollama, host }`. Both forms accept optional `deps`.
+Cloud providers use `{ provider, apiKey }`. Ollama uses `{ provider: ByokProvider.Ollama }` and accepts optional `url` for non-default Ollama servers. Both forms accept optional `deps`.
 
 CLI model discovery is available from the Node runtime provider. Codex CLI shells out to `codex debug models`; Claude CLI fetches Anthropic model IDs from OpenRouter's public model list and strips the OpenRouter provider prefix.
 
