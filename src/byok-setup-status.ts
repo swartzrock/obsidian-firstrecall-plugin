@@ -6,7 +6,7 @@ import {
 	type ByokStoredSettings,
 	type ByokVerificationSnapshot,
 	type ByokVerificationSnapshotMap,
-} from "@cuecraft/byok";
+} from "@swartzrock/byok-runtime";
 
 export const CLI_DEFAULT_MODEL_SENTINEL = "__byok_cli_default__";
 

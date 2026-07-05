@@ -9,7 +9,7 @@ import {
 	resolveGenerationOptions,
 	resolveSectionConcurrency,
 } from "../src/generator";
-import type { ByokProviderStatus } from "@cuecraft/byok";
+import type { ByokProviderStatus } from "@swartzrock/byok-runtime";
 import type {
 	CueCraftCueBatchResult,
 	CueCraftCueInput,

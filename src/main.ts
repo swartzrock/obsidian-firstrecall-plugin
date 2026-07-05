@@ -24,7 +24,7 @@ import {
 import {
 	type ByokHttpClient,
 	byokProviderDefinition,
-} from "@cuecraft/byok";
+} from "@swartzrock/byok-runtime";
 import {
 	generateNote,
 	generateNoteBriefForSections,

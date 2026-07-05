@@ -7,7 +7,7 @@
 		"target": "ES2018",
 		"allowJs": true,
 		"noImplicitAny": true,
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"importHelpers": true,
 		"isolatedModules": true,
 		"strict": true,
@@ -16,9 +16,9 @@
 		"noUnusedParameters": true,
 		"lib": ["DOM", "ES5", "ES6", "ES7", "ES2018"],
 		"paths": {
-			"@cuecraft/byok": ["packages/byok/src/index.ts"],
-			"@cuecraft/byok/node": ["packages/byok/src/node.ts"]
+			"@swartzrock/byok-runtime": ["node_modules/@swartzrock/byok-runtime/src/index.ts"],
+			"@swartzrock/byok-runtime/node": ["node_modules/@swartzrock/byok-runtime/src/node.ts"]
 		}
 	},
-	"include": ["src/**/*.ts", "packages/byok/src/**/*.ts"]
+	"include": ["src/**/*.ts"]
 }

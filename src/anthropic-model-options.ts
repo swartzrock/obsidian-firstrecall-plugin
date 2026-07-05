@@ -1,5 +1,5 @@
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
-import type { ByokModelOption } from "@cuecraft/byok";
+import type { ByokModelOption } from "@swartzrock/byok-runtime";
 
 export interface AnthropicModelOption {
 	id: string;

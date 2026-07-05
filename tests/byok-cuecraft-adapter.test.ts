@@ -17,7 +17,7 @@ import {
 	setCueCraftProviderCredentialMetadata,
 	setCueCraftProviderModel,
 } from "../src/byok-cuecraft-adapter";
-import type { ByokHttpClient, ByokModelOption } from "@cuecraft/byok";
+import type { ByokHttpClient, ByokModelOption } from "@swartzrock/byok-runtime";
 import {
 	type CueCraftSettings,
 } from "../src/settings";

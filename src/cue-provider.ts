@@ -2,7 +2,7 @@ import type {
 	ByokModelOption,
 	ByokProviderId,
 	ByokProviderStatus,
-} from "@cuecraft/byok";
+} from "@swartzrock/byok-runtime";
 import type { CueGenerationOptions } from "./cue-generation";
 import type { CueOutput, NoteBriefOutput, SummaryOutput } from "./schemas";
 

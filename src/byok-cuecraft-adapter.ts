@@ -15,8 +15,8 @@ import {
 	type ByokSetupStatus,
 	type ByokStoredSettings,
 	type ByokVerificationSnapshotMap,
-} from "@cuecraft/byok";
-import { createByokNodeProvider } from "@cuecraft/byok/node";
+} from "@swartzrock/byok-runtime";
+import { createByokNodeProvider } from "@swartzrock/byok-runtime/node";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import { normalizeAnthropicModelSelection } from "./anthropic-model-options";
 import {
@@ -74,7 +74,7 @@ export type CueCraftProviderFactoryDeps = ByokProviderDeps;
 export type CueCraftProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type CueCraftByokSettings = ByokStoredSettings;
 export type CueCraftByokProviderSettings = ByokProviderStoredSettings;
-export type { ByokProviderConfig, ByokProviderDeps } from "@cuecraft/byok";
+export type { ByokProviderConfig, ByokProviderDeps } from "@swartzrock/byok-runtime";
 export type {
 	CueCraftCueBatchResult,
 	CueCraftCueInput,
