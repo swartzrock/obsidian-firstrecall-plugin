@@ -1124,31 +1124,41 @@ const cueRailOverflowPlugin = ViewPlugin.fromClass(
 		};
 
 		constructor(private readonly view: EditorView) {
-			view.dom.addEventListener(RAIL_CARD_TOGGLE_EVENT, this.onRailCardToggle);
+			view.dom.ownerDocument.addEventListener(
+				RAIL_CARD_TOGGLE_EVENT,
+				this.onRailCardToggle
+			);
 			scheduleRailOverflowMeasure(view);
 		}
 
 		update(update: ViewUpdate): void {
-			if (
-				update.docChanged ||
-				update.viewportChanged ||
-				update.selectionSet ||
-				update.transactions.some((tr) =>
-					tr.effects.some((effect) => effect.is(setCuesEffect))
-				)
-			) {
+			if (railOverflowUpdateNeedsMeasure(update)) {
 				scheduleRailOverflowMeasure(this.view);
 			}
 		}
 
 		destroy(): void {
-			this.view.dom.removeEventListener(
+			this.view.dom.ownerDocument.removeEventListener(
 				RAIL_CARD_TOGGLE_EVENT,
 				this.onRailCardToggle
 			);
 		}
 	}
 );
+
+export function railOverflowUpdateNeedsMeasure(update: ViewUpdate): boolean {
+	return (
+		update.docChanged ||
+		update.viewportChanged ||
+		update.selectionSet ||
+		update.transactions.some((tr) =>
+			tr.effects.some(
+				(effect) =>
+					effect.is(setCuesEffect) || effect.is(setRailSpacersEffect)
+			)
+		)
+	);
+}
 
 /** Editor extension that renders CueCraft cues. Register via registerEditorExtension. */
 export const cueEditorExtension = [
