@@ -273,6 +273,8 @@ function renderCornellCueElement(
 		card.appendChild(q);
 	}
 
+	appendSectionLens(card, cue.sectionLens);
+
 	const supports = buildCornellSupportPresentation({
 		keywords: cue.keywords,
 	});

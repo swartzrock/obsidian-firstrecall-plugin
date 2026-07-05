@@ -343,6 +343,9 @@ describe("renderCueElement", () => {
 			expect(cornell.dataset.supportTermsVisible).toBe("false");
 			expect(cornell.querySelector(".cuecraft-cornell-q")).toBeNull();
 			expect(cornell.querySelector(".cuecraft-cornell-kw")).toBeNull();
+			expect(
+				cornell.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
 		});
 	});
 
@@ -742,6 +745,9 @@ describe("cue editor placement", () => {
 			expect(el.querySelector(".cuecraft-cornell-support-text")?.textContent).toBe(
 				"alpha"
 			);
+			expect(
+				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
 		});
 	});
 
@@ -752,12 +758,18 @@ describe("cue editor placement", () => {
 			expect(examPrep.classList.contains("cuecraft-style-exam-prep")).toBe(true);
 			expect(examPrep.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
 			expect(examPrep.textContent).toContain("What is A?");
+			expect(
+				examPrep.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
 
 			const minimal = renderCueElement(cues[0], "cornell-minimal");
 			expect(minimal.classList.contains("cuecraft-editor-hook")).toBe(true);
 			expect(minimal.classList.contains("cuecraft-style-minimal")).toBe(true);
 			expect(minimal.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
 			expect(minimal.textContent).toContain("What is A?");
+			expect(
+				minimal.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
 		});
 	});
 
