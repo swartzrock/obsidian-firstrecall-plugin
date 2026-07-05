@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	CodexCliProvider,
+	extractCodexCliModels,
 	extractCodexCliOutput,
 } from "../src/providers/codex-cli-provider";
 import { defaultLocalCliCwd } from "../src/providers/local-command-runner";
@@ -54,6 +55,41 @@ describe("extractCodexCliOutput", () => {
 
 	it("falls back to plain stdout when the CLI prints raw final text", () => {
 		expect(extractCodexCliOutput('{"summary":"S"}')).toBe('{"summary":"S"}');
+	});
+});
+
+describe("extractCodexCliModels", () => {
+	it("extracts model options from Codex debug models output", () => {
+		expect(
+			extractCodexCliModels(
+				JSON.stringify({
+					models: [
+						{
+							slug: "gpt-5.5",
+							display_name: "GPT-5.5",
+							description: "Frontier model.",
+						},
+						{
+							slug: "gpt-5-codex",
+							display_name: "GPT-5 Codex",
+						},
+					],
+				})
+			)
+		).toEqual([
+			{ id: "gpt-5.5", label: "gpt-5.5" },
+			{ id: "gpt-5-codex", label: "gpt-5-codex" },
+		]);
+	});
+
+	it("accepts string model arrays and ignores entries without IDs", () => {
+		expect(
+			extractCodexCliModels(
+				JSON.stringify({
+					models: ["gpt-5", { display_name: "Missing ID" }, { slug: "" }],
+				})
+			)
+		).toEqual([{ id: "gpt-5", label: "gpt-5" }]);
 	});
 });
 
@@ -130,6 +166,36 @@ describe("CodexCliProvider", () => {
 			ok: true,
 			message: "Connected to Codex CLI (gpt-5).",
 		});
+	});
+
+	it("lists models via codex debug models", async () => {
+		const { provider, run } = makeProvider([
+			result(
+				JSON.stringify({
+					models: [
+						{ slug: "gpt-5.5", display_name: "GPT-5.5" },
+					],
+				})
+			),
+		]);
+
+		await expect(provider.listModels()).resolves.toEqual([
+			{ id: "gpt-5.5", label: "gpt-5.5" },
+		]);
+		expect(run).toHaveBeenCalledWith({
+			command: "codex",
+			args: ["debug", "models"],
+			cwd: "/tmp/byok-empty",
+			timeoutMs: 15_000,
+		});
+	});
+
+	it("maps Codex CLI model-list failures into ProviderError", async () => {
+		const { provider } = makeProvider([new Error("boom")]);
+
+		await expect(provider.listModels()).rejects.toThrow(
+			/Codex CLI model fetch failed: boom/
+		);
 	});
 
 	it("passes the configured model override and omits it when blank", async () => {

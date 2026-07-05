@@ -1,4 +1,5 @@
 import {
+	ByokProvider,
 	createByokNodeProvider,
 	type ByokHttpClient,
 	type ByokProviderConfig,
@@ -18,7 +19,7 @@ const deps: ByokProviderDeps = {
 };
 
 const config: ByokProviderConfig = {
-	provider: "codex-cli",
+	provider: ByokProvider.CodexCli,
 	command: "codex",
 };
 

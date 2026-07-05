@@ -8,14 +8,14 @@ import {
 	textGenerator,
 	type TextGenerator,
 } from "./ai-sdk-provider";
-import {
-	normalizeOpenRouterModel,
-	type ModelOption,
-	type OpenRouterRawModel,
-} from "../models/model-options";
-import type { ByokProviderAppInfo } from "../types";
+import type { ModelOption } from "../models/model-options";
 
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
+
+interface OpenRouterRawModel {
+	id?: string;
+	name?: string;
+}
 
 export interface OpenRouterProviderOptions {
 	apiKey: string;
@@ -27,8 +27,6 @@ export interface OpenRouterProviderOptions {
 	textGenerator?: TextGenerator;
 	/** Overrides the model-list call in tests. */
 	listModelsImpl?: () => Promise<ModelOption[]>;
-	/** Optional app metadata forwarded to OpenRouter request headers. */
-	appInfo?: ByokProviderAppInfo;
 }
 
 export class OpenRouterProvider extends AiSdkProvider {
@@ -40,30 +38,28 @@ export class OpenRouterProvider extends AiSdkProvider {
 			model: opts.model,
 			generateObject:
 				opts.generator ??
-				defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl, opts.appInfo),
+				defaultGenerator(opts.apiKey, opts.model, opts.fetchImpl),
 			generateText:
 				opts.textGenerator ??
-				defaultTextGenerator(opts.apiKey, opts.model, opts.fetchImpl, opts.appInfo),
+				defaultTextGenerator(opts.apiKey, opts.model, opts.fetchImpl),
 			listModels:
 				opts.listModelsImpl ??
-				(() => listOpenRouterModelOptions(opts.apiKey, opts.fetchImpl, opts.appInfo)),
+				(() => listOpenRouterModelOptions(opts.apiKey, opts.fetchImpl)),
 		});
 	}
 }
 
-function openRouterAppHeaders(
-	appInfo: ByokProviderAppInfo | undefined
-): Record<string, string> {
-	const headers: Record<string, string> = {};
-	if (appInfo?.url) headers["HTTP-Referer"] = appInfo.url;
-	if (appInfo?.name) headers["X-Title"] = appInfo.name;
-	return headers;
+function normalizeOpenRouterModel(entry: OpenRouterRawModel): ModelOption {
+	const id = entry.id ?? "";
+	return {
+		id,
+		label: entry.name ?? id,
+	};
 }
 
 async function listOpenRouterModelOptions(
 	apiKey: string,
-	fetchImpl?: FetchFunction,
-	appInfo?: ByokProviderAppInfo
+	fetchImpl?: FetchFunction
 ): Promise<ModelOption[]> {
 	const fetchFn = (fetchImpl ?? globalThis.fetch) as typeof fetch | undefined;
 	if (!fetchFn) {
@@ -73,7 +69,6 @@ async function listOpenRouterModelOptions(
 		method: "GET",
 		headers: {
 			Authorization: `Bearer ${apiKey}`,
-			...openRouterAppHeaders(appInfo),
 		},
 	});
 	if (!response.ok) {
@@ -96,15 +91,13 @@ async function listOpenRouterModelOptions(
 function defaultGenerator(
 	apiKey: string,
 	modelId: string,
-	fetchImpl?: FetchFunction,
-	appInfo?: ByokProviderAppInfo
+	fetchImpl?: FetchFunction
 ): ObjectGenerator {
 	const openrouter = createOpenAI({
 		apiKey,
 		baseURL: OPENROUTER_BASE_URL,
 		fetch: fetchImpl,
 		name: "openrouter",
-		headers: openRouterAppHeaders(appInfo),
 	});
 	const model = openrouter.chat(modelId);
 	return async function generate<T>({ schema, prompt, signal }: {
@@ -128,15 +121,13 @@ function defaultGenerator(
 function defaultTextGenerator(
 	apiKey: string,
 	modelId: string,
-	fetchImpl?: FetchFunction,
-	appInfo?: ByokProviderAppInfo
+	fetchImpl?: FetchFunction
 ): TextGenerator {
 	const openrouter = createOpenAI({
 		apiKey,
 		baseURL: OPENROUTER_BASE_URL,
 		fetch: fetchImpl,
 		name: "openrouter",
-		headers: openRouterAppHeaders(appInfo),
 	});
 	return textGenerator(openrouter.chat(modelId));
 }

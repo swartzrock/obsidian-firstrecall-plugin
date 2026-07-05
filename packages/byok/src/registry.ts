@@ -1,36 +1,40 @@
-import type { ByokProviderDefinition, ByokProviderId } from "./types";
+import {
+	ByokProvider,
+	type ByokProviderDefinition,
+	type ByokProviderId,
+} from "./types";
 import { BYOK_PROVIDER_ICONS } from "./provider-icons";
 
 export const BYOK_PROVIDER_IDS = [
-	"anthropic",
-	"openai",
-	"google",
-	"xai",
-	"openrouter",
-	"ollama",
-	"codex-cli",
-	"claude-cli",
+	ByokProvider.Anthropic,
+	ByokProvider.OpenAI,
+	ByokProvider.Google,
+	ByokProvider.Xai,
+	ByokProvider.OpenRouter,
+	ByokProvider.Ollama,
+	ByokProvider.CodexCli,
+	ByokProvider.ClaudeCli,
 ] as const satisfies readonly ByokProviderId[];
 
 export const BYOK_PROVIDER_DEFINITIONS: Record<
 	ByokProviderId,
 	ByokProviderDefinition
 > = {
-	ollama: {
-		id: "ollama",
+	[ByokProvider.Ollama]: {
+		id: ByokProvider.Ollama,
 		label: "Ollama",
 		shortLabel: "Ollama",
 		productLabel: "Ollama",
 		vendor: "Ollama",
 		icon: BYOK_PROVIDER_ICONS.ollama,
-		credentialKind: "host",
+		credentialKind: "url",
 		credentialField: {
-			label: "Ollama host",
+			label: "Ollama URL",
 			placeholder: "http://localhost:11434",
 			description: "Local Ollama server URL.",
 			secret: false,
-			missingMessage: "Enter your Ollama host first.",
-			resetModelsMessage: "Enter your Ollama host first to fetch models.",
+			missingMessage: "Enter your Ollama URL first.",
+			resetModelsMessage: "Enter your Ollama URL first to fetch models.",
 		},
 		modelBehavior: "required",
 		modelField: {
@@ -39,15 +43,14 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			description: "Installed Ollama model.",
 			listModelsLabel: "Ollama models",
 			listModelsDescription: "Fetch installed Ollama models.",
-			emptyListMessage: "No Ollama models were returned by the configured host.",
-			optionSource: "ollama",
+			emptyListMessage: "No Ollama models were returned by the configured URL.",
 		},
 		requiresNetwork: false,
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	anthropic: {
-		id: "anthropic",
+	[ByokProvider.Anthropic]: {
+		id: ByokProvider.Anthropic,
 		label: "Anthropic (Claude)",
 		shortLabel: "Anthropic",
 		productLabel: "Claude",
@@ -70,14 +73,13 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			listModelsLabel: "Anthropic models",
 			listModelsDescription: "Fetch Anthropic models for this account.",
 			emptyListMessage: "No Anthropic models were returned for this account.",
-			optionSource: "anthropic",
 		},
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	openai: {
-		id: "openai",
+	[ByokProvider.OpenAI]: {
+		id: ByokProvider.OpenAI,
 		label: "OpenAI (ChatGPT)",
 		shortLabel: "OpenAI",
 		productLabel: "ChatGPT",
@@ -100,14 +102,13 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			listModelsLabel: "OpenAI models",
 			listModelsDescription: "Fetch OpenAI models for this account.",
 			emptyListMessage: "No OpenAI models were returned for this account.",
-			optionSource: "openai",
 		},
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	google: {
-		id: "google",
+	[ByokProvider.Google]: {
+		id: ByokProvider.Google,
 		label: "Google (Gemini)",
 		shortLabel: "Gemini",
 		productLabel: "Gemini",
@@ -130,14 +131,13 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			listModelsLabel: "Gemini models",
 			listModelsDescription: "Fetch Gemini models for this account.",
 			emptyListMessage: "No Gemini models were returned for this account.",
-			optionSource: "google",
 		},
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	xai: {
-		id: "xai",
+	[ByokProvider.Xai]: {
+		id: ByokProvider.Xai,
 		label: "xAI (Grok)",
 		shortLabel: "xAI",
 		productLabel: "Grok",
@@ -160,14 +160,13 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			listModelsLabel: "xAI models",
 			listModelsDescription: "Fetch xAI models for this account.",
 			emptyListMessage: "No xAI models were returned for this account.",
-			optionSource: "xai",
 		},
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	openrouter: {
-		id: "openrouter",
+	[ByokProvider.OpenRouter]: {
+		id: ByokProvider.OpenRouter,
 		label: "OpenRouter",
 		shortLabel: "OpenRouter",
 		productLabel: "OpenRouter",
@@ -190,14 +189,13 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			listModelsLabel: "OpenRouter models",
 			listModelsDescription: "Fetch OpenRouter models for this account.",
 			emptyListMessage: "No OpenRouter models were returned for this account.",
-			optionSource: "openrouter",
 		},
 		requiresNetwork: true,
 		requiresDownload: false,
 		supportsModelListing: true,
 	},
-	"codex-cli": {
-		id: "codex-cli",
+	[ByokProvider.CodexCli]: {
+		id: ByokProvider.CodexCli,
 		label: "Codex CLI",
 		shortLabel: "Codex CLI",
 		productLabel: "Codex CLI",
@@ -210,19 +208,23 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			description: "Local Codex CLI command.",
 			secret: false,
 			missingMessage: "Enter your Codex CLI command first.",
+			resetModelsMessage: "Enter your Codex CLI command first to fetch models.",
 		},
 		modelBehavior: "optional",
 		modelField: {
 			label: "Codex CLI model override",
 			placeholder: "CLI default",
 			description: "Optional model override.",
+			listModelsLabel: "Codex CLI models",
+			listModelsDescription: "Fetch models from `codex debug models`.",
+			emptyListMessage: "No Codex CLI models were returned by the configured command.",
 		},
 		requiresNetwork: true,
 		requiresDownload: false,
-		supportsModelListing: false,
+		supportsModelListing: true,
 	},
-	"claude-cli": {
-		id: "claude-cli",
+	[ByokProvider.ClaudeCli]: {
+		id: ByokProvider.ClaudeCli,
 		label: "Claude CLI",
 		shortLabel: "Claude CLI",
 		productLabel: "Claude CLI",
@@ -235,16 +237,20 @@ export const BYOK_PROVIDER_DEFINITIONS: Record<
 			description: "Local Claude CLI command.",
 			secret: false,
 			missingMessage: "Enter your Claude CLI command first.",
+			resetModelsMessage: "Enter your Claude CLI command first to fetch models.",
 		},
 		modelBehavior: "optional",
 		modelField: {
 			label: "Claude CLI model override",
-			placeholder: "sonnet",
+			placeholder: "CLI default",
 			description: "Optional model override.",
+			listModelsLabel: "Claude CLI models",
+			listModelsDescription: "Fetch latest Anthropic models from OpenRouter and use Claude CLI model IDs.",
+			emptyListMessage: "No Anthropic models were returned by OpenRouter.",
 		},
 		requiresNetwork: true,
 		requiresDownload: false,
-		supportsModelListing: false,
+		supportsModelListing: true,
 	},
 };
 
@@ -257,9 +263,9 @@ export function isByokProviderId(value: unknown): value is ByokProviderId {
 
 export function normalizeProviderId(value: unknown): ByokProviderId {
 	if (isByokProviderId(value)) return value;
-	if (value === "codex") return "codex-cli";
-	if (value === "claude") return "claude-cli";
-	return "ollama";
+	if (value === "codex") return ByokProvider.CodexCli;
+	if (value === "claude") return ByokProvider.ClaudeCli;
+	return ByokProvider.Ollama;
 }
 
 export function byokProviderDefinition(

@@ -61,6 +61,9 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 		async testConnection(): Promise<ByokProviderStatus> {
 			return { ok: true, message: "ok" };
 		},
+		async listModels() {
+			return [];
+		},
 		async generateCue(input: CueCraftCueInput): Promise<CueCraftCueOutput> {
 			provider.cueInputs.push(input);
 			opts.onCue?.();

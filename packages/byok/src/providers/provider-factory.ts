@@ -4,6 +4,11 @@ import { OllamaProvider } from "./ollama-provider";
 import { OpenAIProvider } from "./openai-provider";
 import { OpenRouterProvider } from "./openrouter-provider";
 import { XaiProvider } from "./xai-provider";
+import {
+	normalizeOllamaUrl,
+	resolveByokFetchDeps,
+	resolveOllamaDeps,
+} from "./default-deps";
 import type {
 	ByokCoreProviderConfig,
 	ByokProviderDeps,
@@ -12,45 +17,56 @@ import type {
 
 export function createByokProvider(
 	config: ByokCoreProviderConfig,
-	deps: ByokProviderDeps
+	deps?: Partial<ByokProviderDeps>
 ): ByokProviderRuntime {
 	switch (config.provider) {
-		case "anthropic":
+		case "anthropic": {
+			const { fetchImpl } = resolveByokFetchDeps(deps);
 			return new AnthropicProvider({
 				apiKey: config.apiKey,
 				model: config.model,
-				fetchImpl: deps.fetchImpl,
+				fetchImpl,
 			}) as unknown as ByokProviderRuntime;
-		case "openai":
+		}
+		case "openai": {
+			const { fetchImpl } = resolveByokFetchDeps(deps);
 			return new OpenAIProvider({
 				apiKey: config.apiKey,
 				model: config.model,
-				fetchImpl: deps.fetchImpl,
+				fetchImpl,
 			}) as unknown as ByokProviderRuntime;
-		case "google":
+		}
+		case "google": {
+			const { fetchImpl } = resolveByokFetchDeps(deps);
 			return new GoogleProvider({
 				apiKey: config.apiKey,
 				model: config.model,
-				fetchImpl: deps.fetchImpl,
+				fetchImpl,
 			}) as unknown as ByokProviderRuntime;
-		case "xai":
+		}
+		case "xai": {
+			const { fetchImpl } = resolveByokFetchDeps(deps);
 			return new XaiProvider({
 				apiKey: config.apiKey,
 				model: config.model,
-				fetchImpl: deps.fetchImpl,
+				fetchImpl,
 			}) as unknown as ByokProviderRuntime;
-		case "openrouter":
+		}
+		case "openrouter": {
+			const { fetchImpl } = resolveByokFetchDeps(deps);
 			return new OpenRouterProvider({
 				apiKey: config.apiKey,
 				model: config.model,
-				fetchImpl: deps.fetchImpl,
-				appInfo: deps.appInfo,
+				fetchImpl,
 			}) as unknown as ByokProviderRuntime;
-		case "ollama":
+		}
+		case "ollama": {
+			const { http } = resolveOllamaDeps(deps);
 			return new OllamaProvider({
-				host: config.host,
+				url: normalizeOllamaUrl(config.url),
 				model: config.model,
-				http: deps.http,
+				http,
 			}) as unknown as ByokProviderRuntime;
+		}
 	}
 }

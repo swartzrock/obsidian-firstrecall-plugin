@@ -19,7 +19,7 @@ function generateClient(responses: string[]): HttpClient {
 }
 
 const baseOpts = (http: HttpClient) => ({
-	host: "http://localhost:11434/",
+	url: "http://localhost:11434/",
 	model: "test-model",
 	http,
 });
@@ -27,7 +27,9 @@ const baseOpts = (http: HttpClient) => ({
 describe("OllamaProvider.testConnection", () => {
 	it("lists locally installed model ids", async () => {
 		const p = new OllamaProvider(baseOpts(generateClient([])));
-		await expect(p.listModels()).resolves.toEqual(["test-model"]);
+		await expect(p.listModels()).resolves.toEqual([
+			{ id: "test-model", label: "test-model" },
+		]);
 	});
 
 	it("reports success when the model is available", async () => {

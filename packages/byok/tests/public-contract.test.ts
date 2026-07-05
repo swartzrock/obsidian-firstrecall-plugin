@@ -20,45 +20,42 @@ const REPO_ROOT = fileURLToPath(new URL("../../..", import.meta.url));
 describe("BYOK public contract", () => {
 	it("exports only the intentional main-entry public API", () => {
 		expect(Object.keys(byok).sort()).toEqual([
-			"ANTHROPIC_CUSTOM_MODEL_ID",
-			"BYOK_PROVIDER_DEFINITIONS",
 			"BYOK_PROVIDER_IDS",
+			"ByokProvider",
 			"ByokProviderError",
 			"ByokProviderRateLimitError",
-			"CLI_DEFAULT_MODEL_SENTINEL",
-			"anthropicModelInfoToByokModelOption",
-			"buildAnthropicModelOptions",
 			"byokProviderDefinition",
 			"byokProviderDefinitions",
-			"compareFetchedModelIds",
-			"createByokProvider",
-			"deriveProviderSetupStatus",
-			"describeAnthropicModel",
-			"describeAnthropicModelDetails",
-			"formatAnthropicModelHint",
-			"formatAnthropicUnavailableModelMessage",
-			"isAnthropicCustomModelSelection",
+			"createByok",
+			"generateText",
 			"isByokProviderId",
-			"isLargeContextModel",
-			"isLowCostModel",
-			"isModelOption",
-			"modelCompatibilityBadges",
-			"modelCompatibilityWarning",
-			"modelStructuredOutputSupport",
-			"normalizeAnthropicModelSelection",
-			"normalizeModelIds",
-			"normalizeOpenRouterModel",
+			"listModels",
 			"normalizeProviderId",
-			"normalizeStringId",
-			"providerCredentialFingerprint",
-			"recordProviderConnectionSuccess",
-			"refreshAnthropicModelOptions",
-			"sortByokModelOptions",
-			"sortFetchedModelIds",
-			"sortModelOptions",
 		]);
 		expect("createByokNodeProvider" in byok).toBe(false);
+		expect("createByokProvider" in byok).toBe(false);
 		expect("LocalCommandRunner" in byok).toBe(false);
+	});
+
+	it("does not expose removed provider-specific type-only model APIs", () => {
+		const indexSource = readFileSync(join(PACKAGE_ROOT, "src", "index.ts"), "utf8");
+		for (const forbiddenName of [
+			"ByokListedModel",
+			"ByokModelOptionSource",
+			"ModelOptionSource",
+			"OpenRouterRawModel",
+			"StructuredOutputSupport",
+		]) {
+			expect(indexSource, forbiddenName).not.toContain(forbiddenName);
+		}
+
+		const typesSource = readFileSync(join(PACKAGE_ROOT, "src", "types.ts"), "utf8");
+		const modelOptionMatch = typesSource.match(
+			/export interface ByokModelOption \{([\s\S]*?)\n\}/
+		);
+		expect(modelOptionMatch?.[1]).toBe(
+			"\n\tid: string;\n\tlabel: string;"
+		);
 	});
 
 	it("keeps BYOK free of app and storage imports", () => {
@@ -74,13 +71,26 @@ describe("BYOK public contract", () => {
 	});
 
 	it("documents examples against the public barrel", () => {
-		const doc = readFileSync(join(REPO_ROOT, "docs", "byok-extraction.md"), "utf8");
-		const codeExamples = [...doc.matchAll(/```(?:ts|typescript)\n([\s\S]*?)```/g)]
-			.map((match) => match[1] ?? "")
+		const docs = [
+			join(REPO_ROOT, "docs", "byok-extraction.md"),
+			join(PACKAGE_ROOT, "README.md"),
+			join(PACKAGE_ROOT, "API.md"),
+		];
+		const codeExamples = docs
+			.map((path) => readFileSync(path, "utf8"))
+			.flatMap((doc) =>
+				[...doc.matchAll(/```(?:ts|typescript)\n([\s\S]*?)```/g)].map(
+					(match) => match[1] ?? ""
+				)
+			)
 			.join("\n");
 
 		expect(codeExamples).toContain('from "@cuecraft/byok"');
 		expect(codeExamples).toContain('from "@cuecraft/byok/node"');
+		expect(codeExamples).toContain("generateText");
+		expect(codeExamples).toContain("createByok");
+		expect(codeExamples).toContain("listModels");
+		expect(codeExamples).toContain("ByokProvider");
 		expect(codeExamples).not.toMatch(
 			/from\s+["'][^"']*byok\/(?:models|providers|registry|setup-status|types)/
 		);
@@ -93,7 +103,7 @@ describe("BYOK public contract", () => {
 			{ provider: "google", apiKey: "AIza-test", model: "gemini-1.5-flash" },
 			{ provider: "xai", apiKey: "xai-test", model: "grok-2-latest" },
 			{ provider: "openrouter", apiKey: "sk-or-test", model: "openai/gpt-4o" },
-			{ provider: "ollama", host: "http://localhost:11434", model: "llama3.1:8b" },
+			{ provider: "ollama", model: "llama3.1:8b" },
 			{ provider: "codex-cli", command: "codex" },
 			{ provider: "claude-cli", command: "claude", model: "sonnet" },
 		];
@@ -113,7 +123,7 @@ describe("BYOK public contract", () => {
 				return { ok: true, message: "Connected." };
 			},
 			async listModels() {
-				return ["gpt-4o-mini"];
+				return [{ id: "gpt-4o-mini", label: "gpt-4o-mini" }];
 			},
 			async generateText() {
 				return { text: "Plain response." };
@@ -127,7 +137,9 @@ describe("BYOK public contract", () => {
 			ok: true,
 			message: "Connected.",
 		});
-		await expect(runtime.listModels?.()).resolves.toEqual(["gpt-4o-mini"]);
+		await expect(runtime.listModels()).resolves.toEqual([
+			{ id: "gpt-4o-mini", label: "gpt-4o-mini" },
+		]);
 		await expect(runtime.generateText({ prompt: "Hi" })).resolves.toEqual({
 			text: "Plain response.",
 		});
@@ -145,6 +157,7 @@ describe("BYOK public contract", () => {
 
 		expect(definitions).toHaveLength(8);
 		for (const definition of definitions) {
+			expect(definition.supportsModelListing).toBe(true);
 			expect(definition.shortLabel.length).toBeGreaterThan(0);
 			expect(definition.productLabel.length).toBeGreaterThan(0);
 			expect(definition.icon.viewBox.length).toBeGreaterThan(0);
@@ -163,9 +176,9 @@ describe("BYOK public contract", () => {
 			label: "Ollama",
 			shortLabel: "Ollama",
 			productLabel: "Ollama",
-			credentialKind: "host",
+			credentialKind: "url",
 			credentialField: {
-				label: "Ollama host",
+				label: "Ollama URL",
 				secret: false,
 			},
 			requiresNetwork: false,
@@ -185,12 +198,20 @@ describe("BYOK public contract", () => {
 		expect(byId.get("codex-cli")).toMatchObject({
 			label: "Codex CLI",
 			credentialKind: "command",
+			modelField: expect.objectContaining({
+				placeholder: "CLI default",
+			}),
 			modelBehavior: "optional",
+			supportsModelListing: true,
 		} satisfies Partial<ByokProviderDefinition>);
 		expect(byId.get("claude-cli")).toMatchObject({
 			label: "Claude CLI",
 			credentialKind: "command",
+			modelField: expect.objectContaining({
+				placeholder: "CLI default",
+			}),
 			modelBehavior: "optional",
+			supportsModelListing: true,
 		} satisfies Partial<ByokProviderDefinition>);
 	});
 

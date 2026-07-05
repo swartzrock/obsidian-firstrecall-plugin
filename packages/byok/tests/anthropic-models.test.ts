@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
+	anthropicModelInfoToByokModelOption,
 	buildAnthropicModelOptions,
 	describeAnthropicModel,
 	describeAnthropicModelDetails,
@@ -10,7 +11,7 @@ import {
 	isAnthropicCustomModelSelection,
 	normalizeAnthropicModelSelection,
 	refreshAnthropicModelOptions,
-} from "../src";
+} from "../src/models/anthropic-models";
 
 function modelInfo(id: string, display_name: string): ModelInfo {
 	return {
@@ -176,9 +177,15 @@ describe("Anthropic model refresh", () => {
 	it("returns fetched Anthropic models with their provider display names", async () => {
 		const refreshed = await refreshAnthropicModelOptions({
 			listModels: async () => [
-				modelInfo("claude-sonnet-4-6", "Claude Sonnet 4.6"),
-				modelInfo("claude-account-123", "Claude Account 123"),
-				modelInfo("claude-haiku-4-5", "Claude Haiku 4.5"),
+				anthropicModelInfoToByokModelOption(
+					modelInfo("claude-sonnet-4-6", "Claude Sonnet 4.6")
+				),
+				anthropicModelInfoToByokModelOption(
+					modelInfo("claude-account-123", "Claude Account 123")
+				),
+				anthropicModelInfoToByokModelOption(
+					modelInfo("claude-haiku-4-5", "Claude Haiku 4.5")
+				),
 			],
 		});
 		expect(refreshed.availableModels).toHaveLength(3);

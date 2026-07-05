@@ -8,6 +8,7 @@ import {
 	type ObjectGenerator,
 	type TextGenerator,
 } from "./ai-sdk-provider";
+import { normalizeModelIds, type ModelOption } from "../models/model-options";
 
 export interface OpenAIProviderOptions {
 	apiKey: string;
@@ -18,7 +19,7 @@ export interface OpenAIProviderOptions {
 	generator?: ObjectGenerator;
 	textGenerator?: TextGenerator;
 	/** Overrides the model-list call in tests. */
-	listModelsImpl?: () => Promise<string[]>;
+	listModelsImpl?: () => Promise<ModelOption[]>;
 }
 
 export class OpenAIProvider extends AiSdkProvider {
@@ -33,7 +34,8 @@ export class OpenAIProvider extends AiSdkProvider {
 				opts.textGenerator ??
 				defaultTextGenerator(opts.apiKey, opts.model, opts.fetchImpl),
 			listModels:
-				opts.listModelsImpl ?? (() => listOpenAiModels(opts.apiKey, opts.fetchImpl)),
+				opts.listModelsImpl ??
+				(async () => normalizeModelIds(await listOpenAiModels(opts.apiKey, opts.fetchImpl))),
 		});
 	}
 }

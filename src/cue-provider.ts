@@ -1,5 +1,5 @@
 import type {
-	ByokListedModel,
+	ByokModelOption,
 	ByokProviderId,
 	ByokProviderStatus,
 } from "@cuecraft/byok";
@@ -49,7 +49,7 @@ export interface CueCraftCueProviderRuntime {
 	requiresDownload: boolean;
 	sectionConcurrencyLimit?: number;
 	testConnection(): Promise<ByokProviderStatus>;
-	listModels?(): Promise<ByokListedModel[]>;
+	listModels(): Promise<ByokModelOption[]>;
 	generateCue(
 		input: CueCraftCueInput,
 		signal?: AbortSignal

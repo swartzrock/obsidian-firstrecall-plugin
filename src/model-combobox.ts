@@ -1,16 +1,14 @@
 import {
 	normalizeStringId,
-	sortByokModelOptions,
+	sortModelOptions,
 	type ModelOption,
-	type ModelOptionSource,
-} from "@cuecraft/byok";
+} from "./byok-model-options";
 
 let nextComboboxId = 0;
 
 export function buildModelComboboxOptions(opts: {
 	options: ModelOption[];
 	currentModelId: string;
-	source: ModelOptionSource;
 }): ModelOption[] {
 	const byId = new Map<string, ModelOption>();
 	for (const option of opts.options) {
@@ -18,21 +16,15 @@ export function buildModelComboboxOptions(opts: {
 	}
 	const currentModelId = opts.currentModelId.trim();
 	if (currentModelId && !byId.has(currentModelId)) {
-		byId.set(currentModelId, normalizeStringId(currentModelId, opts.source));
+		byId.set(currentModelId, normalizeStringId(currentModelId));
 	}
-	return sortByokModelOptions([...byId.values()], currentModelId);
+	return sortModelOptions([...byId.values()], currentModelId);
 }
 
-export function modelOptionSearchText(
-	option: ModelOption,
-	badges: string[] = []
-): string {
+export function modelOptionSearchText(option: ModelOption): string {
 	return [
 		option.id,
 		option.label,
-		option.provider,
-		option.source,
-		...badges,
 	]
 		.filter(Boolean)
 		.join(" ")
@@ -41,15 +33,12 @@ export function modelOptionSearchText(
 
 export function filterModelOptions(
 	options: ModelOption[],
-	query: string,
-	badgesForOption: (option: ModelOption) => string[] = () => []
+	query: string
 ): ModelOption[] {
 	const normalizedQuery = query.trim().toLowerCase();
 	if (!normalizedQuery) return options;
 	return options.filter((option) =>
-		modelOptionSearchText(option, badgesForOption(option)).includes(
-			normalizedQuery
-		)
+		modelOptionSearchText(option).includes(normalizedQuery)
 	);
 }
 
@@ -57,17 +46,13 @@ export function buildModelComboboxSuggestions(opts: {
 	options: ModelOption[];
 	selectedModelId: string;
 	query: string;
-	source: ModelOptionSource;
-	badgesForOption?: (option: ModelOption) => string[];
 }): ModelOption[] {
 	return filterModelOptions(
 		buildModelComboboxOptions({
 			options: opts.options,
 			currentModelId: opts.selectedModelId,
-			source: opts.source,
 		}),
-		opts.query,
-		opts.badgesForOption
+		opts.query
 	);
 }
 
@@ -75,21 +60,20 @@ export function renderModelCombobox(opts: {
 	containerEl: HTMLElement;
 	value: string;
 	options: ModelOption[];
-	source: ModelOptionSource;
 	placeholder: string;
 	emptyMessage: string;
 	onCommit: (value: string) => void | Promise<void>;
 	renderToggleIcon?: (containerEl: HTMLElement) => void;
-	badgesForOption?: (option: ModelOption) => string[];
 	pinnedOptionIds?: string[];
 	suggestionsLabel?: string;
+	leadingOption?: ModelOption;
 }): void {
 	const comboboxId = `cuecraft-model-combobox-${++nextComboboxId}`;
 	const listboxId = `${comboboxId}-list`;
-	const badgesForOption = opts.badgesForOption ?? (() => []);
 	let isOpen = false;
 	let activeIndex = -1;
 	let committedModelId = opts.value.trim();
+	let searchQuery = "";
 	const suggestionsLabel = opts.suggestionsLabel ?? "model suggestions";
 	const pinnedOptionIds = opts.pinnedOptionIds ?? [];
 	const pinnedRank = new Map(
@@ -132,19 +116,25 @@ export function renderModelCombobox(opts: {
 		const suggestions = buildModelComboboxSuggestions({
 			options: opts.options,
 			selectedModelId: committedModelId,
-			query: inputEl.value,
-			source: opts.source,
-			badgesForOption,
+			query: searchQuery,
 		});
-		if (!pinnedRank.size) return suggestions;
-		return [...suggestions].sort((a, b) => {
-			const aRank = pinnedRank.get(a.id);
-			const bRank = pinnedRank.get(b.id);
-			if (aRank != null && bRank != null) return aRank - bRank;
-			if (aRank != null) return -1;
-			if (bRank != null) return 1;
-			return 0;
-		});
+		const sortedSuggestions = !pinnedRank.size
+			? suggestions
+			: [...suggestions].sort((a, b) => {
+				const aRank = pinnedRank.get(a.id);
+				const bRank = pinnedRank.get(b.id);
+				if (aRank != null && bRank != null) return aRank - bRank;
+				if (aRank != null) return -1;
+				if (bRank != null) return 1;
+				return 0;
+			});
+		if (!opts.leadingOption) return sortedSuggestions;
+		return [
+			opts.leadingOption,
+			...sortedSuggestions.filter(
+				(option) => option.id !== opts.leadingOption?.id
+			),
+		];
 	};
 
 	const closeList = () => {
@@ -158,6 +148,7 @@ export function renderModelCombobox(opts: {
 
 	const commitValue = (value: string) => {
 		const nextValue = value.trim();
+		searchQuery = "";
 		if (nextValue === committedModelId) {
 			inputEl.value = nextValue;
 			return;
@@ -224,22 +215,21 @@ export function renderModelCombobox(opts: {
 					text: detailText,
 				});
 			}
-			const badges = badgesForOption(option);
-			if (badges.length > 0) {
-				const badgeRow = optionEl.createDiv({
-					cls: "cuecraft-model-combobox-badges",
-				});
-				for (const badge of badges) {
-					badgeRow.createSpan({
-						cls: "cuecraft-model-combobox-badge",
-						text: badge,
-					});
-				}
-			}
 			optionEl.addEventListener("mousedown", (event) => {
 				event.preventDefault();
 				chooseOption(option);
 			});
+			if (
+				opts.leadingOption &&
+				index === 0 &&
+				option.id === opts.leadingOption.id &&
+				visibleOptions.length > 1
+			) {
+				listEl.createDiv({
+					cls: "cuecraft-model-combobox-divider",
+					attr: { role: "separator" },
+				});
+			}
 		}
 	};
 
@@ -254,17 +244,20 @@ export function renderModelCombobox(opts: {
 		}
 		isOpen = true;
 		activeIndex = -1;
+		searchQuery = "";
 		renderList();
 		inputEl.focus();
 	});
 	inputEl.addEventListener("focus", () => {
 		isOpen = true;
 		activeIndex = -1;
+		searchQuery = "";
 		renderList();
 	});
 	inputEl.addEventListener("input", () => {
 		isOpen = true;
 		activeIndex = -1;
+		searchQuery = inputEl.value;
 		renderList();
 	});
 	inputEl.addEventListener("keydown", (event) => {

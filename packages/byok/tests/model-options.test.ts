@@ -2,120 +2,40 @@ import { describe, it, expect } from "vitest";
 import {
 	normalizeStringId,
 	normalizeModelIds,
-	normalizeOpenRouterModel,
 	isModelOption,
 	sortModelOptions,
 	type ModelOption,
-	type OpenRouterRawModel,
-} from "../src";
+} from "../src/models/model-options";
 
 describe("normalizeStringId", () => {
 	it("normalizes a plain model ID from a string-only provider", () => {
-		const opt = normalizeStringId("gpt-4o-mini", "openai");
+		const opt = normalizeStringId("gpt-4o-mini");
 		expect(opt).toEqual({
 			id: "gpt-4o-mini",
 			label: "gpt-4o-mini",
-			provider: "openai",
-			contextLength: null,
-			pricing: null,
-			supportedParameters: null,
-			source: "openai",
 		});
 	});
 
-	it("extracts provider prefix from slash-delimited IDs", () => {
-		const opt = normalizeStringId("anthropic/claude-sonnet-4", "openrouter");
-		expect(opt.provider).toBe("anthropic");
-		expect(opt.source).toBe("openrouter");
+	it("keeps slash-delimited IDs as portable model IDs", () => {
+		const opt = normalizeStringId("anthropic/claude-sonnet-4");
+		expect(opt.id).toBe("anthropic/claude-sonnet-4");
 		expect(opt.label).toBe("anthropic/claude-sonnet-4");
-	});
-
-	it("falls back to source when ID has no slash", () => {
-		const opt = normalizeStringId("gemini-1.5-flash", "google");
-		expect(opt.provider).toBe("google");
 	});
 });
 
 describe("normalizeModelIds", () => {
 	it("batch-normalizes an array of string IDs", () => {
-		const result = normalizeModelIds(
-			["gpt-4o-mini", "gpt-4o"],
-			"openai"
-		);
+		const result = normalizeModelIds(["gpt-4o-mini", "gpt-4o"]);
 		expect(result).toHaveLength(2);
 		expect(result[0].id).toBe("gpt-4o-mini");
+		expect(result[0].label).toBe("gpt-4o-mini");
 		expect(result[1].id).toBe("gpt-4o");
-		expect(result.every((o) => o.source === "openai")).toBe(true);
-	});
-});
-
-describe("normalizeOpenRouterModel", () => {
-	it("normalizes a full OpenRouter API model entry", () => {
-		const raw: OpenRouterRawModel = {
-			id: "anthropic/claude-sonnet-4",
-			name: "Anthropic: Claude Sonnet 4",
-			context_length: 200000,
-			pricing: { prompt: "0.000003", completion: "0.000015" },
-			supported_parameters: [
-				"max_tokens",
-				"temperature",
-				"structured_outputs",
-			],
-		};
-		const opt = normalizeOpenRouterModel(raw);
-		expect(opt).toEqual({
-			id: "anthropic/claude-sonnet-4",
-			label: "Anthropic: Claude Sonnet 4",
-			provider: "anthropic",
-			contextLength: 200000,
-			pricing: { prompt: 0.000003, completion: 0.000015 },
-			supportedParameters: [
-				"max_tokens",
-				"temperature",
-				"structured_outputs",
-			],
-			source: "openrouter",
-		});
-	});
-
-	it("falls back to id as label when name is missing", () => {
-		const opt = normalizeOpenRouterModel({ id: "openai/gpt-4o" });
-		expect(opt.label).toBe("openai/gpt-4o");
-		expect(opt.provider).toBe("openai");
-	});
-
-	it("handles missing pricing gracefully", () => {
-		const opt = normalizeOpenRouterModel({
-			id: "meta-llama/llama-3-70b",
-			name: "Meta: Llama 3 70B",
-		});
-		expect(opt.pricing).toBeNull();
-		expect(opt.contextLength).toBeNull();
-		expect(opt.supportedParameters).toBeNull();
-	});
-
-	it("handles empty id gracefully", () => {
-		const opt = normalizeOpenRouterModel({});
-		expect(opt.id).toBe("");
-		expect(opt.label).toBe("");
-		expect(opt.provider).toBe("");
-	});
-
-	it("parses pricing strings to numbers", () => {
-		const opt = normalizeOpenRouterModel({
-			id: "test/model",
-			pricing: { prompt: "0.0000005", completion: "0.000002" },
-		});
-		expect(opt.pricing).toEqual({
-			prompt: 0.0000005,
-			completion: 0.000002,
-		});
 	});
 });
 
 describe("isModelOption", () => {
 	it("returns true for a valid ModelOption", () => {
-		const opt = normalizeStringId("gpt-4o", "openai");
+		const opt = normalizeStringId("gpt-4o");
 		expect(isModelOption(opt)).toBe(true);
 	});
 
@@ -130,13 +50,13 @@ describe("isModelOption", () => {
 
 	it("returns false for an object missing required fields", () => {
 		expect(isModelOption({ id: "x" })).toBe(false);
-		expect(isModelOption({ source: "openai" })).toBe(false);
+		expect(isModelOption({ label: "GPT-4o" })).toBe(false);
 	});
 });
 
 describe("sortModelOptions", () => {
 	function opt(id: string): ModelOption {
-		return normalizeStringId(id, "openrouter");
+		return normalizeStringId(id);
 	}
 
 	it("sorts options by natural ID order", () => {

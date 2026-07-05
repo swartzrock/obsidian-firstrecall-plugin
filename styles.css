@@ -284,6 +284,34 @@
 	max-width: 100%;
 }
 
+.cuecraft-active-provider-fields .cuecraft-cli-text-setting {
+	align-items: stretch;
+	flex-direction: column;
+	gap: 8px;
+	justify-content: flex-start;
+}
+
+.cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-info,
+.cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-control {
+	width: 100%;
+}
+
+.cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-info {
+	flex: 0 1 auto;
+}
+
+.cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-control {
+	flex: 0 1 auto;
+	justify-content: flex-start;
+}
+
+.cuecraft-active-provider-fields .cuecraft-cli-text-input {
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+}
+
 .cuecraft-active-provider-fields .cuecraft-model-setting .setting-item-control {
 	flex-wrap: nowrap;
 	gap: 8px;
@@ -1184,6 +1212,12 @@
 	color: var(--text-normal);
 }
 
+.cuecraft-model-combobox-divider {
+	height: 1px;
+	margin: 4px 0;
+	background: var(--background-modifier-border);
+}
+
 .cuecraft-model-combobox-option-label {
 	width: 100%;
 	overflow: hidden;
@@ -1207,29 +1241,6 @@
 
 .cuecraft-model-combobox-empty {
 	padding: 8px;
-}
-
-.cuecraft-model-combobox-badges {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px;
-	margin-top: 4px;
-}
-
-.cuecraft-model-combobox-badge {
-	border-radius: var(--radius-s);
-	background: var(--background-modifier-hover);
-	color: var(--text-muted);
-	font-size: var(--font-smallest);
-	line-height: 1.2;
-	padding: 2px 5px;
-}
-
-.cuecraft-model-compatibility-warning {
-	margin-top: 6px;
-	color: var(--text-warning);
-	font-size: var(--font-ui-smaller);
-	line-height: 1.35;
 }
 
 @media (max-width: 700px) {

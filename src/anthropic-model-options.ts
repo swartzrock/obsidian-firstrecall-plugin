@@ -1,5 +1,5 @@
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
-import type { ByokModelOption } from "../types";
+import type { ByokModelOption } from "@cuecraft/byok";
 
 export interface AnthropicModelOption {
 	id: string;
@@ -14,16 +14,6 @@ export interface AnthropicModelHint {
 	cost: string;
 	context: string;
 	generationHint: string;
-}
-
-export interface AnthropicModelListSource {
-	listModels(): Promise<ByokModelOption[]>;
-}
-
-export interface AnthropicModelRefreshResult {
-	availableModels: ByokModelOption[];
-	options: AnthropicModelOption[];
-	message: string;
 }
 
 export const ANTHROPIC_CUSTOM_MODEL_ID = "__custom__";
@@ -87,15 +77,6 @@ function storedModelId(model: AnthropicStoredModel): string {
 
 function storedModelLabel(model: AnthropicStoredModel): string {
 	return "display_name" in model ? model.display_name : model.label;
-}
-
-export function anthropicModelInfoToByokModelOption(
-	model: ModelInfo
-): ByokModelOption {
-	return {
-		id: model.id,
-		label: model.display_name,
-	};
 }
 
 export function buildAnthropicModelOptions(
@@ -184,25 +165,6 @@ export function describeAnthropicModel(
 	return { label: "Custom model ID", rawId: modelId };
 }
 
-export function describeAnthropicModelDetails(
-	modelId: string,
-	availableModels: AnthropicStoredModel[] = []
-): {
-	label: string;
-	rawId: string;
-	hint: AnthropicModelHint;
-} {
-	const model = resolveAnthropicModelOption(modelId, availableModels);
-	if (model) {
-		return { label: model.label, rawId: model.id, hint: model.hint };
-	}
-	return {
-		label: "Custom model ID",
-		rawId: modelId,
-		hint: GENERIC_ANTHROPIC_MODEL_HINT,
-	};
-}
-
 export function formatAnthropicUnavailableModelMessage(
 	modelId: string,
 	availableModels: AnthropicStoredModel[] = []
@@ -217,30 +179,4 @@ export function formatAnthropicModelHint(
 ): string {
 	if (!modelId.trim() && availableModels.length === 0) return EMPTY_ANTHROPIC_MODEL_HINT;
 	return "";
-}
-
-export async function refreshAnthropicModelOptions(
-	source: AnthropicModelListSource | null
-): Promise<AnthropicModelRefreshResult> {
-	try {
-		const availableModels = source ? await source.listModels() : [];
-		const options = buildAnthropicModelOptions(availableModels);
-		return {
-			availableModels,
-			options,
-			message:
-				availableModels.length > 0
-					? `Fetched ${availableModels.length} Anthropic model${availableModels.length === 1 ? "" : "s"} from your account.`
-					: "No Anthropic models were returned for this account. You can still enter a custom model ID.",
-		};
-	} catch (error) {
-		const detail = error instanceof Error ? error.message : String(error);
-		return {
-			availableModels: [],
-			options: buildAnthropicModelOptions(),
-			message: detail
-				? `Could not fetch Anthropic models (${detail}). You can still enter a custom model ID.`
-				: "Could not fetch Anthropic models. You can still enter a custom model ID.",
-		};
-	}
 }

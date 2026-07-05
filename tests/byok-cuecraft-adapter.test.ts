@@ -78,11 +78,6 @@ const fetchImpl = (async () => new Response("{}")) as typeof fetch;
 const openrouterOption: ByokModelOption = {
 	id: "anthropic/claude-sonnet-4",
 	label: "Claude Sonnet 4",
-	provider: "Anthropic",
-	contextLength: 200000,
-	pricing: null,
-	supportedParameters: ["tools"],
-	source: "openrouter",
 };
 
 function fakeCredentialStore(opts: {
@@ -172,7 +167,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			)
 		).toEqual({
 			provider: "ollama",
-			host: "http://localhost:11434",
+			url: "http://localhost:11434",
 			model: "llama3.1:8b",
 		});
 	});
@@ -240,7 +235,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			)
 		).resolves.toEqual({
 			provider: "ollama",
-			host: "http://localhost:11434",
+			url: "http://localhost:11434",
 			model: "llama3.1:8b",
 		});
 		expect(readCount).toBe(0);
@@ -389,18 +384,22 @@ describe("CueCraft fetched model adapters", () => {
 		expect(stored.modelRefreshMessage).toBe("Enter an OpenRouter key.");
 	});
 
-	it("persists listed string models and rich OpenRouter model options", () => {
+	it("persists listed model options", () => {
 		const s = settings();
+		const openAiOption = { id: "gpt-4o-mini", label: "gpt-4o-mini" };
 
 		expect(
-			applyCueCraftListedModels(s, "openai", ["gpt-4o-mini"], "No models.")
+			applyCueCraftListedModels(s, "openai", [openAiOption], "No models.")
 		).toEqual({
 			models: ["gpt-4o-mini"],
-			options: [],
+			options: [openAiOption],
 			message: "",
 		});
 		expect(cueCraftProviderSettings(s, "openai").availableModels).toEqual([
 			"gpt-4o-mini",
+		]);
+		expect(cueCraftProviderSettings(s, "openai").modelOptions).toEqual([
+			openAiOption,
 		]);
 		expect(cueCraftProviderSettings(s, "openai").hasFetchedModels).toBe(true);
 
@@ -419,6 +418,39 @@ describe("CueCraft fetched model adapters", () => {
 		]);
 		expect(cueCraftFetchedModelCount(s, "openrouter")).toBe(1);
 		expect(cueCraftModelRefreshMessage(s, "openrouter")).toBe("");
+
+		const codexOption = { id: "gpt-5.5", label: "gpt-5.5" };
+		expect(
+			applyCueCraftListedModels(s, "codex-cli", [codexOption], "No models.")
+		).toEqual({
+			models: ["gpt-5.5"],
+			options: [codexOption],
+			message: "",
+		});
+		expect(cueCraftProviderSettings(s, "codex-cli").availableModels).toEqual([
+			"gpt-5.5",
+		]);
+		expect(cueCraftProviderSettings(s, "codex-cli").modelOptions).toEqual([
+			codexOption,
+		]);
+
+		const claudeOption = {
+			id: "claude-sonnet-4",
+			label: "claude-sonnet-4",
+		};
+		expect(
+			applyCueCraftListedModels(s, "claude-cli", [claudeOption], "No models.")
+		).toEqual({
+			models: ["claude-sonnet-4"],
+			options: [claudeOption],
+			message: "",
+		});
+		expect(cueCraftProviderSettings(s, "claude-cli").availableModels).toEqual([
+			"claude-sonnet-4",
+		]);
+		expect(cueCraftProviderSettings(s, "claude-cli").modelOptions).toEqual([
+			claudeOption,
+		]);
 	});
 
 	it("persists model refresh failures as fetched-but-empty state", () => {

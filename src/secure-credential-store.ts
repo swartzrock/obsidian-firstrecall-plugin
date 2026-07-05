@@ -1,4 +1,4 @@
-import type { ByokProviderId } from "@cuecraft/byok";
+import { ByokProvider, type ByokProviderId } from "@cuecraft/byok";
 
 export type CueCraftCloudCredentialProvider = Extract<
 	ByokProviderId,
@@ -75,7 +75,13 @@ type StoredCredentialPayloadResult =
 export const CUECRAFT_SECRET_STORAGE_MIN_APP_VERSION = "1.11.4";
 
 export const CUECRAFT_CLOUD_CREDENTIAL_PROVIDERS: readonly CueCraftCloudCredentialProvider[] =
-	["anthropic", "openai", "google", "xai", "openrouter"] as const;
+	[
+		ByokProvider.Anthropic,
+		ByokProvider.OpenAI,
+		ByokProvider.Google,
+		ByokProvider.Xai,
+		ByokProvider.OpenRouter,
+	] as const;
 
 export function isCueCraftCloudCredentialProvider(
 	provider: ByokProviderId

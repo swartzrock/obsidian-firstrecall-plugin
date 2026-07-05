@@ -1,16 +1,30 @@
 import type { z } from "zod/v3";
 
-export type ByokProviderId =
-	| "ollama"
+export enum ByokProvider {
+	Ollama = "ollama",
+	Anthropic = "anthropic",
+	OpenAI = "openai",
+	Google = "google",
+	Xai = "xai",
+	OpenRouter = "openrouter",
+	CodexCli = "codex-cli",
+	ClaudeCli = "claude-cli",
+}
+
+export type ByokProviderId = `${ByokProvider}`;
+
+export type ByokCloudProviderId =
 	| "anthropic"
 	| "openai"
 	| "google"
 	| "xai"
-	| "openrouter"
-	| "codex-cli"
-	| "claude-cli";
+	| "openrouter";
 
-export type ByokCredentialKind = "api-key" | "host" | "command";
+export type ByokOllamaProviderId = "ollama";
+
+export type ByokCliProviderId = "codex-cli" | "claude-cli";
+
+export type ByokCredentialKind = "api-key" | "url" | "command";
 
 export type ByokModelBehavior = "required" | "optional";
 
@@ -39,7 +53,6 @@ export interface ByokModelFieldDefinition {
 	listModelsLabel?: string;
 	listModelsDescription?: string;
 	emptyListMessage?: string;
-	optionSource?: ByokModelOptionSource;
 }
 
 export interface ByokProviderDefinition {
@@ -59,24 +72,19 @@ export interface ByokProviderDefinition {
 }
 
 export interface ByokCloudProviderConfig {
-	provider:
-		| "anthropic"
-		| "openai"
-		| "google"
-		| "xai"
-		| "openrouter";
+	provider: ByokCloudProviderId;
 	apiKey: string;
 	model: string;
 }
 
 export interface ByokOllamaProviderConfig {
-	provider: "ollama";
-	host: string;
+	provider: ByokOllamaProviderId;
+	url?: string;
 	model: string;
 }
 
 export interface ByokCliProviderConfig {
-	provider: "codex-cli" | "claude-cli";
+	provider: ByokCliProviderId;
 	command: string;
 	model?: string;
 }
@@ -95,6 +103,7 @@ export interface ByokHttpRequest {
 	method: "GET" | "POST";
 	body?: string;
 	headers?: Record<string, string>;
+	signal?: AbortSignal;
 }
 
 export interface ByokHttpResponse {
@@ -107,18 +116,12 @@ export type ByokHttpClient = (
 	request: ByokHttpRequest
 ) => Promise<ByokHttpResponse>;
 
-export interface ByokProviderAppInfo {
-	/** Optional application name for provider-specific metadata headers. */
-	name?: string;
-	/** Optional public application URL for provider-specific metadata headers. */
-	url?: string;
-}
-
 export interface ByokProviderDeps {
 	fetchImpl: typeof fetch;
 	http: ByokHttpClient;
-	appInfo?: ByokProviderAppInfo;
 }
+
+export type ByokFacadeDeps = Partial<ByokProviderDeps>;
 
 export interface ByokProviderStatus {
 	ok: boolean;
@@ -146,23 +149,9 @@ export interface ByokSetupStatus {
 	testedAt?: string;
 }
 
-export type ByokModelOptionSource =
-	| "openrouter"
-	| "openai"
-	| "google"
-	| "xai"
-	| "ollama"
-	| "anthropic"
-	| "string";
-
 export interface ByokModelOption {
 	id: string;
 	label: string;
-	provider: string;
-	contextLength: number | null;
-	pricing: { prompt: number; completion: number } | null;
-	supportedParameters: string[] | null;
-	source: ByokModelOptionSource;
 }
 
 export interface ByokProviderStoredSettings {
@@ -190,8 +179,6 @@ export interface ByokModelRefreshResult {
 	message: string;
 }
 
-export type ByokListedModel = string | ByokModelOption;
-
 export interface ByokTextGenerationInput {
 	prompt: string;
 	/** Ask providers with native support to constrain the response to JSON text. */
@@ -202,6 +189,46 @@ export interface ByokTextGenerationInput {
 
 export interface ByokTextGenerationOutput {
 	text: string;
+}
+
+export type ByokGenerateTextOptions =
+	| (ByokCloudProviderConfig & {
+			prompt: string;
+			deps?: ByokFacadeDeps;
+			signal?: AbortSignal;
+	  })
+	| (ByokOllamaProviderConfig & {
+			prompt: string;
+			deps?: ByokFacadeDeps;
+			signal?: AbortSignal;
+	  });
+
+export type ByokListModelsOptions =
+	| (Omit<ByokCloudProviderConfig, "model"> & {
+			deps?: ByokFacadeDeps;
+	  })
+	| (Omit<ByokOllamaProviderConfig, "model"> & {
+			deps?: ByokFacadeDeps;
+	  });
+
+export type ByokClientConfig =
+	| (Omit<ByokCloudProviderConfig, "model"> & {
+			deps?: ByokFacadeDeps;
+	  })
+	| (Omit<ByokOllamaProviderConfig, "model"> & {
+			deps?: ByokFacadeDeps;
+	  });
+
+export interface ByokClientTextGenerationInput {
+	model: string;
+	prompt: string;
+	signal?: AbortSignal;
+}
+
+export interface ByokClient {
+	generateText(
+		input: ByokClientTextGenerationInput
+	): Promise<ByokTextGenerationOutput>;
 }
 
 export interface ByokObjectGenerationInput<T> {
@@ -216,7 +243,7 @@ export interface ByokProviderRuntime {
 	requiresDownload: boolean;
 	sectionConcurrencyLimit?: number;
 	testConnection(): Promise<ByokProviderStatus>;
-	listModels?(): Promise<ByokListedModel[]>;
+	listModels(): Promise<ByokModelOption[]>;
 	generateText(
 		input: ByokTextGenerationInput,
 		signal?: AbortSignal

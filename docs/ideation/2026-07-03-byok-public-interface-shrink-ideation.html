@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Ideation: BYOK Public Interface Shrink</title>
+	<style>
+		:root {
+			--bg: #f8f7f2;
+			--panel: #fffefa;
+			--ink: #1f2328;
+			--muted: #636b74;
+			--line: #d8dee4;
+			--accent: #0969da;
+			--accent-soft: #ddf4ff;
+			--warn: #fff8c5;
+			--good: #dafbe1;
+			--code: #eff2f5;
+		}
+		* { box-sizing: border-box; }
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--ink);
+			font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		}
+		main {
+			max-width: 1120px;
+			margin: 0 auto;
+			padding: 42px 24px 56px;
+		}
+		header, section, article {
+			background: var(--panel);
+			border: 1px solid var(--line);
+			border-radius: 8px;
+		}
+		header {
+			padding: 28px;
+			margin-bottom: 18px;
+		}
+		section {
+			padding: 22px;
+			margin: 18px 0;
+		}
+		article {
+			padding: 16px;
+			margin: 14px 0;
+		}
+		h1 {
+			font-size: clamp(32px, 5vw, 52px);
+			line-height: 1.05;
+			margin: 8px 0 12px;
+		}
+		h2 { margin: 0 0 12px; font-size: 24px; }
+		h3 { margin: 0 0 8px; font-size: 18px; }
+		p { max-width: 82ch; margin: 0 0 12px; }
+		code {
+			background: var(--code);
+			padding: 0.12rem 0.28rem;
+			border-radius: 5px;
+			font-size: 0.93em;
+		}
+		pre {
+			background: #1f2328;
+			color: #f6f8fa;
+			border-radius: 8px;
+			overflow-x: auto;
+			padding: 14px;
+			line-height: 1.45;
+		}
+		.meta, .pill {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+		}
+		.pill {
+			display: inline-flex;
+			align-items: center;
+			border-radius: 999px;
+			padding: 5px 9px;
+			background: var(--accent-soft);
+			color: #0550ae;
+			font-weight: 750;
+			font-size: 12px;
+		}
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 14px;
+		}
+		.rank {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 30px;
+			height: 30px;
+			border-radius: 999px;
+			background: var(--accent);
+			color: white;
+			font-weight: 850;
+			margin-right: 8px;
+		}
+		dl {
+			display: grid;
+			grid-template-columns: 125px 1fr;
+			gap: 8px 12px;
+			margin: 12px 0 0;
+		}
+		dt {
+			color: var(--muted);
+			font-size: 12px;
+			font-weight: 850;
+			text-transform: uppercase;
+			letter-spacing: .04em;
+		}
+		dd { margin: 0; }
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			margin-top: 10px;
+		}
+		th, td {
+			border-bottom: 1px solid var(--line);
+			padding: 9px 8px;
+			text-align: left;
+			vertical-align: top;
+		}
+		th {
+			color: var(--muted);
+			font-size: 12px;
+			text-transform: uppercase;
+			letter-spacing: .04em;
+		}
+		.callout {
+			background: var(--warn);
+			border: 1px solid #d4a72c;
+			border-radius: 8px;
+			padding: 14px;
+			margin: 12px 0;
+		}
+		.good {
+			background: var(--good);
+			border-color: #4ac26b;
+		}
+		@media (max-width: 780px) {
+			.grid, dl { grid-template-columns: 1fr; }
+			main { padding: 24px 14px 40px; }
+		}
+	</style>
+</head>
+<body>
+<main>
+	<header>
+		<div class="meta">
+			<span class="pill">CueCraft codebase</span>
+			<span class="pill">BYOK public API</span>
+			<span class="pill">2026-07-03</span>
+			<span class="pill">Continuation of BYOK simplification</span>
+		</div>
+		<h1>Make CueCraft Use BYOK Like A Customer, Then Shrink BYOK Like A Library</h1>
+		<p>The strongest direction is to stop letting CueCraft consume every BYOK helper through the public barrel. CueCraft should use the same small public generation/model-listing/provider enum API that external apps see, while CueCraft-specific settings, model-combobox, Anthropic picker, verification, and storage helpers move behind an app adapter or internal subpath.</p>
+	</header>
+
+	<section>
+		<h2>Grounding Context</h2>
+		<div class="grid">
+			<article>
+				<h3>What CueCraft Uses Today</h3>
+				<p><code>src/byok-cuecraft-adapter.ts</code> imports BYOK registry helpers, setup-state helpers, Anthropic normalization, fetched-model sorting, provider errors, runtime types, and provider storage types. It creates runtime providers via <code>createByokNodeProvider</code>, not <code>createByokProvider</code> directly.</p>
+				<p><code>src/settings.ts</code> imports many BYOK UI/model helpers directly, including Anthropic-specific UI affordances and generic model normalization. Settings also refreshes models through the runtime <code>provider.listModels()</code> path rather than the new top-level <code>listModels(options)</code> helper.</p>
+			</article>
+			<article>
+				<h3>Public Surface Tension</h3>
+				<p>The public barrel currently exports a broad toolkit: simple helpers, provider factory, registry metadata, Anthropic UI helpers, setup-state storage helpers, model sorting utilities, error classes, provider runtime interfaces, and many app-shaped setting types. This makes extraction easier for CueCraft but makes the standalone library feel larger than the README promise.</p>
+				<p>The AI SDK docs model the opposite posture: a tiny default verb such as <code>generateText</code> with advanced areas discoverable separately. BYOK does not need to copy the exact API, but it should copy that shape: small front door, explicit advanced doors.</p>
+			</article>
+		</div>
+		<div class="callout good">
+			<strong>Topic axes:</strong> public generation API; model discovery/setup API; CueCraft integration boundary; provider registry/metadata; low-level helper exports.
+		</div>
+	</section>
+
+	<section>
+		<h2>Ranked Ideas</h2>
+
+		<article>
+			<h3><span class="rank">1</span>Split BYOK Into Three Audiences</h3>
+			<p>Create a strict public main entrypoint for external users, a Node entrypoint for CLI/local command runtimes, and a CueCraft-owned adapter layer for settings/storage/UI helpers. The main barrel should feel like a small SDK, not the entire BYOK implementation toolbox.</p>
+			<dl>
+				<dt>Shape</dt>
+				<dd><code>@cuecraft/byok</code>: <code>ByokProvider</code>, <code>generateText</code>, <code>createByok</code>, <code>listModels</code>, core config/result types, model option type, public errors. <code>@cuecraft/byok/node</code>: <code>createByokNodeProvider</code> and node-only config/types. CueCraft app code owns or imports from an internal adapter for registry/settings helpers.</dd>
+				<dt>Basis</dt>
+				<dd><strong>direct:</strong> CueCraft imports many non-generation helpers from the BYOK barrel, while README quick start now emphasizes simple function-first calls.</dd>
+				<dt>Why It Matters</dt>
+				<dd>This makes CueCraft dogfood the public API for generation while preventing CueCraft settings needs from bloating the public library contract.</dd>
+				<dt>Confidence</dt>
+				<dd>High. This directly resolves the user's stated goal and matches the already-emerging README direction.</dd>
+				<dt>Complexity</dt>
+				<dd>Medium. Requires import migration and public-contract test reshaping, but not provider behavior rewrites.</dd>
+			</dl>
+		</article>
+
+		<article>
+			<h3><span class="rank">2</span>Make CueCraft Refresh Models Through <code>listModels(options)</code></h3>
+			<p>Settings should stop constructing a runtime just to list models. It should resolve provider credentials from CueCraft storage, then call the public <code>listModels</code> helper with <code>ByokProvider</code> enum values. Runtime <code>provider.listModels()</code> can remain internal or advanced.</p>
+			<dl>
+				<dt>Shape</dt>
+				<dd><code>refreshProviderModels</code> and the Anthropic refresh path would build a model-list config and call <code>listModels({ provider: ByokProvider.OpenAI, apiKey })</code> or <code>listModels({ provider: ByokProvider.Ollama, host })</code>.</dd>
+				<dt>Basis</dt>
+				<dd><strong>direct:</strong> <code>settings.ts</code> currently asks <code>provider.listModels()</code> after <code>makeProvider()</code>; earlier interface work added top-level model-free <code>listModels</code> exactly to avoid requiring a selected model.</dd>
+				<dt>Why It Matters</dt>
+				<dd>CueCraft would validate the simplest setup-time public API in production code and catch docs/API drift earlier.</dd>
+				<dt>Confidence</dt>
+				<dd>High.</dd>
+				<dt>Complexity</dt>
+				<dd>Small to Medium, depending on how credential-store resolution is threaded into settings.</dd>
+			</dl>
+		</article>
+
+		<article>
+			<h3><span class="rank">3</span>Move Anthropic Picker Helpers Out Of The BYOK Public Barrel</h3>
+			<p>The Anthropic custom-model picker is CueCraft UI policy, not generic BYOK provider access. Keep the provider model-list implementation in BYOK, but move <code>ANTHROPIC_CUSTOM_MODEL_ID</code>, model hints, unavailable-message copy, and custom-selection normalization into CueCraft or a non-public/internal package path.</p>
+			<dl>
+				<dt>Basis</dt>
+				<dd><strong>direct:</strong> <code>settings.ts</code> consumes Anthropic helpers for dropdown presentation and custom-model UI. These helpers are provider-specific and subjective: quality/speed/cost/context labels are CueCraft UX, not a universal BYOK SDK promise.</dd>
+				<dt>Why It Matters</dt>
+				<dd>Removing these from the main barrel shrinks the API and avoids locking a public library into CueCraft's Anthropic UX language.</dd>
+				<dt>Confidence</dt>
+				<dd>High.</dd>
+				<dt>Complexity</dt>
+				<dd>Small. Mostly file moves/import changes and contract test updates.</dd>
+			</dl>
+		</article>
+
+		<article>
+			<h3><span class="rank">4</span>Replace Public Setup-State Helpers With CueCraft-Owned Settings Logic</h3>
+			<p><code>deriveProviderSetupStatus</code>, <code>recordProviderConnectionSuccess</code>, <code>providerCredentialFingerprint</code>, <code>ByokStoredSettings</code>, and <code>ByokProviderStoredSettings</code> make BYOK look like it owns app storage. CueCraft does need this logic, but a standalone BYOK library should not imply a blessed settings schema.</p>
+			<dl>
+				<dt>Basis</dt>
+				<dd><strong>direct:</strong> <code>byok-cuecraft-adapter.ts</code> wraps these helpers to derive setup state and record verification snapshots. The README also says host apps own storage schema, encryption, and migration flow, which conflicts with exporting BYOK storage types as first-class public API.</dd>
+				<dt>Why It Matters</dt>
+				<dd>This is the cleanest way to make BYOK app-agnostic. External apps can store whatever they want and pass credentials at call time.</dd>
+				<dt>Confidence</dt>
+				<dd>Medium High.</dd>
+				<dt>Complexity</dt>
+				<dd>Medium. CueCraft must retain equivalent logic locally or in a CueCraft integration module.</dd>
+			</dl>
+		</article>
+
+		<article>
+			<h3><span class="rank">5</span>Turn Provider Metadata Into A Minimal Public Function, Not A Full Settings Schema</h3>
+			<p>Keep enough provider metadata for external apps to build a picker, but remove fields that encode CueCraft's settings UI. A public <code>providers()</code> result should likely include <code>id</code>, <code>label</code>, <code>credentialKind</code>, <code>supportsModelListing</code>, <code>supportsLocalExecution</code>, and maybe <code>requiresNetwork</code>. Placeholders, missing-message copy, icon SVGs, model-field descriptions, and reset messages should become CueCraft integration data.</p>
+			<dl>
+				<dt>Basis</dt>
+				<dd><strong>direct:</strong> <code>ByokProviderDefinition</code> currently includes labels, product labels, vendor labels, icon definitions, credential-field copy, model-field copy, model behavior, and capability flags.</dd>
+				<dt>Why It Matters</dt>
+				<dd>Provider metadata is useful, but UI copy and icons create subjective public API commitments. A small metadata contract is easier to support after extraction.</dd>
+				<dt>Confidence</dt>
+				<dd>Medium.</dd>
+				<dt>Complexity</dt>
+				<dd>Medium because settings UI depends on the richer shape.</dd>
+			</dl>
+		</article>
+
+		<article>
+			<h3><span class="rank">6</span>Demote <code>createByokProvider()</code> From Public Main Path To Advanced/Node-Or-Internal</h3>
+			<p>CueCraft does not import <code>createByokProvider</code> directly. It imports <code>createByokNodeProvider</code>, which delegates non-CLI providers to the core factory internally. That suggests the external public story should not start with the runtime factory. Keep it only if structured output and connection testing cannot be covered by smaller public verbs.</p>
+			<dl>
+				<dt>Basis</dt>
+				<dd><strong>direct:</strong> <code>makeCueCraftByokProvider</code> calls <code>createByokNodeProvider</code>; <code>createByokNodeProvider</code> delegates default cases to <code>createByokProvider</code>. The README already now leads with <code>generateText</code> and <code>listModels</code>.</dd>
+				<dt>Why It Matters</dt>
+				<dd>A public runtime factory invites callers into optional methods, provider-specific hints, object generation, and custom deps before they need them.</dd>
+				<dt>Confidence</dt>
+				<dd>Medium. It may still be valuable for advanced apps, but should not be part of the small mental model.</dd>
+				<dt>Complexity</dt>
+				<dd>Small if docs-only; Medium if removed from the main barrel.</dd>
+			</dl>
+		</article>
+	</section>
+
+	<section>
+		<h2>Rejected Or Deferred Ideas</h2>
+		<table>
+			<thead><tr><th>Idea</th><th>Reason Cut</th></tr></thead>
+			<tbody>
+				<tr><td>Remove <code>generateObject()</code> immediately</td><td>CueCraft currently uses it for cues, summaries, and note briefs when available. Removing it now creates behavior risk; demote docs first, then consider a text+schema replacement later.</td></tr>
+				<tr><td>Expose only AI SDK-compatible model objects</td><td>BYOK's point is provider account access with local providers and CLI support; copying AI SDK exactly would erase BYOK's reason to exist.</td></tr>
+				<tr><td>Make every CueCraft setting screen call public <code>generateText</code></td><td>Generation is not the main setup-screen need. Model listing, connection testing, and local CLI providers need separate paths.</td></tr>
+				<tr><td>Remove all provider metadata</td><td>Some metadata is valuable for provider pickers and validation. The problem is the breadth and CueCraft-specific UI copy, not the existence of metadata.</td></tr>
+				<tr><td>Hide all types except inferred options</td><td>TypeScript library consumers need named config/result types for wrappers, factories, tests, and app boundaries. Shrink the type surface, but do not make it opaque.</td></tr>
+			</tbody>
+		</table>
+	</section>
+
+	<section>
+		<h2>Recommended Public Surface</h2>
+		<pre><code>// @cuecraft/byok
+export {
+  ByokProvider,
+  generateText,
+  createByok,
+  listModels,
+  ByokProviderError,
+};
+
+export type {
+  ByokGenerateTextOptions,
+  ByokListModelsOptions,
+  ByokClient,
+  ByokModelOption,
+  ByokProviderId,
+  ByokTextGenerationOutput,
+};
+
+// @cuecraft/byok/node
+export {
+  createByokNodeProvider,
+};
+
+export type {
+  ByokProviderConfig,
+  ByokProviderRuntime,
+  ByokProviderDeps,
+  ByokProviderStatus,
+};</code></pre>
+		<p>This is intentionally not an exact implementation plan. The next step should decide whether CueCraft-only helpers move into <code>src/byok-cuecraft-adapter.ts</code>, a package-internal path, or a clearly non-public subpath such as <code>@cuecraft/byok/cuecraft</code> that will not ship in the standalone open-source repo.</p>
+	</section>
+
+	<section>
+		<h2>Implementation Sequence To Explore Next</h2>
+		<ol>
+			<li>Change CueCraft code to import and use <code>ByokProvider</code> enum values for provider-specific logic.</li>
+			<li>Change settings model refresh flows to call top-level <code>listModels(options)</code> for cloud and Ollama providers.</li>
+			<li>Move Anthropic picker helpers and provider-field UI copy into CueCraft-owned code.</li>
+			<li>Move setup-state/storage helpers into CueCraft-owned code, leaving BYOK credential-agnostic.</li>
+			<li>Shrink <code>packages/byok/src/index.ts</code> and public-contract tests to the small main barrel.</li>
+			<li>Keep provider runtime factories available only where needed: node entrypoint and possibly an advanced/internal export.</li>
+		</ol>
+	</section>
+
+	<section>
+		<h2>External Reference</h2>
+		<p>Vercel's AI SDK documentation presents a compact front door around <code>generateText</code>, while deeper concepts such as providers, structured data, tools, and telemetry sit behind separate docs sections. BYOK should borrow that information architecture even if it keeps BYOK-specific provider enum and credential options.</p>
+	</section>
+</main>
+</body>
+</html>

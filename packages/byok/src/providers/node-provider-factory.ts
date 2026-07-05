@@ -9,7 +9,7 @@ import type {
 
 export function createByokNodeProvider(
 	config: ByokProviderConfig,
-	deps: ByokProviderDeps
+	deps?: Partial<ByokProviderDeps>
 ): ByokProviderRuntime {
 	switch (config.provider) {
 		case "codex-cli":
@@ -21,6 +21,7 @@ export function createByokNodeProvider(
 			return new ClaudeCliProvider({
 				command: config.command,
 				model: config.model,
+				fetchImpl: deps?.fetchImpl,
 			}) as unknown as ByokProviderRuntime;
 		default:
 			return createByokProvider(config, deps);

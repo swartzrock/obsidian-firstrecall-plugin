@@ -7,6 +7,7 @@ import {
 	TextGenerationInput,
 	TextGenerationOutput,
 } from "./types";
+import { normalizeModelIds, type ModelOption } from "../models/model-options";
 
 /** Pull Ollama's `{ "error": "..." }` body out of a failed response. */
 function extractServerError(res: HttpResponse): string {
@@ -24,8 +25,20 @@ function describeError(status: number): string {
 	return "";
 }
 
+function isAbortError(error: unknown): boolean {
+	if (typeof DOMException !== "undefined" && error instanceof DOMException) {
+		return error.name === "AbortError";
+	}
+	return (
+		typeof error === "object" &&
+		error !== null &&
+		"name" in error &&
+		error.name === "AbortError"
+	);
+}
+
 export interface OllamaProviderOptions {
-	host: string;
+	url: string;
 	model: string;
 	http: HttpClient;
 }
@@ -36,12 +49,12 @@ export class OllamaProvider implements AiProvider {
 	readonly requiresNetwork = false;
 	readonly requiresDownload = false;
 
-	private host: string;
+	private url: string;
 	private model: string;
 	private http: HttpClient;
 
 	constructor(opts: OllamaProviderOptions) {
-		this.host = opts.host.replace(/\/+$/, "");
+		this.url = opts.url.replace(/\/+$/, "");
 		this.model = opts.model;
 		this.http = opts.http;
 	}
@@ -49,11 +62,11 @@ export class OllamaProvider implements AiProvider {
 	async testConnection(): Promise<ProviderStatus> {
 		let models: string[];
 		try {
-			models = await this.listModels();
+			models = await this.listModelIds();
 		} catch {
 			return {
 				ok: false,
-				message: "Ollama server unreachable. Check the host and that Ollama is running.",
+				message: "Ollama server unreachable. Check the URL and that Ollama is running.",
 			};
 		}
 		if (this.model && !models.includes(this.model)) {
@@ -70,10 +83,14 @@ export class OllamaProvider implements AiProvider {
 		};
 	}
 
-	async listModels(): Promise<string[]> {
+	async listModels(): Promise<ModelOption[]> {
+		return normalizeModelIds(await this.listModelIds());
+	}
+
+	private async listModelIds(): Promise<string[]> {
 		const { Ollama } = await import("ollama/browser");
 		const client = new Ollama({
-			host: this.host,
+			host: this.url,
 			fetch: this.fetchViaHttp(),
 		});
 		const response = await client.list();
@@ -84,24 +101,26 @@ export class OllamaProvider implements AiProvider {
 
 	async generateText(
 		input: TextGenerationInput,
-		_signal?: AbortSignal
+		signal?: AbortSignal
 	): Promise<TextGenerationOutput> {
 		return {
-			text: await this.complete(input.prompt, input.responseFormat),
+			text: await this.complete(input.prompt, input.responseFormat, signal),
 		};
 	}
 
 	/** POST /api/generate (non-streaming) and return the raw model text. */
 	private async complete(
 		prompt: string,
-		responseFormat: "text" | "json" = "text"
+		responseFormat: "text" | "json" = "text",
+		signal?: AbortSignal
 	): Promise<string> {
 		let res;
 		try {
 			res = await this.http({
-				url: `${this.host}/api/generate`,
+				url: `${this.url}/api/generate`,
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
+				signal,
 				body: JSON.stringify({
 					model: this.model,
 					prompt,
@@ -109,8 +128,9 @@ export class OllamaProvider implements AiProvider {
 					...(responseFormat === "json" ? { format: "json" } : {}),
 				}),
 			});
-		} catch {
-			throw new ProviderError("Ollama server unreachable. Check the host and that Ollama is running.");
+		} catch (e) {
+			if (signal?.aborted || isAbortError(e)) throw e;
+			throw new ProviderError("Ollama server unreachable. Check the URL and that Ollama is running.");
 		}
 		if (res.status < 200 || res.status >= 300) {
 			throw new ProviderError(
@@ -141,6 +161,7 @@ export class OllamaProvider implements AiProvider {
 				method: (init?.method as "GET" | "POST" | undefined) ?? "GET",
 				body: (init?.body as string | undefined) ?? undefined,
 				headers,
+				signal: init?.signal ?? undefined,
 			});
 			return new Response(res.text, {
 				status: res.status,

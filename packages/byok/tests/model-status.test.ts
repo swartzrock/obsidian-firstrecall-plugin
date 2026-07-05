@@ -2,34 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
 	CLI_DEFAULT_MODEL_SENTINEL,
 	deriveProviderSetupStatus,
-	modelCompatibilityBadges,
-	normalizeOpenRouterModel,
 	recordProviderConnectionSuccess,
-} from "../src";
+} from "../src/setup-status";
 
-describe("BYOK model metadata and setup status", () => {
-	it("normalizes model metadata and exposes compatibility helpers", () => {
-		const option = normalizeOpenRouterModel({
-			id: "openai/gpt-4o-mini",
-			name: "OpenAI: GPT-4o mini",
-			context_length: 128000,
-			pricing: { prompt: "0.00000015", completion: "0.0000006" },
-			supported_parameters: ["response_format"],
-		});
-
-		expect(option).toMatchObject({
-			id: "openai/gpt-4o-mini",
-			label: "OpenAI: GPT-4o mini",
-			provider: "openai",
-			contextLength: 128000,
-		});
-		expect(modelCompatibilityBadges(option)).toEqual([
-			"Structured output",
-			"Large context",
-			"Low cost",
-		]);
-	});
-
+describe("BYOK setup status", () => {
 	it("derives CLI setup status with the default-model sentinel", () => {
 		const settings = {
 			byok: {
