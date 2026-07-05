@@ -1503,6 +1503,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-editor-rail-card {
 	--cuecraft-rail-collapsed-max-height: 176px;
 	--cuecraft-rail-fade-background: var(--background-secondary);
+	position: relative;
 }
 
 .cuecraft-editor-rail-card-content {
@@ -1513,6 +1514,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	.cuecraft-editor-rail-card-content {
 	max-height: var(--cuecraft-rail-collapsed-max-height);
 	overflow: hidden;
+	padding-bottom: 2.2rem;
 }
 
 .cuecraft-editor-rail-card[data-overflowing="true"][data-expanded="false"]
@@ -1542,19 +1544,34 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	z-index: 3;
 	display: none;
 	margin: 0.55em 0 0;
-	padding: 0;
-	border: 0;
-	background: transparent;
+	padding: 0.24em 0.68em;
+	border: 1px solid
+		color-mix(in srgb, var(--interactive-accent) 28%, transparent);
+	border-radius: var(--radius-s);
+	background: color-mix(
+		in srgb,
+		var(--background-primary) 90%,
+		var(--interactive-accent)
+	);
 	color: var(--interactive-accent);
 	cursor: pointer;
 	font-size: var(--font-smallest);
 	font-weight: var(--font-semibold);
 	line-height: 1.2;
+	box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
 }
 
 .cuecraft-editor-rail-card[data-overflowing="true"]
 	> .cuecraft-editor-rail-card-toggle:not([hidden]) {
 	display: inline-flex;
+}
+
+.cuecraft-editor-rail-card[data-overflowing="true"][data-expanded="false"]
+	> .cuecraft-editor-rail-card-toggle:not([hidden]) {
+	position: absolute;
+	inset-block-end: 0.45em;
+	inset-inline-start: 0.65em;
+	margin: 0;
 }
 
 .cuecraft-editor-hook-inline-fallback {
