@@ -1901,7 +1901,7 @@ export default class CueCraftPlugin extends Plugin {
 
 	private toggleStudyMode(): void {
 		this.studyMode = !this.studyMode;
-		document.body.toggleClass("cuecraft-study-active", this.studyMode);
+		activeDocument.body.toggleClass("cuecraft-study-active", this.studyMode);
 		if (this.studyMode) {
 			this.setStatus("study");
 		} else {
