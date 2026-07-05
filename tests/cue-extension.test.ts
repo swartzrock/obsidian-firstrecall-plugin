@@ -19,6 +19,7 @@ import {
 	cueRailSpacerField,
 	measureRailSpacerHeights,
 	railSpacerHeightForOverlap,
+	railOverflowUpdateNeedsMeasure,
 	renderNoteBriefElement,
 	renderCueElement,
 	setCuesEffect,
@@ -1360,5 +1361,20 @@ describe("rail spacers", () => {
 			expect(el.dataset.expanded).toBe("true");
 			expect(events).toEqual(["toggle"]);
 		});
+	});
+
+	it("requests another measurement after spacer decorations are applied", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const transaction = state.update({
+			effects: setRailSpacersEffect.of(new Map([[3, 120]])),
+		});
+		expect(
+			railOverflowUpdateNeedsMeasure({
+				docChanged: false,
+				viewportChanged: false,
+				selectionSet: false,
+				transactions: [transaction],
+			} as Parameters<typeof railOverflowUpdateNeedsMeasure>[0])
+		).toBe(true);
 	});
 });
