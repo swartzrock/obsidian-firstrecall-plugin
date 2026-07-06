@@ -121,6 +121,12 @@ describe("settings CSS", () => {
 			)
 		).toBe(true);
 
+		const editorDividerRule = ruleFor(
+			".cuecraft-editor-hook-section-label:not(:first-child)"
+		);
+		expect(editorDividerRule).toContain("margin-top: 0.8em");
+		expect(editorDividerRule).toContain("padding-top: 0.75em");
+
 		const iconRule = ruleFor(".cuecraft-label-icon");
 		expect(iconRule).toContain("width: 1.25em");
 		expect(iconRule).toContain("height: 1.25em");

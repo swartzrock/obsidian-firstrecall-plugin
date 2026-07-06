@@ -1680,8 +1680,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-editor-hook-section-label:not(:first-child) {
 	border-top: 1px solid var(--cc-border);
-	margin-top: 0.6em;
-	padding-top: 0.55em;
+	margin-top: 0.8em;
+	padding-top: 0.75em;
 }
 
 .cuecraft-editor-hook-section-label+.cuecraft-section-lens {
