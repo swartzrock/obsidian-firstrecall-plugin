@@ -143,6 +143,16 @@ function cueCraftProviderError(message: string): ByokProviderError {
 	return new ByokProviderError(message);
 }
 
+function debugModelTextFailure(kind: string, stage: "initial" | "repair", text: string, error: string): void {
+	console.warn("[CueCraft BYOK] Model output validation failed", {
+		kind,
+		stage,
+		error,
+		textLength: text.length,
+		textPreview: text.slice(0, 500),
+	});
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null;
 }
@@ -170,6 +180,10 @@ function normalizeOllamaJsonResponse(response: Awaited<ReturnType<ByokHttpClient
 		thinkingText.trim()
 	) {
 		const json = { ...response.json, response: thinkingText };
+		console.debug("[CueCraft BYOK] Recovered Ollama JSON response from thinking output", {
+			thinkingLength: thinkingText.length,
+			thinkingPreview: thinkingText.slice(0, 300),
+		});
 		return { ...response, json, text: JSON.stringify(json) };
 	}
 	return response;
@@ -263,6 +277,7 @@ async function generateCueFromTextProvider(
 	);
 	let result = validateCue(raw.text);
 	if (!result.ok) {
+		debugModelTextFailure("cue", "initial", raw.text, result.error);
 		const repairPrompt =
 			basePrompt +
 			`\nYour previous reply could not be validated (${result.error}).\n` +
@@ -277,6 +292,9 @@ async function generateCueFromTextProvider(
 			signal
 		);
 		result = validateCue(retry.text);
+		if (!result.ok) {
+			debugModelTextFailure("cue", "repair", retry.text, result.error);
+		}
 	}
 	if (!result.ok) {
 		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
@@ -321,6 +339,7 @@ async function generateSummaryFromTextProvider(
 	);
 	let result = validateSummary(raw.text);
 	if (!result.ok) {
+		debugModelTextFailure("summary", "initial", raw.text, result.error);
 		const repairPrompt =
 			basePrompt +
 			`\nYour previous reply could not be validated (${result.error}).\n` +
@@ -334,6 +353,9 @@ async function generateSummaryFromTextProvider(
 			signal
 		);
 		result = validateSummary(retry.text);
+		if (!result.ok) {
+			debugModelTextFailure("summary", "repair", retry.text, result.error);
+		}
 	}
 	if (!result.ok) {
 		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
@@ -378,6 +400,7 @@ async function generateNoteBriefFromTextProvider(
 	);
 	let result = validateNoteBrief(raw.text);
 	if (!result.ok) {
+		debugModelTextFailure("noteBrief", "initial", raw.text, result.error);
 		const repairPrompt =
 			basePrompt +
 			`\nYour previous reply could not be validated (${result.error}).\n` +
@@ -391,6 +414,9 @@ async function generateNoteBriefFromTextProvider(
 			signal
 		);
 		result = validateNoteBrief(retry.text);
+		if (!result.ok) {
+			debugModelTextFailure("noteBrief", "repair", retry.text, result.error);
+		}
 	}
 	if (!result.ok) {
 		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
@@ -416,6 +442,7 @@ async function generateCueBatchFromTextProvider(
 	);
 	let result = parseCueBatch(raw.text, inputs.length);
 	if (typeof result === "string") {
+		debugModelTextFailure("cueBatch", "initial", raw.text, result);
 		const repairPrompt =
 			basePrompt +
 			`\nYour previous reply could not be validated (${result}).\n` +
@@ -430,6 +457,9 @@ async function generateCueBatchFromTextProvider(
 			signal
 		);
 		result = parseCueBatch(retry.text, inputs.length);
+		if (typeof result === "string") {
+			debugModelTextFailure("cueBatch", "repair", retry.text, result);
+		}
 	}
 	if (typeof result === "string") {
 		throw cueCraftProviderError(`Model output could not be validated: ${result}`);
