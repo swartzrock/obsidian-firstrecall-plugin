@@ -334,6 +334,43 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(body.format).toBe("json");
 		expect(body.think).toBe(false);
 	});
+
+	it("recovers Ollama thinking output when the adapter only receives response text", async () => {
+		const cue = {
+			question: "What does CueCraft turn notes into?",
+			keywords: ["notes", "study cues"],
+			confidence: "high",
+			sectionLens: {
+				takeaway: "CueCraft turns notes into study cues.",
+				keyPhrase: "study cues",
+				explanation: "The phrase names the product's review output.",
+			},
+		};
+		const http: ByokHttpClient = async () => ({
+			status: 200,
+			text: JSON.stringify({
+				response: "",
+				thinking: JSON.stringify(cue),
+			}),
+			json: null,
+		});
+		const provider = makeCueCraftByokProvider(settings({ provider: "ollama" }), {
+			fetchImpl,
+			http,
+		});
+
+		await expect(
+			provider.generateCue({
+				heading: "Product Promise",
+				content: "CueCraft turns notes into study cues.",
+				preset: "conceptual",
+			})
+		).resolves.toMatchObject({
+			question: cue.question,
+			keywords: cue.keywords,
+			confidence: cue.confidence,
+		});
+	});
 });
 
 describe("CueCraft provider settings normalization", () => {
