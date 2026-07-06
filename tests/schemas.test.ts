@@ -22,6 +22,24 @@ describe("extractJson", () => {
 		});
 	});
 
+	it("parses the final JSON object when model reasoning contains braces first", () => {
+		const cue = {
+			question: "What does the product promise?",
+			keywords: ["promise", "study"],
+			confidence: "high",
+			sectionLens: {
+				takeaway: "CueCraft turns notes into study cues.",
+				keyPhrase: "study cues",
+				explanation: "The phrase names the review output.",
+			},
+		};
+		const raw =
+			'<think>I considered {"shape":"draft"} before writing the answer.</think>\n' +
+			JSON.stringify(cue);
+
+		expect(extractJson(raw)).toEqual(cue);
+	});
+
 	it("returns null when no JSON object is present", () => {
 		expect(extractJson("no json here")).toBeNull();
 	});
