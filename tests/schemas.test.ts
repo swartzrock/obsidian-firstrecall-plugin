@@ -85,6 +85,14 @@ describe("validateCue", () => {
 		if (r.ok) expect(r.value.confidence).toBe("high");
 	});
 
+	it("normalizes numeric confidence scores from local models", () => {
+		const r = validateCue(
+			'{"question":"Q","keywords":["a","b"],"confidence":0.95}'
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.confidence).toBe("high");
+	});
+
 	it("accepts an optional rationale", () => {
 		const r = validateCue(
 			'{"question":"Q","keywords":["a","b"],"confidence":"low","rationale":"The section is sparse."}'

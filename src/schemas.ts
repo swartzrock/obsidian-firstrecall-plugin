@@ -32,6 +32,11 @@ function coerceKeywords(value: unknown): unknown {
 
 /** Normalize confidence casing; fall back to "medium" when unrecognized. */
 function coerceConfidence(value: unknown): unknown {
+	if (typeof value === "number" && Number.isFinite(value)) {
+		if (value >= 0.67) return "high";
+		if (value >= 0.34) return "medium";
+		return "low";
+	}
 	if (typeof value !== "string") return value;
 	const normalized = value.trim().toLowerCase();
 	return confidenceSchema.options.includes(normalized as z.infer<typeof confidenceSchema>)

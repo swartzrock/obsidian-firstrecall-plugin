@@ -289,6 +289,51 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(body.prompt).toContain("Section heading: Agents");
 		expect(body.prompt).toContain("Agents can plan and use tools.");
 	});
+
+	it("disables Ollama thinking mode and recovers Qwen JSON from thinking output", async () => {
+		const calls: Array<{ url: string; body?: string }> = [];
+		const cue = {
+			question: "What does CueCraft turn notes into?",
+			keywords: ["notes", "study cues"],
+			confidence: "high",
+			sectionLens: {
+				takeaway: "CueCraft turns notes into study cues.",
+				keyPhrase: "study cues",
+				explanation: "The phrase names the product's review output.",
+			},
+		};
+		const http: ByokHttpClient = async (request) => {
+			calls.push({ url: request.url, body: request.body });
+			return {
+				status: 200,
+				text: "{}",
+				json: {
+					response: "",
+					thinking: JSON.stringify(cue),
+				},
+			};
+		};
+		const provider = makeCueCraftByokProvider(settings({ provider: "ollama" }), {
+			fetchImpl,
+			http,
+		});
+
+		await expect(
+			provider.generateCue({
+				heading: "Product Promise",
+				content: "CueCraft turns notes into study cues.",
+				preset: "conceptual",
+			})
+		).resolves.toMatchObject({
+			question: cue.question,
+			keywords: cue.keywords,
+			confidence: cue.confidence,
+		});
+
+		const body = JSON.parse(calls[0].body ?? "{}");
+		expect(body.format).toBe("json");
+		expect(body.think).toBe(false);
+	});
 });
 
 describe("CueCraft provider settings normalization", () => {

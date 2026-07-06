@@ -143,6 +143,53 @@ function cueCraftProviderError(message: string): ByokProviderError {
 	return new ByokProviderError(message);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
+
+function normalizeOllamaJsonRequestBody(body: string | undefined): string | undefined {
+	if (!body) return body;
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(body);
+	} catch {
+		return body;
+	}
+	if (!isRecord(parsed) || parsed.format === undefined) return body;
+	return JSON.stringify({ ...parsed, think: false });
+}
+
+function normalizeOllamaJsonResponse(response: Awaited<ReturnType<ByokHttpClient>>) {
+	if (!isRecord(response.json)) return response;
+	const generatedText = response.json.response;
+	const thinkingText = response.json.thinking;
+	if (
+		typeof generatedText === "string" &&
+		generatedText.trim() === "" &&
+		typeof thinkingText === "string" &&
+		thinkingText.trim()
+	) {
+		const json = { ...response.json, response: thinkingText };
+		return { ...response, json, text: JSON.stringify(json) };
+	}
+	return response;
+}
+
+function cueCraftProviderDeps(
+	config: ByokProviderConfig,
+	deps: CueCraftProviderFactoryDeps
+): CueCraftProviderFactoryDeps {
+	if (config.provider !== "ollama") return deps;
+	return {
+		...deps,
+		http: async (request) => {
+			const body = normalizeOllamaJsonRequestBody(request.body);
+			const response = await deps.http({ ...request, body });
+			return normalizeOllamaJsonResponse(response);
+		},
+	};
+}
+
 function buildCuePrompt(input: CueCraftCueInput): string {
 	const preset = PRESET_GUIDANCE[input.preset] ?? PRESET_GUIDANCE.conceptual;
 	const contextLine = input.noteContext
@@ -987,11 +1034,9 @@ export function makeCueCraftByokProvider(
 	settings: CueCraftSettings,
 	deps: CueCraftProviderFactoryDeps
 ): CueCraftByokRuntime {
+	const config = cueCraftProviderConfigFromSettings(settings);
 	return wrapCueCraftByokRuntime(
-		createByokNodeProvider(
-			cueCraftProviderConfigFromSettings(settings),
-			deps
-		)
+		createByokNodeProvider(config, cueCraftProviderDeps(config, deps))
 	);
 }
 
