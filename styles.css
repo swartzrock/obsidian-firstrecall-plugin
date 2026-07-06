@@ -1324,33 +1324,144 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	filter: blur(3px);
 }
 
+.cuecraft-cue,
+.cuecraft-note-brief,
+.cuecraft-brief,
+.cuecraft-editor-hook,
+.cuecraft-cornell-cue {
+	--cc-card: var(--background-primary);
+	--cc-border: var(--background-modifier-border);
+	--cc-text: var(--text-normal);
+	--cc-muted: var(--text-muted);
+	--cc-radius: 10px;
+	--cc-shadow:
+		0 1px 2px rgba(0, 0, 0, 0.04),
+		0 4px 12px rgba(0, 0, 0, 0.05);
+	--cc-sequences: #3f7f8c;
+	--cc-linkedlists: #5b5fc7;
+	--cc-stacks: #9a7b2b;
+	--cc-intervals: #b04a3a;
+}
+
+.cuecraft-cue[data-category="sequences"],
+.cuecraft-editor-hook[data-category="sequences"],
+.cuecraft-cornell-cue[data-category="sequences"] {
+	--cc-category-accent: var(--cc-sequences);
+}
+
+.cuecraft-cue[data-category="linkedlists"],
+.cuecraft-editor-hook[data-category="linkedlists"],
+.cuecraft-cornell-cue[data-category="linkedlists"] {
+	--cc-category-accent: var(--cc-linkedlists);
+}
+
+.cuecraft-cue[data-category="stacks"],
+.cuecraft-editor-hook[data-category="stacks"],
+.cuecraft-cornell-cue[data-category="stacks"] {
+	--cc-category-accent: var(--cc-stacks);
+}
+
+.cuecraft-cue[data-category="intervals"],
+.cuecraft-editor-hook[data-category="intervals"],
+.cuecraft-cornell-cue[data-category="intervals"] {
+	--cc-category-accent: var(--cc-intervals);
+}
+
 /* Cue block widget rendered beside a section heading in the editor. */
 .cuecraft-cue {
-	color: var(--text-normal);
+	box-sizing: border-box;
+	color: var(--cc-text);
 	font-size: var(--font-ui-small);
-	border-left: 3px solid var(--interactive-accent);
-	background: var(--background-secondary);
-	border-radius: var(--radius-s);
-	padding: 0.4em 0.7em;
+	border: 1px solid var(--cc-border);
+	border-inline-start: 3px solid var(--cc-category-accent, var(--cc-border));
+	background: var(--cc-card);
+	border-radius: var(--cc-radius);
+	box-shadow: var(--cc-shadow);
+	padding: 14px 16px;
 	margin: 0.3em 0 0.6em;
+}
+
+.cuecraft-cue-section-label {
+	margin: 0 0 0.32em;
+	color: var(--cc-muted);
+	font-size: var(--font-smallest);
+	font-weight: var(--font-bold);
+	letter-spacing: 0.06em;
+	line-height: 1.1;
+	text-transform: uppercase;
+}
+
+.cuecraft-cue-section-label:not(:first-child) {
+	border-top: 1px solid var(--cc-border);
+	margin-top: 0.75em;
+	padding-top: 0.7em;
+}
+
+.cuecraft-section-tag + .cuecraft-cue-section-label,
+.cuecraft-section-tag + .cuecraft-editor-hook-section-label {
+	border-top: 0;
+	margin-top: 0;
+	padding-top: 0;
 }
 
 .cuecraft-cue-question {
 	font-weight: var(--font-semibold);
+	line-height: 1.3;
 }
 
 .cuecraft-cue-keywords {
-	color: var(--text-muted);
-	margin-top: 0.2em;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35em;
+	color: var(--cc-muted);
+	margin-top: 0.35em;
 	font-size: var(--font-smallest);
+}
+
+.cuecraft-cue-term,
+.cuecraft-cornell-support-term {
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	padding: 0.12em 0.45em;
+	border: 1px solid var(--cc-border);
+	border-radius: 999px;
+	color: var(--cc-muted);
+	background: transparent;
+	overflow-wrap: anywhere;
+}
+
+.cuecraft-section-tag {
+	display: inline-flex;
+	align-items: center;
+	width: fit-content;
+	max-width: 100%;
+	gap: 0.35em;
+	margin-bottom: 0.55em;
+	padding: 0.12em 0.45em;
+	border: 1px solid var(--cc-border);
+	border-radius: 999px;
+	color: var(--cc-muted);
+	background: transparent;
+	font-size: var(--font-smallest);
+	font-weight: var(--font-medium);
+	line-height: 1.2;
+	overflow-wrap: anywhere;
+}
+
+.cuecraft-section-tag-dot {
+	width: 0.45em;
+	height: 0.45em;
+	border-radius: 50%;
+	background: var(--cc-category-accent, var(--cc-muted));
+	flex: 0 0 auto;
 }
 
 .cuecraft-section-lens {
 	margin-top: 0.4em;
 	padding-top: 0.35em;
-	border-top: 1px solid
-		color-mix(in srgb, var(--background-modifier-border) 72%, transparent);
-	color: var(--text-muted);
+	border-top: 1px solid var(--cc-border);
+	color: var(--cc-muted);
 	font-size: var(--font-smallest);
 	line-height: 1.25;
 	overflow-wrap: anywhere;
@@ -1363,23 +1474,19 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-section-lens-explanation {
 	margin-top: 0.2em;
-	color: color-mix(in srgb, var(--text-muted) 82%, transparent);
+	color: var(--cc-muted);
 }
 
 .cuecraft-note-brief {
 	box-sizing: border-box;
 	max-width: min(48rem, 100%);
 	margin: 0.65em 0 1em;
-	padding: 0.85em 0.95em;
-	border: 1px solid var(--background-modifier-border);
-	border-inline-start: 4px solid var(--interactive-accent);
-	border-radius: var(--radius-s);
-	background: color-mix(
-		in srgb,
-		var(--background-secondary) 82%,
-		var(--interactive-accent) 8%
-	);
-	color: var(--text-normal);
+	padding: 14px 16px;
+	border: 1px solid var(--cc-border);
+	border-radius: var(--cc-radius);
+	background: var(--cc-card);
+	box-shadow: var(--cc-shadow);
+	color: var(--cc-text);
 	font-size: var(--font-ui-small);
 	line-height: 1.35;
 	user-select: text;
@@ -1392,7 +1499,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-note-brief-label {
 	margin-bottom: 0.35em;
-	color: var(--text-muted);
+	color: var(--cc-muted);
 	font-size: var(--font-smallest);
 	font-weight: var(--font-bold);
 	letter-spacing: 0.04em;
@@ -1401,53 +1508,38 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-note-brief-overview {
 	margin: 0;
-	color: var(--text-normal);
+	color: var(--cc-text);
 	text-wrap: pretty;
 }
 
-.cuecraft-note-brief-cards {
+.cuecraft-note-brief-insights {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
-	gap: 0.55em;
-	margin-top: 0.75em;
+	gap: 0.75em;
+	margin-top: 0.85em;
 }
 
-.cuecraft-note-brief-card {
-	padding: 0.55em 0.65em;
-	border: 1px solid
-		color-mix(in srgb, var(--background-modifier-border) 78%, transparent);
-	border-radius: var(--radius-s);
-	background: color-mix(in srgb, var(--background-primary) 88%, transparent);
+.cuecraft-note-brief-insight {
+	min-width: 0;
+	padding-inline-start: 0.7em;
+	border-inline-start: 1px solid var(--cc-border);
 }
 
-.cuecraft-note-brief-card-title {
+.cuecraft-note-brief-insight-title {
 	font-weight: var(--font-semibold);
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-note-brief-card-detail {
+.cuecraft-note-brief-insight-detail {
 	margin-top: 0.25em;
-	color: var(--text-muted);
+	color: var(--cc-muted);
 	font-size: var(--font-smallest);
 	overflow-wrap: anywhere;
 }
 
-/* Confidence accent on the cue's left border. */
-.cuecraft-cue[data-confidence="high"] {
-	border-left-color: var(--color-green);
-}
-
-.cuecraft-cue[data-confidence="medium"] {
-	border-left-color: var(--color-yellow);
-}
-
-.cuecraft-cue[data-confidence="low"] {
-	border-left-color: var(--color-red);
-}
-
 .cuecraft-editor-hook {
 	box-sizing: border-box;
-	color: var(--text-normal);
+	color: var(--cc-text);
 	font-size: var(--font-ui-small);
 	line-height: 1.25;
 	user-select: text;
@@ -1531,100 +1623,23 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	position: relative;
 	max-width: min(22rem, 100%);
 	margin: 0.45em 0 0.75em;
-	padding: 0.85em 0.95em;
+	padding: 14px 16px;
 	overflow: hidden;
-	border: 2px solid color-mix(in srgb, var(--text-normal) 68%, transparent);
-	border-radius: var(--radius-m);
-	background:
-		radial-gradient(
-			circle at 92% 84%,
-			color-mix(in srgb, var(--color-yellow) 28%, transparent) 0 18%,
-			transparent 19%
-		),
-		linear-gradient(
-			135deg,
-			color-mix(in srgb, var(--color-orange) 72%, var(--background-primary)),
-			color-mix(in srgb, var(--color-yellow) 54%, var(--background-primary))
-		);
-	box-shadow: 0 3px 8px rgba(0, 0, 0, 0.14);
+	border: 1px solid var(--cc-border);
+	border-inline-start: 3px solid var(--cc-category-accent, var(--cc-border));
+	border-radius: var(--cc-radius);
+	background: var(--cc-card);
+	box-shadow: var(--cc-shadow);
 }
 
 .cuecraft-editor-hook-anchored-card-rail[data-tone="cool"] {
-	background:
-		radial-gradient(
-			circle at 92% 84%,
-			color-mix(in srgb, var(--color-cyan) 24%, transparent) 0 18%,
-			transparent 19%
-		),
-		linear-gradient(
-			135deg,
-			color-mix(in srgb, var(--color-cyan) 58%, var(--background-primary)),
-			color-mix(in srgb, var(--color-blue) 34%, var(--background-primary))
-		);
+	background: var(--cc-card);
 }
 
 .cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"] {
-	border: 1px solid var(--cuecraft-hook-gradient-border);
-	background: linear-gradient(
-		135deg,
-		var(--cuecraft-hook-gradient-start),
-		var(--cuecraft-hook-gradient-end)
-	);
-	box-shadow: 0 8px 22px rgba(20, 24, 32, 0.12);
-}
-
-.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"][data-gradient="0"] {
-	--cuecraft-hook-gradient-start: color-mix(
-		in srgb,
-		var(--color-cyan) 10%,
-		var(--background-primary)
-	);
-	--cuecraft-hook-gradient-end: color-mix(
-		in srgb,
-		var(--color-cyan) 22%,
-		var(--background-primary)
-	);
-	--cuecraft-hook-gradient-border: color-mix(
-		in srgb,
-		var(--color-cyan) 40%,
-		var(--background-modifier-border)
-	);
-}
-
-.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"][data-gradient="1"] {
-	--cuecraft-hook-gradient-start: color-mix(
-		in srgb,
-		var(--color-yellow) 12%,
-		var(--background-primary)
-	);
-	--cuecraft-hook-gradient-end: color-mix(
-		in srgb,
-		var(--color-orange) 18%,
-		var(--background-primary)
-	);
-	--cuecraft-hook-gradient-border: color-mix(
-		in srgb,
-		var(--color-orange) 38%,
-		var(--background-modifier-border)
-	);
-}
-
-.cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"][data-gradient="2"] {
-	--cuecraft-hook-gradient-start: color-mix(
-		in srgb,
-		var(--color-purple) 10%,
-		var(--background-primary)
-	);
-	--cuecraft-hook-gradient-end: color-mix(
-		in srgb,
-		var(--color-purple) 20%,
-		var(--background-primary)
-	);
-	--cuecraft-hook-gradient-border: color-mix(
-		in srgb,
-		var(--color-purple) 38%,
-		var(--background-modifier-border)
-	);
+	border-color: var(--cc-border);
+	background: var(--cc-card);
+	box-shadow: var(--cc-shadow);
 }
 
 .cuecraft-editor-hook-heading {
@@ -1648,7 +1663,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	position: relative;
 	z-index: 1;
 	margin: 0 0 0.24em;
-	color: color-mix(in srgb, var(--text-normal) 62%, transparent);
+	color: var(--cc-muted);
 	font-size: 0.7em;
 	font-weight: 800;
 	letter-spacing: 0.08em;
@@ -1657,8 +1672,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-editor-hook-section-label:not(:first-child) {
-	border-top: 1px solid
-		color-mix(in srgb, var(--text-normal) 16%, transparent);
+	border-top: 1px solid var(--cc-border);
 	margin-top: 0.6em;
 	padding-top: 0.55em;
 }
@@ -1683,16 +1697,22 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	position: relative;
 	z-index: 1;
 	margin-top: 0.55em;
-	color: color-mix(in srgb, var(--text-normal) 68%, transparent);
+	color: var(--cc-muted);
 	font-size: var(--font-smallest);
 	font-weight: var(--font-medium);
 	overflow-wrap: anywhere;
 }
 
+.cuecraft-editor-hook-keywords {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.35em;
+}
+
 .cuecraft-editor-hook .cuecraft-section-lens {
 	position: relative;
 	z-index: 1;
-	color: color-mix(in srgb, var(--text-normal) 70%, transparent);
+	color: var(--cc-muted);
 	font-weight: var(--font-medium);
 }
 
@@ -2619,25 +2639,12 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-cornell-cue {
 	position: relative;
-	border-left: 2px solid var(--interactive-accent);
-	border-radius: 0 var(--radius-s) var(--radius-s) 0;
-	padding: 10px 26px 10px 12px;
-	padding-right: 26px;
-	background: color-mix(
-		in srgb,
-		var(--background-secondary) 72%,
-		transparent
-	);
-	border-top: 1px solid color-mix(
-		in srgb,
-		var(--background-modifier-border) 70%,
-		transparent
-	);
-	border-bottom: 1px solid color-mix(
-		in srgb,
-		var(--background-modifier-border) 70%,
-		transparent
-	);
+	border: 1px solid var(--cc-border);
+	border-inline-start: 3px solid var(--cc-category-accent, var(--cc-border));
+	border-radius: var(--cc-radius);
+	padding: 14px 26px 14px 16px;
+	background: var(--cc-card);
+	box-shadow: var(--cc-shadow);
 }
 
 .cuecraft-cornell-cue[data-confidence="low"] {
@@ -3466,16 +3473,12 @@ button.cuecraft-study-area-remove {
 	--cuecraft-accent: #f43f5e;
 }
 
-/* Apply the chosen accent to the Cornell cue surface. Per the v0 design the
- * accent tints the evidence support text and the cue rail — the question text stays the
- * normal foreground color so it reads as the primary content, and confidence is
- * shown via the per-cue label, not the rail. Failed cues keep their red rail
- * (the `:not()` keeps this rule from overriding it). Low specificity otherwise,
- * so presets that recolor support text (legal-pad, minimal) keep their look. */
+/* Redesigned Cornell cue cards use category color only on the cue rail.
+ * Failed cues keep their red rail (the `:not()` keeps this rule from overriding it). */
 .cuecraft-cornell-cue:not(.cuecraft-cornell-cue-error) {
-	border-left-color: var(--cuecraft-accent, var(--interactive-accent));
+	border-left-color: var(--cc-category-accent, var(--cc-border));
 }
 
 .cuecraft-cornell-support-text {
-	color: var(--cuecraft-accent, var(--text-muted));
+	color: var(--cc-muted);
 }

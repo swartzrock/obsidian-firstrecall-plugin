@@ -35,7 +35,7 @@ import {
 	type EditorHookCardStyle,
 } from "./editor-hook-card-style";
 import { isCueEligibleSection, type Section } from "./parser";
-import type { NoteBriefOutput, SectionLens } from "./schemas";
+import type { CueCategory, NoteBriefOutput, SectionLens } from "./schemas";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -47,6 +47,7 @@ export interface CueLineData {
 	question: string;
 	keywords: string[];
 	confidence: Confidence | null;
+	category?: CueCategory | null;
 	sectionLens: SectionLens | null;
 	/** Generation error message, when this section failed. */
 	error: string | null;
@@ -104,6 +105,7 @@ export function buildCueLineData(
 			question: failed ? "" : (sec.question ?? ""),
 			keywords: failed || !showKeywords ? [] : sec.keywords ?? [],
 			confidence: failed ? null : sec.confidence,
+			category: failed ? null : sec.category ?? null,
 			sectionLens: failed || !showSectionLens ? null : sec.sectionLens ?? null,
 			error: failed ? sec.error ?? "Generation failed" : null,
 		});
@@ -132,6 +134,7 @@ class CueWidget extends WidgetType {
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
+			other.cue.category === this.cue.category &&
 			sectionLensKey(other.cue.sectionLens) === sectionLensKey(this.cue.sectionLens) &&
 			other.cue.error === this.cue.error
 		);
@@ -192,6 +195,7 @@ class CueGutterMarker extends GutterMarker {
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
+			other.cue.category === this.cue.category &&
 			sectionLensKey(other.cue.sectionLens) === sectionLensKey(this.cue.sectionLens) &&
 			other.cue.error === this.cue.error
 		);
@@ -265,8 +269,13 @@ function renderCornellCueElement(
 	if (cue.confidence) {
 		card.dataset.confidence = cue.confidence;
 	}
+	if (cue.category) {
+		card.dataset.category = cue.category;
+		appendSectionTag(card, cue.category);
+	}
 
 	if (options.showQuestion ?? true) {
+		appendCueSectionLabel(card, "QUESTION");
 		const q = doc.createElement("div");
 		q.className = "cuecraft-cornell-q";
 		q.textContent = cue.question;
@@ -279,23 +288,10 @@ function renderCornellCueElement(
 		keywords: cue.keywords,
 	});
 	if ((options.showSupportTerms ?? true) && supports.terms.length) {
+		appendCueSectionLabel(card, "TERMS");
 		const kw = doc.createElement("div");
 		kw.className = "cuecraft-cornell-kw";
-		const supportText = doc.createElement("span");
-		supportText.className = "cuecraft-cornell-support-text";
-		kw.appendChild(supportText);
-		for (const [index, term] of supports.terms.entries()) {
-			const item = doc.createElement("span");
-			item.className = "cuecraft-cornell-support-term";
-			item.textContent = term;
-			supportText.appendChild(item);
-			if (index < supports.terms.length - 1) {
-				const separator = doc.createElement("span");
-				separator.className = "cuecraft-cornell-support-separator";
-				separator.textContent = "\u00b7";
-				supportText.appendChild(separator);
-			}
-		}
+		appendCueTerms(kw, supports.terms, "cuecraft-cornell-support-term");
 		card.appendChild(kw);
 	}
 
@@ -325,8 +321,13 @@ function renderInlineCueElement(
 	if (cue.confidence) {
 		root.dataset.confidence = cue.confidence;
 	}
+	if (cue.category) {
+		root.dataset.category = cue.category;
+		appendSectionTag(root, cue.category);
+	}
 
 	if (options.showQuestion ?? true) {
+		appendCueSectionLabel(root, "QUESTION");
 		const q = cueDocument().createElement("div");
 		q.className = "cuecraft-cue-question";
 		q.textContent = cue.question;
@@ -336,9 +337,10 @@ function renderInlineCueElement(
 	appendSectionLens(root, cue.sectionLens);
 
 	if ((options.showSupportTerms ?? true) && cue.keywords.length) {
+		appendCueSectionLabel(root, "TERMS");
 		const kw = cueDocument().createElement("div");
 		kw.className = "cuecraft-cue-keywords";
-		kw.textContent = cue.keywords.join(" · ");
+		appendCueTerms(kw, cue.keywords);
 		root.appendChild(kw);
 	}
 	return root;
@@ -364,6 +366,10 @@ function renderEditorHookElement(
 	root.dataset.questionVisible = String(card.showQuestion);
 	root.dataset.supportTermsVisible = String(card.showSupportTerms);
 	if (card.confidence) root.dataset.confidence = card.confidence;
+	if (card.category) {
+		root.dataset.category = card.category;
+		appendSectionTag(root, card.category);
+	}
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
 	if (card.showQuestion || card.kind === "failed") {
@@ -397,10 +403,43 @@ function renderEditorHookElement(
 		if (showSectionLabels) appendEditorHookSectionLabel(root, "Terms");
 		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
-		keywords.textContent = card.keywords.join(" · ");
+		appendCueTerms(keywords, card.keywords);
 		root.appendChild(keywords);
 	}
 	return root;
+}
+
+function appendCueSectionLabel(parent: HTMLElement, label: string): void {
+	const sectionLabel = parent.ownerDocument.createElement("div");
+	sectionLabel.className = "cuecraft-cue-section-label";
+	sectionLabel.textContent = label;
+	parent.appendChild(sectionLabel);
+}
+
+function appendCueTerms(
+	parent: HTMLElement,
+	terms: readonly string[],
+	chipClass = "cuecraft-cue-term"
+): void {
+	for (const term of terms) {
+		const chip = parent.ownerDocument.createElement("span");
+		chip.className = chipClass;
+		chip.textContent = term;
+		parent.appendChild(chip);
+	}
+}
+
+function appendSectionTag(parent: HTMLElement, category: CueCategory): void {
+	const tag = parent.ownerDocument.createElement("div");
+	tag.className = "cuecraft-section-tag";
+	const dot = parent.ownerDocument.createElement("span");
+	dot.className = "cuecraft-section-tag-dot";
+	dot.setAttribute("aria-hidden", "true");
+	tag.appendChild(dot);
+	const label = parent.ownerDocument.createElement("span");
+	label.textContent = `#${category}`;
+	tag.appendChild(label);
+	parent.appendChild(tag);
 }
 
 function appendEditorHookSectionLabel(
@@ -440,20 +479,20 @@ export function renderNoteBriefElement(
 	root.appendChild(overview);
 
 	const cards = doc.createElement("div");
-	cards.className = "cuecraft-note-brief-cards";
+	cards.className = "cuecraft-note-brief-insights";
 	for (const key of noteBriefCardOrder) {
 		const card = noteBrief[key];
 		const cardEl = doc.createElement("div");
-		cardEl.className = "cuecraft-note-brief-card";
+		cardEl.className = "cuecraft-note-brief-insight";
 		cardEl.dataset.card = key;
 
 		const title = doc.createElement("div");
-		title.className = "cuecraft-note-brief-card-title";
+		title.className = "cuecraft-note-brief-insight-title";
 		title.textContent = card.title;
 		cardEl.appendChild(title);
 
 		const detail = doc.createElement("div");
-		detail.className = "cuecraft-note-brief-card-detail";
+		detail.className = "cuecraft-note-brief-insight-detail";
 		detail.textContent = card.detail;
 		cardEl.appendChild(detail);
 

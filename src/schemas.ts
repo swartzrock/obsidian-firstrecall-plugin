@@ -5,6 +5,16 @@ import { z } from "zod/v3";
  * variation at the boundary, then normalizes to the cue and summary contracts.
  */
 export const confidenceSchema = z.enum(["high", "medium", "low"]);
+export const CUE_CATEGORY_VALUES = [
+	"sequences",
+	"linkedlists",
+	"stacks",
+	"intervals",
+] as const;
+export const CUE_CATEGORY_PROMPT_VALUES = CUE_CATEGORY_VALUES.map(
+	(value) => `"${value}"`
+).join(" | ");
+export const cueCategorySchema = z.enum(CUE_CATEGORY_VALUES);
 
 export const sectionLensSchema = z.object({
 	takeaway: z.string().trim().min(1, "sectionLens.takeaway is required"),
@@ -48,6 +58,7 @@ export const cueOutputSchema = z.object({
 	question: z.string().trim().min(1, "question is required"),
 	keywords: z.preprocess(coerceKeywords, z.array(z.string().min(1)).min(2).max(5)),
 	confidence: z.preprocess(coerceConfidence, confidenceSchema),
+	category: cueCategorySchema.optional(),
 	rationale: z.preprocess(
 		(value) => (value === null ? undefined : value),
 		z.string().trim().optional()
@@ -86,6 +97,11 @@ export const cueGenerationSchema = z.object({
 	confidence: z
 		.enum(["high", "medium", "low"])
 		.describe("How confident you are this cue tests the section well."),
+	category: cueCategorySchema
+		.optional()
+		.describe(
+			`Optional semantic family: ${CUE_CATEGORY_VALUES.join(", ")}.`
+		),
 	rationale: z
 		.string()
 		.nullable()
@@ -130,6 +146,7 @@ export const noteBriefGenerationSchema = z.object({
 });
 
 export type CueOutput = z.infer<typeof cueOutputSchema>;
+export type CueCategory = z.infer<typeof cueCategorySchema>;
 export type SectionLens = z.infer<typeof sectionLensSchema>;
 export type SummaryOutput = z.infer<typeof summaryOutputSchema>;
 export type NoteBriefOutput = z.infer<typeof noteBriefOutputSchema>;

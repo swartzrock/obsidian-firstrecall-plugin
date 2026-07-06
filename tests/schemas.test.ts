@@ -101,6 +101,22 @@ describe("validateCue", () => {
 		if (r.ok) expect(r.value.rationale).toBe("The section is sparse.");
 	});
 
+	it("accepts an optional semantic cue category", () => {
+		const r = validateCue(
+			'{"question":"Q","keywords":["a","b"],"confidence":"high","category":"stacks"}'
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) expect(r.value.category).toBe("stacks");
+	});
+
+	it("rejects unrecognized cue categories", () => {
+		const r = validateCue(
+			'{"question":"Q","keywords":["a","b"],"confidence":"high","category":"graphs"}'
+		);
+		expect(r.ok).toBe(false);
+		if (!r.ok) expect(r.error).toMatch(/category/);
+	});
+
 	it("accepts an optional Section Lens", () => {
 		const r = validateCue(
 			JSON.stringify({
@@ -172,7 +188,12 @@ describe("validateCueBatch", () => {
 			JSON.stringify({
 				cues: [
 					{ question: "Q1?", keywords: ["a", "b"], confidence: "high" },
-					{ question: "Q2?", keywords: ["c", "d"], confidence: "medium" },
+					{
+						question: "Q2?",
+						keywords: ["c", "d"],
+						confidence: "medium",
+						category: "intervals",
+					},
 				],
 			}),
 			2
@@ -180,6 +201,7 @@ describe("validateCueBatch", () => {
 		expect(r.ok).toBe(true);
 		if (r.ok) {
 			expect(r.value.map((item) => item.value?.question)).toEqual(["Q1?", "Q2?"]);
+			expect(r.value[1].value?.category).toBe("intervals");
 			expect(r.value.every((item) => item.error === null)).toBe(true);
 		}
 	});

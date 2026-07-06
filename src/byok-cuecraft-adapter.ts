@@ -47,6 +47,8 @@ import {
 	SECTION_LENS_PROMPT,
 } from "./review-artifact-prompts";
 import {
+	CUE_CATEGORY_PROMPT_VALUES,
+	CUE_CATEGORY_VALUES,
 	cueGenerationSchema,
 	cueOutputSchema,
 	formatZodError,
@@ -120,6 +122,7 @@ const CUE_JSON_SCHEMA = JSON.stringify({
 			maxItems: 5,
 		},
 		confidence: { enum: ["high", "medium", "low"] },
+		category: { enum: CUE_CATEGORY_VALUES },
 		rationale: { type: "string" },
 		sectionLens: SECTION_LENS_JSON_SCHEMA,
 	},
@@ -250,6 +253,7 @@ function buildCuePrompt(input: CueCraftCueInput): string {
 		`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
 		`Return ONLY a JSON object with keys: "question" (string), ` +
 		`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
+		`optional "category" (${CUE_CATEGORY_PROMPT_VALUES}) when the section clearly fits one of those semantic families, ` +
 		`optional "rationale" (short reason, only when confidence is "low"), ` +
 		`and "sectionLens" (object).\n` +
 		`${SECTION_LENS_PROMPT}\n` +

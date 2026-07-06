@@ -60,6 +60,7 @@ describe("buildNoteCache + validateCache", () => {
 		expect(cache.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
 		expect(cache.sections).toHaveLength(2);
 		expect(cache.outline.learningObjective).toBe("understand A and B");
+		expect(cache.sections[0].category).toBeNull();
 		expect(cache.sections[0].sectionLens).toBeNull();
 		expect(cache.noteBrief).toBeNull();
 		expect(validateCache(cache).ok).toBe(true);
@@ -72,6 +73,7 @@ describe("buildNoteCache + validateCache", () => {
 			keyPhrase: "A",
 			explanation: "A frames the rest of the note.",
 		};
+		result.sections[0].category = "sequences";
 		result.noteBrief = {
 			overview: "A and B explain the note.",
 			whatMatters: { title: "A matters", detail: "It frames the note." },
@@ -88,6 +90,7 @@ describe("buildNoteCache + validateCache", () => {
 		});
 
 		expect(cache.sections[0].sectionLens?.keyPhrase).toBe("A");
+		expect(cache.sections[0].category).toBe("sequences");
 		expect(cache.noteBrief?.reviewFirst.title).toBe("A");
 		expect(validateCache(cache).ok).toBe(true);
 	});
@@ -180,6 +183,7 @@ describe("migrateCache", () => {
 		expect(migrated?.preset).toBe("conceptual");
 		expect(migrated?.generationMode).toBe("whole-note-context");
 		expect(migrated?.sections[0].level).toBe(0);
+		expect(migrated?.sections[0].category).toBeNull();
 		expect(migrated?.sections[0].rationale).toBeNull();
 		expect(migrated?.sections[0].sectionLens).toBeNull();
 		expect(migrated?.noteBrief).toBeNull();
@@ -201,6 +205,7 @@ describe("migrateCache", () => {
 		};
 		const migrated = migrateCache(v2);
 		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
+		expect(migrated?.sections[0].category).toBeNull();
 		expect(migrated?.sections[0].rationale).toBeNull();
 		expect(migrated?.sections[0].sectionLens).toBeNull();
 		expect(migrated?.noteBrief).toBeNull();
@@ -218,8 +223,23 @@ describe("migrateCache", () => {
 		};
 		const migrated = migrateCache(v3);
 		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
+		expect(migrated?.sections[0].category).toBeNull();
 		expect(migrated?.sections[0].sectionLens).toBeNull();
 		expect(migrated?.noteBrief).toBeNull();
+		expect(validateCache(migrated).ok).toBe(true);
+	});
+
+	it("upgrades a v4 cache by adding category fields", () => {
+		const v4 = {
+			...build(),
+			schemaVersion: 4,
+			sections: build().sections.map(
+				({ category: _category, ...section }) => section
+			),
+		};
+		const migrated = migrateCache(v4);
+		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
+		expect(migrated?.sections[0].category).toBeNull();
 		expect(validateCache(migrated).ok).toBe(true);
 	});
 
@@ -356,6 +376,7 @@ describe("reconcileCacheSections", () => {
 			keywords: ["gamma"],
 			question: "Q:C",
 			confidence: "medium" as const,
+			category: "intervals" as const,
 			rationale: null,
 			sectionLens: null,
 			error: null,
@@ -365,6 +386,7 @@ describe("reconcileCacheSections", () => {
 
 		expect(result.sections.map((section) => section.heading)).toEqual(["A", "C"]);
 		expect(result.sections.map((section) => section.question)).toEqual(["Q:A", "Q:C"]);
+		expect(result.sections[1].category).toBe("intervals");
 	});
 
 	it("preserves existing cues when sections are reordered", () => {
