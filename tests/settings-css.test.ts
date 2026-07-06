@@ -89,4 +89,20 @@ describe("settings CSS", () => {
 		expect(insightRule).not.toContain("background:");
 		expect(insightRule).not.toContain("box-shadow:");
 	});
+
+	it("keeps CueCraft label icons small and inline", () => {
+		const cueLabelRule = ruleFor(".cuecraft-cue-section-label");
+		expect(cueLabelRule).toContain("display: inline-flex");
+		expect(cueLabelRule).toContain("align-items: center");
+
+		const iconRule = ruleFor(".cuecraft-label-icon");
+		expect(iconRule).toContain("width: 1em");
+		expect(iconRule).toContain("height: 1em");
+		expect(iconRule).toContain("color: var(--cc-category-accent, var(--cc-muted))");
+
+		const briefIconRule = ruleFor(
+			".cuecraft-note-brief-label .cuecraft-label-icon"
+		);
+		expect(briefIconRule).toContain("color: var(--cc-sequences)");
+	});
 });

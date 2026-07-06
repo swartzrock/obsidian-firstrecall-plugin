@@ -14,6 +14,7 @@ import {
 	gutter,
 } from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
+import { setIcon } from "obsidian";
 import type { NoteCache } from "./cache";
 import {
 	buildEditorHookCard,
@@ -412,8 +413,26 @@ function renderEditorHookElement(
 function appendCueSectionLabel(parent: HTMLElement, label: string): void {
 	const sectionLabel = parent.ownerDocument.createElement("div");
 	sectionLabel.className = "cuecraft-cue-section-label";
-	sectionLabel.textContent = label;
+	if (label === "QUESTION") {
+		appendLabelIcon(sectionLabel, "circle-question-mark");
+	}
+	appendLabelText(sectionLabel, label);
 	parent.appendChild(sectionLabel);
+}
+
+function appendLabelIcon(parent: HTMLElement, icon: string): void {
+	const iconEl = parent.ownerDocument.createElement("span");
+	iconEl.className = "cuecraft-label-icon";
+	iconEl.setAttribute("aria-hidden", "true");
+	setIcon(iconEl, icon);
+	parent.appendChild(iconEl);
+}
+
+function appendLabelText(parent: HTMLElement, label: string): void {
+	const labelText = parent.ownerDocument.createElement("span");
+	labelText.className = "cuecraft-label-text";
+	labelText.textContent = label;
+	parent.appendChild(labelText);
 }
 
 function appendCueTerms(
@@ -470,7 +489,8 @@ export function renderNoteBriefElement(
 
 	const label = doc.createElement("div");
 	label.className = "cuecraft-note-brief-label";
-	label.textContent = "Note brief";
+	appendLabelIcon(label, "sparkles");
+	appendLabelText(label, "Note brief");
 	root.appendChild(label);
 
 	const overview = doc.createElement("p");

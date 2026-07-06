@@ -229,6 +229,10 @@ describe("renderCueElement", () => {
 					(label) => label.textContent
 				)
 			).toEqual(["QUESTION", "TERMS"]);
+			expect(
+				el.querySelector(".cuecraft-cue-section-label .cuecraft-label-icon")
+					?.getAttribute("data-icon")
+			).toBe("circle-question-mark");
 			expect(el.querySelector(".cuecraft-cue-question")?.textContent).toBe(
 				"What is an agent?"
 			);
@@ -544,6 +548,10 @@ describe("renderNoteBriefElement", () => {
 			expect(el.querySelector(".cuecraft-note-brief-label")?.textContent).toBe(
 				"Note brief"
 			);
+			expect(
+				el.querySelector(".cuecraft-note-brief-label .cuecraft-label-icon")
+					?.getAttribute("data-icon")
+			).toBe("sparkles");
 			expect(
 				el.querySelector(".cuecraft-note-brief-overview")?.textContent
 			).toBe("The note explains how agents use tools to complete work.");
