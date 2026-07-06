@@ -1664,7 +1664,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-editor-hook-section-label {
-	display: inline-flex;
+	display: flex;
 	align-items: center;
 	gap: 0.48em;
 	position: relative;

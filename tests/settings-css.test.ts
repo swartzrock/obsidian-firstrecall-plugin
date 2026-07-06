@@ -115,7 +115,7 @@ describe("settings CSS", () => {
 		expect(
 			editorLabelRules.some(
 				(rule) =>
-					rule.includes("display: inline-flex") &&
+					rule.includes("display: flex") &&
 					rule.includes("align-items: center") &&
 					rule.includes("gap: 0.48em")
 			)
