@@ -1191,10 +1191,11 @@ export async function makeCueCraftByokProviderFromStore(
 	deps: CueCraftProviderFactoryDeps,
 	credentialStore: SecureCredentialStore
 ): Promise<CueCraftByokRuntime> {
+	const config = await resolveCueCraftProviderConfigFromStore(settings, credentialStore);
 	return wrapCueCraftByokRuntime(
 		createByokNodeProvider(
-			await resolveCueCraftProviderConfigFromStore(settings, credentialStore),
-			deps
+			config,
+			cueCraftProviderDeps(config, deps)
 		)
 	);
 }
