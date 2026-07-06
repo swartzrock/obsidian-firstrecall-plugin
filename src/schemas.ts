@@ -32,6 +32,11 @@ function coerceKeywords(value: unknown): unknown {
 
 /** Normalize confidence casing; fall back to "medium" when unrecognized. */
 function coerceConfidence(value: unknown): unknown {
+	if (typeof value === "number" && Number.isFinite(value)) {
+		if (value >= 0.67) return "high";
+		if (value >= 0.34) return "medium";
+		return "low";
+	}
 	if (typeof value !== "string") return value;
 	const normalized = value.trim().toLowerCase();
 	return confidenceSchema.options.includes(normalized as z.infer<typeof confidenceSchema>)
@@ -138,6 +143,72 @@ export type ValidationResult<T> =
 	| { ok: true; value: T }
 	| { ok: false; error: string };
 
+type JsonParseResult =
+	| { ok: true; value: unknown }
+	| { ok: false };
+
+function parseJson(candidate: string): JsonParseResult {
+	try {
+		return { ok: true, value: JSON.parse(candidate) };
+	} catch {
+		return { ok: false };
+	}
+}
+
+function extractBalancedJsonObject(candidate: string): unknown {
+	let best: { end: number; start: number; value: unknown } | null = null;
+
+	for (let start = 0; start < candidate.length; start++) {
+		if (candidate[start] !== "{") continue;
+
+		let depth = 0;
+		let inString = false;
+		let escaped = false;
+
+		for (let end = start; end < candidate.length; end++) {
+			const char = candidate[end];
+
+			if (escaped) {
+				escaped = false;
+				continue;
+			}
+
+			if (char === "\\") {
+				escaped = inString;
+				continue;
+			}
+
+			if (char === '"') {
+				inString = !inString;
+				continue;
+			}
+
+			if (inString) continue;
+
+			if (char === "{") {
+				depth += 1;
+				continue;
+			}
+
+			if (char !== "}") continue;
+
+			depth -= 1;
+			if (depth !== 0) continue;
+
+			const parsed = parseJson(candidate.slice(start, end + 1));
+			if (
+				parsed.ok &&
+				(!best || end > best.end || (end === best.end && start < best.start))
+			) {
+				best = { end, start, value: parsed.value };
+			}
+			break;
+		}
+	}
+
+	return best?.value ?? null;
+}
+
 /**
  * Extract a JSON object from a model response that may be wrapped in prose
  * or fenced code blocks. Returns the parsed value or null if no object found.
@@ -147,22 +218,10 @@ export function extractJson(raw: string): unknown {
 	const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
 	const candidate = fenced ? fenced[1].trim() : trimmed;
 
-	try {
-		return JSON.parse(candidate);
-	} catch {
-		// Fall through to brace extraction.
-	}
+	const parsed = parseJson(candidate);
+	if (parsed.ok) return parsed.value;
 
-	const start = candidate.indexOf("{");
-	const end = candidate.lastIndexOf("}");
-	if (start !== -1 && end !== -1 && end > start) {
-		try {
-			return JSON.parse(candidate.slice(start, end + 1));
-		} catch {
-			return null;
-		}
-	}
-	return null;
+	return extractBalancedJsonObject(candidate);
 }
 
 export function formatZodError(error: z.ZodError): string {

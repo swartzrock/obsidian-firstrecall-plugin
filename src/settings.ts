@@ -76,7 +76,7 @@ import {
 	type ByokProviderDefinition,
 	type ByokProviderId,
 	type ByokStoredSettings,
-} from "@cuecraft/byok";
+} from "@swartzrock/byok-runtime";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	buildAnthropicModelOptions,

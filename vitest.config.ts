@@ -1,20 +1,24 @@
 import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
-const byokMain = fileURLToPath(new URL("./packages/byok/src/index.ts", import.meta.url));
-const byokNode = fileURLToPath(new URL("./packages/byok/src/node.ts", import.meta.url));
+const byokRuntimeMain = fileURLToPath(
+	new URL("./node_modules/@swartzrock/byok-runtime/src/index.ts", import.meta.url)
+);
+const byokRuntimeNode = fileURLToPath(
+	new URL("./node_modules/@swartzrock/byok-runtime/src/node.ts", import.meta.url)
+);
 const obsidianMock = fileURLToPath(new URL("./tests/mocks/obsidian.ts", import.meta.url));
 
 export default defineConfig({
 	resolve: {
 		alias: [
 			{ find: "obsidian", replacement: obsidianMock },
-			{ find: "@cuecraft/byok/node", replacement: byokNode },
-			{ find: "@cuecraft/byok", replacement: byokMain },
+			{ find: "@swartzrock/byok-runtime/node", replacement: byokRuntimeNode },
+			{ find: "@swartzrock/byok-runtime", replacement: byokRuntimeMain },
 		],
 	},
 	test: {
 		environment: "node",
-		include: ["tests/**/*.test.ts", "packages/*/tests/**/*.test.ts"],
+		include: ["tests/**/*.test.ts"],
 	},
 });

@@ -71,7 +71,11 @@ describe("BYOK client facade", () => {
 		expect(requestUrl).toBe("http://localhost:11434/api/generate");
 		expect(requestInit?.method).toBe("POST");
 		expect(requestInit?.signal).toBe(controller.signal);
-		expect(JSON.parse(String(requestInit?.body))).toMatchObject({
+		const requestBody = requestInit?.body;
+		if (typeof requestBody !== "string") {
+			throw new Error("Expected Ollama request body to be a string.");
+		}
+		expect(JSON.parse(requestBody)).toMatchObject({
 			model: "llama3.1:8b",
 			prompt: "Say hi.",
 			stream: false,

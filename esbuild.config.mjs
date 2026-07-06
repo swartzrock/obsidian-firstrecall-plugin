@@ -10,13 +10,17 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = process.argv[2] === "production";
-const byokMain = fileURLToPath(new URL("./packages/byok/src/index.ts", import.meta.url));
-const byokNode = fileURLToPath(new URL("./packages/byok/src/node.ts", import.meta.url));
-const byokAliasPlugin = {
-	name: "byok-workspace-alias",
+const byokRuntimeMain = fileURLToPath(
+	new URL("./node_modules/@swartzrock/byok-runtime/src/index.ts", import.meta.url)
+);
+const byokRuntimeNode = fileURLToPath(
+	new URL("./node_modules/@swartzrock/byok-runtime/src/node.ts", import.meta.url)
+);
+const byokRuntimeAliasPlugin = {
+	name: "byok-runtime-release-alias",
 	setup(build) {
-		build.onResolve({ filter: /^@cuecraft\/byok(?:\/node)?$/ }, (args) => ({
-			path: args.path === "@cuecraft/byok/node" ? byokNode : byokMain,
+		build.onResolve({ filter: /^@swartzrock\/byok-runtime(?:\/node)?$/ }, (args) => ({
+			path: args.path === "@swartzrock/byok-runtime/node" ? byokRuntimeNode : byokRuntimeMain,
 		}));
 	},
 };
@@ -45,7 +49,7 @@ const context = await esbuild.context({
 	format: "cjs",
 	target: "es2018",
 	logLevel: "info",
-	plugins: [byokAliasPlugin],
+	plugins: [byokRuntimeAliasPlugin],
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
 	outfile: "main.js",

@@ -49,9 +49,13 @@ async function listAnthropicModelOptions(
 		dangerouslyAllowBrowser: true,
 	});
 	const models: ByokModelOption[] = [];
-	// eslint-disable-next-line @typescript-eslint/await-thenable -- PagePromise implements AsyncIterable.
-	for await (const model of client.models.list()) {
-		models.push(anthropicModelInfoToByokModelOption(model));
+	let page = await client.models.list();
+	while (true) {
+		for (const model of page.data) {
+			models.push(anthropicModelInfoToByokModelOption(model));
+		}
+		if (!page.hasNextPage()) break;
+		page = await page.getNextPage();
 	}
 	return models;
 }

@@ -4,16 +4,10 @@
 	"description": "AI-powered active-recall study cues for Obsidian.",
 	"main": "main.js",
 	"type": "module",
-	"workspaces": [
-		"packages/*"
-	],
 	"scripts": {
 		"dev": "bun esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && bun esbuild.config.mjs production",
 		"typecheck": "tsc -noEmit -skipLibCheck",
-		"typecheck:byok": "tsc -p packages/byok/tsconfig.json",
-		"typecheck:byok-examples": "tsc -p packages/byok/tsconfig.examples.json",
-		"test:byok": "vitest run --config packages/byok/vitest.config.ts",
 		"lint": "eslint .",
 		"test": "vitest run"
 	},
@@ -51,17 +45,8 @@
 		"vitest": "^3.2.4"
 	},
 	"dependencies": {
-		"@cuecraft/byok": "workspace:*",
-		"@ai-sdk/anthropic": "^3.0.81",
-		"@ai-sdk/google": "^3.0.80",
-		"@ai-sdk/openai": "^3.0.68",
-		"@ai-sdk/provider-utils": "^4.0.27",
-		"@ai-sdk/xai": "^3.0.93",
+		"@swartzrock/byok-runtime": "github:swartzrock/byok-runtime#v0.1",
 		"@anthropic-ai/sdk": "^0.104.1",
-		"@google/genai": "^2.8.0",
-		"ai": "^6.0.197",
-		"ollama": "^0.6.3",
-		"openai": "^6.42.0",
 		"zod": "^3.25.76"
 	}
 }

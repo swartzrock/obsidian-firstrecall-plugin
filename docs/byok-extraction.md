@@ -1,6 +1,6 @@
 # BYOK Extraction Notes
 
-BYOK is the workspace package for provider setup, model discovery, and app-agnostic AI access through text and structured-object generation. It currently lives at `packages/byok` inside CueCraft so the interface can keep being proven before extraction to a separate public repository.
+BYOK is the extracted runtime package for provider setup, model discovery, and app-agnostic AI access through text and structured-object generation. CueCraft consumes the `@swartzrock/byok-runtime` v0.1 release from `swartzrock/byok-runtime` instead of a local workspace package.
 
 ## Public Surface
 
@@ -16,7 +16,7 @@ import {
 	type ByokCoreProviderConfig,
 	type ByokProviderDeps,
 	type ByokProviderRuntime,
-} from "@cuecraft/byok";
+} from "@swartzrock/byok-runtime";
 ```
 
 The public surface is:
@@ -27,7 +27,7 @@ The public surface is:
 - Function-first generation: `generateText(options)` for one-call text generation with explicit provider credentials, model, prompt, optional `signal`, and optional custom deps.
 - Model discovery: `listModels(options)` for fetching portable model options without requiring a selected model.
 - Repeated-call client: `createByok(config)` for binding one provider credential or Ollama host while supplying `model` per generation call.
-- Node-only runtime creation: `createByokNodeProvider(config, deps): ByokProviderRuntime` from `@cuecraft/byok/node` for connection testing, structured output, and Codex CLI or Claude CLI providers.
+- Node-only runtime creation: `createByokNodeProvider(config, deps): ByokProviderRuntime` from `@swartzrock/byok-runtime/node` for connection testing, structured output, and Codex CLI or Claude CLI providers.
 - Model discovery: provider runtimes return portable `ByokModelOption` values with `id` and `label` only. Provider-specific metadata such as OpenRouter pricing, context length, supported parameters, and compatibility badges is intentionally not part of the main public surface.
 - Runtime generation: `ByokProviderRuntime.generateText`, optional `generateObject`, and provider errors such as `ByokProviderError` and `ByokProviderRateLimitError`.
 
@@ -68,7 +68,7 @@ The function-first API accepts plain text prompts only; provider-specific genera
 The node provider runtime contract remains the advanced setup/model-discovery layer and intentionally stays app-agnostic:
 
 ```ts
-import { ByokProvider, createByokNodeProvider } from "@cuecraft/byok/node";
+import { ByokProvider, createByokNodeProvider } from "@swartzrock/byok-runtime/node";
 
 const provider = createByokNodeProvider(
 	{ provider: ByokProvider.OpenAI, apiKey, model: "gpt-4o-mini" },
@@ -89,7 +89,7 @@ Structured-output capable providers also expose `generateObject`:
 
 ```ts
 import { z } from "zod/v3";
-import { createByokNodeProvider } from "@cuecraft/byok/node";
+import { createByokNodeProvider } from "@swartzrock/byok-runtime/node";
 
 const provider = createByokNodeProvider(config, deps);
 const result = await provider.generateObject?.({
@@ -108,7 +108,7 @@ import {
 	createByokNodeProvider,
 	type ByokProviderConfig,
 	type ByokProviderDeps,
-} from "@cuecraft/byok/node";
+} from "@swartzrock/byok-runtime/node";
 
 const config: ByokProviderConfig = {
 	provider: ByokProvider.CodexCli,
@@ -131,7 +131,7 @@ const provider = createByokNodeProvider(config, deps satisfies ByokProviderDeps)
 - Map CueCraft settings into BYOK configs and map BYOK results back into settings through `src/byok-cuecraft-adapter.ts`.
 - Preserve Obsidian-specific user experience: settings copy, model refresh notices, setup status text, and note-cache metadata.
 
-`src/byok-cuecraft-adapter.ts` is deliberately outside `packages/byok/**`. A future non-Obsidian project should write its own adapter for storage, UI, transport wiring, prompting, and output validation instead of importing CueCraft settings or study-cue types.
+`src/byok-cuecraft-adapter.ts` stays in CueCraft. A future non-Obsidian project should write its own adapter for storage, UI, transport wiring, prompting, and output validation instead of importing CueCraft settings or study-cue types.
 
 ## CueCraft Credential Storage
 
@@ -143,9 +143,9 @@ Direct browser or Electron-renderer BYOK calls are appropriate only for user-ent
 
 If Obsidian `app.secretStorage` is unavailable, cloud providers fail closed in that state; Ollama host and local CLI command providers remain regular non-secret settings. CueCraft requires Obsidian 1.11.4 or newer for cloud API-key storage.
 
-## Package Dependency Expectations
+## Runtime Dependency Expectations
 
-The `packages/byok` package owns provider-runtime dependencies and Node CLI support:
+The `@swartzrock/byok-runtime` package owns provider-runtime dependencies and Node CLI support:
 
 - AI SDK provider packages: `ai`, `@ai-sdk/anthropic`, `@ai-sdk/google`, `@ai-sdk/openai`, and `@ai-sdk/xai`.
 - Vendor/model-list clients: `@anthropic-ai/sdk`, `@google/genai`, `openai`, and `ollama`.
@@ -156,28 +156,22 @@ The package should not depend on `obsidian`, CodeMirror, DOM UI helpers, CueCraf
 
 ## Package Shape and Verification Gates
 
-The workspace package manifest lives in `packages/byok/package.json`. It keeps exactly two documented public entrypoints:
+The released package keeps exactly two documented public entrypoints:
 
 - `.` for browser/Electron-safe core providers and shared types.
 - `./node` for Codex CLI, Claude CLI, and local command-runner support.
 
-Declaration output is configured in `packages/byok/tsconfig.json`, and public examples are typechecked through `packages/byok/tsconfig.examples.json`. Before extraction or release, run:
+The v0.1 GitHub release is currently source-shaped. CueCraft pins the release tag in `package.json` and resolves the package name to the release source while the runtime repository owns its own build, declarations, public examples, and package-level tests.
 
-```sh
-bun run typecheck:byok
-bun run typecheck:byok-examples
-bun run test:byok
-```
+Runtime release validation belongs in `swartzrock/byok-runtime`: typecheck, examples typecheck, package tests, package build, and pack-consumer validation for ESM imports, declarations, the main entrypoint, the Node subpath, and README examples.
 
-Pack-consumer validation should install the built package archive into a fresh fixture and verify ESM imports, declarations, the main entrypoint, the Node subpath, and the README examples before publishing.
+## Ownership Boundary
 
-## Package Ownership
+Owned by `swartzrock/byok-runtime`:
 
-Owned by `packages/byok`:
-
-- `packages/byok/src/**`
-- BYOK-focused tests under `packages/byok/tests/**`
-- Provider adapter tests that exercise package-owned providers, command runner behavior, model normalization, setup status, and provider factory behavior.
+- Runtime source and package documentation.
+- BYOK-focused tests for provider-owned behavior, command runner behavior, model normalization, setup status, and provider factory behavior.
+- Build, declaration output, package publishing, and release validation.
 
 Stay in CueCraft:
 
@@ -186,39 +180,36 @@ Stay in CueCraft:
 - `src/settings.ts`, `src/main.ts`, `src/generator.ts`, note parsing/cache/export/view code, and all Obsidian UI modules.
 - Any app-specific compatibility adapters that a future consumer needs. CueCraft no longer keeps the old `src/providers/*` or top-level model/setup shims.
 
-## Public Repository Extraction Sequence
+## Current Consumption Sequence
 
-1. Copy `packages/byok/**` into the new public repository.
-2. Install the runtime dependencies listed above and keep `obsidian`, CodeMirror, and CueCraft UI dependencies out of the package manifest.
-3. Keep the import-boundary tests in the package test suite so package code cannot drift back toward CueCraft or Obsidian imports.
-4. Publish package types from the public barrel and Node subpath only; avoid documenting internal submodule imports.
-5. Add a real package build that emits JavaScript and declarations to `dist`.
-6. Install the packed output into CueCraft and update the workspace dependency to the published package name/version.
-7. Keep `src/byok-cuecraft-adapter.ts` as CueCraft's app-specific bridge.
-8. Keep CueCraft free of local compatibility shims unless a real downstream consumer needs a transition path.
+1. Pin `@swartzrock/byok-runtime` to the released v0.1 source in CueCraft.
+2. Import only from `@swartzrock/byok-runtime` and `@swartzrock/byok-runtime/node`.
+3. Keep `src/byok-cuecraft-adapter.ts` as CueCraft's app-specific bridge.
+4. Keep CueCraft free of local compatibility shims unless a real downstream consumer needs a transition path.
+5. Move package API, provider, and release validation changes to `swartzrock/byok-runtime` before cutting later runtime releases.
 
 ## Release Governance
 
 - Treat every new export, removed export, renamed type, or changed provider config shape as an API review item.
 - Use semver from the first public beta: patch for fixes, minor for additive exports/provider metadata, and major for breaking runtime or type changes.
 - Maintain a changelog that calls out provider behavior changes, runtime dependency changes, Node/browser entrypoint changes, and migration notes.
-- Publish first as beta or prerelease until CueCraft consumes the package-shaped API end to end from packed output.
+- Publish prereleases until CueCraft consumes package-shaped API end to end from packed output.
 - Before a stable release, create `SECURITY.md`, `CONTRIBUTING.md`, issue templates, a release checklist, and npm trusted publishing with provenance enabled.
 
-## Extraction Checklist
+## Runtime Release Checklist
 
-- Keep `packages/byok/src/**` free of Obsidian, DOM UI, `CueCraftSettings`, and plugin runtime imports.
+- Keep runtime source free of Obsidian, DOM UI, `CueCraftSettings`, and plugin runtime imports.
 - Keep provider tests runnable without live provider accounts or real CLI binaries.
 - Document runtime dependencies that must move with BYOK, including AI SDK packages, vendor SDKs, Ollama, and local process support.
 - Keep CueCraft adapters outside the package so another app can supply its own storage and UI.
-- Publish only after CueCraft consumes the internal public surface end to end.
+- Publish only after CueCraft consumes the public surface end to end.
 - Keep examples and package docs pointed at public BYOK exports, not provider implementation files.
-- Verify `packages/byok/package.json`, declaration output, docs examples, and pack-consumer smoke tests before creating a public release.
-- Confirm CueCraft consumes the package-shaped API internally before promoting any release from beta to stable.
+- Verify runtime package metadata, declaration output, docs examples, and pack-consumer smoke tests before creating a public release.
+- Confirm CueCraft consumes the package-shaped API before promoting any release from beta to stable.
 
 ## Non-Goals
 
-- BYOK is not published as an npm package in this branch.
+- This branch does not publish a new BYOK runtime release.
 - BYOK does not own encryption or persistence of stored keys.
 - BYOK does not add new providers.
 - BYOK is not a storage, UI, prompt-template, or output-validation framework; host apps own those layers.

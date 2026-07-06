@@ -15,8 +15,8 @@ import {
 	type ByokSetupStatus,
 	type ByokStoredSettings,
 	type ByokVerificationSnapshotMap,
-} from "@cuecraft/byok";
-import { createByokNodeProvider } from "@cuecraft/byok/node";
+} from "@swartzrock/byok-runtime";
+import { createByokNodeProvider } from "@swartzrock/byok-runtime/node";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import { normalizeAnthropicModelSelection } from "./anthropic-model-options";
 import {
@@ -74,7 +74,7 @@ export type CueCraftProviderFactoryDeps = ByokProviderDeps;
 export type CueCraftProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type CueCraftByokSettings = ByokStoredSettings;
 export type CueCraftByokProviderSettings = ByokProviderStoredSettings;
-export type { ByokProviderConfig, ByokProviderDeps } from "@cuecraft/byok";
+export type { ByokProviderConfig, ByokProviderDeps } from "@swartzrock/byok-runtime";
 export type {
 	CueCraftCueBatchResult,
 	CueCraftCueInput,
@@ -141,6 +141,100 @@ const NOTE_BRIEF_SCHEMA = JSON.stringify(NOTE_BRIEF_JSON_SCHEMA);
 
 function cueCraftProviderError(message: string): ByokProviderError {
 	return new ByokProviderError(message);
+}
+
+function debugModelTextFailure(kind: string, stage: "initial" | "repair", text: string, error: string): void {
+	console.warn("[CueCraft BYOK] Model output validation failed", {
+		kind,
+		stage,
+		error,
+		textLength: text.length,
+		textPreview: text.slice(0, 500),
+	});
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
+
+function parseJsonRecord(text: string): Record<string, unknown> | null {
+	try {
+		const parsed: unknown = JSON.parse(text);
+		return isRecord(parsed) ? parsed : null;
+	} catch {
+		return null;
+	}
+}
+
+function describeOllamaJsonRequest(body: string | undefined): Record<string, unknown> {
+	const parsed = body ? parseJsonRecord(body) : null;
+	return {
+		bodyLength: body?.length ?? 0,
+		model: typeof parsed?.model === "string" ? parsed.model : undefined,
+		format: parsed?.format === undefined ? undefined : typeof parsed.format,
+		think: parsed?.think,
+		stream: parsed?.stream,
+	};
+}
+
+function normalizeOllamaJsonRequestBody(body: string | undefined): string | undefined {
+	if (!body) return body;
+	const parsed = parseJsonRecord(body);
+	if (!isRecord(parsed) || parsed.format === undefined) return body;
+	return JSON.stringify({ ...parsed, think: false });
+}
+
+function normalizeOllamaJsonResponse(response: Awaited<ReturnType<ByokHttpClient>>) {
+	const record = isRecord(response.json) ? response.json : parseJsonRecord(response.text);
+	if (!record) return response;
+	const generatedText = record.response;
+	const thinkingText = record.thinking;
+	if (
+		typeof generatedText === "string" &&
+		generatedText.trim() === "" &&
+		typeof thinkingText === "string" &&
+		thinkingText.trim()
+	) {
+		const json = { ...record, response: thinkingText };
+		console.debug("[CueCraft BYOK] Recovered Ollama JSON response from thinking output", {
+			thinkingLength: thinkingText.length,
+			thinkingPreview: thinkingText.slice(0, 300),
+		});
+		return { ...response, json, text: JSON.stringify(json) };
+	}
+	if (typeof generatedText === "string" && generatedText.trim() === "") {
+		console.warn("[CueCraft BYOK] Ollama returned an empty JSON response", {
+			status: response.status,
+			responseKeys: Object.keys(record),
+			responseLength: generatedText.length,
+			thinkingLength: typeof thinkingText === "string" ? thinkingText.length : undefined,
+			textLength: response.text.length,
+			textPreview: response.text.slice(0, 500),
+		});
+	}
+	return response;
+}
+
+function cueCraftProviderDeps(
+	config: ByokProviderConfig,
+	deps: CueCraftProviderFactoryDeps
+): CueCraftProviderFactoryDeps {
+	if (config.provider !== "ollama") return deps;
+	return {
+		...deps,
+		http: async (request) => {
+			const body = normalizeOllamaJsonRequestBody(request.body);
+			const requestSummary = describeOllamaJsonRequest(body);
+			const response = await deps.http({ ...request, body });
+			if (requestSummary.format !== undefined) {
+				console.debug("[CueCraft BYOK] Ollama JSON request completed", {
+					...requestSummary,
+					status: response.status,
+				});
+			}
+			return normalizeOllamaJsonResponse(response);
+		},
+	};
 }
 
 function buildCuePrompt(input: CueCraftCueInput): string {
@@ -216,6 +310,7 @@ async function generateCueFromTextProvider(
 	);
 	let result = validateCue(raw.text);
 	if (!result.ok) {
+		debugModelTextFailure("cue", "initial", raw.text, result.error);
 		const repairPrompt =
 			basePrompt +
 			`\nYour previous reply could not be validated (${result.error}).\n` +
@@ -230,6 +325,9 @@ async function generateCueFromTextProvider(
 			signal
 		);
 		result = validateCue(retry.text);
+		if (!result.ok) {
+			debugModelTextFailure("cue", "repair", retry.text, result.error);
+		}
 	}
 	if (!result.ok) {
 		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
@@ -274,6 +372,7 @@ async function generateSummaryFromTextProvider(
 	);
 	let result = validateSummary(raw.text);
 	if (!result.ok) {
+		debugModelTextFailure("summary", "initial", raw.text, result.error);
 		const repairPrompt =
 			basePrompt +
 			`\nYour previous reply could not be validated (${result.error}).\n` +
@@ -287,6 +386,9 @@ async function generateSummaryFromTextProvider(
 			signal
 		);
 		result = validateSummary(retry.text);
+		if (!result.ok) {
+			debugModelTextFailure("summary", "repair", retry.text, result.error);
+		}
 	}
 	if (!result.ok) {
 		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
@@ -331,6 +433,7 @@ async function generateNoteBriefFromTextProvider(
 	);
 	let result = validateNoteBrief(raw.text);
 	if (!result.ok) {
+		debugModelTextFailure("noteBrief", "initial", raw.text, result.error);
 		const repairPrompt =
 			basePrompt +
 			`\nYour previous reply could not be validated (${result.error}).\n` +
@@ -344,6 +447,9 @@ async function generateNoteBriefFromTextProvider(
 			signal
 		);
 		result = validateNoteBrief(retry.text);
+		if (!result.ok) {
+			debugModelTextFailure("noteBrief", "repair", retry.text, result.error);
+		}
 	}
 	if (!result.ok) {
 		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
@@ -369,6 +475,7 @@ async function generateCueBatchFromTextProvider(
 	);
 	let result = parseCueBatch(raw.text, inputs.length);
 	if (typeof result === "string") {
+		debugModelTextFailure("cueBatch", "initial", raw.text, result);
 		const repairPrompt =
 			basePrompt +
 			`\nYour previous reply could not be validated (${result}).\n` +
@@ -383,6 +490,9 @@ async function generateCueBatchFromTextProvider(
 			signal
 		);
 		result = parseCueBatch(retry.text, inputs.length);
+		if (typeof result === "string") {
+			debugModelTextFailure("cueBatch", "repair", retry.text, result);
+		}
 	}
 	if (typeof result === "string") {
 		throw cueCraftProviderError(`Model output could not be validated: ${result}`);
@@ -987,11 +1097,9 @@ export function makeCueCraftByokProvider(
 	settings: CueCraftSettings,
 	deps: CueCraftProviderFactoryDeps
 ): CueCraftByokRuntime {
+	const config = cueCraftProviderConfigFromSettings(settings);
 	return wrapCueCraftByokRuntime(
-		createByokNodeProvider(
-			cueCraftProviderConfigFromSettings(settings),
-			deps
-		)
+		createByokNodeProvider(config, cueCraftProviderDeps(config, deps))
 	);
 }
 
@@ -1083,10 +1191,11 @@ export async function makeCueCraftByokProviderFromStore(
 	deps: CueCraftProviderFactoryDeps,
 	credentialStore: SecureCredentialStore
 ): Promise<CueCraftByokRuntime> {
+	const config = await resolveCueCraftProviderConfigFromStore(settings, credentialStore);
 	return wrapCueCraftByokRuntime(
 		createByokNodeProvider(
-			await resolveCueCraftProviderConfigFromStore(settings, credentialStore),
-			deps
+			config,
+			cueCraftProviderDeps(config, deps)
 		)
 	);
 }

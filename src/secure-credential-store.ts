@@ -1,4 +1,4 @@
-import { ByokProvider, type ByokProviderId } from "@cuecraft/byok";
+import { ByokProvider, type ByokProviderId } from "@swartzrock/byok-runtime";
 
 export type CueCraftCloudCredentialProvider = Extract<
 	ByokProviderId,

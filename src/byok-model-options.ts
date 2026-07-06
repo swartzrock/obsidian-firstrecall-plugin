@@ -1,4 +1,4 @@
-import type { ByokModelOption } from "@cuecraft/byok";
+import type { ByokModelOption } from "@swartzrock/byok-runtime";
 
 const fetchedModelCollator = new Intl.Collator(undefined, {
 	numeric: true,
