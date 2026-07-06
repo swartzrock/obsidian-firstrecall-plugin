@@ -94,10 +94,22 @@ describe("settings CSS", () => {
 		const cueLabelRule = ruleFor(".cuecraft-cue-section-label");
 		expect(cueLabelRule).toContain("display: inline-flex");
 		expect(cueLabelRule).toContain("align-items: center");
+		expect(cueLabelRule).toContain("gap: 0.48em");
+
+		const editorLabelRules =
+			styles.match(/\.cuecraft-editor-hook-section-label\s*\{[^}]*\}/g) ?? [];
+		expect(
+			editorLabelRules.some(
+				(rule) =>
+					rule.includes("display: inline-flex") &&
+					rule.includes("align-items: center") &&
+					rule.includes("gap: 0.48em")
+			)
+		).toBe(true);
 
 		const iconRule = ruleFor(".cuecraft-label-icon");
-		expect(iconRule).toContain("width: 1em");
-		expect(iconRule).toContain("height: 1em");
+		expect(iconRule).toContain("width: 1.25em");
+		expect(iconRule).toContain("height: 1.25em");
 		expect(iconRule).toContain("color: var(--cc-category-accent, var(--cc-muted))");
 
 		const briefIconRule = ruleFor(

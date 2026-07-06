@@ -281,6 +281,11 @@ describe("renderCueElement", () => {
 				).map((label) => label.textContent)
 			).toEqual(["QUESTION", "LENS", "TERMS"]);
 			expect(
+				el.querySelector(
+					".cuecraft-editor-hook-section-label[data-section='question'] .cuecraft-label-icon"
+				)?.getAttribute("data-icon")
+			).toBe("circle-question-mark");
+			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("How do agents differ from chatbots");
 			expect(

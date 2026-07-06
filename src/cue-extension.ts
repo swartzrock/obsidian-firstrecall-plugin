@@ -40,6 +40,12 @@ import type { CueCategory, NoteBriefOutput, SectionLens } from "./schemas";
 
 export type Confidence = "high" | "medium" | "low";
 
+const QUESTION_ICON_CANDIDATES = [
+	"circle-question-mark",
+	"circle-help",
+	"help-circle",
+] as const;
+
 /** One renderable cue, resolved to a current document line. */
 export interface CueLineData {
 	/** 1-based line of the heading the cue belongs to. */
@@ -414,17 +420,25 @@ function appendCueSectionLabel(parent: HTMLElement, label: string): void {
 	const sectionLabel = parent.ownerDocument.createElement("div");
 	sectionLabel.className = "cuecraft-cue-section-label";
 	if (label === "QUESTION") {
-		appendLabelIcon(sectionLabel, "circle-question-mark");
+		appendLabelIcon(sectionLabel, QUESTION_ICON_CANDIDATES);
 	}
 	appendLabelText(sectionLabel, label);
 	parent.appendChild(sectionLabel);
 }
 
-function appendLabelIcon(parent: HTMLElement, icon: string): void {
+function appendLabelIcon(
+	parent: HTMLElement,
+	icon: string | readonly string[]
+): void {
 	const iconEl = parent.ownerDocument.createElement("span");
 	iconEl.className = "cuecraft-label-icon";
 	iconEl.setAttribute("aria-hidden", "true");
-	setIcon(iconEl, icon);
+	const icons: readonly string[] = typeof icon === "string" ? [icon] : icon;
+	for (const candidate of icons) {
+		iconEl.replaceChildren();
+		setIcon(iconEl, candidate);
+		if (iconEl.childElementCount > 0 || iconEl.dataset.icon) break;
+	}
 	parent.appendChild(iconEl);
 }
 
@@ -468,7 +482,10 @@ function appendEditorHookSectionLabel(
 	const sectionLabel = cueDocument().createElement("div");
 	sectionLabel.className = "cuecraft-editor-hook-section-label";
 	sectionLabel.dataset.section = label.toLowerCase();
-	sectionLabel.textContent = label.toUpperCase();
+	if (label === "Question") {
+		appendLabelIcon(sectionLabel, QUESTION_ICON_CANDIDATES);
+	}
+	appendLabelText(sectionLabel, label.toUpperCase());
 	parent.appendChild(sectionLabel);
 }
 
