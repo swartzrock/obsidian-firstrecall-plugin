@@ -90,6 +90,20 @@ describe("settings CSS", () => {
 		expect(insightRule).not.toContain("box-shadow:");
 	});
 
+	it("styles cue terms as quiet secondary chips", () => {
+		const termRule = ruleFor(".cuecraft-cue-term,\n.cuecraft-cornell-support-term");
+		expect(termRule).toContain("padding: 0 0.5rem");
+		expect(termRule).toContain(
+			"border: 1px solid color-mix(in srgb, var(--cc-border) 70%, transparent)"
+		);
+		expect(termRule).toContain("border-radius: 6px");
+		expect(termRule).toContain(
+			"background: color-mix(in srgb, var(--background-secondary) 50%, transparent)"
+		);
+		expect(termRule).toContain("font-size: 11.5px");
+		expect(termRule).toContain("line-height: 20px");
+	});
+
 	it("keeps CueCraft label icons small and inline", () => {
 		const cueLabelRule = ruleFor(".cuecraft-cue-section-label");
 		expect(cueLabelRule).toContain("display: inline-flex");
