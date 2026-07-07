@@ -23,6 +23,8 @@ function settings(
 		xaiModel: "grok-2-latest",
 		openrouterApiKey: "sk-or-test",
 		openrouterModel: "anthropic/claude-sonnet-4",
+		lmStudioUrl: "http://localhost:1234/v1",
+		lmStudioModel: "local-model",
 		codexCliCommand: "codex",
 		codexCliModel: "gpt-5",
 		claudeCliCommand: "claude",
@@ -62,10 +64,24 @@ describe("makeCueCraftByokProvider", () => {
 			command: "codex",
 			model: "",
 		});
+		expect(
+			cueCraftProviderConfigFromSettings(
+				settings({
+					provider: "lm-studio",
+					lmStudioUrl: "http://localhost:1234/v1",
+					lmStudioModel: "qwen3-4b",
+				})
+			)
+		).toEqual({
+			provider: "lm-studio",
+			url: "http://localhost:1234/v1",
+			model: "qwen3-4b",
+		});
 	});
 
 	it.each([
 		["ollama", "ollama"],
+		["lm-studio", "lm-studio"],
 		["anthropic", "anthropic"],
 		["openai", "openai"],
 		["google", "google"],

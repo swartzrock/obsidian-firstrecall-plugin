@@ -335,6 +335,18 @@ async function clickThumbnail(
 }
 
 describe("settings defaults", () => {
+	it("includes LM Studio as a local URL provider", async () => {
+		const { DEFAULT_SETTINGS } = await loadSettingsModule();
+
+		expect(DEFAULT_SETTINGS.byok.providers["lm-studio"]).toMatchObject({
+			credential: "http://localhost:1234/v1",
+			model: "",
+			availableModels: [],
+			modelOptions: [],
+			hasFetchedModels: false,
+		});
+	});
+
 	it("defaults auto-generation settle delay to 10 seconds", () => {
 		expect(DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS).toBe(10);
 	});

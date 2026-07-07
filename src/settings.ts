@@ -5,7 +5,6 @@ import {
 	PluginSettingTab,
 	Setting,
 	TFolder,
-	requestUrl,
 	setIcon,
 } from "obsidian";
 import type CueCraftPlugin from "./main";
@@ -206,30 +205,39 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	byok: {
 		selectedProvider: "ollama",
 		providers: {
-				ollama: {
-					credential: "http://localhost:11434",
-					model: "llama3.1:8b",
-					modelSelection: "",
-					availableModels: [],
-					modelOptions: [],
-					hasFetchedModels: false,
+			ollama: {
+				credential: "http://localhost:11434",
+				model: "llama3.1:8b",
+				modelSelection: "",
+				availableModels: [],
+				modelOptions: [],
+				hasFetchedModels: false,
 				modelRefreshMessage: "",
 			},
-				"codex-cli": {
-					credential: "codex",
-					model: "",
-					modelSelection: "",
-					availableModels: [],
-					modelOptions: [],
-					hasFetchedModels: false,
+			"lm-studio": {
+				credential: "http://localhost:1234/v1",
+				model: "",
+				modelSelection: "",
+				availableModels: [],
+				modelOptions: [],
+				hasFetchedModels: false,
 				modelRefreshMessage: "",
 			},
-				"claude-cli": {
-					credential: "claude",
-					model: "",
-					modelSelection: "",
-					availableModels: [],
-					modelOptions: [],
+			"codex-cli": {
+				credential: "codex",
+				model: "",
+				modelSelection: "",
+				availableModels: [],
+				modelOptions: [],
+				hasFetchedModels: false,
+				modelRefreshMessage: "",
+			},
+			"claude-cli": {
+				credential: "claude",
+				model: "",
+				modelSelection: "",
+				availableModels: [],
+				modelOptions: [],
 				hasFetchedModels: false,
 				modelRefreshMessage: "",
 			},
@@ -1550,8 +1558,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 	}
 
-	private renderOllamaCredentialSettings(containerEl: HTMLElement): void {
-		const field = byokProviderDefinition(ByokProvider.Ollama).credentialField;
+	private renderUrlCredentialSettings(
+		containerEl: HTMLElement,
+		provider: ByokProviderId
+	): void {
+		const field = byokProviderDefinition(provider).credentialField;
 		const s = this.plugin.settings;
 		new Setting(containerEl)
 			.setName(field.label)
@@ -1559,12 +1570,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder(field.placeholder)
-					.setValue(cueCraftProviderCredential(s, ByokProvider.Ollama))
+					.setValue(cueCraftProviderCredential(s, provider))
 					.onChange(async (value) => {
-						setCueCraftProviderCredential(s, ByokProvider.Ollama, value.trim());
+						setCueCraftProviderCredential(s, provider, value.trim());
 						resetCueCraftFetchedModels(
 							s,
-							ByokProvider.Ollama,
+							provider,
 							field.resetModelsMessage ?? field.missingMessage
 						);
 						await this.plugin.saveSettings();
@@ -1573,34 +1584,27 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	}
 
-	private renderOllamaModelSettings(containerEl: HTMLElement): void {
+	private renderDefaultProviderModelSettings(
+		containerEl: HTMLElement,
+		provider: ByokProviderId
+	): void {
 		const s = this.plugin.settings;
-		const stored = cueCraftProviderSettings(s, ByokProvider.Ollama);
-		const definition = byokProviderDefinition(ByokProvider.Ollama);
-		const field = definition.modelField;
-		const modelSetting = this.renderFetchedModelSelector(containerEl, {
-			modelLabel: field.label,
-			modelDesc: this.resolveModelRefreshDescription(
-				stored.modelRefreshMessage,
-				field.description
-			),
-			modelPlaceholder: field.placeholder,
-			availableModels: stored.availableModels,
-			getModel: () => cueCraftProviderModel(s, ByokProvider.Ollama),
-			setModel: (value) => setCueCraftProviderModel(s, ByokProvider.Ollama, value),
-		});
-		this.addModelRefreshButton(modelSetting, {
+		const stored = cueCraftProviderSettings(s, provider);
+		const definition = byokProviderDefinition(provider);
+		this.renderCloudModelSettings(containerEl, {
+			provider,
 			definition,
-			hasFetchedModels: stored.hasFetchedModels,
-			disabled: !cueCraftProviderCredential(s, ByokProvider.Ollama).trim(),
-			onClick: () =>
-				void this.refreshProviderModels({
-					provider: ByokProvider.Ollama,
-					providerName: definition.shortLabel,
-					emptyMessage:
-						definition.modelField.emptyListMessage ??
-						`No ${definition.shortLabel} models were returned.`,
-				}),
+			getModel: () => cueCraftProviderModel(s, provider),
+			setModel: (value) => setCueCraftProviderModel(s, provider, value),
+			hasCredential: () => this.plugin.isProviderCredentialSaved(provider),
+			getAvailableModels: () => stored.availableModels,
+			getModelOptions: () => stored.modelOptions,
+			leadingOption:
+				definition.modelBehavior === "optional"
+					? CLI_DEFAULT_MODEL_OPTION
+					: undefined,
+			getHasFetchedModels: () => stored.hasFetchedModels,
+			getRefreshMessage: () => stored.modelRefreshMessage,
 		});
 	}
 
@@ -1764,242 +1768,56 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private renderProviderCredentialSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
-		switch (cueCraftSelectedProvider(s)) {
-			case "ollama":
-				this.renderOllamaCredentialSettings(containerEl);
-				return;
-			case "anthropic":
-				this.renderAnthropicCredentialSettings(containerEl);
-				return;
-			case "openai": {
-				const definition = byokProviderDefinition(ByokProvider.OpenAI);
-				this.renderCloudCredentialSettings(containerEl, {
-					provider: ByokProvider.OpenAI,
-					field: definition.credentialField,
-					onSaved: () => {
-						resetCueCraftFetchedModels(
-							s,
-							ByokProvider.OpenAI,
-							definition.credentialField.resetModelsMessage ??
-								definition.credentialField.missingMessage
-						);
-					},
-				});
-				return;
-			}
-			case "google": {
-				const definition = byokProviderDefinition(ByokProvider.Google);
-				this.renderCloudCredentialSettings(containerEl, {
-					provider: ByokProvider.Google,
-					field: definition.credentialField,
-					onSaved: () => {
-						resetCueCraftFetchedModels(
-							s,
-							ByokProvider.Google,
-							definition.credentialField.resetModelsMessage ??
-								definition.credentialField.missingMessage
-						);
-					},
-				});
-				return;
-			}
-			case "xai": {
-				const definition = byokProviderDefinition(ByokProvider.Xai);
-				this.renderCloudCredentialSettings(containerEl, {
-					provider: ByokProvider.Xai,
-					field: definition.credentialField,
-					onSaved: () => {
-						resetCueCraftFetchedModels(
-							s,
-							ByokProvider.Xai,
-							definition.credentialField.resetModelsMessage ??
-								definition.credentialField.missingMessage
-						);
-					},
-				});
-				return;
-			}
-			case "openrouter": {
-				const definition = byokProviderDefinition(ByokProvider.OpenRouter);
-				this.renderCloudCredentialSettings(containerEl, {
-					provider: ByokProvider.OpenRouter,
-					field: definition.credentialField,
-					onSaved: () => {
-						resetCueCraftFetchedModels(
-							s,
-							ByokProvider.OpenRouter,
-							definition.credentialField.resetModelsMessage ??
-								definition.credentialField.missingMessage
-						);
-					},
-				});
-				return;
-			}
-			case "codex-cli": {
-				const definition = byokProviderDefinition(ByokProvider.CodexCli);
-				this.renderCliCredentialSettings(containerEl, {
-					label: definition.credentialField.label,
-					description: definition.credentialField.description,
-					commandPlaceholder: definition.credentialField.placeholder,
-					getCommand: () => cueCraftProviderCredential(s, ByokProvider.CodexCli),
-					setCommand: (value) => {
-						setCueCraftProviderCredential(s, ByokProvider.CodexCli, value);
-						resetCueCraftFetchedModels(
-							s,
-							ByokProvider.CodexCli,
-							definition.credentialField.resetModelsMessage ??
-								definition.credentialField.missingMessage
-						);
-					},
-				});
-				return;
-			}
-			case "claude-cli": {
-				const definition = byokProviderDefinition(ByokProvider.ClaudeCli);
-				this.renderCliCredentialSettings(containerEl, {
-					label: definition.credentialField.label,
-					description: definition.credentialField.description,
-					commandPlaceholder: definition.credentialField.placeholder,
-					getCommand: () => cueCraftProviderCredential(s, ByokProvider.ClaudeCli),
-					setCommand: (value) => {
-						setCueCraftProviderCredential(s, ByokProvider.ClaudeCli, value);
-						resetCueCraftFetchedModels(
-							s,
-							ByokProvider.ClaudeCli,
-							definition.credentialField.resetModelsMessage ??
-								definition.credentialField.missingMessage
-						);
-					},
-				});
-				return;
-			}
+		const provider = cueCraftSelectedProvider(s);
+		const definition = byokProviderDefinition(provider);
+		if (provider === "anthropic") {
+			this.renderAnthropicCredentialSettings(containerEl);
+			return;
 		}
+		if (definition.credentialKind === "api-key") {
+			this.renderCloudCredentialSettings(containerEl, {
+				provider,
+				field: definition.credentialField,
+				onSaved: () => {
+					resetCueCraftFetchedModels(
+						s,
+						provider,
+						definition.credentialField.resetModelsMessage ??
+							definition.credentialField.missingMessage
+					);
+				},
+			});
+			return;
+		}
+		if (definition.credentialKind === "command") {
+			this.renderCliCredentialSettings(containerEl, {
+				label: definition.credentialField.label,
+				description: definition.credentialField.description,
+				commandPlaceholder: definition.credentialField.placeholder,
+				getCommand: () => cueCraftProviderCredential(s, provider),
+				setCommand: (value) => {
+					setCueCraftProviderCredential(s, provider, value);
+					resetCueCraftFetchedModels(
+						s,
+						provider,
+						definition.credentialField.resetModelsMessage ??
+							definition.credentialField.missingMessage
+					);
+				},
+			});
+			return;
+		}
+		this.renderUrlCredentialSettings(containerEl, provider);
 	}
 
 	private renderProviderModelSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
-		switch (cueCraftSelectedProvider(s)) {
-			case "ollama":
-				this.renderOllamaModelSettings(containerEl);
-				return;
-			case "anthropic":
-				this.renderAnthropicModelSettings(containerEl);
-				return;
-			case "openai": {
-				const definition = byokProviderDefinition(ByokProvider.OpenAI);
-				this.renderCloudModelSettings(containerEl, {
-					provider: ByokProvider.OpenAI,
-					definition,
-					getModel: () => cueCraftProviderModel(s, ByokProvider.OpenAI),
-					setModel: (v) => setCueCraftProviderModel(s, ByokProvider.OpenAI, v),
-					hasCredential: () => this.plugin.isProviderCredentialSaved(ByokProvider.OpenAI),
-					getAvailableModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.OpenAI).availableModels,
-					getHasFetchedModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.OpenAI).hasFetchedModels,
-					getRefreshMessage: () =>
-						cueCraftProviderSettings(s, ByokProvider.OpenAI).modelRefreshMessage,
-				});
-				return;
-			}
-			case "google": {
-				const definition = byokProviderDefinition(ByokProvider.Google);
-				this.renderCloudModelSettings(containerEl, {
-					provider: ByokProvider.Google,
-					definition,
-					getModel: () => cueCraftProviderModel(s, ByokProvider.Google),
-					setModel: (v) => setCueCraftProviderModel(s, ByokProvider.Google, v),
-					hasCredential: () => this.plugin.isProviderCredentialSaved(ByokProvider.Google),
-					getAvailableModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.Google).availableModels,
-					getHasFetchedModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.Google).hasFetchedModels,
-					getRefreshMessage: () =>
-						cueCraftProviderSettings(s, ByokProvider.Google).modelRefreshMessage,
-				});
-				return;
-			}
-			case "xai": {
-				const definition = byokProviderDefinition(ByokProvider.Xai);
-				this.renderCloudModelSettings(containerEl, {
-					provider: ByokProvider.Xai,
-					definition,
-					getModel: () => cueCraftProviderModel(s, ByokProvider.Xai),
-					setModel: (v) => setCueCraftProviderModel(s, ByokProvider.Xai, v),
-					hasCredential: () => this.plugin.isProviderCredentialSaved(ByokProvider.Xai),
-					getAvailableModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.Xai).availableModels,
-					getHasFetchedModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.Xai).hasFetchedModels,
-					getRefreshMessage: () =>
-						cueCraftProviderSettings(s, ByokProvider.Xai).modelRefreshMessage,
-				});
-				return;
-			}
-			case "openrouter": {
-				const definition = byokProviderDefinition(ByokProvider.OpenRouter);
-				this.renderCloudModelSettings(containerEl, {
-					provider: ByokProvider.OpenRouter,
-					definition,
-					getModel: () => cueCraftProviderModel(s, ByokProvider.OpenRouter),
-					setModel: (v) => setCueCraftProviderModel(s, ByokProvider.OpenRouter, v),
-					hasCredential: () => this.plugin.isProviderCredentialSaved(ByokProvider.OpenRouter),
-					getAvailableModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.OpenRouter).availableModels,
-					getModelOptions: () =>
-						cueCraftProviderSettings(s, ByokProvider.OpenRouter).modelOptions,
-					getHasFetchedModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.OpenRouter).hasFetchedModels,
-					getRefreshMessage: () =>
-						cueCraftProviderSettings(s, ByokProvider.OpenRouter).modelRefreshMessage,
-				});
-				return;
-			}
-			case "codex-cli": {
-				const definition = byokProviderDefinition(ByokProvider.CodexCli);
-				this.renderCloudModelSettings(containerEl, {
-					provider: ByokProvider.CodexCli,
-					definition,
-					getModel: () => cueCraftProviderModel(s, ByokProvider.CodexCli),
-					setModel: (value) =>
-						setCueCraftProviderModel(s, ByokProvider.CodexCli, value),
-					hasCredential: () =>
-						this.plugin.isProviderCredentialSaved(ByokProvider.CodexCli),
-					getAvailableModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.CodexCli).availableModels,
-					getModelOptions: () =>
-						cueCraftProviderSettings(s, ByokProvider.CodexCli).modelOptions,
-					leadingOption: CLI_DEFAULT_MODEL_OPTION,
-					getHasFetchedModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.CodexCli).hasFetchedModels,
-					getRefreshMessage: () =>
-						cueCraftProviderSettings(s, ByokProvider.CodexCli).modelRefreshMessage,
-				});
-				return;
-			}
-			case "claude-cli": {
-				const definition = byokProviderDefinition(ByokProvider.ClaudeCli);
-				this.renderCloudModelSettings(containerEl, {
-					provider: ByokProvider.ClaudeCli,
-					definition,
-					getModel: () => cueCraftProviderModel(s, ByokProvider.ClaudeCli),
-					setModel: (value) =>
-						setCueCraftProviderModel(s, ByokProvider.ClaudeCli, value),
-					hasCredential: () =>
-						this.plugin.isProviderCredentialSaved(ByokProvider.ClaudeCli),
-					getAvailableModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).availableModels,
-					getModelOptions: () =>
-						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).modelOptions,
-					leadingOption: CLI_DEFAULT_MODEL_OPTION,
-					getHasFetchedModels: () =>
-						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).hasFetchedModels,
-					getRefreshMessage: () =>
-						cueCraftProviderSettings(s, ByokProvider.ClaudeCli).modelRefreshMessage,
-				});
-				return;
-			}
+		const provider = cueCraftSelectedProvider(s);
+		if (provider === "anthropic") {
+			this.renderAnthropicModelSettings(containerEl);
+			return;
 		}
+		this.renderDefaultProviderModelSettings(containerEl, provider);
 	}
 
 	private renderCloudCredentialSettings(
@@ -2208,6 +2026,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			getModel: opts.getModel,
 			setModel: opts.setModel,
 		});
+		if (!opts.definition.supportsModelListing) return;
 		this.addModelRefreshButton(modelSetting, {
 			definition: opts.definition,
 			hasFetchedModels: opts.getHasFetchedModels(),
@@ -2309,30 +2128,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			await this.testCloudProvider();
 			return;
 		}
-		const host = cueCraftProviderCredential(
-			this.plugin.settings,
-			ByokProvider.Ollama
-		).replace(/\/+$/, "");
-		const model = cueCraftProviderModel(this.plugin.settings, ByokProvider.Ollama);
-		try {
-			const res = await requestUrl({ url: `${host}/api/tags`, method: "GET" });
-			const models: string[] = (res.json?.models ?? []).map(
-				(m: { name: string }) => m.name
-			);
-			if (model && !models.includes(model)) {
-				new Notice(
-					`CueCraft: connected, but model "${model}" is not installed. Run \`ollama pull ${model}\`.`
-				);
-				return;
-			}
-			recordCueCraftProviderConnectionSuccess(this.plugin.settings);
-			await this.plugin.saveSettings();
-			this.display();
-			new Notice(`CueCraft: connected to Ollama (${models.length} model(s) available).`);
-		} catch (err) {
-			console.error("CueCraft test connection failed", err);
-			new Notice("CueCraft: Ollama server unreachable. Check the host and that Ollama is running.");
-		}
+		await this.testUrlProvider();
 	}
 
 	private async testLocalCliProvider(): Promise<void> {
@@ -2345,6 +2141,30 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return;
 		}
 		const provider = await this.plugin.makeProvider();
+		const status = await provider.testConnection();
+		if (status.ok) {
+			recordCueCraftProviderConnectionSuccess(this.plugin.settings);
+			await this.plugin.saveSettings();
+			this.display();
+		}
+		new Notice(formatCueCraftNotice(status.message));
+	}
+
+	private async testUrlProvider(): Promise<void> {
+		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		const definition = byokProviderDefinition(selectedProvider);
+		const url = cueCraftProviderCredential(this.plugin.settings, selectedProvider);
+		if (!url.trim()) {
+			new Notice(`CueCraft: ${definition.credentialField.missingMessage}`);
+			return;
+		}
+		let provider: CueCraftByokRuntime;
+		try {
+			provider = await this.plugin.makeProvider();
+		} catch (error) {
+			new Notice(formatCueCraftNotice(error instanceof Error ? error.message : String(error)));
+			return;
+		}
 		const status = await provider.testConnection();
 		if (status.ok) {
 			recordCueCraftProviderConnectionSuccess(this.plugin.settings);
