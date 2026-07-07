@@ -272,14 +272,12 @@ describe("renderCueElement", () => {
 			expect(el.dataset.confidence).toBe("medium");
 			expect(el.dataset.category).toBe("intervals");
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
-			expect(el.querySelector(".cuecraft-section-tag")?.textContent).toBe(
-				"#intervals"
-			);
+			expect(el.querySelector(".cuecraft-section-tag")).toBeNull();
 			expect(
 				Array.from(
 					el.querySelectorAll(".cuecraft-editor-hook-section-label")
 				).map((label) => label.textContent)
-			).toEqual(["QUESTION", "LENS", "TERMS"]);
+			).toEqual(["QUESTION", "TERMS"]);
 			expect(
 				el.querySelector(
 					".cuecraft-editor-hook-section-label[data-section='question'] .cuecraft-label-icon"
@@ -292,9 +290,7 @@ describe("renderCueElement", () => {
 				el.querySelector(".cuecraft-editor-hook-keywords .cuecraft-cue-term")
 					?.textContent
 			).toBe("agents");
-			expect(
-				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
-			).toBe("Agents use tools to complete multi-step work.");
+			expect(el.querySelector(".cuecraft-section-lens")).toBeNull();
 		});
 	});
 
@@ -323,16 +319,15 @@ describe("renderCueElement", () => {
 			expect(el.dataset.gradient).toBe("1");
 			expect(el.dataset.questionVisible).toBe("false");
 			expect(el.dataset.supportTermsVisible).toBe("false");
+			expect(el.classList.contains("cuecraft-editor-hook-empty")).toBe(true);
 			expect(
 				Array.from(
 					el.querySelectorAll(".cuecraft-editor-hook-section-label")
 				).map((label) => label.textContent)
-			).toEqual(["LENS"]);
+			).toEqual([]);
 			expect(el.querySelector(".cuecraft-editor-hook-title")).toBeNull();
 			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
-			expect(
-				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
-			).toBe("Agents use tools to complete multi-step work.");
+			expect(el.querySelector(".cuecraft-section-lens")).toBeNull();
 		});
 	});
 
@@ -561,6 +556,11 @@ describe("renderNoteBriefElement", () => {
 				el.querySelector(".cuecraft-note-brief-overview")?.textContent
 			).toBe("The note explains how agents use tools to complete work.");
 			expect(el.querySelectorAll(".cuecraft-note-brief-insight")).toHaveLength(3);
+			expect(
+				Array.from(
+					el.querySelectorAll(".cuecraft-note-brief-insight-label")
+				).map((label) => label.textContent)
+			).toEqual(["Core idea", "Review first", "Self-test"]);
 			const reviewTitle =
 				"[data-card='reviewFirst'] .cuecraft-note-brief-insight-title";
 			expect(

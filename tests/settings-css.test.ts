@@ -84,6 +84,10 @@ describe("settings CSS", () => {
 	});
 
 	it("keeps Note Brief insight columns flat", () => {
+		const insightGridRule = ruleFor(".cuecraft-note-brief-insights");
+		expect(insightGridRule).toContain("border-top: 1px solid var(--cc-border)");
+		expect(insightGridRule).toContain("padding-top: 1em");
+
 		const insightRule = ruleFor(".cuecraft-note-brief-insight");
 		expect(insightRule).not.toContain("background:");
 		expect(insightRule).not.toContain("box-shadow:");
@@ -95,6 +99,10 @@ describe("settings CSS", () => {
 		expect(dividerRule).toContain(
 			"border-inline-start: 1px solid var(--cc-border)"
 		);
+
+		const labelRule = ruleFor(".cuecraft-note-brief-insight-label");
+		expect(labelRule).toContain("text-transform: uppercase");
+		expect(labelRule).toContain("letter-spacing: 0.08em");
 	});
 
 	it("styles cue terms as quiet secondary chips", () => {
@@ -131,8 +139,8 @@ describe("settings CSS", () => {
 		const editorDividerRule = ruleFor(
 			".cuecraft-editor-hook-section-label:not(:first-child)"
 		);
-		expect(editorDividerRule).toContain("margin-top: 0.8em");
-		expect(editorDividerRule).toContain("padding-top: 0.75em");
+		expect(editorDividerRule).toContain("margin-top: 0.95em");
+		expect(editorDividerRule).toContain("padding-top: 0.85em");
 
 		const iconRule = ruleFor(".cuecraft-label-icon");
 		expect(iconRule).toContain("width: 1.25em");
@@ -143,5 +151,21 @@ describe("settings CSS", () => {
 			".cuecraft-note-brief-label .cuecraft-label-icon"
 		);
 		expect(briefIconRule).toContain("color: var(--cc-sequences)");
+	});
+
+	it("keeps anchored rail cards compact and quiet", () => {
+		const railRule = ruleFor(".cuecraft-editor-hook-anchored-card-rail");
+		expect(railRule).toContain("max-width: min(16.75rem, 100%)");
+
+		const emptyRule = ruleFor(".cuecraft-editor-hook-empty");
+		expect(emptyRule).toContain("display: none");
+
+		const titleRule = ruleFor(".cuecraft-editor-hook-title");
+		expect(titleRule).toContain("font-weight: var(--font-semibold)");
+		expect(titleRule).toContain("line-height: 1.28");
+
+		expect(styles).toContain("width: min(16rem, 28vw)");
+		expect(styles).toContain("width: clamp(13.5rem, 19vw, 16rem)");
+		expect(styles).toContain("width: clamp(11.5rem, 20vw, 16rem)");
 	});
 });

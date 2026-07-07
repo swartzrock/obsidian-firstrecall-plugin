@@ -375,10 +375,13 @@ function renderEditorHookElement(
 	if (card.confidence) root.dataset.confidence = card.confidence;
 	if (card.category) {
 		root.dataset.category = card.category;
-		appendSectionTag(root, card.category);
+		if (card.display !== "anchored-card-rail") {
+			appendSectionTag(root, card.category);
+		}
 	}
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
+	let hasContent = false;
 	if (card.showQuestion || card.kind === "failed") {
 		if (showSectionLabels) appendEditorHookSectionLabel(root, "Question");
 		const title = cueDocument().createElement("div");
@@ -390,6 +393,7 @@ function renderEditorHookElement(
 				? card.originalQuestion
 				: card.hookTitle;
 		root.appendChild(title);
+		hasContent = true;
 	}
 
 	if (card.error) {
@@ -401,10 +405,14 @@ function renderEditorHookElement(
 		return root;
 	}
 
-	if (card.sectionLens && showSectionLabels) {
+	const showSectionLens = card.display !== "anchored-card-rail";
+	if (card.sectionLens && showSectionLabels && showSectionLens) {
 		appendEditorHookSectionLabel(root, "Lens");
 	}
-	appendSectionLens(root, card.sectionLens);
+	if (showSectionLens && card.sectionLens) {
+		appendSectionLens(root, card.sectionLens);
+		hasContent = true;
+	}
 
 	if (card.showSupportTerms && card.keywords.length) {
 		if (showSectionLabels) appendEditorHookSectionLabel(root, "Terms");
@@ -412,7 +420,9 @@ function renderEditorHookElement(
 		keywords.className = "cuecraft-editor-hook-keywords";
 		appendCueTerms(keywords, card.keywords);
 		root.appendChild(keywords);
+		hasContent = true;
 	}
+	if (!hasContent) root.classList.add("cuecraft-editor-hook-empty");
 	return root;
 }
 
@@ -495,6 +505,13 @@ const noteBriefCardOrder = [
 	"sayItBack",
 ] as const;
 
+const noteBriefInsightLabels: Record<(typeof noteBriefCardOrder)[number], string> =
+	{
+		whatMatters: "Core idea",
+		reviewFirst: "Review first",
+		sayItBack: "Self-test",
+	};
+
 export function renderNoteBriefElement(
 	noteBrief: NoteBriefOutput,
 	variant: "editor" | "reading" | "cornell" = "editor"
@@ -522,6 +539,11 @@ export function renderNoteBriefElement(
 		const cardEl = doc.createElement("div");
 		cardEl.className = "cuecraft-note-brief-insight";
 		cardEl.dataset.card = key;
+
+		const insightLabel = doc.createElement("div");
+		insightLabel.className = "cuecraft-note-brief-insight-label";
+		insightLabel.textContent = noteBriefInsightLabels[key];
+		cardEl.appendChild(insightLabel);
 
 		const title = doc.createElement("div");
 		title.className = "cuecraft-note-brief-insight-title";
