@@ -85,9 +85,16 @@ describe("settings CSS", () => {
 
 	it("keeps Note Brief insight columns flat", () => {
 		const insightRule = ruleFor(".cuecraft-note-brief-insight");
-		expect(insightRule).toContain("border-inline-start: 1px solid var(--cc-border)");
 		expect(insightRule).not.toContain("background:");
 		expect(insightRule).not.toContain("box-shadow:");
+		expect(insightRule).not.toContain("border-inline-start:");
+
+		const dividerRule = ruleFor(
+			".cuecraft-note-brief-insight:not(:first-child)"
+		);
+		expect(dividerRule).toContain(
+			"border-inline-start: 1px solid var(--cc-border)"
+		);
 	});
 
 	it("styles cue terms as quiet secondary chips", () => {

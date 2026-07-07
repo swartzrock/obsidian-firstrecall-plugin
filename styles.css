@@ -1529,6 +1529,9 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-note-brief-insight {
 	min-width: 0;
 	padding-inline-start: 0.7em;
+}
+
+.cuecraft-note-brief-insight:not(:first-child) {
 	border-inline-start: 1px solid var(--cc-border);
 }
 
