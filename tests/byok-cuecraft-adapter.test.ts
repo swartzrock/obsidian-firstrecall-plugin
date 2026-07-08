@@ -64,6 +64,11 @@ function settings(
 		openrouterModelOptions: [],
 		openrouterHasFetchedModels: false,
 		openrouterModelRefreshMessage: "",
+		lmStudioUrl: "http://localhost:1234/v1",
+		lmStudioModel: "local-model",
+		lmStudioAvailableModels: [],
+		lmStudioHasFetchedModels: false,
+		lmStudioModelRefreshMessage: "",
 		codexCliCommand: "codex",
 		codexCliModel: "gpt-5",
 		claudeCliCommand: "claude",
@@ -171,6 +176,19 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			url: "http://localhost:11434",
 			model: "llama3.1:8b",
 		});
+		expect(
+			cueCraftProviderConfigFromSettings(
+				settings({
+					provider: "lm-studio",
+					lmStudioUrl: "http://localhost:1234/v1",
+					lmStudioModel: "qwen3-4b",
+				})
+			)
+		).toEqual({
+			provider: "lm-studio",
+			url: "http://localhost:1234/v1",
+			model: "qwen3-4b",
+		});
 	});
 
 	it("resolves cloud provider configs through secure storage", async () => {
@@ -249,6 +267,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		"google",
 		"xai",
 		"openrouter",
+		"lm-studio",
 		"codex-cli",
 		"claude-cli",
 	] as const)("creates a BYOK runtime for %s", (provider) => {
