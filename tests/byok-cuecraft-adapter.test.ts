@@ -308,6 +308,11 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(body.format).toBe("json");
 		expect(body.prompt).toContain("Section heading: Agents");
 		expect(body.prompt).toContain("Agents can plan and use tools.");
+		expect(body.prompt).toContain('"category"');
+		expect(body.prompt).toContain("sequences");
+		expect(body.prompt).toContain("linkedlists");
+		expect(body.prompt).toContain("stacks");
+		expect(body.prompt).toContain("intervals");
 	});
 
 	it("disables Ollama thinking mode and recovers Qwen JSON from thinking output", async () => {

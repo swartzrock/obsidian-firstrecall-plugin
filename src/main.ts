@@ -1922,6 +1922,7 @@ function toCachedSection(result: SectionResult): CachedSection {
 		keywords: result.keywords,
 		question: result.question,
 		confidence: result.confidence,
+		category: result.category ?? null,
 		rationale: result.rationale,
 		sectionLens: result.sectionLens,
 		error: result.error,

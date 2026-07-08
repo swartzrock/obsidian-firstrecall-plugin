@@ -209,6 +209,7 @@ describe("renderCueElement", () => {
 					question: "What is an agent?",
 					keywords: ["agent", "tool"],
 					confidence: "high",
+					category: "stacks",
 					sectionLens: SECTION_LENS,
 					error: null,
 				},
@@ -218,12 +219,28 @@ describe("renderCueElement", () => {
 			expect(el.classList.contains("cuecraft-cuewidth-medium")).toBe(true);
 			expect(el.classList.contains("cuecraft-cuefont-medium")).toBe(true);
 			expect(el.dataset.confidence).toBe("high");
+			expect(el.dataset.category).toBe("stacks");
+			expect(el.querySelector(".cuecraft-section-tag")?.textContent).toBe(
+				"#stacks"
+			);
+			expect(el.querySelector(".cuecraft-section-tag-dot")).not.toBeNull();
+			expect(
+				Array.from(el.querySelectorAll(".cuecraft-cue-section-label")).map(
+					(label) => label.textContent
+				)
+			).toEqual(["QUESTION", "TERMS"]);
+			expect(
+				el.querySelector(".cuecraft-cue-section-label .cuecraft-label-icon")
+					?.getAttribute("data-icon")
+			).toBe("circle-question-mark");
 			expect(el.querySelector(".cuecraft-cue-question")?.textContent).toBe(
 				"What is an agent?"
 			);
-			expect(el.querySelector(".cuecraft-cue-keywords")?.textContent).toBe(
-				"agent · tool"
-			);
+			expect(
+				Array.from(el.querySelectorAll(".cuecraft-cue-term")).map(
+					(term) => term.textContent
+				)
+			).toEqual(["agent", "tool"]);
 			expect(
 				el.querySelector(".cuecraft-section-lens-phrase")?.textContent
 			).toBe("agent autonomy");
@@ -239,6 +256,7 @@ describe("renderCueElement", () => {
 					question: "How do agents differ from chatbots?",
 					keywords: ["agents"],
 					confidence: "medium",
+					category: "intervals",
 					sectionLens: SECTION_LENS,
 					error: null,
 				},
@@ -252,21 +270,27 @@ describe("renderCueElement", () => {
 			expect(el.dataset.line).toBe("3");
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.dataset.confidence).toBe("medium");
+			expect(el.dataset.category).toBe("intervals");
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
+			expect(el.querySelector(".cuecraft-section-tag")).toBeNull();
 			expect(
 				Array.from(
 					el.querySelectorAll(".cuecraft-editor-hook-section-label")
 				).map((label) => label.textContent)
-			).toEqual(["QUESTION", "LENS", "TERMS"]);
+			).toEqual(["QUESTION", "TERMS"]);
+			expect(
+				el.querySelector(
+					".cuecraft-editor-hook-section-label[data-section='question'] .cuecraft-label-icon"
+				)?.getAttribute("data-icon")
+			).toBe("circle-question-mark");
 			expect(
 				el.querySelector(".cuecraft-editor-hook-title")?.textContent
 			).toBe("How do agents differ from chatbots");
 			expect(
-				el.querySelector(".cuecraft-editor-hook-keywords")?.textContent
+				el.querySelector(".cuecraft-editor-hook-keywords .cuecraft-cue-term")
+					?.textContent
 			).toBe("agents");
-			expect(
-				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
-			).toBe("Agents use tools to complete multi-step work.");
+			expect(el.querySelector(".cuecraft-section-lens")).toBeNull();
 		});
 	});
 
@@ -295,16 +319,15 @@ describe("renderCueElement", () => {
 			expect(el.dataset.gradient).toBe("1");
 			expect(el.dataset.questionVisible).toBe("false");
 			expect(el.dataset.supportTermsVisible).toBe("false");
+			expect(el.classList.contains("cuecraft-editor-hook-empty")).toBe(true);
 			expect(
 				Array.from(
 					el.querySelectorAll(".cuecraft-editor-hook-section-label")
 				).map((label) => label.textContent)
-			).toEqual(["LENS"]);
+			).toEqual([]);
 			expect(el.querySelector(".cuecraft-editor-hook-title")).toBeNull();
 			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
-			expect(
-				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
-			).toBe("Agents use tools to complete multi-step work.");
+			expect(el.querySelector(".cuecraft-section-lens")).toBeNull();
 		});
 	});
 
@@ -331,6 +354,7 @@ describe("renderCueElement", () => {
 			expect(
 				inline.querySelector(".cuecraft-section-lens-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
+			expect(inline.querySelector(".cuecraft-cue-section-label")).toBeNull();
 
 			const cornell = renderCueElement(
 				cue,
@@ -346,6 +370,7 @@ describe("renderCueElement", () => {
 			expect(
 				cornell.querySelector(".cuecraft-section-lens-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
+			expect(cornell.querySelector(".cuecraft-cue-section-label")).toBeNull();
 		});
 	});
 
@@ -400,8 +425,10 @@ describe("renderCueElement", () => {
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(
-				el.querySelector(".cuecraft-editor-hook-keywords")?.textContent
-			).toBe("standards · workflow");
+				Array.from(
+					el.querySelectorAll(".cuecraft-editor-hook-keywords .cuecraft-cue-term")
+				).map((term) => term.textContent)
+			).toEqual(["standards", "workflow"]);
 		});
 	});
 
@@ -522,11 +549,20 @@ describe("renderNoteBriefElement", () => {
 				"Note brief"
 			);
 			expect(
+				el.querySelector(".cuecraft-note-brief-label .cuecraft-label-icon")
+					?.getAttribute("data-icon")
+			).toBe("sparkles");
+			expect(
 				el.querySelector(".cuecraft-note-brief-overview")?.textContent
 			).toBe("The note explains how agents use tools to complete work.");
-			expect(el.querySelectorAll(".cuecraft-note-brief-card")).toHaveLength(3);
+			expect(el.querySelectorAll(".cuecraft-note-brief-insight")).toHaveLength(3);
+			expect(
+				Array.from(
+					el.querySelectorAll(".cuecraft-note-brief-insight-label")
+				).map((label) => label.textContent)
+			).toEqual(["Core idea", "Review first", "Self-test"]);
 			const reviewTitle =
-				"[data-card='reviewFirst'] .cuecraft-note-brief-card-title";
+				"[data-card='reviewFirst'] .cuecraft-note-brief-insight-title";
 			expect(
 				el.querySelector(reviewTitle)?.textContent
 			).toBe("Agent versus chatbot");
@@ -742,9 +778,9 @@ describe("cue editor placement", () => {
 			expect(el.querySelector(".cuecraft-cornell-q")?.textContent).toBe(
 				"What is A?"
 			);
-			expect(el.querySelector(".cuecraft-cornell-support-text")?.textContent).toBe(
-				"alpha"
-			);
+			expect(
+				el.querySelector(".cuecraft-cornell-support-term")?.textContent
+			).toBe("alpha");
 			expect(
 				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
