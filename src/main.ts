@@ -32,11 +32,11 @@ import {
 	type SectionResult,
 } from "./generator";
 import {
-	cueCraftProviderCredential,
 	cueCraftProviderCredentialSaved,
 	cueCraftProviderModel,
 	cueCraftSelectedProvider,
 	clearCueCraftStoredCloudCredential,
+	isCueCraftProviderConfigured,
 	markCueCraftCloudCredentialSaved,
 	migrateCueCraftCloudCredentials,
 	normalizeCueCraftProviderSettings,
@@ -464,18 +464,9 @@ export default class CueCraftPlugin extends Plugin {
 
 	/** True once the selected provider has its required fields set. */
 	private isConfigured(): boolean {
-		const definition = byokProviderDefinition(
-			cueCraftSelectedProvider(this.settings)
-		);
-		const hasCredential =
-			definition.credentialKind === "api-key"
-				? this.credentialStore.availability().ok &&
-					cueCraftProviderCredentialSaved(this.settings)
-				: cueCraftProviderCredential(this.settings).trim().length > 0;
-		const hasModel =
-			definition.modelBehavior === "optional" ||
-			cueCraftProviderModel(this.settings).trim().length > 0;
-		return hasCredential && hasModel;
+		return isCueCraftProviderConfigured(this.settings, {
+			cloudCredentialStorageAvailable: this.credentialStore.availability().ok,
+		});
 	}
 
 	/** Public view of {@link isConfigured} for the settings tab. */

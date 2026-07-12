@@ -335,6 +335,28 @@ async function clickThumbnail(
 }
 
 describe("settings defaults", () => {
+	it("includes LM Studio as a local URL provider", async () => {
+		const { DEFAULT_SETTINGS } = await loadSettingsModule();
+
+		expect(DEFAULT_SETTINGS.byok.providers["lm-studio"]).toMatchObject({
+			credential: "http://localhost:1234/v1",
+			model: "",
+			availableModels: [],
+			modelOptions: [],
+			hasFetchedModels: false,
+		});
+	});
+
+	it("uses provider-neutral model help text", async () => {
+		const { CUECRAFT_PROVIDER_MODEL_DESCRIPTION } = await loadSettingsModule();
+
+		expect(CUECRAFT_PROVIDER_MODEL_DESCRIPTION).toBe(
+			"Model ID to use for CueCraft requests."
+		);
+		expect(CUECRAFT_PROVIDER_MODEL_DESCRIPTION).not.toContain("Loaded");
+		expect(CUECRAFT_PROVIDER_MODEL_DESCRIPTION).not.toContain("LM Studio");
+	});
+
 	it("defaults auto-generation settle delay to 10 seconds", () => {
 		expect(DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS).toBe(10);
 	});

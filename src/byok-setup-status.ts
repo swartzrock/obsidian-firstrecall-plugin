@@ -35,6 +35,13 @@ function isCloudProvider(provider: unknown): boolean {
 	);
 }
 
+function isUrlProvider(provider: unknown): boolean {
+	return (
+		isByokProviderId(provider) &&
+		byokProviderDefinition(provider).credentialKind === "url"
+	);
+}
+
 function selectedProvider(
 	settings: ProviderSetupStatusSettings
 ): ByokProviderId | null {
@@ -53,6 +60,7 @@ function currentCredentialSaved(settings: ProviderSetupStatusSettings): boolean 
 	const provider = selectedProvider(settings);
 	if (!provider) return false;
 	const stored = settings.byok.providers?.[provider];
+	if (isUrlProvider(provider)) return true;
 	return isCloudProvider(provider)
 		? Boolean(stored?.credentialSaved) || currentCredentialValue(settings).length > 0
 		: currentCredentialValue(settings).length > 0;

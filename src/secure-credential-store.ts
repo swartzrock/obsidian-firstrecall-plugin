@@ -1,9 +1,14 @@
-import { ByokProvider, type ByokProviderId } from "@swartzrock/byok-runtime";
+import {
+	BYOK_PROVIDER_IDS,
+	byokProviderDefinition,
+	type ByokProviderConfig,
+	type ByokProviderId,
+} from "@swartzrock/byok-runtime";
 
 export type CueCraftCloudCredentialProvider = Extract<
-	ByokProviderId,
-	"anthropic" | "openai" | "google" | "xai" | "openrouter"
->;
+	ByokProviderConfig,
+	{ apiKey: string }
+>["provider"];
 
 export interface SecretStorageAdapter {
 	setSecret(id: string, secret: string): void;
@@ -75,13 +80,10 @@ type StoredCredentialPayloadResult =
 export const CUECRAFT_SECRET_STORAGE_MIN_APP_VERSION = "1.11.4";
 
 export const CUECRAFT_CLOUD_CREDENTIAL_PROVIDERS: readonly CueCraftCloudCredentialProvider[] =
-	[
-		ByokProvider.Anthropic,
-		ByokProvider.OpenAI,
-		ByokProvider.Google,
-		ByokProvider.Xai,
-		ByokProvider.OpenRouter,
-	] as const;
+	(BYOK_PROVIDER_IDS as readonly ByokProviderId[]).filter(
+		(provider): provider is CueCraftCloudCredentialProvider =>
+			byokProviderDefinition(provider).credentialKind === "api-key"
+	);
 
 export function isCueCraftCloudCredentialProvider(
 	provider: ByokProviderId

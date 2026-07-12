@@ -5,9 +5,11 @@ import {
 	cueCraftFetchedModelCount,
 	cueCraftModelRefreshMessage,
 	cueCraftProviderConfigFromSettings,
+	cueCraftProviderCredentialSaved,
 	cueCraftProviderSettings,
 	clearCueCraftProviderCredentialMetadata,
 	deriveCueCraftProviderSetupStatus,
+	isCueCraftProviderConfigured,
 	makeCueCraftByokProvider,
 	makeCueCraftByokProviderFromStore,
 	migrateCueCraftCloudCredentials,
@@ -39,7 +41,6 @@ function settings(
 		ollamaModelRefreshMessage: "",
 		anthropicApiKey: "sk-ant-test",
 		anthropicModel: "claude-sonnet-4-6",
-		anthropicModelSelection: "claude-sonnet-4-6",
 		anthropicAvailableModels: [],
 		anthropicHasFetchedModels: false,
 		anthropicModelRefreshMessage: "",
@@ -64,6 +65,11 @@ function settings(
 		openrouterModelOptions: [],
 		openrouterHasFetchedModels: false,
 		openrouterModelRefreshMessage: "",
+		lmStudioUrl: "http://localhost:1234/v1",
+		lmStudioModel: "local-model",
+		lmStudioAvailableModels: [],
+		lmStudioHasFetchedModels: false,
+		lmStudioModelRefreshMessage: "",
 		codexCliCommand: "codex",
 		codexCliModel: "gpt-5",
 		claudeCliCommand: "claude",
@@ -171,6 +177,19 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			url: "http://localhost:11434",
 			model: "llama3.1:8b",
 		});
+		expect(
+			cueCraftProviderConfigFromSettings(
+				settings({
+					provider: "lm-studio",
+					lmStudioUrl: "http://localhost:1234/v1",
+					lmStudioModel: "qwen3-4b",
+				})
+			)
+		).toEqual({
+			provider: "lm-studio",
+			url: "http://localhost:1234/v1",
+			model: "qwen3-4b",
+		});
 	});
 
 	it("resolves cloud provider configs through secure storage", async () => {
@@ -249,6 +268,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		"google",
 		"xai",
 		"openrouter",
+		"lm-studio",
 		"codex-cli",
 		"claude-cli",
 	] as const)("creates a BYOK runtime for %s", (provider) => {
@@ -431,7 +451,6 @@ describe("CueCraft provider settings normalization", () => {
 		}) as CueCraftSettings & { anthropicAvailableModelIds?: string[] };
 		s.anthropicAvailableModelIds = ["claude-account-123"];
 		delete (s as Partial<CueCraftSettings>).anthropicHasFetchedModels;
-		delete (s as Partial<CueCraftSettings>).anthropicModelSelection;
 
 		normalizeCueCraftProviderSettings(s, settings());
 
@@ -442,9 +461,6 @@ describe("CueCraft provider settings normalization", () => {
 			"claude-account-123",
 		]);
 		expect(cueCraftProviderSettings(s, "anthropic").hasFetchedModels).toBe(true);
-		expect(cueCraftProviderSettings(s, "anthropic").modelSelection).toBe(
-			"claude-account-123"
-		);
 	});
 
 	it("normalizes and mutates saved cloud credential metadata", () => {
@@ -604,6 +620,61 @@ describe("CueCraft fetched model adapters", () => {
 });
 
 describe("CueCraft provider connection adapters", () => {
+	it("treats URL providers as configured when they rely on runtime default URLs", () => {
+		const s = settings({
+			provider: "lm-studio",
+			lmStudioUrl: "",
+			lmStudioModel: "qwen2.5-7b-instruct",
+			ollamaHost: "",
+			ollamaModel: "llama3.1:8b",
+			codexCliCommand: "",
+			openaiApiKey: "",
+		});
+
+		expect(cueCraftProviderCredentialSaved(s, "lm-studio")).toBe(true);
+		expect(cueCraftProviderCredentialSaved(s, "ollama")).toBe(true);
+		expect(cueCraftProviderCredentialSaved(s, "codex-cli")).toBe(false);
+		expect(cueCraftProviderCredentialSaved(s, "openai")).toBe(false);
+		expect(isCueCraftProviderConfigured(s)).toBe(true);
+		expect(deriveCueCraftProviderSetupStatus(s)).toEqual({
+			keySaved: true,
+			modelSelected: true,
+			connection: "untested",
+		});
+	});
+
+	it("still requires API-key storage and commands before generation", () => {
+		expect(
+			isCueCraftProviderConfigured(
+				settings({
+					provider: "openai",
+					openaiApiKey: "sk-openai-test",
+					openaiModel: "gpt-4o-mini",
+				}),
+				{ cloudCredentialStorageAvailable: false }
+			)
+		).toBe(false);
+		expect(
+			isCueCraftProviderConfigured(
+				settings({
+					provider: "openai",
+					openaiApiKey: "sk-openai-test",
+					openaiModel: "gpt-4o-mini",
+				}),
+				{ cloudCredentialStorageAvailable: true }
+			)
+		).toBe(true);
+		expect(
+			isCueCraftProviderConfigured(
+				settings({
+					provider: "codex-cli",
+					codexCliCommand: "",
+					codexCliModel: "",
+				})
+			)
+		).toBe(false);
+	});
+
 	it("records and derives setup status through BYOK snapshots", () => {
 		const s = settings({
 			provider: "openai",
