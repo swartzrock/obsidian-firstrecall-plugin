@@ -76,6 +76,7 @@ import {
 	type ByokStoredSettings,
 } from "@swartzrock/byok-runtime";
 import { normalizeModelIds, type ModelOption } from "./byok-model-options";
+import { BYOK_PROVIDER_ICONS } from "./provider-icons";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
 import {
 	applyCueCraftListedModels,
@@ -641,16 +642,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		containerEl: HTMLElement,
 		definition: ByokProviderDefinition
 	): void {
+		const icon = BYOK_PROVIDER_ICONS[definition.id];
 		const iconEl = containerEl.createSpan({
 			cls: "cuecraft-provider-icon",
 			attr: { "aria-hidden": "true" },
 		});
 		const svgEl = activeDocument.createElementNS(SVG_NS, "svg");
-		svgEl.setAttribute("viewBox", definition.icon.viewBox);
+		svgEl.setAttribute("viewBox", icon.viewBox);
 		svgEl.setAttribute("fill", "currentColor");
 		svgEl.setAttribute("stroke", "currentColor");
 		svgEl.setAttribute("focusable", "false");
-		for (const match of definition.icon.svg.matchAll(/<path\s+([^>]*)\/?>/g)) {
+		for (const match of icon.svg.matchAll(/<path\s+([^>]*)\/?>/g)) {
 			const pathEl = activeDocument.createElementNS(SVG_NS, "path");
 			for (const attr of (match[1] ?? "").matchAll(/([a-z-]+)="([^"]*)"/g)) {
 				const [, name, value] = attr;
