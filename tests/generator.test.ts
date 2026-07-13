@@ -139,7 +139,7 @@ const NOTE = "# A\na\n## B\nb\n### C\nc";
 const SIX_SECTION_NOTE = "# A\na\n# B\nb\n# C\nc\n# D\nd\n# E\ne\n# F\nf";
 
 describe("generateNote", () => {
-	it("reports progress for every section and generates the summary last", async () => {
+	it("counts the note brief after section progress", async () => {
 		const provider = mockProvider();
 		const progress: Array<[number, number]> = [];
 		const result = await generateNote({
@@ -152,10 +152,11 @@ describe("generateNote", () => {
 
 		expect(result.sections).toHaveLength(3);
 		expect(progress).toEqual([
-			[0, 3],
-			[1, 3],
-			[2, 3],
-			[3, 3],
+			[0, 4],
+			[1, 4],
+			[2, 4],
+			[3, 4],
+			[4, 4],
 		]);
 		expect(provider.summaryCalls).toBe(1);
 		expect(provider.noteBriefCalls).toBe(1);
@@ -257,14 +258,14 @@ describe("generateNote", () => {
 		]);
 	});
 
-	it("reports the section total before a batched provider starts work", async () => {
+	it("reports the full work total before a batched provider starts", async () => {
 		const progress: Array<[number, number]> = [];
 		let sawInitialProgress = false;
 		const provider = mockProvider({
 			batch: true,
 			onBatch: () => {
 				sawInitialProgress =
-					progress.length === 1 && progress[0][0] === 0 && progress[0][1] === 3;
+					progress.length === 1 && progress[0][0] === 0 && progress[0][1] === 4;
 			},
 		});
 
@@ -370,7 +371,7 @@ describe("generateNote", () => {
 		});
 		expect(provider.cueInputs.map((input) => input.heading)).toEqual(["Prefix Sum"]);
 		expect(result.sections.map((section) => section.heading)).toEqual(["Prefix Sum"]);
-		expect(progress).toEqual([[0, 1], [1, 1]]);
+		expect(progress).toEqual([[0, 2], [1, 2], [2, 2]]);
 		expect(provider.lastSummaryInput?.sectionQuestions).toEqual(["Q:Prefix Sum"]);
 	});
 

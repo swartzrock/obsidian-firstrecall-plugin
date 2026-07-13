@@ -1532,6 +1532,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-note-brief-insight {
+	display: flex;
+	flex-direction: column;
 	min-width: 0;
 	padding-inline-start: 0.7em;
 }
@@ -1544,14 +1546,9 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-inline-start: 1px solid var(--cc-border);
 }
 
-.cuecraft-note-brief-insight-label {
-	margin-bottom: 0.35em;
-	color: var(--cc-muted);
-	font-size: 0.7em;
-	font-weight: 800;
-	letter-spacing: 0.08em;
-	line-height: 1.1;
-	text-transform: uppercase;
+.cuecraft-note-brief-insight-badge {
+	align-self: flex-start;
+	margin-top: auto;
 }
 
 .cuecraft-note-brief-insight-title {
@@ -1561,7 +1558,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-note-brief-insight-detail {
-	margin-top: 0.25em;
+	margin: 0.25em 0 0.65em;
 	color: var(--cc-muted);
 	font-size: var(--font-smallest);
 	overflow-wrap: anywhere;

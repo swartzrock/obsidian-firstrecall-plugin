@@ -284,8 +284,8 @@ export async function generateNoteBriefForSections(
 }
 
 /**
- * Generate cues for every section in bounded parallel batches, then the whole-note summary
- * last. Per-section failures are isolated (recorded as `error`, never thrown).
+ * Generate cues for every section in bounded parallel batches, then the whole-note review
+ * artifacts. Per-section failures are isolated (recorded as `error`, never thrown).
  * Cancellation is checked between batches: in-flight sections finish, then
  * generation stops and partial results are returned.
  */
@@ -303,8 +303,9 @@ export async function generateNote(
 		? clampText(markdown, maxContextChars)
 		: undefined;
 	const sections = cueEligibleSections(parseSections(markdown));
-	const total = sections.length;
-	const results: SectionResult[] = new Array(total);
+	const includesNoteBrief = sections.length > 0 && Boolean(provider.generateNoteBrief);
+	const total = sections.length + (includesNoteBrief ? 1 : 0);
+	const results: SectionResult[] = new Array(sections.length);
 	let done = 0;
 	let canceled = false;
 	onProgress?.(done, total);
@@ -385,6 +386,10 @@ export async function generateNote(
 		.map((r) => r.question)
 		.filter((q): q is string => Boolean(q));
 	if (!questions.length) {
+		if (includesNoteBrief) {
+			done++;
+			onProgress?.(done, total);
+		}
 		return { sections: completedResults, summary, learningObjective, noteBrief, canceled };
 	}
 
@@ -416,6 +421,10 @@ export async function generateNote(
 			maxContextChars,
 			signal,
 		});
+		if (includesNoteBrief) {
+			done++;
+			onProgress?.(done, total);
+		}
 	}
 	if (signal?.aborted) canceled = true;
 

@@ -89,6 +89,8 @@ describe("settings CSS", () => {
 		expect(insightGridRule).toContain("padding-top: 1em");
 
 		const insightRule = ruleFor(".cuecraft-note-brief-insight");
+		expect(insightRule).toContain("display: flex");
+		expect(insightRule).toContain("flex-direction: column");
 		expect(insightRule).not.toContain("background:");
 		expect(insightRule).not.toContain("box-shadow:");
 		expect(insightRule).not.toContain("border-inline-start:");
@@ -100,12 +102,9 @@ describe("settings CSS", () => {
 			"border-inline-start: 1px solid var(--cc-border)"
 		);
 
-		const labelRule = ruleFor(".cuecraft-note-brief-insight-label");
-		expect(labelRule).toContain("text-transform: uppercase");
-		expect(labelRule).toContain("font-size: 0.7em");
-		expect(labelRule).toContain("font-weight: 800");
-		expect(labelRule).toContain("letter-spacing: 0.08em");
-		expect(labelRule).toContain("line-height: 1.1");
+		const badgeRule = ruleFor(".cuecraft-note-brief-insight-badge");
+		expect(badgeRule).toContain("align-self: flex-start");
+		expect(badgeRule).toContain("margin-top: auto");
 
 		const briefLabelRule = ruleFor(".cuecraft-note-brief-label");
 		expect(briefLabelRule).toContain("font-size: 0.7em");

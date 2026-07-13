@@ -511,10 +511,20 @@ const noteBriefCardOrder = [
 
 const noteBriefInsightLabels: Record<(typeof noteBriefCardOrder)[number], string> =
 	{
-		whatMatters: "Core idea",
-		reviewFirst: "Review first",
-		sayItBack: "Self-test",
+		whatMatters: "core idea",
+		reviewFirst: "review first",
+		sayItBack: "self-test",
 	};
+
+function noteBriefTitleWithoutRepeatedLabel(title: string, label: string): string {
+	const trimmedTitle = title.trim();
+	const normalizedTitle = trimmedTitle.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+	const normalizedLabel = label.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+	if (normalizedTitle === normalizedLabel) return "";
+
+	const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	return trimmedTitle.replace(new RegExp(`^${escapedLabel}\\s*[:\\-]\\s*`, "i"), "").trim();
+}
 
 export function renderNoteBriefElement(
 	noteBrief: NoteBriefOutput,
@@ -544,20 +554,24 @@ export function renderNoteBriefElement(
 		cardEl.className = "cuecraft-note-brief-insight";
 		cardEl.dataset.card = key;
 
-		const insightLabel = doc.createElement("div");
-		insightLabel.className = "cuecraft-note-brief-insight-label";
-		insightLabel.textContent = noteBriefInsightLabels[key];
-		cardEl.appendChild(insightLabel);
-
-		const title = doc.createElement("div");
-		title.className = "cuecraft-note-brief-insight-title";
-		title.textContent = card.title;
-		cardEl.appendChild(title);
+		const insightLabel = noteBriefInsightLabels[key];
+		const displayTitle = noteBriefTitleWithoutRepeatedLabel(card.title, insightLabel);
+		if (displayTitle) {
+			const title = doc.createElement("div");
+			title.className = "cuecraft-note-brief-insight-title";
+			title.textContent = displayTitle;
+			cardEl.appendChild(title);
+		}
 
 		const detail = doc.createElement("div");
 		detail.className = "cuecraft-note-brief-insight-detail";
 		detail.textContent = card.detail;
 		cardEl.appendChild(detail);
+
+		const badge = doc.createElement("span");
+		badge.className = "cuecraft-note-brief-insight-badge cuecraft-cue-term";
+		badge.textContent = insightLabel;
+		cardEl.appendChild(badge);
 
 		cards.appendChild(cardEl);
 	}

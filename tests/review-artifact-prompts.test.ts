@@ -7,6 +7,12 @@ import {
 describe("note brief prompt", () => {
 	it("requests an overview of exactly two concise sentences", () => {
 		expect(NOTE_BRIEF_PROMPT).toContain("exactly 2 concise sentences");
+		expect(NOTE_BRIEF_PROMPT).toContain(
+			'never use or begin with the category labels "Core idea", "Review first", or "Self-test"'
+		);
+		expect(NOTE_BRIEF_PROMPT).toContain(
+			'Make the "sayItBack" title the recall question itself'
+		);
 		expect(
 			buildNoteBriefPrompt({
 				noteTitle: "Agents",

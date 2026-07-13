@@ -140,9 +140,15 @@ export const noteBriefGenerationSchema = z.object({
 	overview: z
 		.string()
 		.describe("Exactly 2 concise sentences summarizing the note."),
-	whatMatters: noteBriefCardGenerationSchema.describe("Central claim or idea card."),
-	reviewFirst: noteBriefCardGenerationSchema.describe("Best first review target card."),
-	sayItBack: noteBriefCardGenerationSchema.describe("Active recall self-test card."),
+	whatMatters: noteBriefCardGenerationSchema.describe(
+		"Central claim card with a content-specific title that does not repeat 'Core idea'."
+	),
+	reviewFirst: noteBriefCardGenerationSchema.describe(
+		"Best first review target with a content-specific title that does not repeat 'Review first'."
+	),
+	sayItBack: noteBriefCardGenerationSchema.describe(
+		"Active recall card whose title is the recall question, not 'Self-test'."
+	),
 });
 
 export type CueOutput = z.infer<typeof cueOutputSchema>;

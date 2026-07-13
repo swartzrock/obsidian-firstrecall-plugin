@@ -43,7 +43,9 @@ export const NOTE_BRIEF_PROMPT =
 	`Return ONLY a JSON object with "overview" (exactly 2 concise sentences), ` +
 	`"whatMatters" (title/detail card for the central claim), ` +
 	`"reviewFirst" (title/detail card naming the section or idea to review first), and ` +
-	`"sayItBack" (title/detail card phrased as a self-test prompt).`;
+	`"sayItBack" (title/detail card phrased as a self-test prompt). ` +
+	`Card titles must name specific note content; never use or begin with the category labels ` +
+	`"Core idea", "Review first", or "Self-test". Make the "sayItBack" title the recall question itself.`;
 
 export function buildNoteBriefPrompt(input: CueCraftNoteBriefInput): string {
 	const sections = input.sections

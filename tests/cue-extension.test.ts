@@ -28,11 +28,11 @@ const NOTE_BRIEF = {
 		detail: "Agents can plan, decide, and use tools.",
 	},
 	reviewFirst: {
-		title: "Agent versus chatbot",
+		title: "Review First: Agent versus chatbot",
 		detail: "Review the contrast with single-turn chatbots first.",
 	},
 	sayItBack: {
-		title: "Explain the distinction",
+		title: "Self-Test",
 		detail: "Say why tool use changes the task boundary.",
 	},
 };
@@ -582,14 +582,27 @@ describe("renderNoteBriefElement", () => {
 			expect(el.querySelectorAll(".cuecraft-note-brief-insight")).toHaveLength(3);
 			expect(
 				Array.from(
-					el.querySelectorAll(".cuecraft-note-brief-insight-label")
+					el.querySelectorAll(".cuecraft-note-brief-insight-badge")
 				).map((label) => label.textContent)
-			).toEqual(["Core idea", "Review first", "Self-test"]);
+			).toEqual(["core idea", "review first", "self-test"]);
+			expect(
+				Array.from(el.querySelectorAll(".cuecraft-note-brief-insight")).every(
+					(insight) =>
+						insight.lastElementChild?.matches(
+							".cuecraft-note-brief-insight-badge.cuecraft-cue-term"
+						) === true
+				)
+			).toBe(true);
 			const reviewTitle =
 				"[data-card='reviewFirst'] .cuecraft-note-brief-insight-title";
 			expect(
 				el.querySelector(reviewTitle)?.textContent
 			).toBe("Agent versus chatbot");
+			expect(
+				el.querySelector(
+					"[data-card='sayItBack'] .cuecraft-note-brief-insight-title"
+				)
+			).toBeNull();
 		});
 	});
 });
