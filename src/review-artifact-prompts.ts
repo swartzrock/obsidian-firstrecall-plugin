@@ -40,7 +40,7 @@ export const NOTE_BRIEF_JSON_SCHEMA = {
 } as const;
 
 export const NOTE_BRIEF_PROMPT =
-	`Return ONLY a JSON object with "overview" (one concise paragraph, 2 to 4 sentences), ` +
+	`Return ONLY a JSON object with "overview" (exactly 2 concise sentences), ` +
 	`"whatMatters" (title/detail card for the central claim), ` +
 	`"reviewFirst" (title/detail card naming the section or idea to review first), and ` +
 	`"sayItBack" (title/detail card phrased as a self-test prompt).`;

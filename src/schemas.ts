@@ -139,7 +139,7 @@ const noteBriefCardGenerationSchema = z.object({
 export const noteBriefGenerationSchema = z.object({
 	overview: z
 		.string()
-		.describe("One concise paragraph, 2 to 4 sentences, summarizing the note."),
+		.describe("Exactly 2 concise sentences summarizing the note."),
 	whatMatters: noteBriefCardGenerationSchema.describe("Central claim or idea card."),
 	reviewFirst: noteBriefCardGenerationSchema.describe("Best first review target card."),
 	sayItBack: noteBriefCardGenerationSchema.describe("Active recall self-test card."),

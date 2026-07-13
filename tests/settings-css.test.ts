@@ -102,7 +102,16 @@ describe("settings CSS", () => {
 
 		const labelRule = ruleFor(".cuecraft-note-brief-insight-label");
 		expect(labelRule).toContain("text-transform: uppercase");
+		expect(labelRule).toContain("font-size: 0.7em");
+		expect(labelRule).toContain("font-weight: 800");
 		expect(labelRule).toContain("letter-spacing: 0.08em");
+		expect(labelRule).toContain("line-height: 1.1");
+
+		const briefLabelRule = ruleFor(".cuecraft-note-brief-label");
+		expect(briefLabelRule).toContain("font-size: 0.7em");
+		expect(briefLabelRule).toContain("font-weight: 800");
+		expect(briefLabelRule).toContain("letter-spacing: 0.08em");
+		expect(briefLabelRule).toContain("line-height: 1.1");
 	});
 
 	it("styles cue terms as quiet secondary chips", () => {
@@ -179,7 +188,7 @@ describe("settings CSS", () => {
 		expect(denseTitleRule).toContain("font-size: 12.5px");
 
 		const termRule = ruleFor(
-			".cuecraft-editor-hook-anchored-card-rail .cuecraft-cue-term,\n.cuecraft-editor-hook-terms-toggle"
+			".cuecraft-editor-hook-anchored-card-rail .cuecraft-cue-term"
 		);
 		expect(termRule).toContain("font-size: 10.75px");
 		expect(termRule).toContain("line-height: 18px");

@@ -419,7 +419,7 @@ function renderEditorHookElement(
 		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
 		if (card.display === "anchored-card-rail") {
-			appendAnchoredEditorHookTerms(keywords, card.keywords);
+			appendCueTerms(keywords, card.keywords.slice(0, 4));
 		} else {
 			appendCueTerms(keywords, card.keywords);
 		}
@@ -428,39 +428,6 @@ function renderEditorHookElement(
 	}
 	if (!hasContent) root.classList.add("cuecraft-editor-hook-empty");
 	return root;
-}
-
-function appendAnchoredEditorHookTerms(
-	parent: HTMLElement,
-	terms: readonly string[]
-): void {
-	const visibleTerms = terms.slice(0, 4);
-	const hiddenTerms = terms.slice(4);
-	appendCueTerms(parent, visibleTerms);
-	if (!hiddenTerms.length) return;
-
-	const hiddenChips: HTMLElement[] = [];
-	for (const term of hiddenTerms) {
-		const chip = parent.ownerDocument.createElement("span");
-		chip.className = "cuecraft-cue-term";
-		chip.textContent = term;
-		chip.hidden = true;
-		hiddenChips.push(chip);
-		parent.appendChild(chip);
-	}
-
-	const toggle = parent.ownerDocument.createElement("button");
-	toggle.className = "cuecraft-editor-hook-terms-toggle";
-	toggle.type = "button";
-	toggle.textContent = `+${hiddenTerms.length} more`;
-	toggle.setAttribute("aria-expanded", "false");
-	toggle.setAttribute("aria-label", `Show ${hiddenTerms.length} more terms`);
-	toggle.addEventListener("click", () => {
-		for (const chip of hiddenChips) chip.hidden = false;
-		toggle.setAttribute("aria-expanded", "true");
-		toggle.hidden = true;
-	});
-	parent.appendChild(toggle);
 }
 
 function appendCueSectionLabel(parent: HTMLElement, label: string): void {

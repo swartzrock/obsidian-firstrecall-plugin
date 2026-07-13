@@ -294,7 +294,7 @@ describe("renderCueElement", () => {
 		});
 	});
 
-	it("caps anchored card rail support terms behind a reveal control", () => {
+	it("caps anchored card rail support terms at four", () => {
 		withDocument(() => {
 			const el = renderCueElement(
 				{
@@ -311,26 +311,10 @@ describe("renderCueElement", () => {
 			);
 			expect(
 				Array.from(
-					el.querySelectorAll(
-						".cuecraft-editor-hook-keywords .cuecraft-cue-term:not([hidden])"
-					)
-				).map((term) => term.textContent)
-			).toEqual(["agents", "tools", "planning", "autonomy"]);
-			const toggle = el.querySelector<HTMLButtonElement>(
-				".cuecraft-editor-hook-terms-toggle"
-			);
-			expect(toggle?.textContent).toBe("+1 more");
-			expect(toggle?.getAttribute("aria-expanded")).toBe("false");
-
-			toggle?.click();
-
-			expect(
-				Array.from(
 					el.querySelectorAll(".cuecraft-editor-hook-keywords .cuecraft-cue-term")
 				).map((term) => term.textContent)
-			).toEqual(["agents", "tools", "planning", "autonomy", "memory"]);
-			expect(toggle?.hidden).toBe(true);
-			expect(toggle?.getAttribute("aria-expanded")).toBe("true");
+			).toEqual(["agents", "tools", "planning", "autonomy"]);
+			expect(el.querySelector(".cuecraft-editor-hook-terms-toggle")).toBeNull();
 		});
 	});
 
