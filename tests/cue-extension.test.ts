@@ -294,6 +294,46 @@ describe("renderCueElement", () => {
 		});
 	});
 
+	it("caps anchored card rail support terms behind a reveal control", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 3,
+					heading: "Terms",
+					question: "How do agents differ from chatbots?",
+					keywords: ["agents", "tools", "planning", "autonomy", "memory"],
+					confidence: "medium",
+					category: "intervals",
+					sectionLens: SECTION_LENS,
+					error: null,
+				},
+				"anchored-card-rail"
+			);
+			expect(
+				Array.from(
+					el.querySelectorAll(
+						".cuecraft-editor-hook-keywords .cuecraft-cue-term:not([hidden])"
+					)
+				).map((term) => term.textContent)
+			).toEqual(["agents", "tools", "planning", "autonomy"]);
+			const toggle = el.querySelector<HTMLButtonElement>(
+				".cuecraft-editor-hook-terms-toggle"
+			);
+			expect(toggle?.textContent).toBe("+1 more");
+			expect(toggle?.getAttribute("aria-expanded")).toBe("false");
+
+			toggle?.click();
+
+			expect(
+				Array.from(
+					el.querySelectorAll(".cuecraft-editor-hook-keywords .cuecraft-cue-term")
+				).map((term) => term.textContent)
+			).toEqual(["agents", "tools", "planning", "autonomy", "memory"]);
+			expect(toggle?.hidden).toBe(true);
+			expect(toggle?.getAttribute("aria-expanded")).toBe("true");
+		});
+	});
+
 	it("hides hook card questions and support terms when display settings are off", () => {
 		withDocument(() => {
 			const el = renderCueElement(
@@ -592,11 +632,27 @@ describe("cue editor placement", () => {
 		},
 	];
 
-	it("renders hook displays into left-gutter markers", () => {
+	it("renders anchored card rail markers at section body lines", () => {
 		const state = EditorState.create({ doc: NOTE });
 		const markers = buildCueGutterMarkers(state, {
 			cues,
 			display: "anchored-card-rail",
+		});
+		const positions: number[] = [];
+		markers.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([
+			state.doc.line(2).from,
+			state.doc.line(4).from,
+		]);
+	});
+
+	it("keeps non-anchored hook displays on heading lines", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const markers = buildCueGutterMarkers(state, {
+			cues,
+			display: "active-section-composer",
 		});
 		const positions: number[] = [];
 		markers.between(0, state.doc.length, (from) => {
@@ -632,9 +688,32 @@ describe("cue editor placement", () => {
 			positions.push(from);
 		});
 		expect(positions).toEqual([
-			state.doc.line(1).from,
-			state.doc.line(5).from,
+			state.doc.line(2).from,
+			state.doc.line(6).from,
 		]);
+	});
+
+	it("falls anchored card markers back to the heading line without a body line", () => {
+		const state = EditorState.create({ doc: "# Last" });
+		const markers = buildCueGutterMarkers(state, {
+			cues: [
+				{
+					line: 1,
+					heading: "Last",
+					question: "What is last?",
+					keywords: ["last"],
+					confidence: "high",
+					sectionLens: null,
+					error: null,
+				},
+			],
+			display: "anchored-card-rail",
+		});
+		const positions: number[] = [];
+		markers.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([state.doc.line(1).from]);
 	});
 
 	it("marks the active composer card current for the cursor section", () => {

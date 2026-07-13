@@ -418,12 +418,49 @@ function renderEditorHookElement(
 		if (showSectionLabels) appendEditorHookSectionLabel(root, "Terms");
 		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
-		appendCueTerms(keywords, card.keywords);
+		if (card.display === "anchored-card-rail") {
+			appendAnchoredEditorHookTerms(keywords, card.keywords);
+		} else {
+			appendCueTerms(keywords, card.keywords);
+		}
 		root.appendChild(keywords);
 		hasContent = true;
 	}
 	if (!hasContent) root.classList.add("cuecraft-editor-hook-empty");
 	return root;
+}
+
+function appendAnchoredEditorHookTerms(
+	parent: HTMLElement,
+	terms: readonly string[]
+): void {
+	const visibleTerms = terms.slice(0, 4);
+	const hiddenTerms = terms.slice(4);
+	appendCueTerms(parent, visibleTerms);
+	if (!hiddenTerms.length) return;
+
+	const hiddenChips: HTMLElement[] = [];
+	for (const term of hiddenTerms) {
+		const chip = parent.ownerDocument.createElement("span");
+		chip.className = "cuecraft-cue-term";
+		chip.textContent = term;
+		chip.hidden = true;
+		hiddenChips.push(chip);
+		parent.appendChild(chip);
+	}
+
+	const toggle = parent.ownerDocument.createElement("button");
+	toggle.className = "cuecraft-editor-hook-terms-toggle";
+	toggle.type = "button";
+	toggle.textContent = `+${hiddenTerms.length} more`;
+	toggle.setAttribute("aria-expanded", "false");
+	toggle.setAttribute("aria-label", `Show ${hiddenTerms.length} more terms`);
+	toggle.addEventListener("click", () => {
+		for (const chip of hiddenChips) chip.hidden = false;
+		toggle.setAttribute("aria-expanded", "true");
+		toggle.hidden = true;
+	});
+	parent.appendChild(toggle);
 }
 
 function appendCueSectionLabel(parent: HTMLElement, label: string): void {
@@ -670,15 +707,26 @@ export function buildCueGutterMarkers(
 	const options = editorCueRenderOptionsFromPayload(payload);
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
-		const headingLine = doc.line(cue.line);
+		const markerLine = cueGutterMarkerLine(doc, cue.line, payload.display);
 		const cardState = cue.line === currentCueLine ? "current" : "upcoming";
 		builder.add(
-			headingLine.from,
-			headingLine.from,
+			markerLine.from,
+			markerLine.from,
 			new CueGutterMarker(cue, payload.display, index, cardState, options)
 		);
 	}
 	return builder.finish();
+}
+
+function cueGutterMarkerLine(
+	doc: EditorState["doc"],
+	cueLine: number,
+	display: EditorCueDisplay
+): ReturnType<EditorState["doc"]["line"]> {
+	if (display === "anchored-card-rail" && cueLine < doc.lines) {
+		return doc.line(cueLine + 1);
+	}
+	return doc.line(cueLine);
 }
 
 function editorCueRenderOptionsFromPayload(

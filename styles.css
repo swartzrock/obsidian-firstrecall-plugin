@@ -1686,6 +1686,12 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	overflow-wrap: anywhere;
 }
 
+.cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-title {
+	font-size: 15.5px;
+	font-weight: var(--font-semibold);
+	line-height: 1.34;
+}
+
 .cuecraft-editor-hook-section-label {
 	display: flex;
 	align-items: center;
@@ -1717,9 +1723,19 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-size: var(--font-ui-smaller);
 }
 
+.cuecraft-editor-hook-anchored-card-rail[data-title-density="long"] .cuecraft-editor-hook-title {
+	font-size: 14px;
+	line-height: 1.28;
+}
+
 .cuecraft-editor-hook[data-title-density="dense"] .cuecraft-editor-hook-title {
 	font-size: var(--font-smallest);
 	line-height: 1.18;
+}
+
+.cuecraft-editor-hook-anchored-card-rail[data-title-density="dense"] .cuecraft-editor-hook-title {
+	font-size: 12.5px;
+	line-height: 1.2;
 }
 
 .cuecraft-editor-hook-keywords,
@@ -1737,6 +1753,38 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.35em;
+}
+
+.cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-keywords {
+	gap: 0.32em;
+	margin-top: 0.42em;
+}
+
+.cuecraft-editor-hook-anchored-card-rail .cuecraft-cue-term,
+.cuecraft-editor-hook-terms-toggle {
+	min-height: 18px;
+	padding: 0 0.42rem;
+	color: color-mix(in srgb, var(--cc-muted) 82%, transparent);
+	font-size: 10.75px;
+	line-height: 18px;
+}
+
+.cuecraft-editor-hook-terms-toggle {
+	display: inline-flex;
+	align-items: center;
+	max-width: 100%;
+	border: 1px solid color-mix(in srgb, var(--cc-border) 64%, transparent);
+	border-radius: 6px;
+	background: color-mix(in srgb, var(--background-secondary) 34%, transparent);
+	font-family: inherit;
+	font-weight: var(--font-medium);
+	cursor: pointer;
+}
+
+.cuecraft-editor-hook-terms-toggle:hover,
+.cuecraft-editor-hook-terms-toggle:focus-visible {
+	color: var(--text-muted);
+	border-color: var(--cc-border);
 }
 
 .cuecraft-editor-hook .cuecraft-section-lens {

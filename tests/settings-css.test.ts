@@ -139,6 +139,7 @@ describe("settings CSS", () => {
 		const editorDividerRule = ruleFor(
 			".cuecraft-editor-hook-section-label:not(:first-child)"
 		);
+		expect(editorDividerRule).toContain("border-top: 1px solid var(--cc-border)");
 		expect(editorDividerRule).toContain("margin-top: 0.95em");
 		expect(editorDividerRule).toContain("padding-top: 0.85em");
 
@@ -160,9 +161,28 @@ describe("settings CSS", () => {
 		const emptyRule = ruleFor(".cuecraft-editor-hook-empty");
 		expect(emptyRule).toContain("display: none");
 
-		const titleRule = ruleFor(".cuecraft-editor-hook-title");
+		const titleRule = ruleFor(
+			".cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-title"
+		);
+		expect(titleRule).toContain("font-size: 15.5px");
 		expect(titleRule).toContain("font-weight: var(--font-semibold)");
-		expect(titleRule).toContain("line-height: 1.28");
+		expect(titleRule).toContain("line-height: 1.34");
+
+		const longTitleRule = ruleFor(
+			'.cuecraft-editor-hook-anchored-card-rail[data-title-density="long"] .cuecraft-editor-hook-title'
+		);
+		expect(longTitleRule).toContain("font-size: 14px");
+
+		const denseTitleRule = ruleFor(
+			'.cuecraft-editor-hook-anchored-card-rail[data-title-density="dense"] .cuecraft-editor-hook-title'
+		);
+		expect(denseTitleRule).toContain("font-size: 12.5px");
+
+		const termRule = ruleFor(
+			".cuecraft-editor-hook-anchored-card-rail .cuecraft-cue-term,\n.cuecraft-editor-hook-terms-toggle"
+		);
+		expect(termRule).toContain("font-size: 10.75px");
+		expect(termRule).toContain("line-height: 18px");
 
 		expect(styles).toContain("width: min(16rem, 28vw)");
 		expect(styles).toContain("width: clamp(13.5rem, 19vw, 16rem)");
