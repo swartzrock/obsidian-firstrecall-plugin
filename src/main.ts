@@ -108,6 +108,7 @@ import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
 import { statusLabel, type CueStatus } from "./status";
 import { formatCueCraftNotice } from "./notice";
+import { EditorHookLayoutController } from "./editor-hook-layout";
 import {
 	findMaintainedStudyAreaForPath,
 	isDescendantPath,
@@ -145,6 +146,7 @@ export default class CueCraftPlugin extends Plugin {
 	private autoGenerateTimers = new Map<string, number>();
 	private studyAreaMaintenanceTimers = new Map<string, number>();
 	private editorLayoutFrame: number | null = null;
+	private editorHookLayout = new EditorHookLayoutController();
 	private cueSettingsChanged = false;
 	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {}, hidden: {} };
 	private settingTab!: CueCraftSettingTab;
@@ -375,11 +377,11 @@ export default class CueCraftPlugin extends Plugin {
 	/** Refresh both the status pill and the rendered cues for a note. */
 	private onActiveFile(file: TFile | null): void {
 		void this.updateStatusForFile(file);
-		if (file) this.renderCues(file);
+		if (file) this.renderCues(file, true);
 	}
 
 	/** Push the active note's cached cues into its CodeMirror editor (or clear them). */
-	private renderCues(file: TFile): void {
+	private renderCues(file: TFile, forceLayout = false): void {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view || view.file?.path !== file.path) return;
 		const cm = (view.editor as unknown as { cm?: EditorView }).cm;
@@ -395,7 +397,8 @@ export default class CueCraftPlugin extends Plugin {
 				: [];
 		this.updateEditorHookLayout(
 			cm,
-			cues.length > 0 && this.settings.editorCueDisplay !== "inline-cues"
+			cues.length > 0 && this.settings.editorCueDisplay !== "inline-cues",
+			forceLayout
 		);
 		cm.dispatch({
 			effects: setCuesEffect.of({
@@ -422,15 +425,21 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		this.editorLayoutFrame = window.requestAnimationFrame(() => {
 			this.editorLayoutFrame = null;
-			this.refreshEditorCues();
+			this.refreshEditorCues(true);
 		});
 	}
 
-	private updateEditorHookLayout(cm: EditorView, hasHookRail: boolean): void {
+	private updateEditorHookLayout(
+		cm: EditorView,
+		hasHookRail: boolean,
+		forceLayout = false
+	): void {
 		const leftDockOpen = this.isLeftDockOpen();
-		cm.dom.classList.toggle(
-			"cuecraft-editor-hook-page-shift",
-			hasHookRail && leftDockOpen
+		this.editorHookLayout.sync(
+			cm.dom,
+			hasHookRail,
+			leftDockOpen,
+			forceLayout
 		);
 	}
 
@@ -443,9 +452,9 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/** Rerender CueCraft's CodeMirror cue surface for the active note. */
-	refreshEditorCues(): void {
+	refreshEditorCues(forceLayout = false): void {
 		const active = this.app.workspace.getActiveFile();
-		if (active) this.renderCues(active);
+		if (active) this.renderCues(active, forceLayout);
 	}
 
 	/** Force the active Reading view to rerender its post-processed cue surface. */
