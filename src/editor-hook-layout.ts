@@ -1,5 +1,10 @@
 export const EDITOR_HOOK_PAGE_SHIFT_CLASS = "cuecraft-editor-hook-page-shift";
 
+export function leftDockIsOpen(leftDock: HTMLElement | null): boolean {
+	if (!leftDock) return false;
+	return !leftDock.classList.contains("is-sidedock-collapsed");
+}
+
 export class EditorHookLayoutController {
 	private railPresence = new WeakMap<HTMLElement, boolean>();
 

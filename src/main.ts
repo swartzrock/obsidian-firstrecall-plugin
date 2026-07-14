@@ -108,7 +108,10 @@ import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
 import { statusLabel, type CueStatus } from "./status";
 import { formatCueCraftNotice } from "./notice";
-import { EditorHookLayoutController } from "./editor-hook-layout";
+import {
+	EditorHookLayoutController,
+	leftDockIsOpen,
+} from "./editor-hook-layout";
 import {
 	findMaintainedStudyAreaForPath,
 	isDescendantPath,
@@ -448,8 +451,7 @@ export default class CueCraftPlugin extends Plugin {
 		const leftDock = activeDocument.querySelector<HTMLElement>(
 			".workspace-split.mod-left-split"
 		);
-		if (!leftDock) return false;
-		return leftDock.getBoundingClientRect().width > 120;
+		return leftDockIsOpen(leftDock);
 	}
 
 	/** Rerender CueCraft's CodeMirror cue surface for the active note. */
