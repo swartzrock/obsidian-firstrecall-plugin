@@ -2258,9 +2258,26 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	}
 }
 
+@media (min-width: 980px) {
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"] .inline-title {
+		transform: translateX(calc(0px - var(--cuecraft-editor-masthead-offset) + var(--cuecraft-editor-page-shift) + var(--cuecraft-editor-masthead-title-inset)));
+	}
+
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"] .cuecraft-note-brief-editor {
+		width: calc(100% + var(--cuecraft-editor-masthead-offset));
+		max-width: none;
+		margin-inline-start: calc(0px - var(--cuecraft-editor-masthead-offset));
+	}
+}
+
 @media (min-width: 1180px) {
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift {
 		--cuecraft-editor-page-shift: clamp(6.5rem, 11vw, 11rem);
+	}
+
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"] {
+		--cuecraft-editor-masthead-offset: calc(clamp(13.5rem, 19vw, 16rem) + 2.25rem);
+		--cuecraft-editor-masthead-title-inset: 1.25rem;
 	}
 
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cm-contentContainer {
@@ -2295,6 +2312,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 @media (min-width: 980px) and (max-width: 1179.98px) {
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift {
 		--cuecraft-editor-page-shift: clamp(4rem, 8vw, 6rem);
+	}
+
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"] {
+		--cuecraft-editor-masthead-offset: calc(clamp(10rem, 19vw, 13rem) + 1.5rem);
+		--cuecraft-editor-masthead-title-inset: 0.75rem;
 	}
 
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cm-contentContainer {

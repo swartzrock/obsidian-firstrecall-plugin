@@ -196,4 +196,25 @@ describe("settings CSS", () => {
 		expect(styles).toContain("width: clamp(13.5rem, 19vw, 16rem)");
 		expect(styles).toContain("width: clamp(11.5rem, 20vw, 16rem)");
 	});
+
+	it("aligns the anchored rail masthead without moving Markdown headings", () => {
+		const layoutSelector =
+			'.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"]';
+		const layoutRule = ruleFor(layoutSelector);
+		expect(layoutRule).toContain("--cuecraft-editor-masthead-offset");
+
+		const titleSelector = `${layoutSelector} .inline-title`;
+		const titleRule = ruleFor(titleSelector);
+		expect(titleRule).toContain("var(--cuecraft-editor-masthead-offset)");
+
+		const briefSelector = `${layoutSelector} .cuecraft-note-brief-editor`;
+		const briefRule = ruleFor(briefSelector);
+		expect(briefRule).toContain(
+			"width: calc(100% + var(--cuecraft-editor-masthead-offset))"
+		);
+		expect(briefRule).toContain(
+			"margin-inline-start: calc(0px - var(--cuecraft-editor-masthead-offset))"
+		);
+		expect(styles).not.toContain(`${layoutSelector} .cm-line`);
+	});
 });

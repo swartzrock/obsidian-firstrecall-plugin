@@ -395,6 +395,7 @@ export default class CueCraftPlugin extends Plugin {
 						showSectionLens: this.settings.showSectionLens,
 					})
 				: [];
+		cm.dom.dataset.cuecraftEditorDisplay = this.settings.editorCueDisplay;
 		this.updateEditorHookLayout(
 			cm,
 			cues.length > 0 && this.settings.editorCueDisplay !== "inline-cues",
