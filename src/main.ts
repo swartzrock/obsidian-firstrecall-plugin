@@ -380,7 +380,9 @@ export default class CueCraftPlugin extends Plugin {
 	/** Refresh both the status pill and the rendered cues for a note. */
 	private onActiveFile(file: TFile | null): void {
 		void this.updateStatusForFile(file);
-		if (file) this.renderCues(file, true);
+		if (!file) return;
+		this.renderCues(file, true);
+		this.scheduleEditorLayoutRefresh();
 	}
 
 	/** Push the active note's cached cues into its CodeMirror editor (or clear them). */

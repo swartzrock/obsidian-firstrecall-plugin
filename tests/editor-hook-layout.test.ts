@@ -1,4 +1,5 @@
 import { JSDOM } from "jsdom";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	EDITOR_HOOK_PAGE_SHIFT_CLASS,
@@ -7,6 +8,14 @@ import {
 } from "../src/editor-hook-layout";
 
 describe("editor hook layout", () => {
+	it("retries layout before the first editor paint after opening a file", () => {
+		const mainSource = readFileSync("src/main.ts", "utf8");
+		const onActiveFile =
+			mainSource.match(/private onActiveFile[\s\S]*?\n\t\}/)?.[0] ?? "";
+
+		expect(onActiveFile).toContain("this.scheduleEditorLayoutRefresh()");
+	});
+
 	it("uses stable workspace state before the first editor interaction", () => {
 		expect(leftDockIsOpen({ collapsed: false })).toBe(true);
 		expect(leftDockIsOpen({ collapsed: true })).toBe(false);

@@ -202,6 +202,12 @@ describe("settings CSS", () => {
 			'.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"]';
 		const layoutRule = ruleFor(layoutSelector);
 		expect(layoutRule).toContain("--cuecraft-editor-masthead-offset");
+		expect(layoutRule).toContain(
+			"--cuecraft-editor-masthead-title-inset: 4rem"
+		);
+		expect(
+			styles.match(/--cuecraft-editor-masthead-title-inset: 4rem/g)
+		).toHaveLength(2);
 
 		const titleSelector = `${layoutSelector} .inline-title`;
 		const titleRule = ruleFor(titleSelector);
@@ -214,6 +220,15 @@ describe("settings CSS", () => {
 		);
 		expect(briefRule).toContain(
 			"margin-inline-start: calc(0px - var(--cuecraft-editor-masthead-offset))"
+		);
+		expect(briefRule).toContain(
+			"transform: translateX(calc(0px - var(--cuecraft-editor-masthead-offset)))"
+		);
+
+		const railSelector =
+			".markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cuecraft-editor-hook-gutter .cuecraft-editor-hook";
+		expect(ruleFor(railSelector)).toContain(
+			"transform: translateX(calc(-100% + 1rem))"
 		);
 		expect(styles).not.toContain(`${layoutSelector} .cm-line`);
 	});
