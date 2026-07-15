@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { JSDOM } from "jsdom";
 import { EditorState } from "@codemirror/state";
+import { Decoration, EditorView } from "@codemirror/view";
 import {
 	buildCueGutterMarkers,
 	buildCueLineData,
@@ -789,6 +790,79 @@ describe("cue editor placement", () => {
 			positions.push(from);
 		});
 		expect(positions).toEqual([state.doc.line(1).to]);
+	});
+
+	it("keeps the Note Brief visible when Live Preview replaces a leading divider", () => {
+		const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
+			pretendToBeVisual: true,
+		});
+		const previousGlobals = new Map<PropertyKey, PropertyDescriptor | undefined>();
+		const testGlobals: Record<PropertyKey, unknown> = {
+			window: dom.window,
+			document: dom.window.document,
+			navigator: dom.window.navigator,
+			MutationObserver: dom.window.MutationObserver,
+			HTMLElement: dom.window.HTMLElement,
+			Node: dom.window.Node,
+			DOMRect: dom.window.DOMRect,
+			getComputedStyle: dom.window.getComputedStyle.bind(dom.window),
+		};
+		for (const [key, value] of Object.entries(testGlobals)) {
+			previousGlobals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
+			Object.defineProperty(globalThis, key, {
+				configurable: true,
+				value,
+			});
+		}
+
+		const parent = dom.window.document.querySelector("main");
+		if (!(parent instanceof dom.window.HTMLElement)) {
+			throw new Error("Missing editor parent");
+		}
+		let view: EditorView | null = null;
+		try {
+			const doc = "****\n# Terms";
+			const placementState = EditorState.create({ doc });
+			const cueDecorations = buildCueWidgetDecorations(placementState, {
+				cues: [],
+				display: "anchored-card-rail",
+				noteBrief: NOTE_BRIEF,
+			});
+
+			const focusedState = EditorState.create({
+				doc,
+				extensions: [EditorView.decorations.of(cueDecorations)],
+			});
+			view = new EditorView({ state: focusedState, parent });
+			expect(parent.querySelector(".cuecraft-note-brief-editor")).not.toBeNull();
+			view.destroy();
+			view = null;
+			parent.replaceChildren();
+
+			const firstLine = placementState.doc.line(1);
+			const dividerDecorations = Decoration.set([
+				Decoration.replace({ block: true }).range(firstLine.from, firstLine.to),
+			]);
+			const unfocusedState = EditorState.create({
+				doc,
+				extensions: [
+					EditorView.decorations.of(cueDecorations),
+					EditorView.decorations.of(dividerDecorations),
+				],
+			});
+			view = new EditorView({ state: unfocusedState, parent });
+			expect(parent.querySelector(".cuecraft-note-brief-editor")).not.toBeNull();
+		} finally {
+			view?.destroy();
+			dom.window.close();
+			for (const [key, descriptor] of previousGlobals) {
+				if (descriptor) {
+					Object.defineProperty(globalThis, key, descriptor);
+				} else {
+					delete (globalThis as Record<PropertyKey, unknown>)[key];
+				}
+			}
+		}
 	});
 
 	it("omits the Note Brief widget when it is disabled or missing", () => {

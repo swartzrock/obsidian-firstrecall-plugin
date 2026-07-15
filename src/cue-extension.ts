@@ -634,6 +634,14 @@ function cueDocument(): Document {
 		: activeDocument;
 }
 
+const leadingAsteriskDividerPattern = /^[ ]{0,3}(?:\*[ \t]*){3,}$/;
+
+function noteBriefAnchor(state: EditorState): number {
+	const firstLine = state.doc.line(1);
+	if (!leadingAsteriskDividerPattern.test(firstLine.text)) return firstLine.to;
+	return state.doc.lines > 1 ? state.doc.line(2).from : firstLine.from;
+}
+
 /** Replace all cues currently rendered in the editor. */
 export const setCuesEffect = StateEffect.define<CueEditorRenderState>();
 
@@ -652,7 +660,7 @@ export function buildCueWidgetDecorations(
 				widget: new NoteBriefWidget(payload.noteBrief),
 				block: true,
 				side: 0,
-			}).range(doc.line(1).to)
+			}).range(noteBriefAnchor(state))
 		);
 	}
 
