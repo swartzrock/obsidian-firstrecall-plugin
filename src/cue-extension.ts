@@ -646,6 +646,7 @@ function noteBriefAnchor(state: EditorState): number {
 export const setCuesEffect = StateEffect.define<CueEditorRenderState>();
 
 const emptyCueGutterMarkers = RangeSet.of<GutterMarker>([]);
+const minimumSupportTermLineGap = 6;
 
 export function buildCueWidgetDecorations(
 	state: EditorState,
@@ -698,13 +699,40 @@ export function buildCueGutterMarkers(
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const markerLine = cueGutterMarkerLine(doc, cue.line, payload.display);
 		const cardState = cue.line === currentCueLine ? "current" : "upcoming";
+		const markerOptions = cueHasRoomForSupportTerms(
+			doc,
+			payload,
+			index,
+			markerLine.number
+		)
+			? options
+			: { ...options, showSupportTerms: false };
 		builder.add(
 			markerLine.from,
 			markerLine.from,
-			new CueGutterMarker(cue, payload.display, index, cardState, options)
+			new CueGutterMarker(cue, payload.display, index, cardState, markerOptions)
 		);
 	}
 	return builder.finish();
+}
+
+function cueHasRoomForSupportTerms(
+	doc: EditorState["doc"],
+	payload: CueEditorRenderState,
+	index: number,
+	markerLine: number
+): boolean {
+	if (payload.display !== "anchored-card-rail") return true;
+	const nextCue = payload.cues
+		.slice(index + 1)
+		.find((cue) => cue.line >= 1 && cue.line <= doc.lines);
+	if (!nextCue) return true;
+	const nextMarkerLine = cueGutterMarkerLine(
+		doc,
+		nextCue.line,
+		payload.display
+	).number;
+	return nextMarkerLine - markerLine >= minimumSupportTermLineGap;
 }
 
 function cueGutterMarkerLine(

@@ -646,6 +646,47 @@ describe("cue editor placement", () => {
 		]);
 	});
 
+	it("hides support terms when a short section leaves too little room before the next cue", () => {
+		withDocument(() => {
+			const doc =
+				"# Roles\none\ntwo\n\n# Guidelines\none\ntwo\nthree\nfour\nfive\n# Clarify\nbody";
+			const state = EditorState.create({ doc });
+			const markers = buildCueGutterMarkers(state, {
+				cues: [
+					{
+						...cues[0],
+						line: 1,
+						keywords: ["driver", "designer"],
+					},
+					{
+						...cues[1],
+						line: 5,
+						keywords: ["ask", "clarify"],
+					},
+					{
+						...cues[1],
+						line: 11,
+						heading: "Clarify",
+						keywords: ["scope", "requirements"],
+					},
+				],
+				display: "anchored-card-rail",
+			});
+			const cards: HTMLElement[] = [];
+			markers.between(0, state.doc.length, (_from, _to, marker) => {
+				cards.push(marker.toDOM(null as never) as HTMLElement);
+			});
+
+			expect(cards[0].dataset.supportTermsVisible).toBe("false");
+			expect(cards[0].querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
+			expect(cards[1].dataset.supportTermsVisible).toBe("true");
+			expect(
+				cards[1].querySelector(".cuecraft-editor-hook-keywords")
+			).not.toBeNull();
+			expect(cards[2].dataset.supportTermsVisible).toBe("true");
+		});
+	});
+
 	it("keeps non-anchored hook displays on heading lines", () => {
 		const state = EditorState.create({ doc: NOTE });
 		const markers = buildCueGutterMarkers(state, {
