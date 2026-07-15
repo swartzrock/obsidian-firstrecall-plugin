@@ -165,6 +165,10 @@ describe("settings CSS", () => {
 	it("keeps anchored rail cards compact and quiet", () => {
 		const railRule = ruleFor(".cuecraft-editor-hook-anchored-card-rail");
 		expect(railRule).toContain("max-width: min(16.75rem, 100%)");
+		const compactRailRule = ruleFor(
+			'.cuecraft-editor-hook-anchored-card-rail[data-space="compact"]'
+		);
+		expect(compactRailRule).toContain("padding-bottom: 8px");
 
 		const emptyRule = ruleFor(".cuecraft-editor-hook-empty");
 		expect(emptyRule).toContain("display: none");

@@ -55,8 +55,16 @@ describe("buildEditorHookCard", () => {
 		});
 		expect(card.showQuestion).toBe(false);
 		expect(card.showSupportTerms).toBe(false);
+		expect(card.compactForSpace).toBe(false);
 		expect(card.cardStyle).toBe("gradient");
 		expect(card.gradientIndex).toBe(1);
+	});
+
+	it("accepts automatic short-section compaction", () => {
+		const card = buildEditorHookCard(cue(), "anchored-card-rail", 0, "upcoming", {
+			compactForSpace: true,
+		});
+		expect(card.compactForSpace).toBe(true);
 	});
 
 	it("accepts explicit active section state", () => {

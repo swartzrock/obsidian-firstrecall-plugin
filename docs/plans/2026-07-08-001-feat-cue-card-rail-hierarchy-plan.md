@@ -17,7 +17,7 @@ origin: docs/ideation/2026-07-08-cue-card-rail-hierarchy-ideation.html
 |---|---|
 | Objective | Make anchored editor cue cards visually align with the note body under each heading and read as question first, terms second. |
 | Authority | User-provided design and current-implementation screenshots, then `docs/ideation/2026-07-08-cue-card-rail-hierarchy-ideation.html`, then current renderer/test patterns. |
-| Scope | Anchored card rail rendering, placement, CSS hierarchy, term overflow, and focused tests. |
+| Scope | Anchored card rail rendering, placement, CSS hierarchy, adaptive short-section compaction, term limits, and focused tests. |
 | Execution profile | Single-phase implementation; one branch and one PR are sufficient. |
 | Stop conditions | Stop if body-line placement requires changing parser/cache semantics or if visual QA shows the chosen placement breaks non-anchored hook displays. |
 | Tail ownership | Implementation should leave no plan progress markers; completion is derived from git, tests, and PR review. |
@@ -29,7 +29,8 @@ origin: docs/ideation/2026-07-08-cue-card-rail-hierarchy-ideation.html
 ### Summary
 
 Anchored cue cards should sit beside the first body text under each note heading, not visually above the section content.
-Inside the card, the recall question is the focal text, with muted support terms shown after a divider and capped to four visible chips plus a `+N more` reveal.
+Inside the card, the recall question is the focal text, with muted support terms shown after a divider and capped to four visible chips.
+When nearby section anchors leave too little vertical room, the card should preserve the full question, suppress terms, and tighten only the auto-compacted card's spacing.
 
 ### Problem Frame
 
@@ -54,8 +55,14 @@ Term chips can outnumber the question visually, which weakens the active-recall 
 **Terms**
 
 - R7. Anchored cards show no more than four term chips by default.
-- R8. When more than four terms exist, the card exposes a small `+N more` toggle that reveals the hidden chips in place.
+- R8. Terms beyond the first four remain hidden in anchored cards without an overflow control.
 - R9. Term chips render smaller and quieter than the question text.
+
+**Adaptive spacing**
+
+- R13. Anchored cards hide support terms when the next cue is 6 or fewer source lines away for a standard question, 7 or fewer for a long question, or 8 or fewer for a dense question.
+- R14. Cards compacted by R13 use reduced trailing vertical padding so adjacent card borders retain at least 6px of visible separation in the supplied layout without moving either anchor.
+- R15. Adaptive spacing never truncates the question and does not change inline cues, other hook displays, final anchored cards, or the persisted rail-support setting.
 
 **Safety**
 
@@ -66,15 +73,20 @@ Term chips can outnumber the question visually, which weakens the active-recall 
 ### Acceptance Examples
 
 - AE1. Given an anchored-card rail cue on a section with a heading and body text, when the gutter markers are built, then the card marker is positioned at the first body line and remains associated with the original cue line in DOM data.
-- AE2. Given five support terms, when the anchored card renders, then four chips are visible and a `+1 more` control reveals the fifth term.
+- AE2. Given five support terms and sufficient section space, when the anchored card renders, then only the first four chips are visible and no overflow control appears.
 - AE3. Given rail support terms are hidden by settings, when the anchored card renders, then no terms label, chips, or `+N more` control appears.
 - AE4. Given an active-section-composer or collapsed-tabs display, when gutter markers are built, then marker positions match the existing heading-line behavior.
+- AE5. Given a dense anchored question and a next cue 8 source lines away, when gutter markers are built, then the first card is question-only and receives compact spacing while the next card remains anchored to its own section; visual QA shows at least 6px between their borders in the supplied layout.
+- AE6. Given a standard question with 7 source lines before the next cue, or a final cue with no successor, when gutter markers are built, then support terms remain available unless the global setting hides them.
 
 ### Scope Boundaries
 
 - Keep this limited to anchored editor cue cards.
 - Do not redesign Note Brief, Cornell view hook mode, provider prompts, cache shape, or keyword generation.
 - Do not add a new persisted setting for term caps; four visible terms is the product behavior for this card.
+- Do not add runtime height measurement, collision observers, question clamping, or anchor displacement for adaptive spacing.
+
+Product Contract preservation: changed R8 and AE2 to reflect the previously approved removal of `+N more`; added R13-R15 and AE5-AE6 for adaptive short-section spacing.
 
 ---
 
@@ -85,8 +97,11 @@ Term chips can outnumber the question visually, which weakens the active-recall 
 - KTD1. Use body-line marker targeting for anchored cards, not a CSS-only offset. The repo currently places markers at `headingLine.from`; moving the marker to the next document line for anchored cards is more stable across heading sizes than guessing an offset in CSS.
 - KTD2. Preserve `CueLineData.line` as the section heading identity. The data model and cache matching stay heading-based; only the gutter marker target changes for anchored-card rail display.
 - KTD3. Implement the term cap inside the renderer rather than changing generated keywords. The card is a presentation surface, and cache/provider output should remain complete.
-- KTD4. Make the `+N more` control local DOM state. Revealing hidden chips should not write plugin settings, mutate cache data, or re-render the editor extension payload.
+- KTD4. Keep anchored-card overflow terms hidden without local interaction state. The renderer should cap presentation at four chips without writing plugin settings or mutating cache data.
 - KTD5. Extend existing focused tests. `tests/cue-extension.test.ts` and `tests/settings-css.test.ts` already pin this surface, so new coverage should live there rather than in a new suite.
+- KTD6. Use title-density-specific source-line thresholds: hide terms through 6 lines for standard questions, 7 for long questions, and 8 for dense questions. (session-settled: user-approved — chosen over a global eight-line cutoff: shorter questions can retain useful terms with less room, while dense questions need a larger safety margin.)
+- KTD7. Derive compaction from cue-anchor distance and the existing `titleDensity` classification, not runtime card measurement. Deterministic marker construction avoids the focus and refresh layout instability already observed on this surface.
+- KTD8. Mark only automatically compacted cards and reduce their trailing padding. Preserve the full question, body-line anchor, and global visibility settings; do not solve collisions by truncating text or shifting cards away from their sections.
 
 ### High-Level Technical Design
 
@@ -100,14 +115,16 @@ flowchart TB
   HeadingTarget --> GutterMarker
   GutterMarker --> Card["Card DOM keeps data-line as heading line"]
   Card --> Question["Question focal block"]
-  Question --> Terms["Divider, muted chips, +N more"]
+  Question --> SpaceCheck{"Enough room before next cue?"}
+  SpaceCheck -->|"yes"| Terms["Divider, up to four muted chips"]
+  SpaceCheck -->|"no"| Compact["Full question, compact trailing spacing"]
 ```
 
 ### Assumptions
 
 - The first body line is the line immediately after the heading when it exists in the document.
 - If the heading is the final line or the next line cannot be used, anchored cards may fall back to the heading line rather than disappearing.
-- A local button inside the gutter marker is acceptable because `CueGutterMarker.toDOM()` already returns interactive note elements with `tabIndex`.
+- Source-line distance is an intentionally conservative proxy for vertical room; wrapped questions are accounted for through the existing standard, long, and dense title classifications.
 
 ### Sources & Research
 
@@ -152,27 +169,43 @@ flowchart TB
   - Read `styles.css` and expect anchored-card term chips to be smaller and muted relative to the title.
 - **Verification:** CSS assertions prove the hierarchy rules are present and scoped to anchored cards.
 
-### U3. Term Cap and Reveal Control
+### U3. Term Cap
 
-- **Goal:** Cap anchored-card term chips at four visible chips with an accessible `+N more` reveal.
+- **Goal:** Cap anchored-card term chips at four visible chips without an overflow control.
 - **Requirements:** R7, R8, R10, R11, R12, AE2, AE3.
 - **Dependencies:** U2.
 - **Files:** `src/cue-extension.ts`, `tests/cue-extension.test.ts`, `styles.css`, `tests/settings-css.test.ts`.
-- **Approach:** Add an anchored-card-specific keyword rendering path inside `renderEditorHookElement()`. Render the first four keywords normally, render overflow chips hidden by default, and append a small button that reveals them in place. Keep the existing `appendCueTerms()` path for inline, Cornell, and other displays. Ensure hidden support-term settings skip the entire terms section.
+- **Approach:** Add an anchored-card-specific keyword rendering path inside `renderEditorHookElement()`. Render the first four keywords and omit overflow from this presentation surface. Keep the existing `appendCueTerms()` path for inline, Cornell, and other displays. Ensure hidden support-term settings skip the entire terms section.
 - **Patterns to follow:** Existing `appendCueTerms()` and `appendEditorHookSectionLabel()` boundaries; existing hidden-settings tests for `showSupportTerms`; Obsidian-compatible plain DOM event handling used elsewhere in render helpers.
 - **Test scenarios:**
-  - Covers AE2. Given five keywords, when an anchored card renders, then four `.cuecraft-cue-term` chips are initially visible and the control text is `+1 more`.
-  - Covers AE2. Given the overflow control is clicked, then the hidden term becomes visible and the control no longer advertises hidden terms.
-  - Covers AE3. Given `showSupportTerms: false`, when an anchored card renders with five keywords, then no terms label, chips, or overflow control appears.
-  - Covers R11. Given a failed cue, when an anchored card renders, then no term overflow control appears.
+  - Covers AE2. Given five keywords, when an anchored card renders, then four `.cuecraft-cue-term` chips are visible and no overflow control appears.
+  - Covers AE3. Given `showSupportTerms: false`, when an anchored card renders with five keywords, then no terms label or chips appear.
+  - Covers R11. Given a failed cue, when an anchored card renders, then no terms appear.
   - Given an inline cue with five keywords, when it renders, then all keywords still render through the existing path.
-- **Verification:** DOM tests prove the cap, reveal, hidden-settings behavior, failure behavior, and non-anchored display preservation.
+- **Verification:** DOM tests prove the cap, hidden-settings behavior, failure behavior, and non-anchored display preservation.
+
+### U5. Density-Aware Short-Section Compaction
+
+- **Goal:** Prevent adjacent anchored cards from touching or overlapping while preserving full questions and section alignment.
+- **Requirements:** R13, R14, R15, AE5, AE6, KTD6, KTD7, KTD8.
+- **Dependencies:** U1, U2.
+- **Files:** `src/cue-extension.ts`, `src/editor-hook-rail.ts`, `styles.css`, `tests/cue-extension.test.ts`, `tests/settings-css.test.ts`.
+- **Approach:** Reuse the card model's existing standard/long/dense title classification when gutter markers compare the current anchored cue with its next valid cue. Apply the density threshold from KTD6 to derive an auto-compacted marker option. Auto-compaction suppresses terms for that card and emits a stable card state for anchored-card CSS to reduce trailing padding; cards with sufficient room keep the global support-term behavior. Keep this calculation inside marker construction so edits rebuild the deterministic state without runtime element measurement.
+- **Patterns to follow:** Existing `titleDensity` derivation in `src/editor-hook-rail.ts`, marker-specific options and equality keys in `src/cue-extension.ts`, anchored-card data attributes in the renderer, and scoped CSS assertions in `tests/settings-css.test.ts`.
+- **Execution note:** Add failing focused marker/DOM and CSS tests before changing the thresholds or compact styling.
+- **Test scenarios:**
+  - Covers AE5. Given a dense question whose next anchored cue is 8 source lines away, when markers render, then the first card has compact state, contains no Terms block, and keeps the complete question text.
+  - Covers R13. Given long and standard questions at their 7-line and 6-line boundaries, when markers render, then each card compacts; adding one source line to each interval preserves terms.
+  - Covers AE6. Given a final anchored cue, when it renders, then it retains terms and does not receive compact state.
+  - Covers R15. Given a non-anchored hook display or globally hidden support terms, when markers render, then adaptive spacing does not change that display's existing behavior.
+  - Covers R14. Read `styles.css` and expect compact anchored cards to reduce trailing padding by 6px while retaining their normal top alignment, border, and full title rules; manual replay confirms at least 6px between card borders in the supplied layout.
+- **Verification:** Focused marker/DOM tests prove all density boundaries and unaffected states; CSS assertions pin the compact spacing without introducing position transitions or runtime measurement.
 
 ### U4. Focused Verification Pass
 
 - **Goal:** Run the narrow automated gates that prove this UI polish without broad unrelated churn.
-- **Requirements:** R1-R12, AE1-AE4.
-- **Dependencies:** U1, U2, U3.
+- **Requirements:** R1-R15, AE1-AE6.
+- **Dependencies:** U1, U2, U3, U5.
 - **Files:** `tests/cue-extension.test.ts`, `tests/settings-css.test.ts`.
 - **Approach:** Use existing test commands for the changed test files first, then the repo's normal test/build gates if focused tests pass. Record any manual visual gap in the PR body rather than inventing browser automation for an Obsidian-only editor surface.
 - **Execution note:** This is UI polish in an Obsidian editor surface; automated DOM/CSS coverage is necessary but not a substitute for a manual screenshot check in Obsidian.
@@ -189,8 +222,9 @@ flowchart TB
 
 | Gate | Applies To | Done Signal |
 |---|---|---|
-| Focused renderer tests | U1, U3 | `tests/cue-extension.test.ts` passes with anchored placement and term overflow coverage. |
-| Focused CSS tests | U2, U3 | `tests/settings-css.test.ts` passes with anchored-card hierarchy assertions. |
+| Focused renderer tests | U1, U3, U5 | `tests/cue-extension.test.ts` passes with anchored placement, term-cap, density-boundary, and compact-state coverage. |
+| Focused card-model tests | U5 | `tests/editor-hook-rail.test.ts` passes with shared title-density behavior preserved. |
+| Focused CSS tests | U2, U3, U5 | `tests/settings-css.test.ts` passes with anchored-card hierarchy and compact trailing-spacing assertions. |
 | Full test suite | U1-U4 | The repo test suite passes after focused tests. |
 | Type/build gate | U1-U4 | The production build or typecheck gate passes with no new TypeScript errors. |
 | Manual visual check | U1-U3 | Anchored cards visually start beside the body text below headings, question text dominates, and terms read as secondary. |
@@ -201,7 +235,8 @@ flowchart TB
 
 - Anchored rail cards use body-line placement without changing cue identity, cache data, or non-anchored hook display placement.
 - Anchored card question text is the card focal point with muted labels and a thin divider before terms.
-- Anchored card terms show at most four chips by default and reveal overflow through an accessible `+N more` control.
+- Anchored card terms show at most four chips and expose no overflow control.
+- Standard, long, and dense questions auto-compact through 6, 7, and 8 source lines respectively, hiding terms and leaving visible separation without truncating or shifting the question.
 - Focused DOM/CSS tests cover the new contracts and the repo's broader verification gates have been run or their environment gaps documented.
 - The diff includes the originating ideation artifact and this plan in the implementation branch.
 - No abandoned experiment code, unused imports, or unrelated formatting churn remains in the final diff.

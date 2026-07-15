@@ -1656,6 +1656,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	box-shadow: var(--cc-shadow);
 }
 
+.cuecraft-editor-hook-anchored-card-rail[data-space="compact"] {
+	padding-bottom: 8px;
+}
+
 .cuecraft-editor-hook-anchored-card-rail[data-tone="cool"] {
 	background: var(--cc-card);
 }

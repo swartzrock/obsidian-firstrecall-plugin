@@ -18,6 +18,7 @@ import { setIcon } from "obsidian";
 import type { NoteCache } from "./cache";
 import {
 	buildEditorHookCard,
+	editorHookTitleDensity,
 	type EditorHookCard,
 	type EditorHookCardOptions,
 	type EditorHookCardState,
@@ -372,6 +373,7 @@ function renderEditorHookElement(
 	root.dataset.cardStyle = card.cardStyle;
 	root.dataset.questionVisible = String(card.showQuestion);
 	root.dataset.supportTermsVisible = String(card.showSupportTerms);
+	root.dataset.space = card.compactForSpace ? "compact" : "normal";
 	if (card.confidence) root.dataset.confidence = card.confidence;
 	if (card.category) {
 		root.dataset.category = card.category;
@@ -646,7 +648,14 @@ function noteBriefAnchor(state: EditorState): number {
 export const setCuesEffect = StateEffect.define<CueEditorRenderState>();
 
 const emptyCueGutterMarkers = RangeSet.of<GutterMarker>([]);
-const minimumSupportTermLineGap = 6;
+const compactLineGapByTitleDensity: Record<
+	EditorHookCard["titleDensity"],
+	number
+> = {
+	standard: 6,
+	long: 7,
+	dense: 8,
+};
 
 export function buildCueWidgetDecorations(
 	state: EditorState,
@@ -699,14 +708,16 @@ export function buildCueGutterMarkers(
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const markerLine = cueGutterMarkerLine(doc, cue.line, payload.display);
 		const cardState = cue.line === currentCueLine ? "current" : "upcoming";
-		const markerOptions = cueHasRoomForSupportTerms(
+		const compactForSpace = cueNeedsSpaceCompaction(
 			doc,
 			payload,
 			index,
-			markerLine.number
-		)
-			? options
-			: { ...options, showSupportTerms: false };
+			markerLine.number,
+			cue
+		);
+		const markerOptions = compactForSpace
+			? { ...options, showSupportTerms: false, compactForSpace: true }
+			: options;
 		builder.add(
 			markerLine.from,
 			markerLine.from,
@@ -716,23 +727,26 @@ export function buildCueGutterMarkers(
 	return builder.finish();
 }
 
-function cueHasRoomForSupportTerms(
+function cueNeedsSpaceCompaction(
 	doc: EditorState["doc"],
 	payload: CueEditorRenderState,
 	index: number,
-	markerLine: number
+	markerLine: number,
+	cue: CueLineData
 ): boolean {
-	if (payload.display !== "anchored-card-rail") return true;
+	if (payload.display !== "anchored-card-rail") return false;
 	const nextCue = payload.cues
 		.slice(index + 1)
 		.find((cue) => cue.line >= 1 && cue.line <= doc.lines);
-	if (!nextCue) return true;
+	if (!nextCue) return false;
 	const nextMarkerLine = cueGutterMarkerLine(
 		doc,
 		nextCue.line,
 		payload.display
 	).number;
-	return nextMarkerLine - markerLine >= minimumSupportTermLineGap;
+	const titleDensity = editorHookTitleDensity(cue);
+	const maximumLineGap = compactLineGapByTitleDensity[titleDensity];
+	return nextMarkerLine - markerLine <= maximumLineGap;
 }
 
 function cueGutterMarkerLine(
@@ -762,6 +776,7 @@ function editorHookCardOptionsKey(options: CueRenderOptions): string {
 	return [
 		options.showQuestion ?? true,
 		options.showSupportTerms ?? true,
+		options.compactForSpace ?? false,
 		options.cardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
 		options.cueColumnWidth ?? "",
 		options.cueFontSize ?? "",

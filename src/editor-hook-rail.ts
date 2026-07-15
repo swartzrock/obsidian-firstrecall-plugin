@@ -17,6 +17,7 @@ export type EditorHookTone = "warm" | "cool";
 export interface EditorHookCardOptions {
 	showQuestion?: boolean;
 	showSupportTerms?: boolean;
+	compactForSpace?: boolean;
 	cardStyle?: EditorHookCardStyle;
 }
 
@@ -38,7 +39,14 @@ export interface EditorHookCard {
 	gradientIndex: number;
 	showQuestion: boolean;
 	showSupportTerms: boolean;
+	compactForSpace: boolean;
 	cardStyle: EditorHookCardStyle;
+}
+
+export function editorHookTitleDensity(
+	cue: CueLineData
+): EditorHookCard["titleDensity"] {
+	return shortFormHookTitleDensity(editorHookTitle(cue));
 }
 
 export function buildEditorHookCard(
@@ -49,9 +57,7 @@ export function buildEditorHookCard(
 	options: EditorHookCardOptions = {}
 ): EditorHookCard {
 	const failed = Boolean(cue.error);
-	const hookTitle = failed
-		? "Cue unavailable"
-		: buildShortFormHookTitle(cue.question) ?? cue.heading;
+	const hookTitle = editorHookTitle(cue);
 	const showQuestion = options.showQuestion ?? true;
 	const showSupportTerms = options.showSupportTerms ?? true;
 	return {
@@ -72,6 +78,13 @@ export function buildEditorHookCard(
 		gradientIndex: index % 3,
 		showQuestion,
 		showSupportTerms,
+		compactForSpace: options.compactForSpace ?? false,
 		cardStyle: options.cardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
 	};
+}
+
+function editorHookTitle(cue: CueLineData): string {
+	return cue.error
+		? "Cue unavailable"
+		: buildShortFormHookTitle(cue.question) ?? cue.heading;
 }

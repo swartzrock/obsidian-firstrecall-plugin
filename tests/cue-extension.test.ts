@@ -646,46 +646,97 @@ describe("cue editor placement", () => {
 		]);
 	});
 
-	it("hides support terms when a short section leaves too little room before the next cue", () => {
-		withDocument(() => {
-			const doc =
-				"# Roles\none\ntwo\n\n# Guidelines\none\ntwo\nthree\nfour\nfive\n# Clarify\nbody";
-			const state = EditorState.create({ doc });
-			const markers = buildCueGutterMarkers(state, {
-				cues: [
-					{
-						...cues[0],
-						line: 1,
-						keywords: ["driver", "designer"],
-					},
-					{
-						...cues[1],
-						line: 5,
-						keywords: ["ask", "clarify"],
-					},
-					{
-						...cues[1],
-						line: 11,
-						heading: "Clarify",
-						keywords: ["scope", "requirements"],
-					},
-				],
-				display: "anchored-card-rail",
-			});
-			const cards: HTMLElement[] = [];
-			markers.between(0, state.doc.length, (_from, _to, marker) => {
-				cards.push(marker.toDOM(null as never) as HTMLElement);
-			});
+	it.each([
+		{
+			name: "standard",
+			question: "What are the key roles?",
+			compactGap: 6,
+			roomyGap: 7,
+		},
+		{
+			name: "long",
+			question:
+				"How do agents differ from chatbots, and how do tools make them useful?",
+			compactGap: 7,
+			roomyGap: 8,
+		},
+		{
+			name: "dense",
+			question:
+				"How does tailoring AI with organizational knowledge upskill employees, and why does encoding that expertise into reusable plugins or agents make them faster and smarter?",
+			compactGap: 8,
+			roomyGap: 9,
+		},
+	])(
+		"compacts $name cue cards only when the next cue is too close",
+		({ question, compactGap, roomyGap }) => {
+			withDocument(() => {
+				const firstSection = Array.from(
+					{ length: compactGap - 1 },
+					(_, index) => `compact ${index + 1}`
+				);
+				const secondSection = Array.from(
+					{ length: roomyGap - 1 },
+					(_, index) => `roomy ${index + 1}`
+				);
+				const secondCueLine = compactGap + 1;
+				const finalCueLine = secondCueLine + roomyGap;
+				const doc = [
+					"# Compact",
+					...firstSection,
+					"# Roomy",
+					...secondSection,
+					"# Final",
+					"body",
+				].join("\n");
+				const state = EditorState.create({ doc });
+				const markers = buildCueGutterMarkers(state, {
+					cues: [
+						{
+							...cues[0],
+							line: 1,
+							question,
+							keywords: ["driver", "designer"],
+						},
+						{
+							...cues[1],
+							line: secondCueLine,
+							question,
+							keywords: ["ask", "clarify"],
+						},
+						{
+							...cues[1],
+							line: finalCueLine,
+							heading: "Final",
+							question,
+							keywords: ["scope", "requirements"],
+						},
+					],
+					display: "anchored-card-rail",
+				});
+				const cards: HTMLElement[] = [];
+				markers.between(0, state.doc.length, (_from, _to, marker) => {
+					cards.push(marker.toDOM(null as never) as HTMLElement);
+				});
 
-			expect(cards[0].dataset.supportTermsVisible).toBe("false");
-			expect(cards[0].querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
-			expect(cards[1].dataset.supportTermsVisible).toBe("true");
-			expect(
-				cards[1].querySelector(".cuecraft-editor-hook-keywords")
-			).not.toBeNull();
-			expect(cards[2].dataset.supportTermsVisible).toBe("true");
-		});
-	});
+				expect(cards[0].dataset.supportTermsVisible).toBe("false");
+				expect(cards[0].dataset.space).toBe("compact");
+				expect(
+					cards[0].querySelector(".cuecraft-editor-hook-keywords")
+				).toBeNull();
+				expect(
+					cards[0].querySelector(".cuecraft-editor-hook-title")?.textContent
+				).toBe(question.replace(/\?$/, ""));
+				expect(cards[1].dataset.supportTermsVisible).toBe("true");
+				expect(cards[1].dataset.space).toBe("normal");
+				expect(
+					cards[1].querySelector(".cuecraft-editor-hook-keywords")
+				).not.toBeNull();
+				expect(cards[2].dataset.supportTermsVisible).toBe("true");
+				expect(cards[2].dataset.space).toBe("normal");
+			});
+		}
+	);
 
 	it("keeps non-anchored hook displays on heading lines", () => {
 		const state = EditorState.create({ doc: NOTE });
