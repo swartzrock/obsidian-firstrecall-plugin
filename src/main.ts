@@ -448,10 +448,7 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private isLeftDockOpen(): boolean {
-		const leftDock = activeDocument.querySelector<HTMLElement>(
-			".workspace-split.mod-left-split"
-		);
-		return leftDockIsOpen(leftDock);
+		return leftDockIsOpen(this.app.workspace.leftSplit);
 	}
 
 	/** Rerender CueCraft's CodeMirror cue surface for the active note. */

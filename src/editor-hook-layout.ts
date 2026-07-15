@@ -1,8 +1,12 @@
 export const EDITOR_HOOK_PAGE_SHIFT_CLASS = "cuecraft-editor-hook-page-shift";
 
-export function leftDockIsOpen(leftDock: HTMLElement | null): boolean {
+export interface LeftDockState {
+	collapsed: boolean;
+}
+
+export function leftDockIsOpen(leftDock: LeftDockState | null): boolean {
 	if (!leftDock) return false;
-	return !leftDock.classList.contains("is-sidedock-collapsed");
+	return !leftDock.collapsed;
 }
 
 export class EditorHookLayoutController {

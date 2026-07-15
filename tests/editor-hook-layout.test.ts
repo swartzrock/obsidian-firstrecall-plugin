@@ -7,18 +7,21 @@ import {
 } from "../src/editor-hook-layout";
 
 describe("editor hook layout", () => {
-	it("keeps an expanded dock open during a transient zero-width layout", () => {
-		const leftDock = new JSDOM(
-			"<div class='workspace-split mod-left-split'></div>"
-		).window.document.body.firstElementChild as HTMLElement;
-		Object.defineProperty(leftDock, "getBoundingClientRect", {
-			value: () => ({ width: 0 }),
-		});
+	it("uses stable workspace state before the first editor interaction", () => {
+		expect(leftDockIsOpen({ collapsed: false })).toBe(true);
+		expect(leftDockIsOpen({ collapsed: true })).toBe(false);
+	});
 
-		expect(leftDockIsOpen(leftDock)).toBe(true);
+	it("keeps placement stable when the first interaction refreshes layout", () => {
+		const editor = new JSDOM("<div class='cm-editor'></div>").window.document
+			.body.firstElementChild as HTMLElement;
+		const layout = new EditorHookLayoutController();
 
-		leftDock.classList.add("is-sidedock-collapsed");
-		expect(leftDockIsOpen(leftDock)).toBe(false);
+		layout.sync(editor, true, leftDockIsOpen({ collapsed: false }), true);
+		expect(editor.classList.contains(EDITOR_HOOK_PAGE_SHIFT_CLASS)).toBe(true);
+
+		layout.sync(editor, true, leftDockIsOpen({ collapsed: false }), true);
+		expect(editor.classList.contains(EDITOR_HOOK_PAGE_SHIFT_CLASS)).toBe(true);
 	});
 
 	it("keeps page placement stable across cue refreshes", () => {
