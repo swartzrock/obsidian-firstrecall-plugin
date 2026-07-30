@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { JSDOM } from "jsdom";
 import { EditorState } from "@codemirror/state";
+import { Decoration, EditorView } from "@codemirror/view";
 import {
 	buildCueGutterMarkers,
 	buildCueLineData,
@@ -28,11 +29,11 @@ const NOTE_BRIEF = {
 		detail: "Agents can plan, decide, and use tools.",
 	},
 	reviewFirst: {
-		title: "Agent versus chatbot",
+		title: "Review First: Agent versus chatbot",
 		detail: "Review the contrast with single-turn chatbots first.",
 	},
 	sayItBack: {
-		title: "Explain the distinction",
+		title: "Self-Test",
 		detail: "Say why tool use changes the task boundary.",
 	},
 };
@@ -291,6 +292,30 @@ describe("renderCueElement", () => {
 					?.textContent
 			).toBe("agents");
 			expect(el.querySelector(".cuecraft-section-lens")).toBeNull();
+		});
+	});
+
+	it("caps anchored card rail support terms at four", () => {
+		withDocument(() => {
+			const el = renderCueElement(
+				{
+					line: 3,
+					heading: "Terms",
+					question: "How do agents differ from chatbots?",
+					keywords: ["agents", "tools", "planning", "autonomy", "memory"],
+					confidence: "medium",
+					category: "intervals",
+					sectionLens: SECTION_LENS,
+					error: null,
+				},
+				"anchored-card-rail"
+			);
+			expect(
+				Array.from(
+					el.querySelectorAll(".cuecraft-editor-hook-keywords .cuecraft-cue-term")
+				).map((term) => term.textContent)
+			).toEqual(["agents", "tools", "planning", "autonomy"]);
+			expect(el.querySelector(".cuecraft-editor-hook-terms-toggle")).toBeNull();
 		});
 	});
 
@@ -558,14 +583,27 @@ describe("renderNoteBriefElement", () => {
 			expect(el.querySelectorAll(".cuecraft-note-brief-insight")).toHaveLength(3);
 			expect(
 				Array.from(
-					el.querySelectorAll(".cuecraft-note-brief-insight-label")
+					el.querySelectorAll(".cuecraft-note-brief-insight-badge")
 				).map((label) => label.textContent)
-			).toEqual(["Core idea", "Review first", "Self-test"]);
+			).toEqual(["core idea", "review first", "self-test"]);
+			expect(
+				Array.from(el.querySelectorAll(".cuecraft-note-brief-insight")).every(
+					(insight) =>
+						insight.lastElementChild?.matches(
+							".cuecraft-note-brief-insight-badge.cuecraft-cue-term"
+						) === true
+				)
+			).toBe(true);
 			const reviewTitle =
 				"[data-card='reviewFirst'] .cuecraft-note-brief-insight-title";
 			expect(
 				el.querySelector(reviewTitle)?.textContent
 			).toBe("Agent versus chatbot");
+			expect(
+				el.querySelector(
+					"[data-card='sayItBack'] .cuecraft-note-brief-insight-title"
+				)
+			).toBeNull();
 		});
 	});
 });
@@ -592,11 +630,119 @@ describe("cue editor placement", () => {
 		},
 	];
 
-	it("renders hook displays into left-gutter markers", () => {
+	it("renders anchored card rail markers at section body lines", () => {
 		const state = EditorState.create({ doc: NOTE });
 		const markers = buildCueGutterMarkers(state, {
 			cues,
 			display: "anchored-card-rail",
+		});
+		const positions: number[] = [];
+		markers.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([
+			state.doc.line(2).from,
+			state.doc.line(4).from,
+		]);
+	});
+
+	it.each([
+		{
+			name: "standard",
+			question: "What are the key roles?",
+			compactGap: 6,
+			roomyGap: 7,
+		},
+		{
+			name: "long",
+			question:
+				"How do agents differ from chatbots, and how do tools make them useful?",
+			compactGap: 7,
+			roomyGap: 8,
+		},
+		{
+			name: "dense",
+			question:
+				"How does tailoring AI with organizational knowledge upskill employees, and why does encoding that expertise into reusable plugins or agents make them faster and smarter?",
+			compactGap: 8,
+			roomyGap: 9,
+		},
+	])(
+		"compacts $name cue cards only when the next cue is too close",
+		({ question, compactGap, roomyGap }) => {
+			withDocument(() => {
+				const firstSection = Array.from(
+					{ length: compactGap - 1 },
+					(_, index) => `compact ${index + 1}`
+				);
+				const secondSection = Array.from(
+					{ length: roomyGap - 1 },
+					(_, index) => `roomy ${index + 1}`
+				);
+				const secondCueLine = compactGap + 1;
+				const finalCueLine = secondCueLine + roomyGap;
+				const doc = [
+					"# Compact",
+					...firstSection,
+					"# Roomy",
+					...secondSection,
+					"# Final",
+					"body",
+				].join("\n");
+				const state = EditorState.create({ doc });
+				const markers = buildCueGutterMarkers(state, {
+					cues: [
+						{
+							...cues[0],
+							line: 1,
+							question,
+							keywords: ["driver", "designer"],
+						},
+						{
+							...cues[1],
+							line: secondCueLine,
+							question,
+							keywords: ["ask", "clarify"],
+						},
+						{
+							...cues[1],
+							line: finalCueLine,
+							heading: "Final",
+							question,
+							keywords: ["scope", "requirements"],
+						},
+					],
+					display: "anchored-card-rail",
+				});
+				const cards: HTMLElement[] = [];
+				markers.between(0, state.doc.length, (_from, _to, marker) => {
+					cards.push(marker.toDOM(null as never) as HTMLElement);
+				});
+
+				expect(cards[0].dataset.supportTermsVisible).toBe("false");
+				expect(cards[0].dataset.space).toBe("compact");
+				expect(
+					cards[0].querySelector(".cuecraft-editor-hook-keywords")
+				).toBeNull();
+				expect(
+					cards[0].querySelector(".cuecraft-editor-hook-title")?.textContent
+				).toBe(question.replace(/\?$/, ""));
+				expect(cards[1].dataset.supportTermsVisible).toBe("true");
+				expect(cards[1].dataset.space).toBe("normal");
+				expect(
+					cards[1].querySelector(".cuecraft-editor-hook-keywords")
+				).not.toBeNull();
+				expect(cards[2].dataset.supportTermsVisible).toBe("true");
+				expect(cards[2].dataset.space).toBe("normal");
+			});
+		}
+	);
+
+	it("keeps non-anchored hook displays on heading lines", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const markers = buildCueGutterMarkers(state, {
+			cues,
+			display: "active-section-composer",
 		});
 		const positions: number[] = [];
 		markers.between(0, state.doc.length, (from) => {
@@ -632,9 +778,32 @@ describe("cue editor placement", () => {
 			positions.push(from);
 		});
 		expect(positions).toEqual([
-			state.doc.line(1).from,
-			state.doc.line(5).from,
+			state.doc.line(2).from,
+			state.doc.line(6).from,
 		]);
+	});
+
+	it("falls anchored card markers back to the heading line without a body line", () => {
+		const state = EditorState.create({ doc: "# Last" });
+		const markers = buildCueGutterMarkers(state, {
+			cues: [
+				{
+					line: 1,
+					heading: "Last",
+					question: "What is last?",
+					keywords: ["last"],
+					confidence: "high",
+					sectionLens: null,
+					error: null,
+				},
+			],
+			display: "anchored-card-rail",
+		});
+		const positions: number[] = [];
+		markers.between(0, state.doc.length, (from) => {
+			positions.push(from);
+		});
+		expect(positions).toEqual([state.doc.line(1).from]);
 	});
 
 	it("marks the active composer card current for the cursor section", () => {
@@ -713,6 +882,79 @@ describe("cue editor placement", () => {
 			positions.push(from);
 		});
 		expect(positions).toEqual([state.doc.line(1).to]);
+	});
+
+	it("keeps the Note Brief visible when Live Preview replaces a leading divider", () => {
+		const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
+			pretendToBeVisual: true,
+		});
+		const previousGlobals = new Map<PropertyKey, PropertyDescriptor | undefined>();
+		const testGlobals: Record<PropertyKey, unknown> = {
+			window: dom.window,
+			document: dom.window.document,
+			navigator: dom.window.navigator,
+			MutationObserver: dom.window.MutationObserver,
+			HTMLElement: dom.window.HTMLElement,
+			Node: dom.window.Node,
+			DOMRect: dom.window.DOMRect,
+			getComputedStyle: dom.window.getComputedStyle.bind(dom.window),
+		};
+		for (const [key, value] of Object.entries(testGlobals)) {
+			previousGlobals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
+			Object.defineProperty(globalThis, key, {
+				configurable: true,
+				value,
+			});
+		}
+
+		const parent = dom.window.document.querySelector("main");
+		if (!(parent instanceof dom.window.HTMLElement)) {
+			throw new Error("Missing editor parent");
+		}
+		let view: EditorView | null = null;
+		try {
+			const doc = "****\n# Terms";
+			const placementState = EditorState.create({ doc });
+			const cueDecorations = buildCueWidgetDecorations(placementState, {
+				cues: [],
+				display: "anchored-card-rail",
+				noteBrief: NOTE_BRIEF,
+			});
+
+			const focusedState = EditorState.create({
+				doc,
+				extensions: [EditorView.decorations.of(cueDecorations)],
+			});
+			view = new EditorView({ state: focusedState, parent });
+			expect(parent.querySelector(".cuecraft-note-brief-editor")).not.toBeNull();
+			view.destroy();
+			view = null;
+			parent.replaceChildren();
+
+			const firstLine = placementState.doc.line(1);
+			const dividerDecorations = Decoration.set([
+				Decoration.replace({ block: true }).range(firstLine.from, firstLine.to),
+			]);
+			const unfocusedState = EditorState.create({
+				doc,
+				extensions: [
+					EditorView.decorations.of(cueDecorations),
+					EditorView.decorations.of(dividerDecorations),
+				],
+			});
+			view = new EditorView({ state: unfocusedState, parent });
+			expect(parent.querySelector(".cuecraft-note-brief-editor")).not.toBeNull();
+		} finally {
+			view?.destroy();
+			dom.window.close();
+			for (const [key, descriptor] of previousGlobals) {
+				if (descriptor) {
+					Object.defineProperty(globalThis, key, descriptor);
+				} else {
+					delete (globalThis as Record<PropertyKey, unknown>)[key];
+				}
+			}
+		}
 	});
 
 	it("omits the Note Brief widget when it is disabled or missing", () => {

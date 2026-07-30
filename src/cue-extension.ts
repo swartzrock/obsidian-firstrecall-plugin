@@ -18,6 +18,7 @@ import { setIcon } from "obsidian";
 import type { NoteCache } from "./cache";
 import {
 	buildEditorHookCard,
+	editorHookTitleDensity,
 	type EditorHookCard,
 	type EditorHookCardOptions,
 	type EditorHookCardState,
@@ -372,6 +373,7 @@ function renderEditorHookElement(
 	root.dataset.cardStyle = card.cardStyle;
 	root.dataset.questionVisible = String(card.showQuestion);
 	root.dataset.supportTermsVisible = String(card.showSupportTerms);
+	root.dataset.space = card.compactForSpace ? "compact" : "normal";
 	if (card.confidence) root.dataset.confidence = card.confidence;
 	if (card.category) {
 		root.dataset.category = card.category;
@@ -418,7 +420,11 @@ function renderEditorHookElement(
 		if (showSectionLabels) appendEditorHookSectionLabel(root, "Terms");
 		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
-		appendCueTerms(keywords, card.keywords);
+		if (card.display === "anchored-card-rail") {
+			appendCueTerms(keywords, card.keywords.slice(0, 4));
+		} else {
+			appendCueTerms(keywords, card.keywords);
+		}
 		root.appendChild(keywords);
 		hasContent = true;
 	}
@@ -507,10 +513,20 @@ const noteBriefCardOrder = [
 
 const noteBriefInsightLabels: Record<(typeof noteBriefCardOrder)[number], string> =
 	{
-		whatMatters: "Core idea",
-		reviewFirst: "Review first",
-		sayItBack: "Self-test",
+		whatMatters: "core idea",
+		reviewFirst: "review first",
+		sayItBack: "self-test",
 	};
+
+function noteBriefTitleWithoutRepeatedLabel(title: string, label: string): string {
+	const trimmedTitle = title.trim();
+	const normalizedTitle = trimmedTitle.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+	const normalizedLabel = label.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+	if (normalizedTitle === normalizedLabel) return "";
+
+	const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	return trimmedTitle.replace(new RegExp(`^${escapedLabel}\\s*[:\\-]\\s*`, "i"), "").trim();
+}
 
 export function renderNoteBriefElement(
 	noteBrief: NoteBriefOutput,
@@ -540,20 +556,24 @@ export function renderNoteBriefElement(
 		cardEl.className = "cuecraft-note-brief-insight";
 		cardEl.dataset.card = key;
 
-		const insightLabel = doc.createElement("div");
-		insightLabel.className = "cuecraft-note-brief-insight-label";
-		insightLabel.textContent = noteBriefInsightLabels[key];
-		cardEl.appendChild(insightLabel);
-
-		const title = doc.createElement("div");
-		title.className = "cuecraft-note-brief-insight-title";
-		title.textContent = card.title;
-		cardEl.appendChild(title);
+		const insightLabel = noteBriefInsightLabels[key];
+		const displayTitle = noteBriefTitleWithoutRepeatedLabel(card.title, insightLabel);
+		if (displayTitle) {
+			const title = doc.createElement("div");
+			title.className = "cuecraft-note-brief-insight-title";
+			title.textContent = displayTitle;
+			cardEl.appendChild(title);
+		}
 
 		const detail = doc.createElement("div");
 		detail.className = "cuecraft-note-brief-insight-detail";
 		detail.textContent = card.detail;
 		cardEl.appendChild(detail);
+
+		const badge = doc.createElement("span");
+		badge.className = "cuecraft-note-brief-insight-badge cuecraft-cue-term";
+		badge.textContent = insightLabel;
+		cardEl.appendChild(badge);
 
 		cards.appendChild(cardEl);
 	}
@@ -616,10 +636,26 @@ function cueDocument(): Document {
 		: activeDocument;
 }
 
+const leadingAsteriskDividerPattern = /^[ ]{0,3}(?:\*[ \t]*){3,}$/;
+
+function noteBriefAnchor(state: EditorState): number {
+	const firstLine = state.doc.line(1);
+	if (!leadingAsteriskDividerPattern.test(firstLine.text)) return firstLine.to;
+	return state.doc.lines > 1 ? state.doc.line(2).from : firstLine.from;
+}
+
 /** Replace all cues currently rendered in the editor. */
 export const setCuesEffect = StateEffect.define<CueEditorRenderState>();
 
 const emptyCueGutterMarkers = RangeSet.of<GutterMarker>([]);
+const compactLineGapByTitleDensity: Record<
+	EditorHookCard["titleDensity"],
+	number
+> = {
+	standard: 6,
+	long: 7,
+	dense: 8,
+};
 
 export function buildCueWidgetDecorations(
 	state: EditorState,
@@ -634,7 +670,7 @@ export function buildCueWidgetDecorations(
 				widget: new NoteBriefWidget(payload.noteBrief),
 				block: true,
 				side: 0,
-			}).range(doc.line(1).to)
+			}).range(noteBriefAnchor(state))
 		);
 	}
 
@@ -670,15 +706,58 @@ export function buildCueGutterMarkers(
 	const options = editorCueRenderOptionsFromPayload(payload);
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
-		const headingLine = doc.line(cue.line);
+		const markerLine = cueGutterMarkerLine(doc, cue.line, payload.display);
 		const cardState = cue.line === currentCueLine ? "current" : "upcoming";
+		const compactForSpace = cueNeedsSpaceCompaction(
+			doc,
+			payload,
+			index,
+			markerLine.number,
+			cue
+		);
+		const markerOptions = compactForSpace
+			? { ...options, showSupportTerms: false, compactForSpace: true }
+			: options;
 		builder.add(
-			headingLine.from,
-			headingLine.from,
-			new CueGutterMarker(cue, payload.display, index, cardState, options)
+			markerLine.from,
+			markerLine.from,
+			new CueGutterMarker(cue, payload.display, index, cardState, markerOptions)
 		);
 	}
 	return builder.finish();
+}
+
+function cueNeedsSpaceCompaction(
+	doc: EditorState["doc"],
+	payload: CueEditorRenderState,
+	index: number,
+	markerLine: number,
+	cue: CueLineData
+): boolean {
+	if (payload.display !== "anchored-card-rail") return false;
+	const nextCue = payload.cues
+		.slice(index + 1)
+		.find((cue) => cue.line >= 1 && cue.line <= doc.lines);
+	if (!nextCue) return false;
+	const nextMarkerLine = cueGutterMarkerLine(
+		doc,
+		nextCue.line,
+		payload.display
+	).number;
+	const titleDensity = editorHookTitleDensity(cue);
+	const maximumLineGap = compactLineGapByTitleDensity[titleDensity];
+	return nextMarkerLine - markerLine <= maximumLineGap;
+}
+
+function cueGutterMarkerLine(
+	doc: EditorState["doc"],
+	cueLine: number,
+	display: EditorCueDisplay
+): ReturnType<EditorState["doc"]["line"]> {
+	if (display === "anchored-card-rail" && cueLine < doc.lines) {
+		return doc.line(cueLine + 1);
+	}
+	return doc.line(cueLine);
 }
 
 function editorCueRenderOptionsFromPayload(
@@ -697,6 +776,7 @@ function editorHookCardOptionsKey(options: CueRenderOptions): string {
 	return [
 		options.showQuestion ?? true,
 		options.showSupportTerms ?? true,
+		options.compactForSpace ?? false,
 		options.cardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
 		options.cueColumnWidth ?? "",
 		options.cueFontSize ?? "",

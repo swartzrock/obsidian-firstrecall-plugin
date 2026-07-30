@@ -1507,9 +1507,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	gap: 0.48em;
 	margin-bottom: 0.35em;
 	color: var(--cc-muted);
-	font-size: var(--font-smallest);
-	font-weight: var(--font-bold);
-	letter-spacing: 0.04em;
+	font-size: 0.7em;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	line-height: 1.1;
 	text-transform: uppercase;
 }
 
@@ -1531,6 +1532,8 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-note-brief-insight {
+	display: flex;
+	flex-direction: column;
 	min-width: 0;
 	padding-inline-start: 0.7em;
 }
@@ -1543,14 +1546,9 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-inline-start: 1px solid var(--cc-border);
 }
 
-.cuecraft-note-brief-insight-label {
-	margin-bottom: 0.35em;
-	color: var(--cc-muted);
-	font-size: var(--font-smallest);
-	font-weight: var(--font-medium);
-	letter-spacing: 0.08em;
-	line-height: 1.1;
-	text-transform: uppercase;
+.cuecraft-note-brief-insight-badge {
+	align-self: flex-start;
+	margin-top: auto;
 }
 
 .cuecraft-note-brief-insight-title {
@@ -1560,7 +1558,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-note-brief-insight-detail {
-	margin-top: 0.25em;
+	margin: 0.25em 0 0.65em;
 	color: var(--cc-muted);
 	font-size: var(--font-smallest);
 	overflow-wrap: anywhere;
@@ -1658,6 +1656,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	box-shadow: var(--cc-shadow);
 }
 
+.cuecraft-editor-hook-anchored-card-rail[data-space="compact"] {
+	padding-bottom: 8px;
+}
+
 .cuecraft-editor-hook-anchored-card-rail[data-tone="cool"] {
 	background: var(--cc-card);
 }
@@ -1684,6 +1686,12 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-weight: var(--font-semibold);
 	line-height: 1.28;
 	overflow-wrap: anywhere;
+}
+
+.cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-title {
+	font-size: 15.5px;
+	font-weight: var(--font-semibold);
+	line-height: 1.34;
 }
 
 .cuecraft-editor-hook-section-label {
@@ -1717,9 +1725,19 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-size: var(--font-ui-smaller);
 }
 
+.cuecraft-editor-hook-anchored-card-rail[data-title-density="long"] .cuecraft-editor-hook-title {
+	font-size: 14px;
+	line-height: 1.28;
+}
+
 .cuecraft-editor-hook[data-title-density="dense"] .cuecraft-editor-hook-title {
 	font-size: var(--font-smallest);
 	line-height: 1.18;
+}
+
+.cuecraft-editor-hook-anchored-card-rail[data-title-density="dense"] .cuecraft-editor-hook-title {
+	font-size: 12.5px;
+	line-height: 1.2;
 }
 
 .cuecraft-editor-hook-keywords,
@@ -1737,6 +1755,19 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.35em;
+}
+
+.cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-keywords {
+	gap: 0.32em;
+	margin-top: 0.42em;
+}
+
+.cuecraft-editor-hook-anchored-card-rail .cuecraft-cue-term {
+	min-height: 18px;
+	padding: 0 0.42rem;
+	color: color-mix(in srgb, var(--cc-muted) 82%, transparent);
+	font-size: 10.75px;
+	line-height: 18px;
 }
 
 .cuecraft-editor-hook .cuecraft-section-lens {
@@ -2231,18 +2262,36 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	}
 }
 
+@media (min-width: 980px) {
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"] .inline-title {
+		transform: translateX(calc(0px - var(--cuecraft-editor-masthead-offset) + var(--cuecraft-editor-page-shift) + var(--cuecraft-editor-masthead-title-inset)));
+	}
+
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"] .cuecraft-note-brief-editor {
+		width: calc(100% + var(--cuecraft-editor-masthead-offset));
+		max-width: none;
+		margin-inline-start: calc(0px - var(--cuecraft-editor-masthead-offset));
+		transform: translateX(calc(0px - var(--cuecraft-editor-masthead-offset)));
+	}
+
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cuecraft-editor-hook-gutter .cuecraft-editor-hook {
+		transform: translateX(calc(-100% + 1rem));
+	}
+}
+
 @media (min-width: 1180px) {
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift {
 		--cuecraft-editor-page-shift: clamp(6.5rem, 11vw, 11rem);
 	}
 
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"] {
+		--cuecraft-editor-masthead-offset: calc(clamp(13.5rem, 19vw, 16rem) + 2.25rem);
+		--cuecraft-editor-masthead-title-inset: 4rem;
+	}
+
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cm-contentContainer {
 		transform: translateX(var(--cuecraft-editor-page-shift));
 		transition: transform 140ms ease;
-	}
-
-	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cuecraft-editor-hook-gutter .cuecraft-editor-hook {
-		transform: translateX(calc(-100% - 0.9rem));
 	}
 
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cuecraft-editor-hook-gutter .cuecraft-editor-hook-anchored-card-rail {
@@ -2268,6 +2317,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 @media (min-width: 980px) and (max-width: 1179.98px) {
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift {
 		--cuecraft-editor-page-shift: clamp(4rem, 8vw, 6rem);
+	}
+
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"] {
+		--cuecraft-editor-masthead-offset: calc(clamp(10rem, 19vw, 13rem) + 1.5rem);
+		--cuecraft-editor-masthead-title-inset: 4rem;
 	}
 
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cm-contentContainer {
