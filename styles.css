@@ -1574,6 +1574,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	margin: 0;
 }
 
+.cuecraft-editor-rail-spacer {
+	display: block;
+	width: 1px;
+	opacity: 0;
+	pointer-events: none;
+	user-select: none;
+}
+
 .cuecraft-editor-hook-inline-fallback {
 	display: none;
 }
