@@ -6,10 +6,24 @@ import {
 	buildCueGutterMarkers,
 	buildCueLineData,
 	buildCueWidgetDecorations,
+	applyRailOverflowMeasurements,
 	cueGutterField,
+	measureRailOverflowCards,
+	railCardCollapsedHeightForAvailable,
+	railCardContentOverflows,
+	RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT,
+	RAIL_CARD_COLLAPSED_MAX_HEIGHT,
+	RAIL_CARD_COLLAPSED_MIN_HEIGHT,
+	RAIL_CARD_TOGGLE_EVENT,
+	buildRailSpacerDecorations,
+	cueRailSpacerField,
+	measureRailSpacerHeights,
+	railSpacerHeightForOverlap,
+	railOverflowUpdateNeedsMeasure,
 	renderNoteBriefElement,
 	renderCueElement,
 	setCuesEffect,
+	setRailSpacersEffect,
 } from "../src/cue-extension";
 import { EDITOR_CUE_DISPLAY_OPTIONS } from "../src/editor-cue-display";
 import { buildNoteCache } from "../src/cache";
@@ -272,6 +286,15 @@ describe("renderCueElement", () => {
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.dataset.confidence).toBe("medium");
 			expect(el.dataset.category).toBe("intervals");
+			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(true);
+			expect(el.dataset.overflowing).toBe("false");
+			expect(
+				el.querySelector(".cuecraft-editor-rail-card-content")
+			).not.toBeNull();
+			expect(
+				el.querySelector<HTMLButtonElement>(".cuecraft-editor-rail-card-toggle")
+					?.hidden
+			).toBe(true);
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(el.querySelector(".cuecraft-section-tag")).toBeNull();
 			expect(
@@ -416,6 +439,8 @@ describe("renderCueElement", () => {
 			expect(el.classList.contains("cuecraft-editor-hook-collapsed-tabs")).toBe(
 				true
 			);
+			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(false);
+			expect(el.querySelector(".cuecraft-editor-rail-card-toggle")).toBeNull();
 			expect(el.dataset.display).toBe("collapsed-tabs");
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.dataset.confidence).toBe("low");
@@ -446,6 +471,7 @@ describe("renderCueElement", () => {
 			expect(
 				el.classList.contains("cuecraft-editor-hook-threaded-margin-notes")
 			).toBe(true);
+			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(true);
 			expect(el.dataset.display).toBe("threaded-margin-notes");
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
@@ -474,6 +500,8 @@ describe("renderCueElement", () => {
 			expect(
 				el.classList.contains("cuecraft-editor-hook-active-section-composer")
 			).toBe(true);
+			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(false);
+			expect(el.querySelector(".cuecraft-editor-rail-card-toggle")).toBeNull();
 			expect(el.dataset.display).toBe("active-section-composer");
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.getAttribute("role")).toBe("note");
@@ -528,6 +556,8 @@ describe("renderCueElement", () => {
 			expect(el.classList.contains("cuecraft-editor-hook-hook-minimap")).toBe(
 				true
 			);
+			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(false);
+			expect(el.querySelector(".cuecraft-editor-rail-card-toggle")).toBeNull();
 			expect(el.dataset.display).toBe("hook-minimap");
 			expect(el.dataset.line).toBe("9");
 			expect(el.dataset.state).toBe("upcoming");
@@ -1015,6 +1045,8 @@ describe("cue editor placement", () => {
 			const el = renderCueElement(cues[0], "cornell");
 			expect(el.classList.contains("cuecraft-editor-hook")).toBe(true);
 			expect(el.classList.contains("cuecraft-editor-cornell-card")).toBe(true);
+			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(true);
+			expect(el.dataset.display).toBe("cornell");
 			expect(el.classList.contains("cuecraft-style-classic")).toBe(true);
 			expect(el.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
 			expect(el.querySelector(".cuecraft-cornell-q")?.textContent).toBe(
@@ -1033,6 +1065,7 @@ describe("cue editor placement", () => {
 		withDocument(() => {
 			const examPrep = renderCueElement(cues[0], "cornell-exam-prep");
 			expect(examPrep.classList.contains("cuecraft-editor-hook")).toBe(true);
+			expect(examPrep.classList.contains("cuecraft-editor-rail-card")).toBe(true);
 			expect(examPrep.classList.contains("cuecraft-style-exam-prep")).toBe(true);
 			expect(examPrep.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
 			expect(examPrep.textContent).toContain("What is A?");
@@ -1042,6 +1075,7 @@ describe("cue editor placement", () => {
 
 			const minimal = renderCueElement(cues[0], "cornell-minimal");
 			expect(minimal.classList.contains("cuecraft-editor-hook")).toBe(true);
+			expect(minimal.classList.contains("cuecraft-editor-rail-card")).toBe(true);
 			expect(minimal.classList.contains("cuecraft-style-minimal")).toBe(true);
 			expect(minimal.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
 			expect(minimal.textContent).toContain("What is A?");
@@ -1062,5 +1096,285 @@ describe("cue editor placement", () => {
 				expect(element.classList.contains("cuecraft-cuefont-large")).toBe(true);
 			}
 		});
+	});
+});
+
+describe("rail card overflow", () => {
+	const cue = {
+		line: 1,
+		heading: "A",
+		question: "What is A?",
+		keywords: ["alpha"],
+		confidence: "high" as const,
+		sectionLens: SECTION_LENS,
+		error: null,
+	};
+
+	it("clamps collapsed height to the next section gap with a fallback", () => {
+		expect(railCardCollapsedHeightForAvailable(null)).toBe(
+			RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT
+		);
+		expect(railCardCollapsedHeightForAvailable(Number.NaN)).toBe(
+			RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT
+		);
+		expect(railCardCollapsedHeightForAvailable(60)).toBe(
+			RAIL_CARD_COLLAPSED_MIN_HEIGHT
+		);
+		expect(railCardCollapsedHeightForAvailable(220)).toBe(208);
+		expect(railCardCollapsedHeightForAvailable(999)).toBe(
+			RAIL_CARD_COLLAPSED_MAX_HEIGHT
+		);
+	});
+
+	it("uses a small tolerance when deciding whether content overflows", () => {
+		expect(railCardContentOverflows(178, 176)).toBe(true);
+		expect(railCardContentOverflows(177, 176)).toBe(false);
+		expect(railCardContentOverflows(176, 176)).toBe(false);
+	});
+
+	it("measures rail card content against the next card position", () => {
+		withDocument(() => {
+			const root = document.createElement("div");
+			const first = document.createElement("div");
+			first.className = "cuecraft-editor-rail-card";
+			const firstContent = document.createElement("div");
+			firstContent.className = "cuecraft-editor-rail-card-content";
+			const firstToggle = document.createElement("button");
+			firstToggle.className = "cuecraft-editor-rail-card-toggle";
+			firstToggle.hidden = true;
+			first.append(firstContent, firstToggle);
+			Object.defineProperty(firstContent, "scrollHeight", {
+				configurable: true,
+				value: 260,
+			});
+			first.getBoundingClientRect = () =>
+				({ top: 10 }) as DOMRect;
+
+			const second = document.createElement("div");
+			second.className = "cuecraft-editor-rail-card";
+			const secondContent = document.createElement("div");
+			secondContent.className = "cuecraft-editor-rail-card-content";
+			const secondToggle = document.createElement("button");
+			secondToggle.className = "cuecraft-editor-rail-card-toggle";
+			secondToggle.hidden = true;
+			second.append(secondContent, secondToggle);
+			Object.defineProperty(secondContent, "scrollHeight", {
+				configurable: true,
+				value: 80,
+			});
+			second.getBoundingClientRect = () =>
+				({ top: 210 }) as DOMRect;
+			root.append(first, second);
+
+			const measurements = measureRailOverflowCards(root);
+			expect(measurements).toHaveLength(2);
+			expect(measurements[0]).toMatchObject({
+				card: first,
+				collapsedHeight: 188,
+				overflowing: true,
+			});
+			expect(measurements[1]).toMatchObject({
+				card: second,
+				collapsedHeight: RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT,
+				overflowing: false,
+			});
+
+			applyRailOverflowMeasurements(measurements);
+			expect(first.dataset.overflowing).toBe("true");
+			expect(first.style.getPropertyValue("--cuecraft-rail-collapsed-max-height")).toBe(
+				"188px"
+			);
+			expect(firstToggle.hidden).toBe(false);
+			expect(second.dataset.overflowing).toBe("false");
+			expect(secondToggle.hidden).toBe(true);
+		});
+	});
+
+	it("toggles overflowing rail cards between collapsed and expanded states", () => {
+		withDocument(() => {
+			const el = renderCueElement(cue, "anchored-card-rail");
+			const toggle = el.querySelector<HTMLButtonElement>(
+				".cuecraft-editor-rail-card-toggle"
+			);
+			expect(toggle).not.toBeNull();
+			el.dataset.overflowing = "true";
+			toggle!.hidden = false;
+
+			toggle!.click();
+			expect(el.dataset.expanded).toBe("true");
+			expect(toggle!.textContent).toBe("Show less");
+			expect(toggle!.getAttribute("aria-expanded")).toBe("true");
+
+			toggle!.click();
+			expect(el.dataset.expanded).toBe("false");
+			expect(toggle!.textContent).toBe("Show more");
+			expect(toggle!.getAttribute("aria-expanded")).toBe("false");
+		});
+	});
+
+	it("does not add rail overflow controls to inline cues", () => {
+		withDocument(() => {
+			const el = renderCueElement(cue, "inline-cues");
+			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(false);
+			expect(el.querySelector(".cuecraft-editor-rail-card-content")).toBeNull();
+			expect(el.querySelector(".cuecraft-editor-rail-card-toggle")).toBeNull();
+		});
+	});
+});
+
+describe("rail spacers", () => {
+	const cues = [
+		{
+			line: 1,
+			heading: "A",
+			question: "What is A?",
+			keywords: ["alpha"],
+			confidence: "high" as const,
+			sectionLens: SECTION_LENS,
+			error: null,
+		},
+		{
+			line: 3,
+			heading: "B",
+			question: "What is B?",
+			keywords: ["beta"],
+			confidence: "medium" as const,
+			sectionLens: SECTION_LENS,
+			error: null,
+		},
+	];
+
+	it("calculates stable spacer height from overlap and existing spacer", () => {
+		expect(railSpacerHeightForOverlap(200, 120, 0)).toBe(92);
+		expect(railSpacerHeightForOverlap(200, 212, 92)).toBe(92);
+		expect(railSpacerHeightForOverlap(120, 200, 0)).toBe(0);
+		expect(railSpacerHeightForOverlap(0, 120, 0)).toBe(0);
+	});
+
+	it("measures desired spacers before the next rail card line", () => {
+		withDocument(() => {
+			const root = document.createElement("div");
+			const first = document.createElement("div");
+			first.className = "cuecraft-editor-rail-card";
+			first.dataset.line = "1";
+			first.getBoundingClientRect = () =>
+				({ top: 10, height: 200 }) as DOMRect;
+
+			const second = document.createElement("div");
+			second.className = "cuecraft-editor-rail-card";
+			second.dataset.line = "3";
+			second.getBoundingClientRect = () =>
+				({ top: 130, height: 90 }) as DOMRect;
+			root.append(first, second);
+
+			expect(Array.from(measureRailSpacerHeights(root))).toEqual([[3, 92]]);
+
+			second.getBoundingClientRect = () =>
+				({ top: 222, height: 90 }) as DOMRect;
+			expect(
+				Array.from(measureRailSpacerHeights(root, new Map([[3, 92]])))
+			).toEqual([[3, 92]]);
+
+			second.getBoundingClientRect = () =>
+				({ top: 230, height: 90 }) as DOMRect;
+			expect(Array.from(measureRailSpacerHeights(root))).toEqual([]);
+		});
+	});
+
+	it("builds invisible block spacer widgets for rail displays only", () => {
+		withDocument(() => {
+			const state = EditorState.create({ doc: NOTE });
+			const railDecorations = buildRailSpacerDecorations(
+				state,
+				{ cues, display: "anchored-card-rail" },
+				new Map([[3, 42]])
+			);
+			const positions: number[] = [];
+			const spacerHeights: string[] = [];
+			railDecorations.between(0, state.doc.length, (from, _to, value) => {
+				positions.push(from);
+				const widget = (value.spec as { widget: { toDOM(): HTMLElement } }).widget;
+				spacerHeights.push(widget.toDOM().style.height);
+			});
+			expect(positions).toEqual([state.doc.line(3).from]);
+			expect(spacerHeights).toEqual(["42px"]);
+
+			const inlineDecorations = buildRailSpacerDecorations(
+				state,
+				{ cues, display: "inline-cues" },
+				new Map([[3, 42]])
+			);
+			const inlinePositions: number[] = [];
+			inlineDecorations.between(0, state.doc.length, (from) => {
+				inlinePositions.push(from);
+			});
+			expect(inlinePositions).toEqual([]);
+		});
+	});
+
+	it("keeps spacer lines attached when edits move headings down", () => {
+		let state = EditorState.create({
+			doc: NOTE,
+			extensions: [cueRailSpacerField],
+		});
+		state = state.update({
+			effects: setCuesEffect.of({
+				cues,
+				display: "anchored-card-rail",
+			}),
+		}).state;
+		state = state.update({
+			effects: setRailSpacersEffect.of(new Map([[3, 42]])),
+		}).state;
+		state = state.update({
+			changes: {
+				from: state.doc.line(3).from,
+				insert: "\n\n",
+			},
+		}).state;
+
+		const positions: number[] = [];
+		state.field(cueRailSpacerField).decorations.between(
+			0,
+			state.doc.length,
+			(from) => {
+				positions.push(from);
+			}
+		);
+		expect(positions).toEqual([state.doc.line(5).from]);
+	});
+
+	it("dispatches a rail toggle event after Show more changes expansion state", () => {
+		withDocument(() => {
+			const el = renderCueElement(cues[0], "anchored-card-rail");
+			const events: string[] = [];
+			el.addEventListener(RAIL_CARD_TOGGLE_EVENT, () => {
+				events.push("toggle");
+			});
+			const toggle = el.querySelector<HTMLButtonElement>(
+				".cuecraft-editor-rail-card-toggle"
+			);
+			expect(toggle).not.toBeNull();
+			toggle!.hidden = false;
+			toggle!.click();
+
+			expect(el.dataset.expanded).toBe("true");
+			expect(events).toEqual(["toggle"]);
+		});
+	});
+
+	it("requests another measurement after spacer decorations are applied", () => {
+		const state = EditorState.create({ doc: NOTE });
+		const transaction = state.update({
+			effects: setRailSpacersEffect.of(new Map([[3, 120]])),
+		});
+		expect(
+			railOverflowUpdateNeedsMeasure({
+				docChanged: false,
+				viewportChanged: false,
+				selectionSet: false,
+				transactions: [transaction],
+			} as Parameters<typeof railOverflowUpdateNeedsMeasure>[0])
+		).toBe(true);
 	});
 });

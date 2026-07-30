@@ -1629,6 +1629,88 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	content: none;
 }
 
+.cuecraft-editor-rail-card {
+	--cuecraft-rail-collapsed-max-height: 176px;
+	--cuecraft-rail-fade-background: var(--background-secondary);
+	position: relative;
+}
+
+.cuecraft-editor-rail-card-content {
+	position: relative;
+}
+
+.cuecraft-editor-rail-card[data-overflowing="true"][data-expanded="false"]
+	.cuecraft-editor-rail-card-content {
+	max-height: var(--cuecraft-rail-collapsed-max-height);
+	overflow: hidden;
+	padding-bottom: 2.2rem;
+}
+
+.cuecraft-editor-rail-card[data-overflowing="true"][data-expanded="false"]
+	.cuecraft-editor-rail-card-content::after {
+	content: "";
+	position: absolute;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	height: 2.35rem;
+	pointer-events: none;
+	background: linear-gradient(
+		to bottom,
+		transparent,
+		var(--cuecraft-rail-fade-background)
+	);
+}
+
+.cuecraft-editor-rail-card[data-expanded="true"]
+	.cuecraft-editor-rail-card-content {
+	max-height: none;
+	overflow: visible;
+}
+
+.cuecraft-editor-rail-card-toggle {
+	position: relative;
+	z-index: 3;
+	display: none;
+	margin: 0.55em 0 0;
+	padding: 0.24em 0.68em;
+	border: 1px solid
+		color-mix(in srgb, var(--interactive-accent) 28%, transparent);
+	border-radius: var(--radius-s);
+	background: color-mix(
+		in srgb,
+		var(--background-primary) 90%,
+		var(--interactive-accent)
+	);
+	color: var(--interactive-accent);
+	cursor: pointer;
+	font-size: var(--font-smallest);
+	font-weight: var(--font-semibold);
+	line-height: 1.2;
+	box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
+}
+
+.cuecraft-editor-rail-card[data-overflowing="true"]
+	> .cuecraft-editor-rail-card-toggle:not([hidden]) {
+	display: inline-flex;
+}
+
+.cuecraft-editor-rail-card[data-overflowing="true"][data-expanded="false"]
+	> .cuecraft-editor-rail-card-toggle:not([hidden]) {
+	position: absolute;
+	inset-block-end: 0.45em;
+	inset-inline-start: 0.65em;
+	margin: 0;
+}
+
+.cuecraft-editor-rail-spacer {
+	display: block;
+	width: 1px;
+	opacity: 0;
+	pointer-events: none;
+	user-select: none;
+}
+
 .cuecraft-editor-hook-inline-fallback {
 	display: none;
 }
@@ -1644,6 +1726,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-editor-hook-anchored-card-rail {
+	--cuecraft-rail-fade-background: var(--cc-card);
 	position: relative;
 	max-width: min(16.75rem, 100%);
 	margin: 0.45em 0 0.75em;
@@ -1661,10 +1744,12 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-editor-hook-anchored-card-rail[data-tone="cool"] {
+	--cuecraft-rail-fade-background: var(--cc-card);
 	background: var(--cc-card);
 }
 
 .cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"] {
+	--cuecraft-rail-fade-background: var(--cc-card);
 	border-color: var(--cc-border);
 	background: var(--cc-card);
 	box-shadow: var(--cc-shadow);
@@ -1854,6 +1939,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-editor-hook-threaded-margin-notes {
 	--cuecraft-thread-color: var(--interactive-accent);
+	--cuecraft-rail-fade-background: color-mix(
+		in srgb,
+		var(--background-secondary) 88%,
+		transparent
+	);
 	position: relative;
 	max-width: min(20rem, 100%);
 	margin: 0.25em 0 0.85em;

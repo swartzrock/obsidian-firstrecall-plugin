@@ -10,10 +10,11 @@ import {
 	Decoration,
 	EditorView,
 	GutterMarker,
+	ViewPlugin,
 	WidgetType,
 	gutter,
 } from "@codemirror/view";
-import type { DecorationSet } from "@codemirror/view";
+import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { setIcon } from "obsidian";
 import type { NoteCache } from "./cache";
 import {
@@ -81,6 +82,14 @@ interface CueRenderOptions extends EditorHookCardOptions {
 	cueColumnWidth?: CueColumnWidth;
 	cueFontSize?: CueFontSize;
 }
+
+export const RAIL_CARD_COLLAPSED_MIN_HEIGHT = 112;
+export const RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT = 176;
+export const RAIL_CARD_COLLAPSED_MAX_HEIGHT = 288;
+const RAIL_CARD_SECTION_GAP = 12;
+const RAIL_CARD_OVERFLOW_TOLERANCE = 1;
+const RAIL_CARD_SPACER_TOLERANCE = 1;
+export const RAIL_CARD_TOGGLE_EVENT = "cuecraft-rail-card-toggle";
 
 /**
  * Resolve a cache's cues to current document lines. Cues are matched to the
@@ -181,6 +190,28 @@ class NoteBriefWidget extends WidgetType {
 	}
 }
 
+class RailSpacerWidget extends WidgetType {
+	constructor(private readonly height: number) {
+		super();
+	}
+
+	eq(other: RailSpacerWidget): boolean {
+		return other.height === this.height;
+	}
+
+	toDOM(): HTMLElement {
+		const element = cueDocument().createElement("div");
+		element.className = "cuecraft-editor-rail-spacer";
+		element.setAttribute("aria-hidden", "true");
+		element.style.height = `${this.height}px`;
+		return element;
+	}
+
+	ignoreEvent(): boolean {
+		return true;
+	}
+}
+
 class CueGutterMarker extends GutterMarker {
 	constructor(
 		private readonly cue: CueLineData,
@@ -229,7 +260,7 @@ export function renderCueElement(
 ): HTMLElement {
 	const cornellStyle = cornellEditorDisplayStyle(display);
 	if (cornellStyle) {
-		return renderCornellCueElement(cue, cornellStyle, state, options);
+		return renderCornellCueElement(cue, display, cornellStyle, state, options);
 	}
 	if (!isInlineEditorDisplay(display)) {
 		return renderEditorHookElement(
@@ -242,6 +273,7 @@ export function renderCueElement(
 
 function renderCornellCueElement(
 	cue: CueLineData,
+	display: EditorCueDisplay,
 	style: CornellStyle,
 	state: EditorHookCardState,
 	options: CueRenderOptions = {}
@@ -255,6 +287,10 @@ function renderCornellCueElement(
 		"cuecraft-cornell",
 		cornellStyleClass(style),
 	].join(" ");
+	root.tabIndex = 0;
+	root.setAttribute("role", "note");
+	root.dataset.display = display;
+	root.dataset.line = String(cue.line);
 	root.dataset.state = state;
 	root.dataset.questionVisible = String(options.showQuestion ?? true);
 	root.dataset.supportTermsVisible = String(options.showSupportTerms ?? true);
@@ -271,7 +307,7 @@ function renderCornellCueElement(
 		q.className = "cuecraft-cornell-q";
 		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
 		card.appendChild(q);
-		return root;
+		return finalizeRailOverflowCard(root);
 	}
 
 	if (cue.confidence) {
@@ -303,7 +339,7 @@ function renderCornellCueElement(
 		card.appendChild(kw);
 	}
 
-	return root;
+	return finalizeRailOverflowCard(root);
 }
 
 function renderInlineCueElement(
@@ -404,7 +440,9 @@ function renderEditorHookElement(
 		error.className = "cuecraft-editor-hook-status";
 		error.textContent = "Generation failed - regenerate";
 		root.appendChild(error);
-		return root;
+		return railOverflowAppliesToDisplay(card.display)
+			? finalizeRailOverflowCard(root)
+			: root;
 	}
 
 	const showSectionLens = card.display !== "anchored-card-rail";
@@ -429,7 +467,9 @@ function renderEditorHookElement(
 		hasContent = true;
 	}
 	if (!hasContent) root.classList.add("cuecraft-editor-hook-empty");
-	return root;
+	return railOverflowAppliesToDisplay(card.display)
+		? finalizeRailOverflowCard(root)
+		: root;
 }
 
 function appendCueSectionLabel(parent: HTMLElement, label: string): void {
@@ -489,6 +529,197 @@ function appendSectionTag(parent: HTMLElement, category: CueCategory): void {
 	label.textContent = `#${category}`;
 	tag.appendChild(label);
 	parent.appendChild(tag);
+}
+
+function railOverflowAppliesToDisplay(display: EditorCueDisplay): boolean {
+	return (
+		display === "anchored-card-rail" ||
+		display === "threaded-margin-notes" ||
+		cornellEditorDisplayStyle(display) !== null
+	);
+}
+
+function finalizeRailOverflowCard(root: HTMLElement): HTMLElement {
+	root.classList.add("cuecraft-editor-rail-card");
+	root.dataset.overflowing = "false";
+	root.dataset.expanded = "false";
+
+	const doc = root.ownerDocument;
+	const content = doc.createElement("div");
+	content.className = "cuecraft-editor-rail-card-content";
+	while (root.firstChild) {
+		content.appendChild(root.firstChild);
+	}
+	root.appendChild(content);
+
+	const toggle = doc.createElement("button");
+	toggle.type = "button";
+	toggle.className = "cuecraft-editor-rail-card-toggle";
+	toggle.textContent = "Show more";
+	toggle.setAttribute("aria-expanded", "false");
+	toggle.hidden = true;
+	toggle.addEventListener("click", (event) => {
+		event.preventDefault();
+		event.stopPropagation();
+		setRailCardExpanded(root, toggle, root.dataset.expanded !== "true");
+		dispatchRailCardToggleEvent(root);
+	});
+	root.appendChild(toggle);
+
+	return root;
+}
+
+function setRailCardExpanded(
+	card: HTMLElement,
+	toggle: HTMLButtonElement,
+	expanded: boolean
+): void {
+	card.dataset.expanded = String(expanded);
+	toggle.textContent = expanded ? "Show less" : "Show more";
+	toggle.setAttribute("aria-expanded", String(expanded));
+}
+
+function dispatchRailCardToggleEvent(card: HTMLElement): void {
+	const CustomEventCtor = card.ownerDocument.defaultView?.CustomEvent;
+	if (!CustomEventCtor) return;
+	card.dispatchEvent(
+		new CustomEventCtor(RAIL_CARD_TOGGLE_EVENT, { bubbles: true })
+	);
+}
+
+export function railCardCollapsedHeightForAvailable(
+	availableHeight: number | null | undefined
+): number {
+	if (typeof availableHeight !== "number" || !Number.isFinite(availableHeight)) {
+		return RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT;
+	}
+	const usableHeight = Math.floor(availableHeight - RAIL_CARD_SECTION_GAP);
+	return Math.max(
+		RAIL_CARD_COLLAPSED_MIN_HEIGHT,
+		Math.min(RAIL_CARD_COLLAPSED_MAX_HEIGHT, usableHeight)
+	);
+}
+
+export function railCardContentOverflows(
+	contentHeight: number,
+	collapsedHeight: number
+): boolean {
+	return contentHeight > collapsedHeight + RAIL_CARD_OVERFLOW_TOLERANCE;
+}
+
+export interface RailOverflowMeasurement {
+	card: HTMLElement;
+	collapsedHeight: number;
+	overflowing: boolean;
+}
+
+export function measureRailOverflowCards(
+	root: ParentNode
+): RailOverflowMeasurement[] {
+	const cards = railCardsIn(root);
+	return cards.map((card, index) => {
+		const nextCard = cards[index + 1];
+		const cardTop = card.getBoundingClientRect().top;
+		const nextCardTop = nextCard?.getBoundingClientRect().top;
+		const availableHeight =
+			typeof nextCardTop === "number" ? nextCardTop - cardTop : null;
+		const collapsedHeight =
+			railCardCollapsedHeightForAvailable(availableHeight);
+		const content = card.querySelector<HTMLElement>(
+			":scope > .cuecraft-editor-rail-card-content"
+		);
+		const contentHeight = content?.scrollHeight ?? card.scrollHeight;
+		return {
+			card,
+			collapsedHeight,
+			overflowing: railCardContentOverflows(contentHeight, collapsedHeight),
+		};
+	});
+}
+
+function railCardsIn(root: ParentNode): HTMLElement[] {
+	const rootElement = root as Element;
+	return [
+		...(rootElement.matches?.(".cuecraft-editor-rail-card")
+			? [rootElement as HTMLElement]
+			: []),
+		...Array.from(
+			root.querySelectorAll<HTMLElement>(".cuecraft-editor-rail-card")
+		),
+	];
+}
+
+export function railSpacerHeightForOverlap(
+	cardHeight: number,
+	distanceToNextCard: number,
+	currentSpacerHeight = 0
+): number {
+	if (
+		!Number.isFinite(cardHeight) ||
+		!Number.isFinite(distanceToNextCard) ||
+		cardHeight <= 0 ||
+		distanceToNextCard <= 0
+	) {
+		return 0;
+	}
+	const desiredHeight = Math.ceil(
+		Math.max(0, currentSpacerHeight) +
+			cardHeight +
+			RAIL_CARD_SECTION_GAP -
+			distanceToNextCard
+	);
+	return desiredHeight > RAIL_CARD_SPACER_TOLERANCE ? desiredHeight : 0;
+}
+
+export function measureRailSpacerHeights(
+	root: ParentNode,
+	currentSpacers: ReadonlyMap<number, number> = emptyRailSpacerMap
+): Map<number, number> {
+	const cards = railCardsIn(root);
+	const spacers = new Map<number, number>();
+	for (const [index, card] of cards.entries()) {
+		const nextCard = cards[index + 1];
+		if (!nextCard) continue;
+		const nextLine = railCardLine(nextCard);
+		if (nextLine === null) continue;
+		const cardRect = card.getBoundingClientRect();
+		const nextRect = nextCard.getBoundingClientRect();
+		const spacerHeight = railSpacerHeightForOverlap(
+			cardRect.height,
+			nextRect.top - cardRect.top,
+			currentSpacers.get(nextLine) ?? 0
+		);
+		if (spacerHeight > 0) {
+			spacers.set(nextLine, spacerHeight);
+		}
+	}
+	return spacers;
+}
+
+function railCardLine(card: HTMLElement): number | null {
+	const line = Number(card.dataset.line);
+	return Number.isInteger(line) && line > 0 ? line : null;
+}
+
+export function applyRailOverflowMeasurements(
+	measurements: readonly RailOverflowMeasurement[]
+): void {
+	for (const measurement of measurements) {
+		const { card, collapsedHeight, overflowing } = measurement;
+		card.style.setProperty(
+			"--cuecraft-rail-collapsed-max-height",
+			`${collapsedHeight}px`
+		);
+		card.dataset.overflowing = String(overflowing);
+		const toggle = card.querySelector<HTMLButtonElement>(
+			":scope > .cuecraft-editor-rail-card-toggle"
+		);
+		if (!toggle) continue;
+		toggle.hidden = !overflowing;
+		if (!overflowing) {
+			setRailCardExpanded(card, toggle, false);
+		}
+	}
 }
 
 function appendEditorHookSectionLabel(
@@ -646,6 +877,8 @@ function noteBriefAnchor(state: EditorState): number {
 
 /** Replace all cues currently rendered in the editor. */
 export const setCuesEffect = StateEffect.define<CueEditorRenderState>();
+export const setRailSpacersEffect =
+	StateEffect.define<ReadonlyMap<number, number>>();
 
 const emptyCueGutterMarkers = RangeSet.of<GutterMarker>([]);
 const compactLineGapByTitleDensity: Record<
@@ -656,6 +889,7 @@ const compactLineGapByTitleDensity: Record<
 	long: 7,
 	dense: 8,
 };
+const emptyRailSpacerMap = new Map<number, number>();
 
 export function buildCueWidgetDecorations(
 	state: EditorState,
@@ -760,6 +994,29 @@ function cueGutterMarkerLine(
 	return doc.line(cueLine);
 }
 
+export function buildRailSpacerDecorations(
+	state: EditorState,
+	payload: CueEditorRenderState | null,
+	spacers: ReadonlyMap<number, number>
+): DecorationSet {
+	if (!payload || !railOverflowAppliesToDisplay(payload.display)) {
+		return Decoration.none;
+	}
+	const ranges: Range<Decoration>[] = [];
+	for (const [line, height] of spacers.entries()) {
+		if (height <= RAIL_CARD_SPACER_TOLERANCE) continue;
+		if (line < 1 || line > state.doc.lines) continue;
+		ranges.push(
+			Decoration.widget({
+				widget: new RailSpacerWidget(Math.ceil(height)),
+				block: true,
+				side: -1,
+			}).range(state.doc.line(line).from)
+		);
+	}
+	return ranges.length ? Decoration.set(ranges, true) : Decoration.none;
+}
+
 function editorCueRenderOptionsFromPayload(
 	payload: CueEditorRenderState
 ): CueRenderOptions {
@@ -848,6 +1105,45 @@ function mapCueLineThroughChanges(line: number, tr: Transaction): number {
 	return tr.state.doc.lineAt(boundedPos).number;
 }
 
+function mapRailSpacersThroughChanges(
+	spacers: ReadonlyMap<number, number>,
+	tr: Transaction
+): Map<number, number> {
+	if (!tr.docChanged || spacers.size === 0) return new Map(spacers);
+	const mapped = new Map<number, number>();
+	for (const [line, height] of spacers.entries()) {
+		const nextLine = mapCueLineThroughChanges(line, tr);
+		const previous = mapped.get(nextLine) ?? 0;
+		mapped.set(nextLine, Math.max(previous, height));
+	}
+	return mapped;
+}
+
+function normalizeRailSpacers(
+	spacers: ReadonlyMap<number, number>
+): Map<number, number> {
+	const normalized = new Map<number, number>();
+	for (const [line, height] of spacers.entries()) {
+		if (!Number.isInteger(line) || line < 1) continue;
+		if (!Number.isFinite(height) || height <= RAIL_CARD_SPACER_TOLERANCE) {
+			continue;
+		}
+		normalized.set(line, Math.ceil(height));
+	}
+	return normalized;
+}
+
+function railSpacerMapsEqual(
+	a: ReadonlyMap<number, number>,
+	b: ReadonlyMap<number, number>
+): boolean {
+	if (a.size !== b.size) return false;
+	for (const [line, height] of a.entries()) {
+		if (b.get(line) !== height) return false;
+	}
+	return true;
+}
+
 export const cueField = StateField.define<DecorationSet>({
 	create() {
 		return Decoration.none;
@@ -863,6 +1159,69 @@ export const cueField = StateField.define<DecorationSet>({
 		return next;
 	},
 	provide: (f) => EditorView.decorations.from(f),
+});
+
+export interface CueRailSpacerState {
+	decorations: DecorationSet;
+	payload: CueEditorRenderState | null;
+	spacers: ReadonlyMap<number, number>;
+}
+
+export const cueRailSpacerField = StateField.define<CueRailSpacerState>({
+	create() {
+		return {
+			decorations: Decoration.none,
+			payload: null,
+			spacers: emptyRailSpacerMap,
+		};
+	},
+	update(value, tr) {
+		let payload = value.payload;
+		let spacers = value.spacers;
+		let rebuild = false;
+
+		for (const effect of tr.effects) {
+			if (effect.is(setCuesEffect)) {
+				payload = effect.value;
+				spacers = emptyRailSpacerMap;
+				rebuild = true;
+			}
+			if (effect.is(setRailSpacersEffect)) {
+				spacers = normalizeRailSpacers(effect.value);
+				rebuild = true;
+			}
+		}
+
+		if (!payload) {
+			return {
+				decorations: Decoration.none,
+				payload,
+				spacers: emptyRailSpacerMap,
+			};
+		}
+
+		if (tr.docChanged) {
+			payload = mapCuePayloadThroughChanges(payload, tr);
+			spacers = mapRailSpacersThroughChanges(spacers, tr);
+			rebuild = true;
+		}
+
+		if (!railOverflowAppliesToDisplay(payload.display)) {
+			return {
+				decorations: Decoration.none,
+				payload,
+				spacers: emptyRailSpacerMap,
+			};
+		}
+
+		if (!rebuild) return value;
+		return {
+			decorations: buildRailSpacerDecorations(tr.state, payload, spacers),
+			payload,
+			spacers,
+		};
+	},
+	provide: (f) => EditorView.decorations.from(f, (value) => value.decorations),
 });
 
 interface CueGutterState {
@@ -905,5 +1264,85 @@ const cueGutter = gutter({
 	markers: (view) => view.state.field(cueGutterField).markers,
 });
 
+function scheduleRailOverflowMeasure(view: EditorView): void {
+	if (!viewHasRailOverflowCards(view)) return;
+	const currentSpacers =
+		view.state.field(cueRailSpacerField, false)?.spacers ??
+		emptyRailSpacerMap;
+	view.requestMeasure({
+		read: () => ({
+			overflow: measureRailOverflowCards(view.dom),
+			spacers: measureRailSpacerHeights(view.dom, currentSpacers),
+		}),
+		write: (measurements) => {
+			applyRailOverflowMeasurements(measurements.overflow);
+			const latestSpacers =
+				view.state.field(cueRailSpacerField, false)?.spacers ??
+				emptyRailSpacerMap;
+			if (!railSpacerMapsEqual(latestSpacers, measurements.spacers)) {
+				view.dispatch({
+					effects: setRailSpacersEffect.of(measurements.spacers),
+				});
+			}
+		},
+	});
+}
+
+function viewHasRailOverflowCards(view: EditorView): boolean {
+	const cueGutterState = view.state.field(cueGutterField, false);
+	return cueGutterState?.payload
+		? railOverflowAppliesToDisplay(cueGutterState.payload.display)
+		: false;
+}
+
+const cueRailOverflowPlugin = ViewPlugin.fromClass(
+	class {
+		private readonly onRailCardToggle = () => {
+			scheduleRailOverflowMeasure(this.view);
+		};
+
+		constructor(private readonly view: EditorView) {
+			view.dom.ownerDocument.addEventListener(
+				RAIL_CARD_TOGGLE_EVENT,
+				this.onRailCardToggle
+			);
+			scheduleRailOverflowMeasure(view);
+		}
+
+		update(update: ViewUpdate): void {
+			if (railOverflowUpdateNeedsMeasure(update)) {
+				scheduleRailOverflowMeasure(this.view);
+			}
+		}
+
+		destroy(): void {
+			this.view.dom.ownerDocument.removeEventListener(
+				RAIL_CARD_TOGGLE_EVENT,
+				this.onRailCardToggle
+			);
+		}
+	}
+);
+
+export function railOverflowUpdateNeedsMeasure(update: ViewUpdate): boolean {
+	return (
+		update.docChanged ||
+		update.viewportChanged ||
+		update.selectionSet ||
+		update.transactions.some((tr) =>
+			tr.effects.some(
+				(effect) =>
+					effect.is(setCuesEffect) || effect.is(setRailSpacersEffect)
+			)
+		)
+	);
+}
+
 /** Editor extension that renders CueCraft cues. Register via registerEditorExtension. */
-export const cueEditorExtension = [cueField, cueGutterField, cueGutter];
+export const cueEditorExtension = [
+	cueField,
+	cueRailSpacerField,
+	cueGutterField,
+	cueGutter,
+	cueRailOverflowPlugin,
+];
