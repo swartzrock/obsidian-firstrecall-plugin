@@ -671,7 +671,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const svgEl = activeDocument.createElementNS(SVG_NS, "svg");
 		svgEl.setAttribute("viewBox", definition.icon.viewBox);
 		svgEl.setAttribute("fill", "currentColor");
-		svgEl.setAttribute("stroke", "currentColor");
 		svgEl.setAttribute("focusable", "false");
 		for (const match of definition.icon.svg.matchAll(/<path\s+([^>]*)\/?>/g)) {
 			const pathEl = activeDocument.createElementNS(SVG_NS, "path");

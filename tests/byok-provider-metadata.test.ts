@@ -16,7 +16,7 @@ describe("CueCraft BYOK provider metadata", () => {
 		);
 	});
 
-	it("uses supplied icons and documents providers still using fallbacks", () => {
+	it("uses a supplied icon for every provider", () => {
 		for (const provider of Object.keys(BYOK_PROVIDER_ICONS)) {
 			expect(byokProviderDefinition(provider as ByokProviderId).icon).toBe(
 				BYOK_PROVIDER_ICONS[
@@ -28,7 +28,7 @@ describe("CueCraft BYOK provider metadata", () => {
 			BYOK_PROVIDER_IDS.filter(
 				(provider) => !(provider in BYOK_PROVIDER_ICONS)
 			)
-		).toEqual(["groq", "mistral", "deepseek", "deepinfra"]);
+		).toEqual([]);
 	});
 
 	it.each([
