@@ -2,10 +2,10 @@ import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
 
 const byokRuntimeMain = fileURLToPath(
-	new URL("./node_modules/@swartzrock/byok-runtime/src/index.ts", import.meta.url)
+	new URL("./node_modules/@swartzrock/byok-runtime/dist/index.js", import.meta.url)
 );
 const byokRuntimeNode = fileURLToPath(
-	new URL("./node_modules/@swartzrock/byok-runtime/src/node.ts", import.meta.url)
+	new URL("./node_modules/@swartzrock/byok-runtime/dist/node.js", import.meta.url)
 );
 const obsidianMock = fileURLToPath(new URL("./tests/mocks/obsidian.ts", import.meta.url));
 

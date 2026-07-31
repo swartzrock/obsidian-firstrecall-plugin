@@ -267,12 +267,24 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		"google",
 		"xai",
 		"openrouter",
+		"groq",
+		"mistral",
+		"deepseek",
+		"deepinfra",
 		"lm-studio",
 		"codex-cli",
 		"claude-cli",
 	] as const)("creates a BYOK runtime for %s", (provider) => {
+		const providerSettings = settings({ provider });
+		if (
+			["groq", "mistral", "deepseek", "deepinfra"].includes(provider)
+		) {
+			const stored = cueCraftProviderSettings(providerSettings, provider);
+			stored.credential = "test-key";
+			stored.model = "test-model";
+		}
 		expect(
-			makeCueCraftByokProvider(settings({ provider }), { fetchImpl, http }).id
+			makeCueCraftByokProvider(providerSettings, { fetchImpl, http }).id
 		).toBe(provider);
 	});
 

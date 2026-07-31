@@ -1,7 +1,6 @@
 import {
 	BYOK_PROVIDER_IDS,
 	ByokProviderError,
-	byokProviderDefinition,
 	listModels,
 	normalizeProviderId,
 	type ByokHttpClient,
@@ -18,6 +17,7 @@ import {
 import { createByokNodeProvider } from "@swartzrock/byok-runtime/node";
 import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
 import { normalizeAnthropicModelSelection } from "./anthropic-model-options";
+import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
 	deriveProviderSetupStatus,
 	recordProviderConnectionSuccess,
@@ -710,6 +710,7 @@ function legacyProviderCredential(
 		case "claude-cli":
 			return legacy.claudeCliCommand ?? "";
 	}
+	return "";
 }
 
 function deleteLegacyCloudProviderCredential(
@@ -767,6 +768,7 @@ function legacyProviderModel(
 		case "claude-cli":
 			return legacy.claudeCliModel ?? "";
 	}
+	return "";
 }
 
 function storedProviderSettingsFromCueCraftSettings(

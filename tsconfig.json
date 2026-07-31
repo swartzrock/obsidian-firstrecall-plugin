@@ -16,8 +16,8 @@
 		"noUnusedParameters": true,
 		"lib": ["DOM", "ES5", "ES6", "ES7", "ES2018"],
 		"paths": {
-			"@swartzrock/byok-runtime": ["node_modules/@swartzrock/byok-runtime/src/index.ts"],
-			"@swartzrock/byok-runtime/node": ["node_modules/@swartzrock/byok-runtime/src/node.ts"]
+			"@swartzrock/byok-runtime": ["node_modules/@swartzrock/byok-runtime/dist/index.d.ts"],
+			"@swartzrock/byok-runtime/node": ["node_modules/@swartzrock/byok-runtime/dist/node.d.ts"]
 		}
 	},
 	"include": ["src/**/*.ts"]

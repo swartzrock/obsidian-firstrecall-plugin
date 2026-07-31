@@ -11,10 +11,10 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = process.argv[2] === "production";
 const byokRuntimeMain = fileURLToPath(
-	new URL("./node_modules/@swartzrock/byok-runtime/src/index.ts", import.meta.url)
+	new URL("./node_modules/@swartzrock/byok-runtime/dist/index.js", import.meta.url)
 );
 const byokRuntimeNode = fileURLToPath(
-	new URL("./node_modules/@swartzrock/byok-runtime/src/node.ts", import.meta.url)
+	new URL("./node_modules/@swartzrock/byok-runtime/dist/node.js", import.meta.url)
 );
 const byokRuntimeAliasPlugin = {
 	name: "byok-runtime-release-alias",
