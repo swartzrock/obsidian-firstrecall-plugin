@@ -1,5 +1,4 @@
 import {
-	byokProviderDefinition,
 	isByokProviderId,
 	type ByokProviderId,
 	type ByokSetupStatus,
@@ -7,6 +6,7 @@ import {
 	type ByokVerificationSnapshot,
 	type ByokVerificationSnapshotMap,
 } from "@swartzrock/byok-runtime";
+import { byokProviderDefinition } from "./byok-provider-metadata";
 
 export const CLI_DEFAULT_MODEL_SENTINEL = "__byok_cli_default__";
 

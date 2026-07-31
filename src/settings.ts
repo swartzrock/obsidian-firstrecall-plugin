@@ -69,13 +69,15 @@ import {
 } from "./settings-summaries";
 import {
 	ByokProvider,
-	byokProviderDefinition,
-	byokProviderDefinitions,
 	isByokProviderId,
-	type ByokProviderDefinition,
 	type ByokProviderId,
 	type ByokStoredSettings,
 } from "@swartzrock/byok-runtime";
+import {
+	byokProviderDefinition,
+	byokProviderDefinitions,
+	type CueCraftProviderDefinition,
+} from "./byok-provider-metadata";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	buildAnthropicModelOptions,
@@ -656,12 +658,16 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private renderProviderIcon(
 		containerEl: HTMLElement,
-		definition: ByokProviderDefinition
+		definition: CueCraftProviderDefinition
 	): void {
 		const iconEl = containerEl.createSpan({
 			cls: "cuecraft-provider-icon",
 			attr: { "aria-hidden": "true" },
 		});
+		if (typeof definition.icon === "string") {
+			setIcon(iconEl, definition.icon);
+			return;
+		}
 		const svgEl = activeDocument.createElementNS(SVG_NS, "svg");
 		svgEl.setAttribute("viewBox", definition.icon.viewBox);
 		svgEl.setAttribute("fill", "currentColor");
@@ -1824,7 +1830,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		containerEl: HTMLElement,
 		opts: {
 			provider: ByokProviderId;
-			field: ByokProviderDefinition["credentialField"];
+			field: CueCraftProviderDefinition["credentialField"];
 			onSaved: () => void;
 		}
 	): void {
@@ -2001,7 +2007,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		containerEl: HTMLElement,
 		opts: {
 			provider: CueCraftFetchedModelProvider;
-			definition: ByokProviderDefinition;
+			definition: CueCraftProviderDefinition;
 			getModel: () => string;
 			setModel: (v: string) => void;
 			hasCredential: () => boolean;
@@ -2045,7 +2051,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private addModelRefreshButton(
 		setting: Setting,
 		opts: {
-			definition: ByokProviderDefinition;
+			definition: CueCraftProviderDefinition;
 			hasFetchedModels: boolean;
 			disabled: boolean;
 			onClick: () => void;

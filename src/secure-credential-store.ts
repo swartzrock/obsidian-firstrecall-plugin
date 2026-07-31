@@ -1,9 +1,9 @@
 import {
 	BYOK_PROVIDER_IDS,
-	byokProviderDefinition,
 	type ByokProviderConfig,
 	type ByokProviderId,
 } from "@swartzrock/byok-runtime";
+import { byokProviderDefinition } from "./byok-provider-metadata";
 
 export type CueCraftCloudCredentialProvider = Extract<
 	ByokProviderConfig,

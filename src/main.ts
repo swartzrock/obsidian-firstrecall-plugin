@@ -21,10 +21,8 @@ import {
 	normalizeAutoGenerationSettleDelaySeconds,
 	scheduleAutoGenerationTimer,
 } from "./auto-generation-delay";
-import {
-	type ByokHttpClient,
-	byokProviderDefinition,
-} from "@swartzrock/byok-runtime";
+import { type ByokHttpClient } from "@swartzrock/byok-runtime";
+import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
 	generateNote,
 	generateNoteBriefForSections,
