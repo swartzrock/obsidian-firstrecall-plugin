@@ -327,6 +327,98 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(body.prompt).toContain("intervals");
 	});
 
+	it("sends customized summary instructions through structured-object providers", async () => {
+		const calls: Array<{ body?: string }> = [];
+		const instructions =
+			"  Emphasize causal relationships across sections.\nKeep this spacing.  ";
+		const provider = makeCueCraftByokProvider(
+			settings({
+				provider: "openai",
+				summaryInstructionsOverride: instructions,
+			}),
+			{
+				http,
+				fetchImpl: (async (_input, init) => {
+					calls.push({ body: init?.body as string | undefined });
+					return new Response(
+						JSON.stringify({
+							choices: [
+								{
+									message: {
+										content: JSON.stringify({
+											summary: "Systems reinforce one another.",
+											learningObjective: null,
+										}),
+									},
+								},
+							],
+						}),
+						{ status: 200, headers: { "content-type": "application/json" } }
+					);
+				}) as typeof fetch,
+			}
+		);
+
+		await expect(
+			provider.generateSummary({
+				noteTitle: "Systems",
+				fullText: "# Inputs\nInputs feed outputs.\n# Feedback\nOutputs alter inputs.",
+				sectionQuestions: ["How do outputs alter later inputs?"],
+			})
+		).resolves.toEqual({ summary: "Systems reinforce one another." });
+
+		const body = JSON.parse(calls[0]?.body ?? "{}");
+		expect(body.messages[0]).toEqual({
+			role: "system",
+			content: instructions,
+		});
+		expect(body.messages[1].role).toBe("user");
+		expect(body.messages[1].content).not.toContain(instructions);
+		expect(body.messages[1].content).toContain("How do outputs alter later inputs?");
+		expect(body.messages[1].content).toContain(
+			"Return one note-grounded study takeaway sentence"
+		);
+	});
+
+	it("keeps summary instructions on text-provider repair requests", async () => {
+		const calls: Array<{ body?: string }> = [];
+		const instructions = "Focus on the relationship between sections.";
+		const http: ByokHttpClient = async (request) => {
+			calls.push({ body: request.body });
+			const response =
+				calls.length === 1
+					? "not json"
+					: JSON.stringify({ summary: "Feedback connects outputs to inputs." });
+			return {
+				status: 200,
+				text: "{}",
+				json: { response },
+			};
+		};
+		const provider = makeCueCraftByokProvider(
+			settings({
+				provider: "ollama",
+				summaryInstructionsOverride: instructions,
+			}),
+			{ fetchImpl, http }
+		);
+
+		await expect(
+			provider.generateSummary({
+				noteTitle: "Feedback",
+				fullText: "Outputs alter later inputs.",
+				sectionQuestions: [],
+			})
+		).resolves.toEqual({ summary: "Feedback connects outputs to inputs." });
+
+		expect(calls).toHaveLength(2);
+		for (const call of calls) {
+			const body = JSON.parse(call.body ?? "{}");
+			expect(body.system).toBe(instructions);
+			expect(body.prompt).not.toContain(instructions);
+		}
+	});
+
 	it("disables Ollama thinking mode and recovers Qwen JSON from thinking output", async () => {
 		const calls: Array<{ url: string; body?: string }> = [];
 		const cue = {

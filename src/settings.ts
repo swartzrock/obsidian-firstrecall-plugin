@@ -141,6 +141,10 @@ import {
 	DEFAULT_SHOW_NOTE_BRIEF,
 	DEFAULT_SHOW_SECTION_LENS,
 } from "./review-surfaces";
+import {
+	DEFAULT_SUMMARY_INSTRUCTIONS,
+	resolveSummaryInstructions,
+} from "./summary-instructions";
 
 /**
  * CueCraft supports a local provider (Ollama), local CLI providers, and several
@@ -190,6 +194,7 @@ export interface CueCraftSettings {
 	questionStyle: QuestionStyle;
 	generateKeywords: boolean;
 	autoSummary: boolean;
+	summaryInstructionsOverride: string;
 	showSectionLens: boolean;
 	showNoteBrief: boolean;
 	showRailQuestions: boolean;
@@ -262,6 +267,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	questionStyle: DEFAULT_QUESTION_STYLE,
 	generateKeywords: true,
 	autoSummary: true,
+	summaryInstructionsOverride: "",
 	showSectionLens: DEFAULT_SHOW_SECTION_LENS,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
 	showRailQuestions: true,
@@ -278,10 +284,20 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 export class CueCraftSettingTab extends PluginSettingTab {
 	private plugin: CueCraftPlugin;
 	private currentSubpage: CueCraftSettingsSubpage = "home";
+	private summaryInstructionsSaveQueue: Promise<void> = Promise.resolve();
 
 	constructor(app: App, plugin: CueCraftPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
+	}
+
+	private saveSummaryInstructions(): Promise<void> {
+		const save = this.summaryInstructionsSaveQueue.then(async () => {
+			await this.plugin.saveSettings();
+			this.plugin.noteCueSettingsChanged();
+		});
+		this.summaryInstructionsSaveQueue = save.catch(() => undefined);
+		return save;
 	}
 
 	display(): void {
@@ -876,7 +892,40 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 						this.plugin.noteCueSettingsChanged();
 					})
+				);
+
+		const summaryInstructionsSetting = new Setting(containerEl)
+			.setName("Summary system prompt")
+			.setDesc(
+				"Guides whole-note study summaries. CueCraft uses its built-in prompt until you customize it; reset to follow future default improvements."
 			);
+		summaryInstructionsSetting.addTextArea((textArea) => {
+			textArea
+				.setValue(
+					resolveSummaryInstructions(
+						this.plugin.settings.summaryInstructionsOverride
+					)
+				)
+				.onChange(async (value) => {
+					this.plugin.settings.summaryInstructionsOverride =
+						value === DEFAULT_SUMMARY_INSTRUCTIONS ? "" : value;
+					await this.saveSummaryInstructions();
+				});
+			textArea.inputEl.rows = 8;
+			textArea.inputEl.addClass("cuecraft-summary-instructions-input");
+			textArea.inputEl.setAttr("aria-label", "Summary system prompt");
+
+			summaryInstructionsSetting.addButton((button) =>
+				button.setButtonText("Reset to default").onClick(async () => {
+					this.plugin.settings.summaryInstructionsOverride = "";
+					textArea.setValue(DEFAULT_SUMMARY_INSTRUCTIONS);
+					await this.saveSummaryInstructions();
+				})
+			);
+		});
+		summaryInstructionsSetting.settingEl.addClass(
+			"cuecraft-summary-instructions-setting"
+		);
 
 		new Setting(containerEl)
 			.setName("Auto-generate on save")

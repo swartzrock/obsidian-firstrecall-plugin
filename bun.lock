@@ -6,7 +6,7 @@
       "name": "cuecraft",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.104.1",
-        "@swartzrock/byok-runtime": "2.1.0",
+        "@swartzrock/byok-runtime": "2.3.0",
         "zod": "^3.25.76",
       },
       "devDependencies": {
@@ -200,7 +200,7 @@
 
     "@stablelib/base64": ["@stablelib/base64@1.0.1", "", {}, "sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ=="],
 
-    "@swartzrock/byok-runtime": ["@swartzrock/byok-runtime@2.1.0", "", { "dependencies": { "ollama": "^0.6.3", "openai": "^6.45.0", "tslib": "2.6.2", "zod": "^3.25.76" } }, "sha512-BA7mH+6aXwVQ4YEKLmsUbxkjV1YQlbwcweJOG9VDHAUKmjw+mvzuQK+Q1UEVCy9rz9u7fdZaKtrNUWntoG6yeg=="],
+    "@swartzrock/byok-runtime": ["@swartzrock/byok-runtime@2.3.0", "", { "dependencies": { "ollama": "^0.6.3", "openai": "^6.45.0", "tslib": "2.6.2", "zod": "^3.25.76" } }, "sha512-rQ4Y7ybTyOt/XCrWrpNmYGkNuQC3Cy6OCL+Vbux2N4cWTSosGoKx7zmW1zvmsSoDsdH/eAq4gYqntVlRTJ3N8A=="],
 
     "@types/chai": ["@types/chai@5.2.3", "", { "dependencies": { "@types/deep-eql": "*", "assertion-error": "^2.0.1" } }, "sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA=="],
 

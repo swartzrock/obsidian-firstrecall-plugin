@@ -32,6 +32,7 @@ import {
 	cornellViewSettingsSummary,
 	editingViewSettingsSummary,
 } from "../src/settings-summaries";
+import { DEFAULT_SUMMARY_INSTRUCTIONS } from "../src/summary-instructions";
 
 function createObsidianMock() {
 	class MockPluginSettingTab {
@@ -103,6 +104,32 @@ function createObsidianMock() {
 			return this;
 		}
 
+		addSlider(callback: (slider: MockSlider) => void): this {
+			const input = this.settingEl.ownerDocument.createElement("input");
+			input.type = "range";
+			input.dataset.control = "slider";
+			this.controlEl.appendChild(input);
+			callback(new MockSlider(input));
+			return this;
+		}
+
+		addTextArea(callback: (textArea: MockTextArea) => void): this {
+			const input = this.settingEl.ownerDocument.createElement("textarea");
+			input.dataset.control = "textarea";
+			this.controlEl.appendChild(input);
+			callback(new MockTextArea(input));
+			return this;
+		}
+
+		addButton(callback: (button: MockButton) => void): this {
+			const input = this.settingEl.ownerDocument.createElement("button");
+			input.type = "button";
+			input.dataset.control = "button";
+			this.controlEl.appendChild(input);
+			callback(new MockButton(input));
+			return this;
+		}
+
 		then(callback: (setting: this) => void): this {
 			callback(this);
 			return this;
@@ -143,6 +170,68 @@ function createObsidianMock() {
 		onChange(callback: (value: string) => void | Promise<void>): this {
 			(this.select as HTMLSelectElement & { __onChange?: typeof callback }).__onChange =
 				callback;
+			return this;
+		}
+	}
+
+	class MockSlider {
+		constructor(private input: HTMLInputElement) {}
+
+		setLimits(min: number, max: number, step: number): this {
+			this.input.min = String(min);
+			this.input.max = String(max);
+			this.input.step = String(step);
+			return this;
+		}
+
+		setValue(value: number): this {
+			this.input.value = String(value);
+			return this;
+		}
+
+		setDynamicTooltip(): this {
+			return this;
+		}
+
+		onChange(callback: (value: number) => void | Promise<void>): this {
+			(this.input as HTMLInputElement & { __onChange?: typeof callback }).__onChange =
+				callback;
+			return this;
+		}
+	}
+
+	class MockTextArea {
+		constructor(readonly inputEl: HTMLTextAreaElement) {}
+
+		setValue(value: string): this {
+			this.inputEl.value = value;
+			return this;
+		}
+
+		onChange(callback: (value: string) => void | Promise<void>): this {
+			(
+				this.inputEl as HTMLTextAreaElement & {
+					__onChange?: typeof callback;
+				}
+			).__onChange = callback;
+			return this;
+		}
+	}
+
+	class MockButton {
+		constructor(private button: HTMLButtonElement) {}
+
+		setButtonText(value: string): this {
+			this.button.textContent = value;
+			return this;
+		}
+
+		onClick(callback: () => void | Promise<void>): this {
+			(
+				this.button as HTMLButtonElement & {
+					__onClick?: typeof callback;
+				}
+			).__onClick = callback;
 			return this;
 		}
 	}
@@ -317,6 +406,41 @@ async function changeToggle(
 	await toggle.__onChange(value);
 }
 
+async function changeTextArea(
+	containerEl: HTMLElement,
+	name: string,
+	value: string
+): Promise<void> {
+	const setting = containerEl.querySelector<HTMLElement>(
+		`[data-setting-name="${name}"]`
+	);
+	if (!setting) throw new Error(`Missing setting: ${name}`);
+	const textArea = setting.querySelector<HTMLTextAreaElement>(
+		"[data-control='textarea']"
+	) as HTMLTextAreaElement & {
+		__onChange?: (value: string) => void | Promise<void>;
+	};
+	if (!textArea.__onChange) throw new Error(`Missing text area callback: ${name}`);
+	textArea.value = value;
+	await textArea.__onChange(value);
+}
+
+async function clickSettingButton(
+	containerEl: HTMLElement,
+	name: string,
+	label: string
+): Promise<void> {
+	const setting = containerEl.querySelector<HTMLElement>(
+		`[data-setting-name="${name}"]`
+	);
+	if (!setting) throw new Error(`Missing setting: ${name}`);
+	const button = [...setting.querySelectorAll<HTMLButtonElement>("button")].find(
+		(candidate) => candidate.textContent === label
+	) as HTMLButtonElement & { __onClick?: () => void | Promise<void> };
+	if (!button?.__onClick) throw new Error(`Missing button callback: ${name} ${label}`);
+	await button.__onClick();
+}
+
 async function clickThumbnail(
 	containerEl: HTMLElement,
 	name: string,
@@ -345,6 +469,12 @@ describe("settings defaults", () => {
 			modelOptions: [],
 			hasFetchedModels: false,
 		});
+	});
+
+	it("uses the built-in summary instructions until the user customizes them", async () => {
+		const { DEFAULT_SETTINGS } = await loadSettingsModule();
+
+		expect(DEFAULT_SETTINGS.summaryInstructionsOverride).toBe("");
 	});
 
 	it("defaults auto-generation settle delay to 10 seconds", () => {
@@ -505,6 +635,98 @@ describe("settings defaults", () => {
 		expect(text).toContain("Cornell View");
 		expect(text).toContain("Editing View");
 		expect(text).not.toContain("Appearance");
+	});
+
+	it("stores and resets customized summary system instructions", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		const customization = "Emphasize contrasts between sections.";
+
+		tab.display();
+		openSettingsCard(tab, "Cue generation");
+
+		const setting = tab.containerEl.querySelector<HTMLElement>(
+			'[data-setting-name="Summary system prompt"]'
+		);
+		const textArea = setting?.querySelector<HTMLTextAreaElement>("textarea");
+		expect(textArea?.value).toBe(DEFAULT_SUMMARY_INSTRUCTIONS);
+
+		await changeTextArea(
+			tab.containerEl,
+			"Summary system prompt",
+			customization
+		);
+		expect(plugin.settings.summaryInstructionsOverride).toBe(customization);
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
+
+		await clickSettingButton(
+			tab.containerEl,
+			"Summary system prompt",
+			"Reset to default"
+		);
+		expect(plugin.settings.summaryInstructionsOverride).toBe("");
+		expect(textArea?.value).toBe(DEFAULT_SUMMARY_INSTRUCTIONS);
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
+		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(2);
+	});
+
+	it("clears the override when the user restores the built-in prompt", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+
+		tab.display();
+		openSettingsCard(tab, "Cue generation");
+
+		await changeTextArea(
+			tab.containerEl,
+			"Summary system prompt",
+			"Emphasize contrasts between sections."
+		);
+		await changeTextArea(
+			tab.containerEl,
+			"Summary system prompt",
+			DEFAULT_SUMMARY_INSTRUCTIONS
+		);
+
+		expect(plugin.settings.summaryInstructionsOverride).toBe("");
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
+		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(2);
+	});
+
+	it("finishes an earlier prompt save before persisting Reset", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		let finishFirstSave: (() => void) | undefined;
+		plugin.saveSettings.mockImplementationOnce(
+			() =>
+				new Promise<void>((resolve) => {
+					finishFirstSave = resolve;
+				})
+		);
+
+		tab.display();
+		openSettingsCard(tab, "Cue generation");
+
+		const change = changeTextArea(
+			tab.containerEl,
+			"Summary system prompt",
+			"Emphasize contrasts between sections."
+		);
+		await vi.waitFor(() => expect(plugin.saveSettings).toHaveBeenCalledTimes(1));
+
+		const reset = clickSettingButton(
+			tab.containerEl,
+			"Summary system prompt",
+			"Reset to default"
+		);
+		await Promise.resolve();
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+
+		finishFirstSave?.();
+		await change;
+		await reset;
+
+		expect(plugin.settings.summaryInstructionsOverride).toBe("");
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
+		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(2);
 	});
 
 	it("keeps Cornell View controls Cornell-only", async () => {

@@ -121,6 +121,29 @@
 	max-width: 100%;
 }
 
+.cuecraft-summary-instructions-setting {
+	flex-direction: column;
+	align-items: stretch;
+}
+
+.cuecraft-summary-instructions-setting .setting-item-control {
+	width: 100%;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 8px;
+}
+
+.cuecraft-summary-instructions-input {
+	width: 100%;
+	min-height: 10rem;
+	resize: vertical;
+	font-family: var(--font-monospace);
+}
+
+.cuecraft-summary-instructions-setting button {
+	align-self: flex-end;
+}
+
 .cuecraft-settings-flow-heading {
 	margin: 12px 0 6px;
 }
