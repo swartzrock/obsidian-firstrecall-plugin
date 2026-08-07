@@ -321,6 +321,7 @@ describe("normalizeCacheMap", () => {
 		const cache = build();
 		expect(normalizeCacheMap({ "note.md": cache })).toEqual({
 			caches: { "note.md": cache },
+			retainedCaches: {},
 			changed: false,
 		});
 	});
@@ -337,7 +338,7 @@ describe("normalizeCacheMap", () => {
 		);
 	});
 
-	it("does not request persistence when it would discard an invalid cache entry", () => {
+	it("migrates valid caches while retaining invalid entries for persistence", () => {
 		const current = build();
 		const v5 = {
 			...current,
@@ -348,14 +349,18 @@ describe("normalizeCacheMap", () => {
 			})),
 		};
 
+		const invalid = { schemaVersion: 99, sections: ["unknown"] };
 		const normalized = normalizeCacheMap({
 			"note.md": v5,
-			"unrecognized.md": { schemaVersion: 99, sections: ["unknown"] },
+			"unrecognized.md": invalid,
 		});
 
 		expect(normalized.caches["note.md"].schemaVersion).toBe(CACHE_SCHEMA_VERSION);
 		expect(normalized.caches).not.toHaveProperty("unrecognized.md");
-		expect(normalized.changed).toBe(false);
+		expect(normalized.retainedCaches).toEqual({
+			"unrecognized.md": invalid,
+		});
+		expect(normalized.changed).toBe(true);
 	});
 });
 

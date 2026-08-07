@@ -207,28 +207,24 @@ export function loadCache(raw: unknown): NoteCache | null {
 /** Normalize the persisted per-note cache map and report whether it changed. */
 export function normalizeCacheMap(raw: Record<string, unknown>): {
 	caches: Record<string, NoteCache>;
+	retainedCaches: Record<string, unknown>;
 	changed: boolean;
 } {
 	const caches: Record<string, NoteCache> = {};
+	const retainedCaches: Record<string, unknown> = {};
 	let changed = false;
-	let canPersist = true;
 	for (const [path, value] of Object.entries(raw)) {
 		const cache = loadCache(value);
 		if (!cache) {
-			// Keep startup from overwriting unknown stored data with the filtered map.
-			canPersist = false;
+			retainedCaches[path] = value;
 			continue;
 		}
 		caches[path] = cache;
-		if (
-			canPersist &&
-			!changed &&
-			JSON.stringify(cache) !== JSON.stringify(value)
-		) {
+		if (!changed && JSON.stringify(cache) !== JSON.stringify(value)) {
 			changed = true;
 		}
 	}
-	return { caches, changed: changed && canPersist };
+	return { caches, retainedCaches, changed };
 }
 
 /**
