@@ -1,7 +1,6 @@
 import { z } from "zod/v3";
 import {
 	confidenceSchema,
-	cueCategorySchema,
 	noteBriefOutputSchema,
 	sectionLensSchema,
 	type ValidationResult,
@@ -13,7 +12,7 @@ import type { NoteGenerationResult } from "./generator";
  * Persisted per-note study data. Bumping CACHE_SCHEMA_VERSION requires adding a
  * migration step in `migrateCache` so existing caches upgrade rather than break.
  */
-export const CACHE_SCHEMA_VERSION = 5;
+export const CACHE_SCHEMA_VERSION = 6;
 
 const cachedSectionSchema = z.object({
 	id: z.string(),
@@ -24,7 +23,6 @@ const cachedSectionSchema = z.object({
 	keywords: z.array(z.string()).nullable(),
 	question: z.string().nullable(),
 	confidence: confidenceSchema.nullable(),
-	category: cueCategorySchema.nullable(),
 	rationale: z.string().nullable(),
 	sectionLens: sectionLensSchema.nullable(),
 	error: z.string().nullable(),
@@ -79,7 +77,6 @@ export function buildNoteCache(params: BuildCacheParams): NoteCache {
 			keywords: s.keywords,
 			question: s.question,
 			confidence: s.confidence,
-			category: s.category ?? null,
 			rationale: s.rationale ?? null,
 			sectionLens: s.sectionLens ?? null,
 			error: s.error,
@@ -110,6 +107,7 @@ export function validateCache(raw: unknown): ValidationResult<NoteCache> {
  * v2 -> v3: v2 lacked per-cue `rationale`.
  * v3 -> v4: v3 lacked generated Section Lens and Note Brief artifacts.
  * v4 -> v5: v4 lacked per-cue semantic category tags.
+ * v5 -> v6: v5 included per-cue category tags that are no longer used.
  */
 export function migrateCache(raw: unknown): NoteCache | null {
 	if (!raw || typeof raw !== "object") return null;
@@ -137,7 +135,6 @@ export function migrateCache(raw: unknown): NoteCache | null {
 					keywords: sec.keywords ?? null,
 					question: sec.question ?? null,
 					confidence: sec.confidence ?? null,
-					category: null,
 					rationale: null,
 					sectionLens: null,
 					error: sec.error ?? null,
@@ -160,7 +157,6 @@ export function migrateCache(raw: unknown): NoteCache | null {
 						typeof sec.rationale === "string" && sec.rationale.trim()
 							? sec.rationale.trim()
 							: null,
-					category: null,
 					sectionLens: null,
 				};
 			}),
@@ -176,7 +172,6 @@ export function migrateCache(raw: unknown): NoteCache | null {
 				const sec = (s ?? {}) as Record<string, unknown>;
 				return {
 					...sec,
-					category: null,
 					sectionLens: null,
 				};
 			}),
@@ -184,16 +179,20 @@ export function migrateCache(raw: unknown): NoteCache | null {
 		};
 	}
 	if (version === 4) {
+		candidate = {
+			...obj,
+			schemaVersion: CACHE_SCHEMA_VERSION,
+		};
+	}
+	if (version === 5) {
 		const sections = Array.isArray(obj.sections) ? obj.sections : [];
 		candidate = {
 			...obj,
 			schemaVersion: CACHE_SCHEMA_VERSION,
 			sections: sections.map((s) => {
 				const sec = (s ?? {}) as Record<string, unknown>;
-				return {
-					...sec,
-					category: null,
-				};
+				const { category: _category, ...section } = sec;
+				return section;
 			}),
 		};
 	}
@@ -207,6 +206,27 @@ export function loadCache(raw: unknown): NoteCache | null {
 	const direct = validateCache(raw);
 	if (direct.ok) return direct.value;
 	return migrateCache(raw);
+}
+
+/** Normalize the persisted per-note cache map and report whether it changed. */
+export function normalizeCacheMap(raw: Record<string, unknown>): {
+	caches: Record<string, NoteCache>;
+	changed: boolean;
+} {
+	const caches: Record<string, NoteCache> = {};
+	let changed = false;
+	let canPersist = true;
+	for (const [path, value] of Object.entries(raw)) {
+		const cache = loadCache(value);
+		if (!cache) {
+			// Keep startup from overwriting unknown stored data with the filtered map.
+			canPersist = false;
+			continue;
+		}
+		caches[path] = cache;
+		if (JSON.stringify(cache) !== JSON.stringify(value)) changed = true;
+	}
+	return { caches, changed: changed && canPersist };
 }
 
 /**

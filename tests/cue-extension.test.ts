@@ -24,9 +24,10 @@ import {
 	renderCueElement,
 	setCuesEffect,
 	setRailSpacersEffect,
+	type CueLineData,
 } from "../src/cue-extension";
 import { EDITOR_CUE_DISPLAY_OPTIONS } from "../src/editor-cue-display";
-import { buildNoteCache } from "../src/cache";
+import { buildNoteCache, migrateCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
 
@@ -51,6 +52,22 @@ const NOTE_BRIEF = {
 		detail: "Say why tool use changes the task boundary.",
 	},
 };
+const LEGACY_CATEGORY_TEXT = [
+	"sequences",
+	"linkedlists",
+	"stacks",
+	"intervals",
+];
+
+function expectNoLegacyCategoryPresentation(element: HTMLElement): void {
+	expect(element.hasAttribute("data-category")).toBe(false);
+	expect(element.querySelector("[data-category]") !== null).toBe(false);
+	expect(element.querySelector(".cuecraft-section-tag") !== null).toBe(false);
+	expect(element.querySelector(".cuecraft-section-tag-dot") !== null).toBe(false);
+	for (const category of LEGACY_CATEGORY_TEXT) {
+		expect(element.textContent).not.toContain(category);
+	}
+}
 
 function withDocument<T>(fn: () => T): T {
 	const dom = new JSDOM("<!doctype html><html><body></body></html>");
@@ -117,6 +134,7 @@ describe("buildCueLineData", () => {
 			confidence: "high",
 			sectionLens: SECTION_LENS,
 		});
+		expect(cues[0]).not.toHaveProperty("category");
 	});
 
 	it("can hide keyword data while keeping questions visible", () => {
@@ -147,6 +165,7 @@ describe("buildCueLineData", () => {
 		expect(cues).toHaveLength(3);
 		const b = cues.find((c) => c.heading === "B");
 		expect(b).toMatchObject({ error: "boom", question: "", keywords: [], confidence: null });
+		expect(b).not.toHaveProperty("category");
 		// Usable cues carry no error.
 		expect(cues.find((c) => c.heading === "A")?.error).toBeNull();
 	});
@@ -215,30 +234,24 @@ describe("buildCueLineData", () => {
 });
 
 describe("renderCueElement", () => {
-	it("keeps the existing inline cue DOM shape", () => {
+	it("renders a legacy inline cue without category markers", () => {
 		withDocument(() => {
-			const el = renderCueElement(
-				{
-					line: 1,
-					heading: "Terms",
-					question: "What is an agent?",
-					keywords: ["agent", "tool"],
-					confidence: "high",
-					category: "stacks",
-					sectionLens: SECTION_LENS,
-					error: null,
-				},
-				"inline-cues"
-			);
+			const legacyCue: CueLineData & { category: "stacks" } = {
+				line: 1,
+				heading: "Terms",
+				question: "What is an agent?",
+				keywords: ["agent", "tool"],
+				confidence: "high",
+				category: "stacks",
+				sectionLens: SECTION_LENS,
+				error: null,
+			};
+			const el = renderCueElement(legacyCue, "inline-cues");
 			expect(el.classList.contains("cuecraft-cue")).toBe(true);
 			expect(el.classList.contains("cuecraft-cuewidth-medium")).toBe(true);
 			expect(el.classList.contains("cuecraft-cuefont-medium")).toBe(true);
 			expect(el.dataset.confidence).toBe("high");
-			expect(el.dataset.category).toBe("stacks");
-			expect(el.querySelector(".cuecraft-section-tag")?.textContent).toBe(
-				"#stacks"
-			);
-			expect(el.querySelector(".cuecraft-section-tag-dot")).not.toBeNull();
+			expectNoLegacyCategoryPresentation(el);
 			expect(
 				Array.from(el.querySelectorAll(".cuecraft-cue-section-label")).map(
 					(label) => label.textContent
@@ -262,6 +275,76 @@ describe("renderCueElement", () => {
 		});
 	});
 
+	it.each([
+		{
+			name: "anchored rail",
+			display: "anchored-card-rail",
+			supportSelector: ".cuecraft-editor-hook-keywords .cuecraft-cue-term",
+		},
+		{
+			name: "alternate editor hook",
+			display: "threaded-margin-notes",
+			supportSelector: ".cuecraft-editor-hook-keywords .cuecraft-cue-term",
+		},
+		{
+			name: "Cornell",
+			display: "cornell",
+			supportSelector: ".cuecraft-cornell-support-term",
+		},
+	] as const)(
+		"renders a legacy cue in $name without category markers",
+		({ display, supportSelector }) => {
+			withDocument(() => {
+				const legacyCue: CueLineData & { category: "sequences" } = {
+					line: 7,
+					heading: "Retrieval Practice",
+					question: "Why does retrieval practice strengthen memory?",
+					keywords: ["retrieval", "testing effect"],
+					confidence: "high",
+					category: "sequences",
+					sectionLens: SECTION_LENS,
+					error: null,
+				};
+				const el = renderCueElement(legacyCue, display);
+
+				expectNoLegacyCategoryPresentation(el);
+				expect(el.textContent).toContain(
+					"Why does retrieval practice strengthen memory"
+				);
+				expect(
+					Array.from(el.querySelectorAll(supportSelector)).map(
+						(term) => term.textContent
+					)
+				).toEqual(["retrieval", "testing effect"]);
+			});
+		}
+	);
+
+	it("keeps support terms when rendering a migrated v5 cue", () => {
+		withDocument(() => {
+			const current = cacheFrom();
+			const migrated = migrateCache({
+				...current,
+				schemaVersion: 5,
+				sections: current.sections.map((section) => ({
+					...section,
+					category: "linkedlists",
+				})),
+			});
+			expect(migrated).not.toBeNull();
+			if (!migrated) throw new Error("Expected v5 cache to migrate");
+			const [cue] = buildCueLineData(migrated, parseSections(NOTE));
+			const el = renderCueElement(cue, "inline-cues");
+
+			expectNoLegacyCategoryPresentation(el);
+			expect(
+				Array.from(el.querySelectorAll(".cuecraft-cue-term")).map(
+					(term) => term.textContent
+				)
+			).toEqual(["k1", "k2"]);
+		});
+	});
+
 	it("renders anchored card rail hook DOM", () => {
 		withDocument(() => {
 			const el = renderCueElement(
@@ -271,7 +354,6 @@ describe("renderCueElement", () => {
 					question: "How do agents differ from chatbots?",
 					keywords: ["agents"],
 					confidence: "medium",
-					category: "intervals",
 					sectionLens: SECTION_LENS,
 					error: null,
 				},
@@ -285,7 +367,7 @@ describe("renderCueElement", () => {
 			expect(el.dataset.line).toBe("3");
 			expect(el.dataset.state).toBe("upcoming");
 			expect(el.dataset.confidence).toBe("medium");
-			expect(el.dataset.category).toBe("intervals");
+			expectNoLegacyCategoryPresentation(el);
 			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(true);
 			expect(el.dataset.overflowing).toBe("false");
 			expect(
@@ -327,7 +409,6 @@ describe("renderCueElement", () => {
 					question: "How do agents differ from chatbots?",
 					keywords: ["agents", "tools", "planning", "autonomy", "memory"],
 					confidence: "medium",
-					category: "intervals",
 					sectionLens: SECTION_LENS,
 					error: null,
 				},

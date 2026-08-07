@@ -480,6 +480,7 @@ describe("generateSectionCue", () => {
 		expect(result.sectionLens?.keyPhrase).toBe("Terms");
 		expect(result.error).toBeNull();
 		expect(result.contentHash).toBe("abc123");
+		expect(result).not.toHaveProperty("category");
 	});
 
 	it("forwards the preset (tone override) to the provider", async () => {
@@ -521,6 +522,7 @@ describe("generateSectionCue", () => {
 		});
 		expect(result.error).toMatch(/boom/);
 		expect(result.question).toBeNull();
+		expect(result).not.toHaveProperty("category");
 	});
 
 	it("passes noteContext when supplied", async () => {

@@ -7,7 +7,7 @@ import type {
 	CueCraftCueBatchResult,
 	CueCraftCueProviderRuntime,
 } from "./cue-provider";
-import type { CueCategory, NoteBriefOutput, SectionLens } from "./schemas";
+import type { NoteBriefOutput, SectionLens } from "./schemas";
 
 export interface SectionResult {
 	id: string;
@@ -18,7 +18,6 @@ export interface SectionResult {
 	keywords: string[] | null;
 	question: string | null;
 	confidence: "high" | "medium" | "low" | null;
-	category?: CueCategory | null;
 	rationale: string | null;
 	sectionLens: SectionLens | null;
 	/** Non-null when this section failed validation/generation (isolated). */
@@ -138,7 +137,6 @@ function emptySectionResult(
 		keywords: null,
 		question: null,
 		confidence: null,
-		category: null,
 		rationale: null,
 		sectionLens: null,
 		error: null,
@@ -164,7 +162,6 @@ function applyCueResult(
 	result.keywords = item.cue.keywords;
 	result.question = item.cue.question;
 	result.confidence = item.cue.confidence;
-	result.category = item.cue.category ?? null;
 	result.rationale = item.cue.rationale ?? null;
 	result.sectionLens = item.cue.sectionLens ?? null;
 }

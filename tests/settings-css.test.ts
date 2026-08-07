@@ -41,10 +41,6 @@ describe("settings CSS", () => {
 		expect(styles).toContain("--cc-text: var(--text-normal)");
 		expect(styles).toContain("--cc-muted: var(--text-muted)");
 		expect(styles).toContain("--cc-radius: 10px");
-		expect(styles).toContain("--cc-sequences: #3f7f8c");
-		expect(styles).toContain("--cc-linkedlists: #5b5fc7");
-		expect(styles).toContain("--cc-stacks: #9a7b2b");
-		expect(styles).toContain("--cc-intervals: #b04a3a");
 	});
 
 	it("uses neutral card surfaces for cues and Note Brief", () => {
@@ -61,19 +57,40 @@ describe("settings CSS", () => {
 		expect(briefRule).not.toContain("interactive-accent");
 	});
 
-	it("keeps category hue constrained to rail and tag dot variables", () => {
-		expect(styles).toContain('.cuecraft-cue[data-category="stacks"],');
-		expect(styles).toContain("--cc-category-accent: var(--cc-stacks)");
-
+	it("uses neutral rail tokens without legacy category styling", () => {
 		const cueRule = ruleFor(".cuecraft-cue");
 		expect(cueRule).toContain(
-			"border-inline-start: 3px solid var(--cc-category-accent, var(--cc-border))"
+			"border-inline-start: 3px solid var(--cc-border)"
 		);
+		const railRule = ruleFor(".cuecraft-editor-hook-anchored-card-rail");
+		expect(railRule).toContain(
+			"border-inline-start: 3px solid var(--cc-border)"
+		);
+		const cornellRules =
+			styles.match(/\.cuecraft-cornell-cue\s*\{[^}]*\}/g) ?? [];
+		expect(
+			cornellRules.some((rule) =>
+				rule.includes("border-inline-start: 3px solid var(--cc-border)")
+			)
+		).toBe(true);
 
-		const dotRule = ruleFor(".cuecraft-section-tag-dot");
-		expect(dotRule).toContain(
-			"background: var(--cc-category-accent, var(--cc-muted))"
+		expect(styles).not.toContain("--cc-category-accent");
+		expect(styles).not.toContain("--cc-sequences");
+		expect(styles).not.toContain("--cc-linkedlists");
+		expect(styles).not.toContain("--cc-stacks");
+		expect(styles).not.toContain("--cc-intervals");
+		expect(styles).not.toContain("[data-category=");
+		expect(styles).not.toContain(".cuecraft-section-tag");
+	});
+
+	it("preserves failed-cue error styling", () => {
+		const failedCueRule = ruleFor(
+			".cuecraft-cue-error,\n.cuecraft-cornell-cue-error"
 		);
+		expect(failedCueRule).toContain("border-left-color: var(--text-error)");
+
+		const failedHookRule = ruleFor(".cuecraft-editor-hook-failed");
+		expect(failedHookRule).toContain("var(--color-red)");
 	});
 
 	it("does not paint cue rails from confidence", () => {
@@ -154,12 +171,12 @@ describe("settings CSS", () => {
 		const iconRule = ruleFor(".cuecraft-label-icon");
 		expect(iconRule).toContain("width: 1.25em");
 		expect(iconRule).toContain("height: 1.25em");
-		expect(iconRule).toContain("color: var(--cc-category-accent, var(--cc-muted))");
+		expect(iconRule).toContain("color: var(--cc-muted)");
 
 		const briefIconRule = ruleFor(
 			".cuecraft-note-brief-label .cuecraft-label-icon"
 		);
-		expect(briefIconRule).toContain("color: var(--cc-sequences)");
+		expect(briefIconRule).toBe("");
 	});
 
 	it("keeps anchored rail cards compact and quiet", () => {

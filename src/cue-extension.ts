@@ -38,7 +38,7 @@ import {
 	type EditorHookCardStyle,
 } from "./editor-hook-card-style";
 import { isCueEligibleSection, type Section } from "./parser";
-import type { CueCategory, NoteBriefOutput, SectionLens } from "./schemas";
+import type { NoteBriefOutput, SectionLens } from "./schemas";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -56,7 +56,6 @@ export interface CueLineData {
 	question: string;
 	keywords: string[];
 	confidence: Confidence | null;
-	category?: CueCategory | null;
 	sectionLens: SectionLens | null;
 	/** Generation error message, when this section failed. */
 	error: string | null;
@@ -122,7 +121,6 @@ export function buildCueLineData(
 			question: failed ? "" : (sec.question ?? ""),
 			keywords: failed || !showKeywords ? [] : sec.keywords ?? [],
 			confidence: failed ? null : sec.confidence,
-			category: failed ? null : sec.category ?? null,
 			sectionLens: failed || !showSectionLens ? null : sec.sectionLens ?? null,
 			error: failed ? sec.error ?? "Generation failed" : null,
 		});
@@ -151,7 +149,6 @@ class CueWidget extends WidgetType {
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
-			other.cue.category === this.cue.category &&
 			sectionLensKey(other.cue.sectionLens) === sectionLensKey(this.cue.sectionLens) &&
 			other.cue.error === this.cue.error
 		);
@@ -234,7 +231,6 @@ class CueGutterMarker extends GutterMarker {
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
-			other.cue.category === this.cue.category &&
 			sectionLensKey(other.cue.sectionLens) === sectionLensKey(this.cue.sectionLens) &&
 			other.cue.error === this.cue.error
 		);
@@ -313,11 +309,6 @@ function renderCornellCueElement(
 	if (cue.confidence) {
 		card.dataset.confidence = cue.confidence;
 	}
-	if (cue.category) {
-		card.dataset.category = cue.category;
-		appendSectionTag(card, cue.category);
-	}
-
 	if (options.showQuestion ?? true) {
 		appendCueSectionLabel(card, "QUESTION");
 		const q = doc.createElement("div");
@@ -365,11 +356,6 @@ function renderInlineCueElement(
 	if (cue.confidence) {
 		root.dataset.confidence = cue.confidence;
 	}
-	if (cue.category) {
-		root.dataset.category = cue.category;
-		appendSectionTag(root, cue.category);
-	}
-
 	if (options.showQuestion ?? true) {
 		appendCueSectionLabel(root, "QUESTION");
 		const q = cueDocument().createElement("div");
@@ -411,12 +397,6 @@ function renderEditorHookElement(
 	root.dataset.supportTermsVisible = String(card.showSupportTerms);
 	root.dataset.space = card.compactForSpace ? "compact" : "normal";
 	if (card.confidence) root.dataset.confidence = card.confidence;
-	if (card.category) {
-		root.dataset.category = card.category;
-		if (card.display !== "anchored-card-rail") {
-			appendSectionTag(root, card.category);
-		}
-	}
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
 	let hasContent = false;
@@ -516,19 +496,6 @@ function appendCueTerms(
 		chip.textContent = term;
 		parent.appendChild(chip);
 	}
-}
-
-function appendSectionTag(parent: HTMLElement, category: CueCategory): void {
-	const tag = parent.ownerDocument.createElement("div");
-	tag.className = "cuecraft-section-tag";
-	const dot = parent.ownerDocument.createElement("span");
-	dot.className = "cuecraft-section-tag-dot";
-	dot.setAttribute("aria-hidden", "true");
-	tag.appendChild(dot);
-	const label = parent.ownerDocument.createElement("span");
-	label.textContent = `#${category}`;
-	tag.appendChild(label);
-	parent.appendChild(tag);
 }
 
 function railOverflowAppliesToDisplay(display: EditorCueDisplay): boolean {

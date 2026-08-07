@@ -54,7 +54,7 @@ import {
 	buildNoteCache,
 	hasUsableCues,
 	isStale,
-	loadCache,
+	normalizeCacheMap,
 	replaceSection,
 	reconcileCacheSections,
 	sectionIdsNeedingGeneration,
@@ -323,15 +323,11 @@ export default class CueCraftPlugin extends Plugin {
 			settings.cornellDisplayMode = DEFAULT_CORNELL_DISPLAY_MODE;
 		}
 		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
-		const caches: Record<string, NoteCache> = {};
-		for (const [path, value] of Object.entries(rawCaches)) {
-			const cache = loadCache(value);
-			if (cache) caches[path] = cache;
-		}
+		const { caches, changed: cachesChanged } = normalizeCacheMap(rawCaches);
 		const hidden = loadHiddenMap(loaded?.hidden);
 		this.data = { settings, caches, hidden };
 		this.settings = this.data.settings;
-		if (credentialMigration.settingsChanged) {
+		if (credentialMigration.settingsChanged || cachesChanged) {
 			await this.saveData(this.data);
 		}
 	}
@@ -1937,7 +1933,6 @@ function toCachedSection(result: SectionResult): CachedSection {
 		keywords: result.keywords,
 		question: result.question,
 		confidence: result.confidence,
-		category: result.category ?? null,
 		rationale: result.rationale,
 		sectionLens: result.sectionLens,
 		error: result.error,
