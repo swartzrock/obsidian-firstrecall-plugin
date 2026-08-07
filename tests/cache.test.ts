@@ -55,6 +55,58 @@ function build(): NoteCache {
 	});
 }
 
+function richV5Cache() {
+	return {
+		schemaVersion: 5,
+		generatedAt: "2026-08-01T12:00:00.000Z",
+		noteModifiedAt: 1234,
+		provider: "openai",
+		model: "gpt-5-mini",
+		generationMode: "whole-note-context",
+		preset: "exam-prep",
+		outline: {
+			learningObjective: "Explain how retrieval strengthens memory.",
+			keyThemes: ["retrieval", "memory"],
+		},
+		sections: [
+			{
+				id: "retrieval-practice",
+				heading: "Retrieval Practice",
+				level: 2,
+				lineNumber: 7,
+				contentHash: "abc123",
+				keywords: ["retrieval", "testing effect"],
+				question: "Why does retrieval practice strengthen memory?",
+				confidence: "high",
+				category: "sequences",
+				rationale: "The section states the causal relationship directly.",
+				sectionLens: {
+					takeaway: "Practice recalling an idea instead of rereading it.",
+					keyPhrase: "retrieval practice",
+					explanation: "Active recall makes the memory easier to access later.",
+				},
+				error: null,
+			},
+		],
+		summary: "Retrieval practice improves later access to learned material.",
+		noteBrief: {
+			overview: "Retrieval strengthens memory. Repeated recall improves access.",
+			whatMatters: {
+				title: "Recall beats rereading",
+				detail: "Effortful retrieval produces more durable learning.",
+			},
+			reviewFirst: {
+				title: "Retrieval practice",
+				detail: "Start with the mechanism that strengthens recall.",
+			},
+			sayItBack: {
+				title: "Why does retrieval strengthen memory?",
+				detail: "Explain the testing effect without looking at the note.",
+			},
+		},
+	};
+}
+
 describe("buildNoteCache + validateCache", () => {
 	it("produces a current-schema cache that validates", () => {
 		const cache = build();
@@ -157,106 +209,15 @@ describe("isStale", () => {
 
 describe("migrateCache", () => {
 	it("upgrades a rich v5 cache by discarding only category", () => {
-		const v5 = {
-			schemaVersion: 5,
-			generatedAt: "2026-08-01T12:00:00.000Z",
-			noteModifiedAt: 1234,
-			provider: "openai",
-			model: "gpt-5-mini",
-			generationMode: "whole-note-context",
-			preset: "exam-prep",
-			outline: {
-				learningObjective: "Explain how retrieval strengthens memory.",
-				keyThemes: ["retrieval", "memory"],
-			},
-			sections: [
-				{
-					id: "retrieval-practice",
-					heading: "Retrieval Practice",
-					level: 2,
-					lineNumber: 7,
-					contentHash: "abc123",
-					keywords: ["retrieval", "testing effect"],
-					question: "Why does retrieval practice strengthen memory?",
-					confidence: "high",
-					category: "sequences",
-					rationale: "The section states the causal relationship directly.",
-					sectionLens: {
-						takeaway: "Practice recalling an idea instead of rereading it.",
-						keyPhrase: "retrieval practice",
-						explanation: "Active recall makes the memory easier to access later.",
-					},
-					error: null,
-				},
-			],
-			summary: "Retrieval practice improves later access to learned material.",
-			noteBrief: {
-				overview: "Retrieval strengthens memory. Repeated recall improves access.",
-				whatMatters: {
-					title: "Recall beats rereading",
-					detail: "Effortful retrieval produces more durable learning.",
-				},
-				reviewFirst: {
-					title: "Retrieval practice",
-					detail: "Start with the mechanism that strengthens recall.",
-				},
-				sayItBack: {
-					title: "Why does retrieval strengthen memory?",
-					detail: "Explain the testing effect without looking at the note.",
-				},
-			},
-		};
+		const v5 = richV5Cache();
 
 		const migrated = migrateCache(v5);
 
-		expect(migrated).toMatchObject({
+		expect(migrated).toEqual({
+			...v5,
 			schemaVersion: CACHE_SCHEMA_VERSION,
-			generatedAt: "2026-08-01T12:00:00.000Z",
-			noteModifiedAt: 1234,
-			provider: "openai",
-			model: "gpt-5-mini",
-			generationMode: "whole-note-context",
-			preset: "exam-prep",
-			outline: {
-				learningObjective: "Explain how retrieval strengthens memory.",
-				keyThemes: ["retrieval", "memory"],
-			},
-			summary: "Retrieval practice improves later access to learned material.",
-			noteBrief: {
-				overview: "Retrieval strengthens memory. Repeated recall improves access.",
-				whatMatters: {
-					title: "Recall beats rereading",
-					detail: "Effortful retrieval produces more durable learning.",
-				},
-				reviewFirst: {
-					title: "Retrieval practice",
-					detail: "Start with the mechanism that strengthens recall.",
-				},
-				sayItBack: {
-					title: "Why does retrieval strengthen memory?",
-					detail: "Explain the testing effect without looking at the note.",
-				},
-			},
+			sections: v5.sections.map(({ category: _category, ...section }) => section),
 		});
-		expect(migrated?.sections).toEqual([
-			{
-				id: "retrieval-practice",
-				heading: "Retrieval Practice",
-				level: 2,
-				lineNumber: 7,
-				contentHash: "abc123",
-				keywords: ["retrieval", "testing effect"],
-				question: "Why does retrieval practice strengthen memory?",
-				confidence: "high",
-				rationale: "The section states the causal relationship directly.",
-				sectionLens: {
-					takeaway: "Practice recalling an idea instead of rereading it.",
-					keyPhrase: "retrieval practice",
-					explanation: "Active recall makes the memory easier to access later.",
-				},
-				error: null,
-			},
-		]);
 	});
 
 	it("upgrades a v1 cache by filling new fields", () => {
@@ -365,46 +326,7 @@ describe("normalizeCacheMap", () => {
 	});
 
 	it("reports when persisted caches were normalized to v6", () => {
-		const current = build();
-		const v5 = {
-			...current,
-			schemaVersion: 5,
-			outline: {
-				learningObjective: "Explain how retrieval strengthens memory.",
-				keyThemes: ["retrieval", "memory"],
-			},
-			sections: [
-				{
-					...current.sections[0],
-					keywords: ["retrieval", "testing effect"],
-					question: "Why does retrieval practice strengthen memory?",
-					confidence: "high",
-					category: "sequences",
-					rationale: "The section states the causal relationship directly.",
-					sectionLens: {
-						takeaway: "Practice recalling an idea instead of rereading it.",
-						keyPhrase: "retrieval practice",
-						explanation: "Active recall makes the memory easier to access later.",
-					},
-				},
-			],
-			summary: "Retrieval practice improves later access to learned material.",
-			noteBrief: {
-				overview: "Retrieval strengthens memory. Repeated recall improves access.",
-				whatMatters: {
-					title: "Recall beats rereading",
-					detail: "Effortful retrieval produces more durable learning.",
-				},
-				reviewFirst: {
-					title: "Retrieval practice",
-					detail: "Start with the mechanism that strengthens recall.",
-				},
-				sayItBack: {
-					title: "Why does retrieval strengthen memory?",
-					detail: "Explain the testing effect without looking at the note.",
-				},
-			},
-		};
+		const v5 = richV5Cache();
 
 		const normalized = normalizeCacheMap({ "notes/retrieval.md": v5 });
 

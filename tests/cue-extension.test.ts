@@ -61,9 +61,9 @@ const LEGACY_CATEGORY_TEXT = [
 
 function expectNoLegacyCategoryPresentation(element: HTMLElement): void {
 	expect(element.hasAttribute("data-category")).toBe(false);
-	expect(element.querySelector("[data-category]") !== null).toBe(false);
-	expect(element.querySelector(".cuecraft-section-tag") !== null).toBe(false);
-	expect(element.querySelector(".cuecraft-section-tag-dot") !== null).toBe(false);
+	expect(element.querySelector("[data-category]")).toBeNull();
+	expect(element.querySelector(".cuecraft-section-tag")).toBeNull();
+	expect(element.querySelector(".cuecraft-section-tag-dot")).toBeNull();
 	for (const category of LEGACY_CATEGORY_TEXT) {
 		expect(element.textContent).not.toContain(category);
 	}

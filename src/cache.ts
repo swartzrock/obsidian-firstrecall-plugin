@@ -189,11 +189,7 @@ export function migrateCache(raw: unknown): NoteCache | null {
 		candidate = {
 			...obj,
 			schemaVersion: CACHE_SCHEMA_VERSION,
-			sections: sections.map((s) => {
-				const sec = (s ?? {}) as Record<string, unknown>;
-				const { category: _category, ...section } = sec;
-				return section;
-			}),
+			sections,
 		};
 	}
 
@@ -224,7 +220,13 @@ export function normalizeCacheMap(raw: Record<string, unknown>): {
 			continue;
 		}
 		caches[path] = cache;
-		if (JSON.stringify(cache) !== JSON.stringify(value)) changed = true;
+		if (
+			canPersist &&
+			!changed &&
+			JSON.stringify(cache) !== JSON.stringify(value)
+		) {
+			changed = true;
+		}
 	}
 	return { caches, changed: changed && canPersist };
 }
