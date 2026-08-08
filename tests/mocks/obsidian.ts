@@ -75,6 +75,32 @@ export class Setting {
 		return this;
 	}
 
+	addSlider(callback: (slider: MockSlider) => void): this {
+		const input = this.settingEl.ownerDocument.createElement("input");
+		input.type = "range";
+		input.dataset.control = "slider";
+		this.controlEl.appendChild(input);
+		callback(new MockSlider(input));
+		return this;
+	}
+
+	addTextArea(callback: (textArea: MockTextArea) => void): this {
+		const input = this.settingEl.ownerDocument.createElement("textarea");
+		input.dataset.control = "textarea";
+		this.controlEl.appendChild(input);
+		callback(new MockTextArea(input));
+		return this;
+	}
+
+	addButton(callback: (button: MockButton) => void): this {
+		const input = this.settingEl.ownerDocument.createElement("button");
+		input.type = "button";
+		input.dataset.control = "button";
+		this.controlEl.appendChild(input);
+		callback(new MockButton(input));
+		return this;
+	}
+
 	then(callback: (setting: this) => void): this {
 		callback(this);
 		return this;
@@ -115,6 +141,68 @@ class MockDropdown {
 	onChange(callback: (value: string) => void | Promise<void>): this {
 		(this.select as HTMLSelectElement & { __onChange?: typeof callback }).__onChange =
 			callback;
+		return this;
+	}
+}
+
+class MockSlider {
+	constructor(private input: HTMLInputElement) {}
+
+	setLimits(min: number, max: number, step: number): this {
+		this.input.min = String(min);
+		this.input.max = String(max);
+		this.input.step = String(step);
+		return this;
+	}
+
+	setValue(value: number): this {
+		this.input.value = String(value);
+		return this;
+	}
+
+	setDynamicTooltip(): this {
+		return this;
+	}
+
+	onChange(callback: (value: number) => void | Promise<void>): this {
+		(this.input as HTMLInputElement & { __onChange?: typeof callback }).__onChange =
+			callback;
+		return this;
+	}
+}
+
+class MockTextArea {
+	constructor(readonly inputEl: HTMLTextAreaElement) {}
+
+	setValue(value: string): this {
+		this.inputEl.value = value;
+		return this;
+	}
+
+	onChange(callback: (value: string) => void | Promise<void>): this {
+		(
+			this.inputEl as HTMLTextAreaElement & {
+				__onChange?: typeof callback;
+			}
+		).__onChange = callback;
+		return this;
+	}
+}
+
+class MockButton {
+	constructor(private button: HTMLButtonElement) {}
+
+	setButtonText(value: string): this {
+		this.button.textContent = value;
+		return this;
+	}
+
+	onClick(callback: () => void | Promise<void>): this {
+		(
+			this.button as HTMLButtonElement & {
+				__onClick?: typeof callback;
+			}
+		).__onClick = callback;
 		return this;
 	}
 }

@@ -104,6 +104,7 @@ import {
 } from "./cornell";
 import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
+import { normalizeSummaryInstructionsOverride } from "./summary-instructions";
 import { statusLabel, type CueStatus } from "./status";
 import { formatCueCraftNotice } from "./notice";
 import {
@@ -278,6 +279,11 @@ export default class CueCraftPlugin extends Plugin {
 			normalizeAutoGenerationSettleDelaySeconds(
 				(settings as { autoGenerationSettleDelaySeconds?: unknown })
 					.autoGenerationSettleDelaySeconds
+			);
+		settings.summaryInstructionsOverride =
+			normalizeSummaryInstructionsOverride(
+				(settings as { summaryInstructionsOverride?: unknown })
+					.summaryInstructionsOverride
 			);
 		for (const key of [
 			"showSectionLens",

@@ -63,6 +63,7 @@ import {
 	type SummaryOutput,
 } from "./schemas";
 import type { CueCraftSettings } from "./settings";
+import { resolveSummaryInstructions } from "./summary-instructions";
 import {
 	isCueCraftCloudCredentialProvider,
 	type CueCraftCloudCredentialProvider,
@@ -278,7 +279,8 @@ function buildSummaryPrompt(input: CueCraftSummaryInput): string {
 		`and optional "learningObjective" (one short sentence).\n` +
 		`\nNote title: ${input.noteTitle}\n` +
 		questions +
-		`\nNote text:\n${input.fullText}\n`
+		`\nNote text:\n${input.fullText}\n` +
+		`\nReturn one note-grounded study takeaway sentence that reflects the successful section questions when provided; JSON only.\n`
 	);
 }
 
@@ -347,12 +349,14 @@ async function generateCueFromTextProvider(
 async function generateSummaryFromObjectProvider(
 	runtime: ByokProviderRuntime,
 	input: CueCraftSummaryInput,
+	instructions: string,
 	signal?: AbortSignal
 ): Promise<SummaryOutput> {
 	if (!runtime.generateObject) {
 		throw cueCraftProviderError("Provider does not support structured output.");
 	}
 	const raw = await runtime.generateObject({
+		instructions,
 		schema: summaryGenerationSchema,
 		prompt: buildSummaryPrompt(input),
 	}, signal);
@@ -368,11 +372,13 @@ async function generateSummaryFromObjectProvider(
 async function generateSummaryFromTextProvider(
 	runtime: ByokProviderRuntime,
 	input: CueCraftSummaryInput,
+	instructions: string,
 	signal?: AbortSignal
 ): Promise<SummaryOutput> {
 	const basePrompt = buildSummaryPrompt(input);
 	const raw = await runtime.generateText(
 		{
+			instructions,
 			prompt: basePrompt,
 			responseFormat: "json",
 			jsonSchema: SUMMARY_JSON_SCHEMA,
@@ -388,6 +394,7 @@ async function generateSummaryFromTextProvider(
 			`Reply again with ONLY the corrected JSON object.`;
 		const retry = await runtime.generateText(
 			{
+				instructions,
 				prompt: repairPrompt,
 				responseFormat: "json",
 				jsonSchema: SUMMARY_JSON_SCHEMA,
@@ -510,9 +517,13 @@ async function generateCueBatchFromTextProvider(
 }
 
 function wrapCueCraftByokRuntime(
-	runtime: ByokProviderRuntime
+	runtime: ByokProviderRuntime,
+	settings: CueCraftSettings
 ): CueCraftByokRuntime {
 	const generateFromObject = Boolean(runtime.generateObject);
+	const summaryInstructions = resolveSummaryInstructions(
+		settings.summaryInstructionsOverride
+	);
 	const cueRuntime: CueCraftByokRuntime = {
 		id: runtime.id,
 		label: runtime.label,
@@ -527,8 +538,18 @@ function wrapCueCraftByokRuntime(
 				: generateCueFromTextProvider(runtime, input, signal),
 		generateSummary: (input, signal) =>
 			generateFromObject
-				? generateSummaryFromObjectProvider(runtime, input, signal)
-				: generateSummaryFromTextProvider(runtime, input, signal),
+				? generateSummaryFromObjectProvider(
+						runtime,
+						input,
+						summaryInstructions,
+						signal
+					)
+				: generateSummaryFromTextProvider(
+						runtime,
+						input,
+						summaryInstructions,
+						signal
+					),
 		generateNoteBrief: (input, signal) =>
 			generateFromObject
 				? generateNoteBriefFromObjectProvider(runtime, input, signal)
@@ -1095,7 +1116,8 @@ export function makeCueCraftByokProvider(
 ): CueCraftByokRuntime {
 	const config = cueCraftProviderConfigFromSettings(settings);
 	return wrapCueCraftByokRuntime(
-		createByokNodeProvider(config, cueCraftProviderDeps(config, deps))
+		createByokNodeProvider(config, cueCraftProviderDeps(config, deps)),
+		settings
 	);
 }
 
@@ -1174,7 +1196,8 @@ export async function makeCueCraftByokProviderFromStore(
 		createByokNodeProvider(
 			config,
 			cueCraftProviderDeps(config, deps)
-		)
+		),
+		settings
 	);
 }
 
