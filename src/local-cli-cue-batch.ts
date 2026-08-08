@@ -4,11 +4,7 @@ import {
 	questionStyleGuidance,
 } from "./cue-generation";
 import type { CueCraftCueBatchResult, CueCraftCueInput } from "./cue-provider";
-import {
-	CUE_CATEGORY_PROMPT_VALUES,
-	CUE_CATEGORY_VALUES,
-	validateCueBatch,
-} from "./schemas";
+import { validateCueBatch } from "./schemas";
 import {
 	SECTION_LENS_JSON_SCHEMA,
 	SECTION_LENS_PROMPT,
@@ -25,7 +21,6 @@ const CUE_BATCH_ITEM_SCHEMA = {
 			maxItems: 5,
 		},
 		confidence: { enum: ["high", "medium", "low"] },
-		category: { enum: CUE_CATEGORY_VALUES },
 		rationale: { type: "string" },
 		sectionLens: SECTION_LENS_JSON_SCHEMA,
 	},
@@ -79,7 +74,6 @@ export function buildCueBatchPrompt(
 		`"cues" must be an array with exactly ${inputs.length} objects, in the same order as the sections. ` +
 		`Each object must have keys: "question" (string), ` +
 		`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
-		`optional "category" (${CUE_CATEGORY_PROMPT_VALUES}) when the section clearly fits one of those semantic families, ` +
 		`optional "rationale" (short reason, only when confidence is "low"), ` +
 		`and "sectionLens" (object). ${SECTION_LENS_PROMPT}\n` +
 		contextLine +

@@ -8,7 +8,7 @@ import {
 	DEFAULT_EDITOR_HOOK_CARD_STYLE,
 	type EditorHookCardStyle,
 } from "./editor-hook-card-style";
-import type { CueCategory, SectionLens } from "./schemas";
+import type { SectionLens } from "./schemas";
 
 export type EditorHookCardKind = "hook" | "failed";
 export type EditorHookCardState = "current" | "upcoming";
@@ -30,7 +30,6 @@ export interface EditorHookCard {
 	originalQuestion: string;
 	keywords: string[];
 	confidence: Confidence | null;
-	category: CueCategory | null;
 	sectionLens: SectionLens | null;
 	error: string | null;
 	titleDensity: "standard" | "long" | "dense";
@@ -69,7 +68,6 @@ export function buildEditorHookCard(
 		originalQuestion: cue.question,
 		keywords: cue.keywords,
 		confidence: cue.confidence,
-		category: cue.category ?? null,
 		sectionLens: cue.sectionLens,
 		error: cue.error,
 		titleDensity: shortFormHookTitleDensity(hookTitle),

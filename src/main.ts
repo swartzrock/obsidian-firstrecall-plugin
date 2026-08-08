@@ -54,7 +54,7 @@ import {
 	buildNoteCache,
 	hasUsableCues,
 	isStale,
-	loadCache,
+	normalizeCacheMap,
 	replaceSection,
 	reconcileCacheSections,
 	sectionIdsNeedingGeneration,
@@ -151,6 +151,7 @@ export default class CueCraftPlugin extends Plugin {
 	private editorHookLayout = new EditorHookLayoutController();
 	private cueSettingsChanged = false;
 	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {}, hidden: {} };
+	private retainedCaches: Record<string, unknown> = {};
 	private settingTab!: CueCraftSettingTab;
 	private cacheStore!: CacheStore;
 	private visibility!: VisibilityStore;
@@ -164,12 +165,15 @@ export default class CueCraftPlugin extends Plugin {
 		await this.loadPluginData();
 
 		this.cacheStore = new CacheStore(this.data.caches, async (map) => {
+			for (const path of Object.keys(map)) {
+				delete this.retainedCaches[path];
+			}
 			this.data.caches = map;
-			await this.saveData(this.data);
+			await this.persistPluginData();
 		});
 		this.visibility = new VisibilityStore(this.data.hidden, async (map) => {
 			this.data.hidden = map;
-			await this.saveData(this.data);
+			await this.persistPluginData();
 		});
 
 		this.settingTab = new CueCraftSettingTab(this.app, this);
@@ -323,22 +327,30 @@ export default class CueCraftPlugin extends Plugin {
 			settings.cornellDisplayMode = DEFAULT_CORNELL_DISPLAY_MODE;
 		}
 		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
-		const caches: Record<string, NoteCache> = {};
-		for (const [path, value] of Object.entries(rawCaches)) {
-			const cache = loadCache(value);
-			if (cache) caches[path] = cache;
-		}
+		const {
+			caches,
+			retainedCaches,
+			changed: cachesChanged,
+		} = normalizeCacheMap(rawCaches);
 		const hidden = loadHiddenMap(loaded?.hidden);
+		this.retainedCaches = retainedCaches;
 		this.data = { settings, caches, hidden };
 		this.settings = this.data.settings;
-		if (credentialMigration.settingsChanged) {
-			await this.saveData(this.data);
+		if (credentialMigration.settingsChanged || cachesChanged) {
+			await this.persistPluginData();
 		}
+	}
+
+	private async persistPluginData(): Promise<void> {
+		await this.saveData({
+			...this.data,
+			caches: { ...this.retainedCaches, ...this.data.caches },
+		});
 	}
 
 	async saveSettings(): Promise<void> {
 		this.data.settings = this.settings;
-		await this.saveData(this.data);
+		await this.persistPluginData();
 		this.updateRibbonLabel();
 		if (!this.studyMode) {
 			void this.updateStatusForFile(this.app.workspace.getActiveFile());
@@ -1937,7 +1949,6 @@ function toCachedSection(result: SectionResult): CachedSection {
 		keywords: result.keywords,
 		question: result.question,
 		confidence: result.confidence,
-		category: result.category ?? null,
 		rationale: result.rationale,
 		sectionLens: result.sectionLens,
 		error: result.error,

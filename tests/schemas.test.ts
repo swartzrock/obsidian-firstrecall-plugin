@@ -101,21 +101,40 @@ describe("validateCue", () => {
 		if (r.ok) expect(r.value.rationale).toBe("The section is sparse.");
 	});
 
-	it("accepts an optional semantic cue category", () => {
-		const r = validateCue(
-			'{"question":"Q","keywords":["a","b"],"confidence":"high","category":"stacks"}'
-		);
-		expect(r.ok).toBe(true);
-		if (r.ok) expect(r.value.category).toBe("stacks");
-	});
+	it.each([null, "sequences", "unrelated"])(
+		"strips a stray category value (%s) while preserving the cue",
+		(category) => {
+			const r = validateCue(
+				JSON.stringify({
+					question: "Q",
+					keywords: ["a", "b"],
+					confidence: "high",
+					category,
+					rationale: "Grounded in the section.",
+					sectionLens: {
+						takeaway: "Focus on the main idea.",
+						keyPhrase: "main idea",
+						explanation: "This phrase anchors recall.",
+					},
+				})
+			);
 
-	it("rejects unrecognized cue categories", () => {
-		const r = validateCue(
-			'{"question":"Q","keywords":["a","b"],"confidence":"high","category":"graphs"}'
-		);
-		expect(r.ok).toBe(false);
-		if (!r.ok) expect(r.error).toMatch(/category/);
-	});
+			expect(r).toEqual({
+				ok: true,
+				value: {
+					question: "Q",
+					keywords: ["a", "b"],
+					confidence: "high",
+					rationale: "Grounded in the section.",
+					sectionLens: {
+						takeaway: "Focus on the main idea.",
+						keyPhrase: "main idea",
+						explanation: "This phrase anchors recall.",
+					},
+				},
+			});
+		}
+	);
 
 	it("accepts an optional Section Lens", () => {
 		const r = validateCue(
@@ -183,7 +202,7 @@ describe("validateCue", () => {
 });
 
 describe("validateCueBatch", () => {
-	it("accepts a cue array wrapped in a cues object", () => {
+	it("accepts a cue array and strips stray category properties", () => {
 		const r = validateCueBatch(
 			JSON.stringify({
 				cues: [
@@ -201,7 +220,7 @@ describe("validateCueBatch", () => {
 		expect(r.ok).toBe(true);
 		if (r.ok) {
 			expect(r.value.map((item) => item.value?.question)).toEqual(["Q1?", "Q2?"]);
-			expect(r.value[1].value?.category).toBe("intervals");
+			expect(r.value[1].value).not.toHaveProperty("category");
 			expect(r.value.every((item) => item.error === null)).toBe(true);
 		}
 	});

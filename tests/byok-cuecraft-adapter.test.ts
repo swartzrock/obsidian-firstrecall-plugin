@@ -300,6 +300,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 						question: "What is an agent?",
 						keywords: ["plan", "tools"],
 						confidence: "high",
+						category: "unrelated",
 					}),
 				},
 			};
@@ -315,16 +316,83 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			preset: "conceptual",
 		});
 
-		expect(cue.question).toBe("What is an agent?");
+		expect(cue).toEqual({
+			question: "What is an agent?",
+			keywords: ["plan", "tools"],
+			confidence: "high",
+		});
+		expect(calls).toHaveLength(1);
 		const body = JSON.parse(calls[0].body ?? "{}");
 		expect(body.format).toBe("json");
 		expect(body.prompt).toContain("Section heading: Agents");
 		expect(body.prompt).toContain("Agents can plan and use tools.");
-		expect(body.prompt).toContain('"category"');
-		expect(body.prompt).toContain("sequences");
-		expect(body.prompt).toContain("linkedlists");
-		expect(body.prompt).toContain("stacks");
-		expect(body.prompt).toContain("intervals");
+		expect(body.prompt).not.toContain('"category"');
+		expect(body.prompt).not.toContain("sequences");
+		expect(body.prompt).not.toContain("linkedlists");
+		expect(body.prompt).not.toContain("stacks");
+		expect(body.prompt).not.toContain("intervals");
+	});
+
+	it("omits category from structured-object cue requests and normalized output", async () => {
+		const calls: Array<{ body?: string }> = [];
+		const provider = makeCueCraftByokProvider(
+			settings({ provider: "openai" }),
+			{
+				http,
+				fetchImpl: (async (_input, init) => {
+					calls.push({ body: init?.body as string | undefined });
+					return new Response(
+						JSON.stringify({
+							choices: [
+								{
+									message: {
+										content: JSON.stringify({
+											question: "What is an agent?",
+											keywords: ["plan", "tools"],
+											confidence: "high",
+											category: "stacks",
+											rationale: null,
+											sectionLens: {
+												takeaway: "Agents plan and use tools.",
+												keyPhrase: "use tools",
+												explanation: "Tool use enables action.",
+											},
+										}),
+									},
+								},
+							],
+						}),
+						{ status: 200, headers: { "content-type": "application/json" } }
+					);
+				}) as typeof fetch,
+			}
+		);
+
+		await expect(
+			provider.generateCue({
+				heading: "Agents",
+				content: "Agents can plan and use tools.",
+				preset: "conceptual",
+			})
+		).resolves.toEqual({
+			question: "What is an agent?",
+			keywords: ["plan", "tools"],
+			confidence: "high",
+			sectionLens: {
+				takeaway: "Agents plan and use tools.",
+				keyPhrase: "use tools",
+				explanation: "Tool use enables action.",
+			},
+		});
+
+		const body = JSON.parse(calls[0]?.body ?? "{}");
+		const promptMessage = body.messages.find(
+			(message: { role?: string }) => message.role === "user"
+		);
+		expect(promptMessage?.content).toContain(
+			'Respond with ONLY a valid JSON object matching this schema'
+		);
+		expect(promptMessage?.content).not.toContain('"category"');
 	});
 
 	it("sends customized summary instructions through structured-object providers", async () => {

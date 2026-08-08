@@ -1,5 +1,17 @@
 export class App {}
 
+export class Plugin {
+	app: unknown;
+
+	constructor(app: unknown) {
+		this.app = app;
+	}
+}
+
+export class ItemView {}
+
+export class FuzzySuggestModal<_T> {}
+
 export class Modal {}
 
 export class Notice {}

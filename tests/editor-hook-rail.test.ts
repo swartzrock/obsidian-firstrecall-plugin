@@ -37,6 +37,7 @@ describe("buildEditorHookCard", () => {
 			showSupportTerms: true,
 			cardStyle: "classic",
 		});
+		expect(card).not.toHaveProperty("category");
 	});
 
 	it("does not mark cards current without active section state", () => {
@@ -100,5 +101,6 @@ describe("buildEditorHookCard", () => {
 			keywords: [],
 			confidence: null,
 		});
+		expect(card).not.toHaveProperty("category");
 	});
 });
