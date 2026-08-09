@@ -127,6 +127,7 @@ import {
 	type StudyAreaQueueItem,
 	type StudyAreaRunSummary,
 } from "./study-area";
+import { normalizeCueInstructionsOverride } from "./cue-instructions";
 
 interface PluginData {
 	settings: CueCraftSettings;
@@ -284,6 +285,10 @@ export default class CueCraftPlugin extends Plugin {
 				(settings as { autoGenerationSettleDelaySeconds?: unknown })
 					.autoGenerationSettleDelaySeconds
 			);
+		settings.cueInstructionsOverride = normalizeCueInstructionsOverride(
+			(settings as { cueInstructionsOverride?: unknown })
+				.cueInstructionsOverride
+		);
 		settings.summaryInstructionsOverride =
 			normalizeSummaryInstructionsOverride(
 				(settings as { summaryInstructionsOverride?: unknown })

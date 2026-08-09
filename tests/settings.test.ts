@@ -28,6 +28,7 @@ import {
 	DEFAULT_SHOW_NOTE_BRIEF,
 	DEFAULT_SHOW_SECTION_LENS,
 } from "../src/review-surfaces";
+import { DEFAULT_CUE_INSTRUCTIONS } from "../src/cue-instructions";
 import {
 	cornellViewSettingsSummary,
 	editingViewSettingsSummary,
@@ -471,10 +472,45 @@ describe("settings defaults", () => {
 		});
 	});
 
-	it("uses the built-in summary instructions until the user customizes them", async () => {
+	it("stores blank overrides until the user customizes either instruction policy", async () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
+		expect(DEFAULT_SETTINGS.cueInstructionsOverride).toBe("");
 		expect(DEFAULT_SETTINGS.summaryInstructionsOverride).toBe("");
+	});
+
+	it("normalizes an invalid stored Cue override without altering a legacy Summary override", async () => {
+		const { default: CueCraftPlugin } = await import("../src/main");
+		const legacySummaryOverride = "  Preserve this legacy Summary policy.  ";
+		const missing = async () => ({
+			ok: false as const,
+			reason: "missing-credential" as const,
+		});
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: {
+				availability: () => ({ ok: true }),
+				metadata: missing,
+				read: missing,
+				save: missing,
+				clear: missing,
+			},
+			loadData: vi.fn(async () => ({
+				settings: {
+					cueInstructionsOverride: ["invalid"],
+					summaryInstructionsOverride: legacySummaryOverride,
+				},
+			})),
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.cueInstructionsOverride).toBe("");
+		expect(plugin.settings.summaryInstructionsOverride).toBe(
+			legacySummaryOverride
+		);
 	});
 
 	it("defaults auto-generation settle delay to 10 seconds", () => {
@@ -637,40 +673,100 @@ describe("settings defaults", () => {
 		expect(text).not.toContain("Appearance");
 	});
 
-	it("stores and resets customized summary system instructions", async () => {
+	it("renders independent Cue and Study review policies without persisting defaults", async () => {
 		const { tab, plugin } = await setupSettingsTab();
-		const customization = "Emphasize contrasts between sections.";
+
+		tab.display();
+		openSettingsCard(tab, "Cue generation");
+
+		const cueSetting = tab.containerEl.querySelector<HTMLElement>(
+			'[data-setting-name="Cue system prompt"]'
+		);
+		const reviewSetting = tab.containerEl.querySelector<HTMLElement>(
+			'[data-setting-name="Summary/Note Brief system prompt"]'
+		);
+		expect(cueSetting?.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe(
+			DEFAULT_CUE_INSTRUCTIONS
+		);
+		expect(
+			reviewSetting?.querySelector<HTMLTextAreaElement>("textarea")?.value
+		).toBe(DEFAULT_SUMMARY_INSTRUCTIONS);
+		expect(
+			cueSetting?.querySelector<HTMLTextAreaElement>(
+				'textarea[aria-label="Cue system prompt"]'
+			)
+		).not.toBeNull();
+		expect(
+			reviewSetting?.querySelector<HTMLTextAreaElement>(
+				'textarea[aria-label="Summary/Note Brief system prompt"]'
+			)
+		).not.toBeNull();
+		expect(plugin.settings.cueInstructionsOverride).toBe("");
+		expect(plugin.settings.summaryInstructionsOverride).toBe("");
+		expect(plugin.saveSettings).not.toHaveBeenCalled();
+	});
+
+	it("shows an existing Summary customization under the shared review label", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		const legacyCustomization = "  Preserve this legacy Summary policy.  ";
+		plugin.settings.summaryInstructionsOverride = legacyCustomization;
 
 		tab.display();
 		openSettingsCard(tab, "Cue generation");
 
 		const setting = tab.containerEl.querySelector<HTMLElement>(
-			'[data-setting-name="Summary system prompt"]'
+			'[data-setting-name="Summary/Note Brief system prompt"]'
 		);
-		const textArea = setting?.querySelector<HTMLTextAreaElement>("textarea");
-		expect(textArea?.value).toBe(DEFAULT_SUMMARY_INSTRUCTIONS);
+		expect(setting?.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe(
+			legacyCustomization
+		);
+		expect(setting?.textContent).toContain(
+			"An existing Summary customization now guides both Summary and Note Brief."
+		);
+		expect(plugin.saveSettings).not.toHaveBeenCalled();
+	});
+
+	it("stores and resets Cue and Study review customizations independently", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		const cueCustomization = "  Emphasize mechanisms.\nKeep spacing.  ";
+		const reviewCustomization = "  Compare sections.\nKeep spacing.  ";
+
+		tab.display();
+		openSettingsCard(tab, "Cue generation");
 
 		await changeTextArea(
 			tab.containerEl,
-			"Summary system prompt",
-			customization
+			"Cue system prompt",
+			cueCustomization
 		);
-		expect(plugin.settings.summaryInstructionsOverride).toBe(customization);
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
+		await changeTextArea(
+			tab.containerEl,
+			"Summary/Note Brief system prompt",
+			reviewCustomization
+		);
+		expect(plugin.settings.cueInstructionsOverride).toBe(cueCustomization);
+		expect(plugin.settings.summaryInstructionsOverride).toBe(reviewCustomization);
 
 		await clickSettingButton(
 			tab.containerEl,
-			"Summary system prompt",
+			"Cue system prompt",
 			"Reset to default"
 		);
+		expect(plugin.settings.cueInstructionsOverride).toBe("");
+		expect(plugin.settings.summaryInstructionsOverride).toBe(reviewCustomization);
+
+		await clickSettingButton(
+			tab.containerEl,
+			"Summary/Note Brief system prompt",
+			"Reset to default"
+		);
+		expect(plugin.settings.cueInstructionsOverride).toBe("");
 		expect(plugin.settings.summaryInstructionsOverride).toBe("");
-		expect(textArea?.value).toBe(DEFAULT_SUMMARY_INSTRUCTIONS);
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
-		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(2);
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(4);
+		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(4);
 	});
 
-	it("clears the override when the user restores the built-in prompt", async () => {
+	it("clears each override when its input is blank or restored to its built-in policy", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 
 		tab.display();
@@ -678,23 +774,30 @@ describe("settings defaults", () => {
 
 		await changeTextArea(
 			tab.containerEl,
-			"Summary system prompt",
-			"Emphasize contrasts between sections."
+			"Cue system prompt",
+			"Emphasize mechanisms."
 		);
 		await changeTextArea(
 			tab.containerEl,
-			"Summary system prompt",
-			DEFAULT_SUMMARY_INSTRUCTIONS
+			"Cue system prompt",
+			DEFAULT_CUE_INSTRUCTIONS
+		);
+		await changeTextArea(
+			tab.containerEl,
+			"Summary/Note Brief system prompt",
+			"   \n   "
 		);
 
+		expect(plugin.settings.cueInstructionsOverride).toBe("");
 		expect(plugin.settings.summaryInstructionsOverride).toBe("");
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
-		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(2);
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(3);
+		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(3);
 	});
 
-	it("finishes an earlier prompt save before persisting Reset", async () => {
+	it("serializes a cross-control reset and marks it dirty before persistence", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		let finishFirstSave: (() => void) | undefined;
+		plugin.settings.summaryInstructionsOverride = "Compare sections.";
 		plugin.saveSettings.mockImplementationOnce(
 			() =>
 				new Promise<void>((resolve) => {
@@ -707,26 +810,53 @@ describe("settings defaults", () => {
 
 		const change = changeTextArea(
 			tab.containerEl,
-			"Summary system prompt",
-			"Emphasize contrasts between sections."
+			"Cue system prompt",
+			"Emphasize mechanisms."
 		);
 		await vi.waitFor(() => expect(plugin.saveSettings).toHaveBeenCalledTimes(1));
 
-		const reset = clickSettingButton(
+		const reviewReset = clickSettingButton(
 			tab.containerEl,
-			"Summary system prompt",
+			"Summary/Note Brief system prompt",
 			"Reset to default"
 		);
 		await Promise.resolve();
+		expect(plugin.settings.summaryInstructionsOverride).toBe("");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(2);
 
 		finishFirstSave?.();
 		await change;
-		await reset;
+		await reviewReset;
 
-		expect(plugin.settings.summaryInstructionsOverride).toBe("");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
-		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(2);
+	});
+
+	it("marks instruction changes before an unresolved save so close can hand off regeneration", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		let finishSave: (() => void) | undefined;
+		plugin.saveSettings.mockImplementationOnce(
+			() =>
+				new Promise<void>((resolve) => {
+					finishSave = resolve;
+				})
+		);
+
+		tab.display();
+		openSettingsCard(tab, "Cue generation");
+		const change = changeTextArea(
+			tab.containerEl,
+			"Cue system prompt",
+			"Emphasize mechanisms."
+		);
+		await vi.waitFor(() => expect(plugin.saveSettings).toHaveBeenCalledTimes(1));
+
+		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
+		tab.hide();
+		expect(plugin.promptForCueSettingsRegeneration).toHaveBeenCalledTimes(1);
+
+		finishSave?.();
+		await change;
 	});
 
 	it("keeps Cornell View controls Cornell-only", async () => {
