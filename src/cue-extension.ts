@@ -425,11 +425,10 @@ function renderEditorHookElement(
 			: root;
 	}
 
-	const showSectionLens = card.display !== "anchored-card-rail";
-	if (card.sectionLens && showSectionLabels && showSectionLens) {
+	if (card.sectionLens && showSectionLabels) {
 		appendEditorHookSectionLabel(root, "Lens");
 	}
-	if (showSectionLens && card.sectionLens) {
+	if (card.sectionLens) {
 		appendSectionLens(root, card.sectionLens);
 		hasContent = true;
 	}

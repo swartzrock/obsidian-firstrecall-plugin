@@ -383,7 +383,7 @@ describe("renderCueElement", () => {
 				Array.from(
 					el.querySelectorAll(".cuecraft-editor-hook-section-label")
 				).map((label) => label.textContent)
-			).toEqual(["QUESTION", "TERMS"]);
+			).toEqual(["QUESTION", "LENS", "TERMS"]);
 			expect(
 				el.querySelector(
 					".cuecraft-editor-hook-section-label[data-section='question'] .cuecraft-label-icon"
@@ -396,7 +396,15 @@ describe("renderCueElement", () => {
 				el.querySelector(".cuecraft-editor-hook-keywords .cuecraft-cue-term")
 					?.textContent
 			).toBe("agents");
-			expect(el.querySelector(".cuecraft-section-lens")).toBeNull();
+			expect(
+				el.querySelector(".cuecraft-section-lens-phrase")?.textContent
+			).toBe("agent autonomy");
+			expect(
+				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+			expect(
+				el.querySelector(".cuecraft-section-lens-explanation")?.textContent
+			).toBe("The section contrasts one-shot chat with tool-using agents.");
 		});
 	});
 
@@ -448,15 +456,15 @@ describe("renderCueElement", () => {
 			expect(el.dataset.gradient).toBe("1");
 			expect(el.dataset.questionVisible).toBe("false");
 			expect(el.dataset.supportTermsVisible).toBe("false");
-			expect(el.classList.contains("cuecraft-editor-hook-empty")).toBe(true);
+			expect(el.classList.contains("cuecraft-editor-hook-empty")).toBe(false);
 			expect(
 				Array.from(
 					el.querySelectorAll(".cuecraft-editor-hook-section-label")
 				).map((label) => label.textContent)
-			).toEqual([]);
+			).toEqual(["LENS"]);
 			expect(el.querySelector(".cuecraft-editor-hook-title")).toBeNull();
 			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
-			expect(el.querySelector(".cuecraft-section-lens")).toBeNull();
+			expect(el.querySelector(".cuecraft-section-lens")).not.toBeNull();
 		});
 	});
 
