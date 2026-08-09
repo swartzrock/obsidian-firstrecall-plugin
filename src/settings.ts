@@ -935,12 +935,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			"cuecraft-instructions-setting"
 		);
 
-		const summaryInstructionsSetting = new Setting(containerEl)
+		const studyReviewInstructionsSetting = new Setting(containerEl)
 			.setName("Summary/Note Brief system prompt")
 			.setDesc(
 				"Guides whole-note Summary and Note Brief study-review material. An existing Summary customization now guides both Summary and Note Brief. CueCraft uses its built-in prompt until you customize it; reset to follow future default improvements."
 			);
-		summaryInstructionsSetting.addTextArea((textArea) => {
+		studyReviewInstructionsSetting.addTextArea((textArea) => {
 			textArea
 				.setValue(
 					resolveSummaryInstructions(
@@ -959,7 +959,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				"Summary/Note Brief system prompt"
 			);
 
-			summaryInstructionsSetting.addButton((button) =>
+			studyReviewInstructionsSetting.addButton((button) =>
 				button.setButtonText("Reset to default").onClick(async () => {
 					this.plugin.settings.summaryInstructionsOverride = "";
 					textArea.setValue(DEFAULT_SUMMARY_INSTRUCTIONS);
@@ -967,7 +967,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				})
 			);
 		});
-		summaryInstructionsSetting.settingEl.addClass(
+		studyReviewInstructionsSetting.settingEl.addClass(
 			"cuecraft-instructions-setting"
 		);
 

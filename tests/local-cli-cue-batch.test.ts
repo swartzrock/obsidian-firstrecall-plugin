@@ -9,7 +9,6 @@ import {
 	cueBatchJsonSchema,
 	parseCueBatch,
 } from "../src/local-cli-cue-batch";
-import type { CueCraftSettings } from "../src/settings";
 
 describe("local CLI cue batch prompt", () => {
 	it("keeps protected Cue policy isolated on batch initial and repair requests", async () => {
@@ -45,13 +44,10 @@ describe("local CLI cue batch prompt", () => {
 				};
 			},
 		};
-		const provider = wrapCueCraftByokRuntime(
-			runtime,
-			{
-				cueInstructionsOverride: cuePolicy,
-				summaryInstructionsOverride: reviewPolicy,
-			} as CueCraftSettings
-		);
+		const provider = wrapCueCraftByokRuntime(runtime, {
+			cueInstructionsOverride: cuePolicy,
+			summaryInstructionsOverride: reviewPolicy,
+		});
 
 		await expect(
 			provider.generateCues?.([
@@ -117,10 +113,10 @@ describe("local CLI cue batch prompt", () => {
 				return { text: "still not json" };
 			},
 		};
-		const provider = wrapCueCraftByokRuntime(
-			runtime,
-			{ cueInstructionsOverride: cuePolicy } as CueCraftSettings
-		);
+		const provider = wrapCueCraftByokRuntime(runtime, {
+			cueInstructionsOverride: cuePolicy,
+			summaryInstructionsOverride: "",
+		});
 
 		await expect(
 			provider.generateCues?.([
