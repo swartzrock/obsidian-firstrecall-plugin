@@ -92,10 +92,10 @@ describe("local CLI cue batch prompt", () => {
 			expect(call.instructions?.split(cuePolicy)).toHaveLength(2);
 			expect(call.instructions).not.toContain(reviewPolicy);
 			expect(call.instructions).toContain(
-				"CueCraft's protected Cue Batch invariant takes precedence"
+				"CueCraft's protected Cue Batch contract requires"
 			);
 			expect(call.instructions).toContain(
-				"Create exactly one section-level active-recall cue for each of the 2 supplied sections, in input order."
+				"requires exactly one section-level active-recall cue for each of the 2 supplied sections, in input order."
 			);
 			expect(call.instructions).not.toContain(
 				"Create one section-level active-recall cue using"

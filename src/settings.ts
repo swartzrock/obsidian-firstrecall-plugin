@@ -905,7 +905,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const cueInstructionsSetting = new Setting(containerEl)
 			.setName("Cue system prompt")
 			.setDesc(
-				"Guides section-level active-recall questions. CueCraft uses its built-in prompt until you customize it; reset to follow future default improvements."
+				"Controls the content, emphasis, tone, wording, and teaching style of section cues. CueCraft still requires valid Cue and Section Lens fields. Reset to follow future default improvements."
 			);
 		cueInstructionsSetting.addTextArea((textArea) => {
 			textArea
@@ -938,7 +938,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const studyReviewInstructionsSetting = new Setting(containerEl)
 			.setName("Summary/Note Brief system prompt")
 			.setDesc(
-				"Guides whole-note Summary and Note Brief study-review material. An existing Summary customization now guides both Summary and Note Brief. CueCraft uses its built-in prompt until you customize it; reset to follow future default improvements."
+				"Controls the content, emphasis, tone, wording, and teaching style of Summary and Note Brief. CueCraft still requires valid Summary and Note Brief fields. An existing Summary customization now guides both Summary and Note Brief. Reset to follow future default improvements."
 			);
 		studyReviewInstructionsSetting.addTextArea((textArea) => {
 			textArea

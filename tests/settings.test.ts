@@ -691,6 +691,18 @@ describe("settings defaults", () => {
 		expect(
 			reviewSetting?.querySelector<HTMLTextAreaElement>("textarea")?.value
 		).toBe(DEFAULT_SUMMARY_INSTRUCTIONS);
+		expect(cueSetting?.textContent).toContain(
+			"Controls the content, emphasis, tone, wording, and teaching style of section cues."
+		);
+		expect(cueSetting?.textContent).toContain(
+			"CueCraft still requires valid Cue and Section Lens fields."
+		);
+		expect(reviewSetting?.textContent).toContain(
+			"Controls the content, emphasis, tone, wording, and teaching style of Summary and Note Brief."
+		);
+		expect(reviewSetting?.textContent).toContain(
+			"CueCraft still requires valid Summary and Note Brief fields."
+		);
 		expect(
 			cueSetting?.querySelector<HTMLTextAreaElement>(
 				'textarea[aria-label="Cue system prompt"]'
