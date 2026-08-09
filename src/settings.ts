@@ -142,7 +142,13 @@ import {
 	DEFAULT_SHOW_SECTION_LENS,
 } from "./review-surfaces";
 import {
+	DEFAULT_CUE_INSTRUCTIONS,
+	normalizeCueInstructionsOverride,
+	resolveCueInstructions,
+} from "./cue-instructions";
+import {
 	DEFAULT_SUMMARY_INSTRUCTIONS,
+	normalizeSummaryInstructionsOverride,
 	resolveSummaryInstructions,
 } from "./summary-instructions";
 
@@ -194,6 +200,7 @@ export interface CueCraftSettings {
 	questionStyle: QuestionStyle;
 	generateKeywords: boolean;
 	autoSummary: boolean;
+	cueInstructionsOverride: string;
 	summaryInstructionsOverride: string;
 	showSectionLens: boolean;
 	showNoteBrief: boolean;
@@ -267,6 +274,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	questionStyle: DEFAULT_QUESTION_STYLE,
 	generateKeywords: true,
 	autoSummary: true,
+	cueInstructionsOverride: "",
 	summaryInstructionsOverride: "",
 	showSectionLens: DEFAULT_SHOW_SECTION_LENS,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
@@ -284,19 +292,19 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 export class CueCraftSettingTab extends PluginSettingTab {
 	private plugin: CueCraftPlugin;
 	private currentSubpage: CueCraftSettingsSubpage = "home";
-	private summaryInstructionsSaveQueue: Promise<void> = Promise.resolve();
+	private instructionPersistenceQueue: Promise<void> = Promise.resolve();
 
 	constructor(app: App, plugin: CueCraftPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
-	private saveSummaryInstructions(): Promise<void> {
-		const save = this.summaryInstructionsSaveQueue.then(async () => {
-			await this.plugin.saveSettings();
-			this.plugin.noteCueSettingsChanged();
-		});
-		this.summaryInstructionsSaveQueue = save.catch(() => undefined);
+	private persistInstructions(): Promise<void> {
+		this.plugin.noteCueSettingsChanged();
+		const save = this.instructionPersistenceQueue.then(() =>
+			this.plugin.saveSettings()
+		);
+		this.instructionPersistenceQueue = save.catch(() => undefined);
 		return save;
 	}
 
@@ -894,12 +902,45 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					})
 				);
 
-		const summaryInstructionsSetting = new Setting(containerEl)
-			.setName("Summary system prompt")
+		const cueInstructionsSetting = new Setting(containerEl)
+			.setName("Cue system prompt")
 			.setDesc(
-				"Guides whole-note study summaries. CueCraft uses its built-in prompt until you customize it; reset to follow future default improvements."
+				"Controls the content, emphasis, tone, wording, and teaching style of section cues. CueCraft still requires valid Cue and Section Lens fields. Reset to follow future default improvements."
 			);
-		summaryInstructionsSetting.addTextArea((textArea) => {
+		cueInstructionsSetting.addTextArea((textArea) => {
+			textArea
+				.setValue(
+					resolveCueInstructions(
+						this.plugin.settings.cueInstructionsOverride
+					)
+				)
+				.onChange(async (value) => {
+					this.plugin.settings.cueInstructionsOverride =
+						normalizeCueInstructionsOverride(value);
+					await this.persistInstructions();
+				});
+			textArea.inputEl.rows = 8;
+			textArea.inputEl.addClass("cuecraft-instructions-input");
+			textArea.inputEl.setAttr("aria-label", "Cue system prompt");
+
+			cueInstructionsSetting.addButton((button) =>
+				button.setButtonText("Reset to default").onClick(async () => {
+					this.plugin.settings.cueInstructionsOverride = "";
+					textArea.setValue(DEFAULT_CUE_INSTRUCTIONS);
+					await this.persistInstructions();
+				})
+			);
+		});
+		cueInstructionsSetting.settingEl.addClass(
+			"cuecraft-instructions-setting"
+		);
+
+		const studyReviewInstructionsSetting = new Setting(containerEl)
+			.setName("Summary/Note Brief system prompt")
+			.setDesc(
+				"Controls the content, emphasis, tone, wording, and teaching style of Summary and Note Brief. CueCraft still requires valid Summary and Note Brief fields. An existing Summary customization now guides both Summary and Note Brief. Reset to follow future default improvements."
+			);
+		studyReviewInstructionsSetting.addTextArea((textArea) => {
 			textArea
 				.setValue(
 					resolveSummaryInstructions(
@@ -908,23 +949,26 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				)
 				.onChange(async (value) => {
 					this.plugin.settings.summaryInstructionsOverride =
-						value === DEFAULT_SUMMARY_INSTRUCTIONS ? "" : value;
-					await this.saveSummaryInstructions();
+						normalizeSummaryInstructionsOverride(value);
+					await this.persistInstructions();
 				});
 			textArea.inputEl.rows = 8;
-			textArea.inputEl.addClass("cuecraft-summary-instructions-input");
-			textArea.inputEl.setAttr("aria-label", "Summary system prompt");
+			textArea.inputEl.addClass("cuecraft-instructions-input");
+			textArea.inputEl.setAttr(
+				"aria-label",
+				"Summary/Note Brief system prompt"
+			);
 
-			summaryInstructionsSetting.addButton((button) =>
+			studyReviewInstructionsSetting.addButton((button) =>
 				button.setButtonText("Reset to default").onClick(async () => {
 					this.plugin.settings.summaryInstructionsOverride = "";
 					textArea.setValue(DEFAULT_SUMMARY_INSTRUCTIONS);
-					await this.saveSummaryInstructions();
+					await this.persistInstructions();
 				})
 			);
 		});
-		summaryInstructionsSetting.settingEl.addClass(
-			"cuecraft-summary-instructions-setting"
+		studyReviewInstructionsSetting.settingEl.addClass(
+			"cuecraft-instructions-setting"
 		);
 
 		new Setting(containerEl)

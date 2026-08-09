@@ -11,6 +11,24 @@ function ruleFor(selector: string): string {
 }
 
 describe("settings CSS", () => {
+	it("uses shared instruction-control hooks for both policies", () => {
+		const settingRule = ruleFor(".cuecraft-instructions-setting");
+		expect(settingRule).toContain("flex-direction: column");
+		expect(settingRule).toContain("align-items: stretch");
+
+		const controlRule = ruleFor(
+			".cuecraft-instructions-setting .setting-item-control"
+		);
+		expect(controlRule).toContain("width: 100%");
+		expect(controlRule).toContain("flex-direction: column");
+
+		const inputRule = ruleFor(".cuecraft-instructions-input");
+		expect(inputRule).toContain("width: 100%");
+		expect(inputRule).toContain("min-height: 10rem");
+
+		expect(styles).not.toContain("cuecraft-summary-instructions");
+	});
+
 	it("stacks active CLI command labels above the command input", () => {
 		const settingRule = ruleFor(
 			".cuecraft-active-provider-fields .cuecraft-cli-text-setting"

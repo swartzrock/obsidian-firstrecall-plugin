@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cuecraft system instructions for note summaries — ideation</title>
+  <title>Cuecraft instruction controls for cues and review artifacts — ideation</title>
   <style>
     :root {
       color-scheme: light dark;
@@ -258,27 +258,28 @@
   <main class="page">
     <header class="hero">
       <p class="eyebrow">Cuecraft · Ideation</p>
-      <h1>System instructions for note summaries</h1>
-      <p class="lede">The new channel is useful as a configurable study-review rubric, not as a second copy of the whole prompt. The strongest direction combines a persisted user override with a safe built-in default, while a fixed, self-contained user prompt keeps the immediate command after the note.</p>
+      <h1>Two instruction controls, protected artifact contracts</h1>
+      <p class="lede">Cuecraft should expose one policy for section cues and one shared policy for whole-note review. Those policies steer emphasis and teaching behavior; Cuecraft continues to own each artifact’s task, schema, source boundary, repair behavior, and freshness.</p>
 
       <div class="metadata" aria-label="Document metadata">
-        <span class="chip">Date · <time datetime="2026-08-06">2026-08-06</time></span>
-        <span class="chip info">Topic · byok-system-instructions-note-summaries</span>
+        <span class="chip">Date · <time datetime="2026-08-08">2026-08-08</time></span>
+        <span class="chip info">Topic · separate-cue-review-system-instructions</span>
         <span class="chip info">Mode · repo-grounded</span>
       </div>
-      <p class="lede"><strong>Focus:</strong> How byok-runtime 2.3.0 system instructions can improve Cuecraft's structured note-section summaries, how users can safely customize that policy, and which functional guarantees must remain in the main prompt.</p>
+      <p class="lede"><strong>Focus:</strong> Separate controls for Cue instructions and shared Summary/Note Brief instructions, with no new work on the retiring Cornell View.</p>
 
       <div class="stats" aria-label="Ideation counts">
-        <div class="stat"><b>41</b><span>raw ideas</span></div>
+        <div class="stat"><b>42</b><span>raw ideas</span></div>
         <div class="stat"><b>24</b><span>distinct</span></div>
         <div class="stat"><b>6</b><span>ranked</span></div>
-        <div class="stat"><b>4</b><span>axes</span></div>
+        <div class="stat"><b>5</b><span>axes</span></div>
       </div>
 
       <nav class="top-nav" aria-label="Document sections">
         <a href="#grounding-context">Grounding Context</a>
         <a href="#topic-axes">Topic Axes</a>
         <a href="#ranked-ideas">Ranked Ideas</a>
+        <a href="#prior-ideation">Prior Ideation</a>
         <a href="#rejection-summary">Rejection Summary</a>
       </nav>
     </header>
@@ -288,29 +289,37 @@
       <h2>Grounding Context</h2>
       <div class="grounding-grid">
         <article class="ground-card">
-          <h3>Current prompt shape</h3>
-          <p>Cuecraft's summary request currently combines stable study-review rules, JSON instructions, the note title, successful section questions, and clamped whole-note markdown in one user prompt. The prompt ends with the note text.</p>
+          <h3>One working precedent</h3>
+          <p>The existing Summary instruction override already has the right storage semantics: blank follows the evolving built-in default, customization stores only the override, and Reset clears it. Summary sends the resolved policy through object, text, and text-repair routes.</p>
         </article>
         <article class="ground-card">
-          <h3>Runtime parity</h3>
-          <p><code>byok-runtime</code> 2.3.0 accepts <code>instructions</code> on both <code>generateText</code> and <code>generateObject</code>. Cuecraft can now send the same summary rubric through the preferred structured-object route and text fallbacks.</p>
+          <h3>Cue policy is still fixed</h3>
+          <p>Single-cue and local CLI batch generation assemble fixed study behavior beside protected JSON, Section Lens, source, and repair clauses. A Cue control must reach both paths without letting user text replace their output contracts.</p>
         </article>
         <article class="ground-card">
-          <h3>Reliability gap</h3>
-          <p>The current schema proves that <code>summary</code> is a nonblank string. It does not enforce one-sentence form, faithfulness, cross-section synthesis, or usefulness as a study takeaway.</p>
+          <h3>One review policy, two artifacts</h3>
+          <p>Summary and Note Brief have different schemas and tasks. A shared control should express study-review judgment once, then apply it through two artifact-specific adapters rather than pretending the artifacts use one interchangeable prompt.</p>
         </article>
         <article class="ground-card">
-          <h3>Settings fit</h3>
-          <p>Cuecraft already persists global generation settings, exposes a dedicated Cue generation subpage, and marks generation-affecting changes so existing notes can be regenerated. A summary-policy override fits that established lifecycle.</p>
+          <h3>Note Brief has two parents</h3>
+          <p>Note Brief consumes the shared review policy directly and generated cue questions and keywords indirectly. Cue-policy changes therefore stale cues and Note Brief; review-policy changes stale Summary and Note Brief while leaving cues intact.</p>
+        </article>
+        <article class="ground-card">
+          <h3>Freshness lacks policy identity</h3>
+          <p>The cache records source hashes, provider, model, and preset but not the effective instruction or built-in default version. One generic settings-changed flag cannot explain which artifacts are outdated or why.</p>
         </article>
         <article class="ground-card">
           <h3>External evidence</h3>
-          <p><a href="https://help.openai.com/en/articles/9824968-generate-prompts-function-definitions-and-structured-output-schemas-in-the-playground%252523.flac">OpenAI</a>, <a href="https://platform.claude.com/docs/en/api/messages/create">Anthropic</a>, and <a href="https://ai.google.dev/gemini-api/docs/prompting-strategies">Google</a> converge on separating persistent behavior from per-call task and context. Google also recommends placing the concrete task close to the end for long documents.</p>
+          <p><a href="https://developers.openai.com/api/docs/guides/prompt-engineering">OpenAI prompt guidance</a> and <a href="https://developers.openai.com/api/docs/guides/structured-outputs">Structured Outputs</a> separate behavioral instructions from application-owned schemas. <a href="https://platform.claude.com/docs/en/build-with-claude/prompt-caching">Anthropic caching guidance</a> reinforces exact effective-prompt identity and explicit invalidation.</p>
+        </article>
+        <article class="ground-card">
+          <h3>Product boundary</h3>
+          <p>The normal editor and reading-mode artifacts are the continuing surfaces. Cornell View is planned for removal, so no candidate may require new Cornell-specific UI, behavior, migration, or evaluation work.</p>
         </article>
       </div>
       <div class="callout">
-        <p class="eyebrow">Decision-changing fact</p>
-        <p>Store a user's customization as an override, not a copied snapshot of today's default. With no override—or after “Reset to default”—Cuecraft should resolve the latest built-in rubric. The portable prompt still retains the JSON contract and final command so the system rubric remains focused on study-review judgment rather than transport details.</p>
+        <p class="eyebrow">Recommended direction</p>
+        <p>Treat the controls as two behavioral policy families, not two complete request replacements. Link each policy to protected artifact adapters, track the policy actually applied to every artifact, and make regeneration an explicit reconciliation step with an exact impact receipt.</p>
       </div>
     </section>
 
@@ -319,20 +328,24 @@
       <h2>Topic Axes</h2>
       <div class="axis-grid">
         <article class="axis-card">
-          <h3>1. Prompt responsibility</h3>
-          <p>Invariant role and quality rules versus per-call note data, JSON shape, and artifact-specific commands.</p>
+          <h3>1. Control boundaries and lifecycle</h3>
+          <p>What each user control means, how default/custom/reset states behave, and when saved policy becomes applied output.</p>
         </article>
         <article class="axis-card">
-          <h3>2. Runtime/provider reach</h3>
-          <p>Which guarantees reach <code>generateText</code>, <code>generateObject</code>, and each provider-native instruction channel.</p>
+          <h3>2. Composition and contract protection</h3>
+          <p>User-owned behavioral emphasis versus application-owned tasks, schemas, required fields, source boundaries, and repair commands.</p>
         </article>
         <article class="axis-card">
-          <h3>3. Semantic adherence</h3>
-          <p>What prompts, schemas, parsing, validation, and repairs can actually guarantee about summary quality.</p>
+          <h3>3. Dependencies and regeneration</h3>
+          <p>Which artifacts become stale after each policy change, especially Note Brief’s direct review-policy and indirect Cue-policy parents.</p>
         </article>
         <article class="axis-card">
-          <h3>4. Testability and maintenance</h3>
-          <p>Canonical rule ownership, prompt drift, provider regressions, evaluation evidence, and token/caching costs.</p>
+          <h3>4. Provider and repair conformance</h3>
+          <p>Equivalent policy carriage across object, text, local CLI batch, initial, and repair routes.</p>
+        </article>
+        <article class="axis-card">
+          <h3>5. Evaluation, migration, and provenance</h3>
+          <p>Effective-policy identity, independently versioned defaults, cache migrations, diagnostics, and regression evidence.</p>
         </article>
       </div>
     </section>
@@ -340,19 +353,170 @@
     <section id="ranked-ideas">
       <p class="eyebrow">Survivors after adversarial filtering</p>
       <h2>Ranked Ideas</h2>
-      <p class="section-intro">The prior ideas 1 and 2 are now one direction: a configurable system rubric and a fixed end-of-note command work as two layers of the same summary contract. Customization changes Cuecraft's judgment policy; it cannot erase the portable artifact requirements.</p>
+      <p class="section-intro">The six survivors form a coherent two-control contract. They are ranked by how much they clarify the product boundary; together they cover control semantics, protected composition, explicit application, artifact freshness, provenance, and route parity.</p>
 
       <ol class="jump-list" aria-label="Ranked idea jump list">
-        <li><a href="#idea-1">1. Configurable two-layer summary prompt</a></li>
-        <li><a href="#idea-2">2. Object-route instruction parity</a></li>
-        <li><a href="#idea-3">3. Semantic acceptance gate</a></li>
-        <li><a href="#idea-4">4. Provider-conformance lab</a></li>
-        <li><a href="#idea-5">5. Capability-conformance envelope</a></li>
-        <li><a href="#idea-6">6. Persist policy during repair</a></li>
+        <li><a href="#idea-1">1. Two policy families, three artifact adapters</a></li>
+        <li><a href="#idea-2">2. Protected policy overlay</a></li>
+        <li><a href="#idea-3">3. Prompt plan/apply reconciliation</a></li>
+        <li><a href="#idea-4">4. Artifact freshness graph</a></li>
+        <li><a href="#idea-5">5. Effective policy identity</a></li>
+        <li><a href="#idea-6">6. Route-invariance contract and conformance lab</a></li>
       </ol>
 
       <article class="idea-card" id="idea-1">
-        <div class="idea-head"><span class="rank-number">1</span><div><h3>1. Configurable two-layer summary prompt</h3><div class="idea-meta"><span class="chip rank">Top pick</span><span class="chip">Confidence · 89%</span><span class="chip info">Complexity · Medium</span></div></div></div>
+        <div class="idea-head"><span class="rank-number">1</span><div><h3>1. Two policy families, three artifact adapters</h3><div class="idea-meta"><span class="chip rank">Top pick</span><span class="chip">Confidence · 95%</span><span class="chip info">Complexity · Medium</span></div></div></div>
+        <p>Expose exactly two advanced instruction controls: <strong>Cue instructions</strong> for section-level active recall, and <strong>Study review instructions</strong> shared by Summary and Note Brief. The shared review policy is applied independently through Summary- and Note-Brief-specific adapters; it does not merge their schemas, source inputs, or jobs.</p>
+
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 860 430" role="img" aria-labelledby="policy-diagram-title policy-diagram-desc">
+            <title id="policy-diagram-title">Two policy families connected to three artifact adapters</title>
+            <desc id="policy-diagram-desc">Cue instructions feed the Cue adapter. Study review instructions feed separate Summary and Note Brief adapters. Generated cues also feed Note Brief as an upstream artifact dependency.</desc>
+            <defs>
+              <marker id="policy-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)" />
+              </marker>
+              <marker id="dependency-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--info-text)" />
+              </marker>
+            </defs>
+
+            <rect x="20" y="45" width="220" height="95" rx="16" fill="var(--accent-soft)" stroke="var(--accent)" />
+            <text x="130" y="82" text-anchor="middle" font-size="16" font-weight="700" fill="var(--accent-text)">Cue instructions</text>
+            <text x="130" y="108" text-anchor="middle" font-size="12" fill="var(--accent-text)">default or user override</text>
+
+            <rect x="20" y="230" width="220" height="95" rx="16" fill="var(--info-soft)" stroke="var(--info-text)" />
+            <text x="130" y="267" text-anchor="middle" font-size="16" font-weight="700" fill="var(--info-text)">Study review instructions</text>
+            <text x="130" y="293" text-anchor="middle" font-size="12" fill="var(--info-text)">one shared behavioral policy</text>
+
+            <rect x="330" y="45" width="230" height="95" rx="16" fill="var(--surface)" stroke="var(--line)" />
+            <text x="445" y="79" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">Cue adapter</text>
+            <text x="445" y="105" text-anchor="middle" font-size="12" fill="var(--muted)">task + schema + section source</text>
+
+            <rect x="330" y="180" width="230" height="85" rx="16" fill="var(--surface)" stroke="var(--line)" />
+            <text x="445" y="214" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">Summary adapter</text>
+            <text x="445" y="239" text-anchor="middle" font-size="12" fill="var(--muted)">one-sentence takeaway contract</text>
+
+            <rect x="330" y="315" width="230" height="90" rx="16" fill="var(--surface)" stroke="var(--line)" />
+            <text x="445" y="349" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">Note Brief adapter</text>
+            <text x="445" y="374" text-anchor="middle" font-size="12" fill="var(--muted)">overview + three card contract</text>
+
+            <rect x="650" y="45" width="180" height="95" rx="16" fill="var(--warn-soft)" stroke="var(--warn-text)" />
+            <text x="740" y="82" text-anchor="middle" font-size="15" font-weight="700" fill="var(--warn-text)">Cues + lenses</text>
+            <text x="740" y="108" text-anchor="middle" font-size="12" fill="var(--warn-text)">section artifacts</text>
+
+            <rect x="650" y="180" width="180" height="85" rx="16" fill="var(--warn-soft)" stroke="var(--warn-text)" />
+            <text x="740" y="214" text-anchor="middle" font-size="15" font-weight="700" fill="var(--warn-text)">Summary</text>
+            <text x="740" y="239" text-anchor="middle" font-size="12" fill="var(--warn-text)">whole-note artifact</text>
+
+            <rect x="650" y="315" width="180" height="90" rx="16" fill="var(--warn-soft)" stroke="var(--warn-text)" />
+            <text x="740" y="349" text-anchor="middle" font-size="15" font-weight="700" fill="var(--warn-text)">Note Brief</text>
+            <text x="740" y="374" text-anchor="middle" font-size="12" fill="var(--warn-text)">whole-note artifact</text>
+
+            <path d="M240 92 H330" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#policy-arrow)" />
+            <path d="M240 277 C280 277 287 222 330 222" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#policy-arrow)" />
+            <path d="M240 277 C280 277 287 360 330 360" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#policy-arrow)" />
+            <path d="M560 92 H650" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#policy-arrow)" />
+            <path d="M560 222 H650" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#policy-arrow)" />
+            <path d="M560 360 H650" fill="none" stroke="var(--accent)" stroke-width="2.5" marker-end="url(#policy-arrow)" />
+            <path d="M650 92 H610 V392 H560" fill="none" stroke="var(--info-text)" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#dependency-arrow)" />
+            <text x="620" y="292" font-size="12" fill="var(--info-text)">cue inputs</text>
+          </svg>
+          <p class="diagram-caption">The visible surface stays at two controls, while Cuecraft retains three artifact-specific contracts. Note Brief is deliberately asymmetric: it receives Study review policy directly and cue outputs as an upstream dependency.</p>
+        </div>
+
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Control boundaries and settings lifecycle</dd>
+          <dt>Basis</dt><dd><strong>direct:</strong> <code>summaryInstructionsOverride</code> already demonstrates default/override/reset semantics, while Summary and Note Brief use separate generation paths and schemas. Cue has no instruction channel today, and Note Brief consumes generated cue questions and keywords.</dd>
+          <dt>Rationale</dt><dd>This is the clearest product promise: users control two kinds of study judgment, while Cuecraft remains responsible for turning that judgment into three reliable artifact forms. It is simple at the settings surface and honest about the execution model.</dd>
+          <dt>Downsides</dt><dd>The copy must explain that one Study review policy influences two artifacts without promising identical wording or behavior. Internally, the two adapters must not drift.</dd>
+          <dt>Confidence</dt><dd>95%</dd>
+          <dt>Complexity</dt><dd>Medium</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-2">
+        <div class="idea-head"><span class="rank-number">2</span><div><h3>2. Protected policy overlay</h3><div class="idea-meta"><span class="chip">Confidence · 94%</span><span class="chip info">Complexity · Medium</span></div></div></div>
+        <p>Define the editable text as a behavioral overlay: it may change emphasis, tone, questioning strategy, and study judgment. Cuecraft always retains the artifact task, schema, required fields, source labels, note-as-data boundary, and repair command in application-owned prompt layers.</p>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Instruction composition and contract protection</dd>
+          <dt>Basis</dt><dd><strong>direct:</strong> Cue prompts currently mix policy-like guidance with JSON and Section Lens requirements, while Summary already separates provider <code>instructions</code> from its portable task prompt. Single Cue, batch Cue, Summary, and Note Brief paths each carry distinct protected contracts.</dd>
+          <dt>Rationale</dt><dd>Advanced control remains meaningful without turning a textarea into an accidental schema editor. The same boundary also prevents note content from being promoted into the higher-authority instruction layer.</dd>
+          <dt>Downsides</dt><dd>Composition must remain consistent across single, batch, object, text, and repair paths. A small shared contract is warranted; a general prompt framework is not.</dd>
+          <dt>Confidence</dt><dd>94%</dd>
+          <dt>Complexity</dt><dd>Medium</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-3">
+        <div class="idea-head"><span class="rank-number">3</span><div><h3>3. Prompt plan/apply reconciliation</h3><div class="idea-meta"><span class="chip">Confidence · 91%</span><span class="chip info">Complexity · Medium</span></div></div></div>
+        <p>Saving either control establishes the desired policy; it does not silently spend tokens or make existing output current. Cuecraft shows a plain-language impact plan, then an explicit Apply action performs the smallest correct regeneration while older artifacts remain usable and visibly outdated.</p>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Control boundaries and settings lifecycle</dd>
+          <dt>Basis</dt><dd><strong>direct:</strong> Settings already queue prompt saves and set one generic generation-changed flag; closing settings offers regeneration. Full and stale-section generation paths already provide seams for an explicit apply step.</dd>
+          <dt>Rationale</dt><dd>The user sees consequences before provider work begins: Cue changes replace cues and refresh dependent Note Brief; Study review changes refresh Summary and Note Brief while preserving cues.</dd>
+          <dt>Downsides</dt><dd>Desired-versus-applied state is more explicit than today’s boolean and needs calm, compact status copy. Deferring regeneration must never make stale artifacts look current.</dd>
+          <dt>Confidence</dt><dd>91%</dd>
+          <dt>Complexity</dt><dd>Medium</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-4">
+        <div class="idea-head"><span class="rank-number">4</span><div><h3>4. Artifact freshness graph</h3><div class="idea-meta"><span class="chip">Confidence · 95%</span><span class="chip info">Complexity · Medium–High</span></div></div></div>
+        <p>Track Cue, Summary, and Note Brief freshness independently from source content, effective policy, and upstream artifacts. Note Brief is a two-parent artifact: Cue policy reaches it through generated cue questions and keywords, while Study review policy reaches it directly.</p>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Artifact dependencies, staleness, and regeneration</dd>
+          <dt>Basis</dt><dd><strong>direct:</strong> Note Brief is generated after successful cues and receives their questions and keywords. Current staleness checks use section content hashes and generation metadata but do not include instruction identity or explicit artifact dependencies.</dd>
+          <dt>Rationale</dt><dd>This is the smallest model that avoids both under-regeneration and wasteful whole-note regeneration. It also gives the impact plan in idea 3 a truthful source of data.</dd>
+          <dt>Downsides</dt><dd>The cache schema and partial refresh logic become more explicit. Migration must preserve existing artifacts while classifying their instruction provenance as unknown or legacy.</dd>
+          <dt>Confidence</dt><dd>95%</dd>
+          <dt>Complexity</dt><dd>Medium–High</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-5">
+        <div class="idea-head"><span class="rank-number">5</span><div><h3>5. Effective policy identity</h3><div class="idea-meta"><span class="chip">Confidence · 92%</span><span class="chip info">Complexity · Medium</span></div></div></div>
+        <p>Version the built-in Cue and Study review policies independently and fingerprint the resolved effective policy applied to each artifact. Empty overrides track the moving built-in; a customization remains user-owned; Reset rejoins the current default rather than copying its text.</p>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Evaluation, migration, and provenance</dd>
+          <dt>Basis</dt><dd><strong>direct:</strong> Current Summary reset semantics already promise future default improvements, but cached generation metadata contains no effective instruction or built-in prompt version. <strong>external:</strong> exact effective-prompt identity is the relevant application-cache boundary.</dd>
+          <dt>Rationale</dt><dd>Cuecraft can explain whether an artifact reflects today’s default, an older default, or a custom policy—and can improve defaults without overwriting deliberate customizations.</dd>
+          <dt>Downsides</dt><dd>Fingerprint inputs and normalization must be canonical across routes. Harmless formatting changes should not create accidental policy churn unless they affect the actual request.</dd>
+          <dt>Confidence</dt><dd>92%</dd>
+          <dt>Complexity</dt><dd>Medium</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-6">
+        <div class="idea-head"><span class="rank-number">6</span><div><h3>6. Route-invariance contract and conformance lab</h3><div class="idea-meta"><span class="chip">Confidence · 94%</span><span class="chip info">Complexity · Medium</span></div></div></div>
+        <p>Define semantic policy carriage as a route-level invariant and prove it with a compact fixture matrix. The applicable Cue or Study review policy must survive object, text, local CLI batch, initial, and repair paths, while schemas and source data remain in their protected layers.</p>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Provider-route and repair conformance</dd>
+          <dt>Basis</dt><dd><strong>direct:</strong> Cuecraft branches across object, text, batch, and repair paths. Existing tests prove Summary instruction placement and repair persistence, but Cue and Note Brief lack equivalent instruction coverage.</dd>
+          <dt>Rationale</dt><dd>The settings promise is only real if every selected provider and fallback path means the same thing. Request-shape fixtures can verify placement deterministically; a small behavioral corpus can remain separate and intentionally narrow.</dd>
+          <dt>Downsides</dt><dd>Behavioral assertions can become brittle if tied to live model wording. Keep the release gate focused on request composition, protected contracts, and a few provider-neutral semantic checks.</dd>
+          <dt>Confidence</dt><dd>94%</dd>
+          <dt>Complexity</dt><dd>Medium</dd>
+        </dl>
+      </article>
+    </section>
+
+    <section id="prior-ideation">
+      <p class="eyebrow">Retained foundation from August 4</p>
+      <h2>Prior Ideation Retained</h2>
+      <p class="section-intro">The earlier summary-only work remains the foundation for the expanded direction. Its ranked ideas are preserved below because they established the default/override model, provider instruction parity, repair persistence, and schema-versus-semantics boundary that the new two-control design builds upon.</p>
+
+      <ol class="jump-list" aria-label="Prior ranked idea jump list">
+        <li><a href="#prior-idea-1">1. Configurable two-layer summary prompt</a></li>
+        <li><a href="#prior-idea-2">2. Object-route instruction parity</a></li>
+        <li><a href="#prior-idea-3">3. Semantic acceptance gate</a></li>
+        <li><a href="#prior-idea-4">4. Provider-conformance lab</a></li>
+        <li><a href="#prior-idea-5">5. Capability-conformance envelope</a></li>
+        <li><a href="#prior-idea-6">6. Persist policy during repair</a></li>
+      </ol>
+
+      <article class="idea-card" id="prior-idea-1">
+        <div class="idea-head"><span class="rank-number">1</span><div><h3>1. Configurable two-layer summary prompt</h3><div class="idea-meta"><span class="chip">Prior top pick</span><span class="chip">Confidence · 89%</span><span class="chip info">Complexity · Medium</span></div></div></div>
         <p>Add a multiline “Summary system prompt” control under Cue generation settings. Cuecraft resolves its effective rubric from a persisted user override when present, otherwise from the current built-in default; “Reset to default” clears the override. Send that effective rubric as text-route <code>instructions</code> on both initial and repair requests. Separately, keep the exact artifact, JSON keys, sentence limit, title, section questions, note text, and a fixed end-of-note command in the portable user prompt used by every route.</p>
 
         <div class="diagram-wrap">
@@ -409,7 +573,7 @@
         </dl>
       </article>
 
-      <article class="idea-card" id="idea-2">
+      <article class="idea-card" id="prior-idea-2">
         <div class="idea-head"><span class="rank-number">2</span><div><h3>2. Add instruction parity to <code>generateObject</code></h3><div class="idea-meta"><span class="chip rank">Shipped · byok-runtime 2.3.0</span><span class="chip">Confidence · 100%</span><span class="chip info">Complexity · Medium</span></div></div></div>
         <p>byok-runtime 2.3.0 extends its structured-object request with the same <code>instructions</code> concept as text generation and maps it to the provider's native system/developer channel. Cuecraft can now use the same split on its preferred route rather than treating the system rubric as a fallback-only enhancement.</p>
         <dl class="idea-fields">
@@ -422,7 +586,7 @@
         </dl>
       </article>
 
-      <article class="idea-card" id="idea-3">
+      <article class="idea-card" id="prior-idea-3">
         <div class="idea-head"><span class="rank-number">3</span><div><h3>3. Summary-specific semantic acceptance gate</h3><div class="idea-meta"><span class="chip warn">Confidence · 78%</span><span class="chip info">Complexity · Medium</span></div></div></div>
         <p>Treat a generated summary as a candidate until it passes narrow, explainable checks: one-sentence form, concise length, avoidance of generic filler, and an observable relationship to supplied note or cue concepts. A failed criterion becomes a targeted repair instruction rather than a generic “try again.”</p>
         <dl class="idea-fields">
@@ -435,7 +599,7 @@
         </dl>
       </article>
 
-      <article class="idea-card" id="idea-4">
+      <article class="idea-card" id="prior-idea-4">
         <div class="idea-head"><span class="rank-number">4</span><div><h3>4. Metamorphic provider-conformance lab</h3><div class="idea-meta"><span class="chip">Confidence · 88%</span><span class="chip info">Complexity · Medium</span></div></div></div>
         <p>Keep representative notes fixed and vary only the channel arrangement: inline-only, system/user split, and split plus end reminder. Across object, text/cloud, Ollama, Claude CLI, and Codex CLI routes, measure sentence compliance, note specificity, section-question alignment, JSON success, repair rate, token cost, and native instruction placement.</p>
         <dl class="idea-fields">
@@ -448,7 +612,7 @@
         </dl>
       </article>
 
-      <article class="idea-card" id="idea-5">
+      <article class="idea-card" id="prior-idea-5">
         <div class="idea-head"><span class="rank-number">5</span><div><h3>5. Capability-conformance envelope</h3><div class="idea-meta"><span class="chip">Confidence · 86%</span><span class="chip info">Complexity · Medium</span></div></div></div>
         <p>Define one end-to-end summary request contract—persistent behavior, task and source context, structured artifact, semantic checks, and repair behavior—and document how each runtime route satisfies it. Transport differences become explicit without allowing the intended output to fork by provider.</p>
         <dl class="idea-fields">
@@ -461,7 +625,7 @@
         </dl>
       </article>
 
-      <article class="idea-card" id="idea-6">
+      <article class="idea-card" id="prior-idea-6">
         <div class="idea-head"><span class="rank-number">6</span><div><h3>6. Persist the invariant policy during repair</h3><div class="idea-meta"><span class="chip">Confidence · 89%</span><span class="chip info">Complexity · Low</span></div></div></div>
         <p>Send the same study-summary <code>instructions</code> on both the initial text request and its JSON repair request. Let the repair user message focus on the parse or validation failure while the higher-level channel continues to enforce grounding, concision, and study purpose.</p>
         <dl class="idea-fields">
@@ -478,11 +642,30 @@
     <section id="rejection-summary">
       <p class="eyebrow">What did not survive</p>
       <h2>Rejection Summary</h2>
-      <p class="section-intro">Every distinct candidate was checked against the runtime types, Cuecraft's routing and validation behavior, official provider guidance, and the meeting-worthiness floor.</p>
+      <p class="section-intro">The extension generated 42 raw ideas, consolidated them to 24 distinct candidates, then subjected every candidate to fresh-context basis verification. The August 4 rejection record is retained after the new cuts.</p>
       <div class="table-wrap">
         <table>
           <thead><tr><th>#</th><th>Idea</th><th>Reason rejected</th></tr></thead>
           <tbody>
+            <tr><td>N1</td><td>Read-only effective prompt anatomy</td><td>Weak: composition is currently invisible, but a new diagnostic UI surface has no demonstrated user need.</td></tr>
+            <tr><td>N2</td><td>Contract-conflict linting</td><td>Weak: detecting semantic conflicts in arbitrary natural-language instructions would be noisy and costly.</td></tr>
+            <tr><td>N3</td><td>Materialized instruction recipes</td><td>Refuted: adds conceptual and settings surface beyond the requested two controls without evidence it is needed.</td></tr>
+            <tr><td>N4</td><td>Non-destructive default upgrade queue</td><td>Weak: potentially useful later, but historical grouping and refresh-queue UI are premature lifecycle machinery.</td></tr>
+            <tr><td>N5</td><td>Desired policy versus applied policy</td><td>Merged into ranked idea 3, where it becomes part of one coherent plan/apply lifecycle.</td></tr>
+            <tr><td>N6</td><td>Artifact impact receipt</td><td>Merged into ranked idea 3; impact disclosure is the plan shown before explicit Apply.</td></tr>
+            <tr><td>N7</td><td>No provider call on settings save</td><td>Merged into ranked idea 3 as the hard boundary between saving desired policy and applying generation.</td></tr>
+            <tr><td>N8</td><td>Note Brief as a two-parent artifact</td><td>Merged into ranked idea 4 as the defining asymmetric edge in the freshness graph.</td></tr>
+            <tr><td>N9</td><td>Immutable generation variants</td><td>Refuted: storage history, rollback, comparison, and variant lifecycle add substantial scope with no present requirement.</td></tr>
+            <tr><td>N10</td><td>Generated-artifact instruction receipt</td><td>Weak as a separate product idea; minimal applied-policy provenance belongs inside freshness and status.</td></tr>
+            <tr><td>N11</td><td>Before/after policy sandbox</td><td>Refuted: provider-backed comparison adds cost and a new workflow beyond separating the controls.</td></tr>
+            <tr><td>N12</td><td>Artifact-specific semantic floors</td><td>Weak: subjective validators risk silently constraining legitimate user policy and are costly to maintain.</td></tr>
+            <tr><td>N13</td><td>Dual evaluation oracles</td><td>Weak as a standalone direction; retain deterministic structure and placement assertions inside ranked idea 6.</td></tr>
+            <tr><td>N14</td><td>Policy-to-artifact manifest</td><td>Weak: a declaration abstraction is unproven; the surviving boundaries can be implemented directly first.</td></tr>
+            <tr><td>N15</td><td>Reproducible generation identity bundle</td><td>Weak: combines useful fingerprints with scope-heavy evidence and reproducibility infrastructure.</td></tr>
+            <tr><td>N16</td><td>Contract-aware prompt studio</td><td>Refuted: packages several weak extras into a product larger than the requested two-control surface.</td></tr>
+            <tr><td>N17</td><td>Tracking defaults + action keys</td><td>Merged into ranked idea 5 as one effective-policy identity model.</td></tr>
+            <tr><td>N18</td><td>Route contract + provider lab</td><td>Merged into ranked idea 6 so the invariant and its proof remain one direction.</td></tr>
+            <tr><td>Prior</td><td>Earlier August 4 cuts</td><td>The original summary-only rejection record follows unchanged.</td></tr>
             <tr><td>—</td><td>Prior ranked ideas 1 + 2</td><td>Merged into “Configurable two-layer summary prompt”; the separate rubric and micro-echo cards were replaced by one coherent settings-and-prompt direction.</td></tr>
             <tr><td>1</td><td>Canonical prompt-policy compiler</td><td>Premature abstraction; focused shared constants and route-contract tests can establish whether a compiler-like layer is actually needed.</td></tr>
             <tr><td>4</td><td>Portable user-prompt bookends only</td><td>Sound baseline, but its useful micro-echo is already part of ranked idea 1's fixed portable contract.</td></tr>
@@ -506,7 +689,7 @@
       </div>
     </section>
 
-    <footer class="composition-signal">Composed 2026-08-06T22:55:00-07:00 by ce-ideate from the user's Cuecraft system-instruction question, settings refinement, byok-runtime 2.3.0 release, and repository evidence.</footer>
+    <footer class="composition-signal">Composed 2026-08-08T19:23:06-07:00 by ce-ideate from the requested Cue and Summary/Note Brief instruction split, the retained August 4 ideation, repository evidence, and primary provider guidance.</footer>
   </main>
 </body>
 </html>
