@@ -157,6 +157,18 @@ const CUE_PROTECTED_INVARIANT =
 	`and the required Section Lens fields (takeaway, keyPhrase, and explanation). ` +
 	PROTECTED_ARTIFACT_CONTRACT;
 
+function cueBatchProtectedInvariant(count: number): string {
+	return (
+		`CueCraft's protected Cue Batch invariant takes precedence over the editable policy above. ` +
+		`Create exactly one section-level active-recall cue for each of the ${count} supplied sections, in input order. ` +
+		`Use each section's configured preset, cue density, and question style. ` +
+		`Return a cues array with exactly ${count} objects. Each object must include the required Cue fields ` +
+		`(question, keywords, confidence, optional rationale, and sectionLens) and the required Section Lens fields ` +
+		`(takeaway, keyPhrase, and explanation). ` +
+		PROTECTED_ARTIFACT_CONTRACT
+	);
+}
+
 const SUMMARY_PROTECTED_INVARIANT =
 	`CueCraft's protected Summary invariant takes precedence over the editable policy above. ` +
 	`Create one concise Summary and an optional learning objective. ` +
@@ -168,7 +180,7 @@ const NOTE_BRIEF_PROTECTED_INVARIANT =
 	PROTECTED_ARTIFACT_CONTRACT;
 
 function protectedInstructionEnvelope(
-	artifact: "Cue" | "Summary" | "Note Brief",
+	artifact: "Cue" | "Cue Batch" | "Summary" | "Note Brief",
 	policy: string,
 	invariant: string
 ): string {
@@ -568,9 +580,10 @@ export function wrapCueCraftByokRuntime(
 	>
 ): CueCraftByokRuntime {
 	const generateFromObject = Boolean(runtime.generateObject);
+	const cuePolicy = resolveCueInstructions(settings.cueInstructionsOverride);
 	const cueInstructions = protectedInstructionEnvelope(
 		"Cue",
-		resolveCueInstructions(settings.cueInstructionsOverride),
+		cuePolicy,
 		CUE_PROTECTED_INVARIANT
 	);
 	const studyReviewPolicy = resolveSummaryInstructions(
@@ -629,7 +642,16 @@ export function wrapCueCraftByokRuntime(
 	};
 	if (runtime.id === "codex-cli" || runtime.id === "claude-cli") {
 		cueRuntime.generateCues = (inputs, signal) =>
-			generateCueBatchFromTextProvider(runtime, inputs, cueInstructions, signal);
+			generateCueBatchFromTextProvider(
+				runtime,
+				inputs,
+				protectedInstructionEnvelope(
+					"Cue Batch",
+					cuePolicy,
+					cueBatchProtectedInvariant(inputs.length)
+				),
+				signal
+			);
 	}
 	return cueRuntime;
 }

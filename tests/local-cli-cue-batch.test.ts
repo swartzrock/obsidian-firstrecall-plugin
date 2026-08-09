@@ -39,6 +39,16 @@ describe("local CLI cue batch prompt", () => {
 										explanation: "The phrase defines stack order.",
 									},
 								},
+								{
+									question: "What makes a queue FIFO?",
+									keywords: ["queue", "FIFO"],
+									confidence: "high",
+									sectionLens: {
+										takeaway: "Queues remove the oldest item first.",
+										keyPhrase: "first-in-first-out",
+										explanation: "The phrase defines queue order.",
+									},
+								},
 							],
 						}),
 				};
@@ -57,9 +67,16 @@ describe("local CLI cue batch prompt", () => {
 					preset: "conceptual",
 					options: { cueDensity: "balanced", questionStyle: "mixed" },
 				},
+				{
+					heading: "Queues",
+					content: "A queue removes the oldest item first.",
+					preset: "conceptual",
+					options: { cueDensity: "balanced", questionStyle: "mixed" },
+				},
 			])
 		).resolves.toMatchObject([
 			{ cue: { question: "What makes a stack LIFO?" } },
+			{ cue: { question: "What makes a queue FIFO?" } },
 		]);
 
 		expect(calls).toHaveLength(2);
@@ -68,7 +85,13 @@ describe("local CLI cue batch prompt", () => {
 			expect(call.instructions?.split(cuePolicy)).toHaveLength(2);
 			expect(call.instructions).not.toContain(reviewPolicy);
 			expect(call.instructions).toContain(
-				"CueCraft's protected Cue invariant takes precedence"
+				"CueCraft's protected Cue Batch invariant takes precedence"
+			);
+			expect(call.instructions).toContain(
+				"Create exactly one section-level active-recall cue for each of the 2 supplied sections, in input order."
+			);
+			expect(call.instructions).not.toContain(
+				"Create one section-level active-recall cue using"
 			);
 			for (const field of [
 				"question",
@@ -84,10 +107,14 @@ describe("local CLI cue batch prompt", () => {
 			expect(call.instructions).not.toContain(
 				"A stack removes the newest item first."
 			);
+			expect(call.instructions).not.toContain(
+				"A queue removes the oldest item first."
+			);
 			expect(call.prompt).toContain("A stack removes the newest item first.");
+			expect(call.prompt).toContain("A queue removes the oldest item first.");
 			expect(call.prompt).not.toContain(cuePolicy);
 			expect(call.prompt).not.toContain(reviewPolicy);
-			expect(call.jsonSchema).toBe(cueBatchJsonSchema(1));
+			expect(call.jsonSchema).toBe(cueBatchJsonSchema(2));
 		}
 		expect(calls[1].prompt).toContain(
 			"Your previous reply could not be validated (response was not valid JSON)."
