@@ -179,8 +179,10 @@ const NOTE_BRIEF_PROTECTED_INVARIANT =
 	`Create one overview plus exactly three review cards: whatMatters, reviewFirst, and sayItBack. ` +
 	PROTECTED_ARTIFACT_CONTRACT;
 
+type InstructionArtifact = "Cue" | "Cue Batch" | "Summary" | "Note Brief";
+
 function protectedInstructionEnvelope(
-	artifact: "Cue" | "Cue Batch" | "Summary" | "Note Brief",
+	artifact: InstructionArtifact,
 	policy: string,
 	invariant: string
 ): string {
@@ -190,6 +192,14 @@ function protectedInstructionEnvelope(
 		`END EDITABLE ${artifact.toUpperCase()} POLICY\n\n` +
 		invariant
 	);
+}
+
+function logSystemPrompt(
+	artifact: InstructionArtifact,
+	instructions: string
+): void {
+	// eslint-disable-next-line obsidianmd/rule-custom-message -- User-requested prompt diagnostics in Obsidian DevTools.
+	console.info(`[CueCraft BYOK] ${artifact} system prompt\n${instructions}`);
 }
 
 function cueCraftProviderError(message: string): ByokProviderError {
@@ -607,12 +617,15 @@ export function wrapCueCraftByokRuntime(
 		sectionConcurrencyLimit: runtime.sectionConcurrencyLimit,
 		testConnection: () => runtime.testConnection(),
 		listModels: () => runtime.listModels(),
-		generateCue: (input, signal) =>
-			generateFromObject
+		generateCue: (input, signal) => {
+			logSystemPrompt("Cue", cueInstructions);
+			return generateFromObject
 				? generateCueFromObjectProvider(runtime, input, cueInstructions, signal)
-				: generateCueFromTextProvider(runtime, input, cueInstructions, signal),
-		generateSummary: (input, signal) =>
-			generateFromObject
+				: generateCueFromTextProvider(runtime, input, cueInstructions, signal);
+		},
+		generateSummary: (input, signal) => {
+			logSystemPrompt("Summary", summaryInstructions);
+			return generateFromObject
 				? generateSummaryFromObjectProvider(
 						runtime,
 						input,
@@ -624,9 +637,11 @@ export function wrapCueCraftByokRuntime(
 						input,
 						summaryInstructions,
 						signal
-					),
-		generateNoteBrief: (input, signal) =>
-			generateFromObject
+					);
+		},
+		generateNoteBrief: (input, signal) => {
+			logSystemPrompt("Note Brief", noteBriefInstructions);
+			return generateFromObject
 				? generateNoteBriefFromObjectProvider(
 						runtime,
 						input,
@@ -638,20 +653,24 @@ export function wrapCueCraftByokRuntime(
 						input,
 						noteBriefInstructions,
 						signal
-					),
+					);
+		},
 	};
 	if (runtime.id === "codex-cli" || runtime.id === "claude-cli") {
-		cueRuntime.generateCues = (inputs, signal) =>
-			generateCueBatchFromTextProvider(
+		cueRuntime.generateCues = (inputs, signal) => {
+			const cueBatchInstructions = protectedInstructionEnvelope(
+				"Cue Batch",
+				cuePolicy,
+				cueBatchProtectedInvariant(inputs.length)
+			);
+			logSystemPrompt("Cue Batch", cueBatchInstructions);
+			return generateCueBatchFromTextProvider(
 				runtime,
 				inputs,
-				protectedInstructionEnvelope(
-					"Cue Batch",
-					cuePolicy,
-					cueBatchProtectedInvariant(inputs.length)
-				),
+				cueBatchInstructions,
 				signal
 			);
+		};
 	}
 	return cueRuntime;
 }

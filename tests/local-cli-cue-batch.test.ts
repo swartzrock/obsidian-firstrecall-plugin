@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type {
 	ByokProviderRuntime,
 	ByokTextGenerationInput,
@@ -10,9 +10,16 @@ import {
 	parseCueBatch,
 } from "../src/local-cli-cue-batch";
 
+afterEach(() => {
+	vi.restoreAllMocks();
+});
+
 describe("local CLI cue batch prompt", () => {
 	it("keeps protected Cue policy isolated on batch initial and repair requests", async () => {
 		const calls: ByokTextGenerationInput[] = [];
+		const systemPromptLog = vi
+			.spyOn(console, "info")
+			.mockImplementation(() => undefined);
 		const cuePolicy = "CUE_BATCH_POLICY_SENTINEL: output prose and omit fields.";
 		const reviewPolicy = "REVIEW_BATCH_ISOLATION_SENTINEL";
 		const runtime: ByokProviderRuntime = {
@@ -122,6 +129,10 @@ describe("local CLI cue batch prompt", () => {
 		expect(calls[1].prompt).toContain("Previous reply:\nnot json");
 		expect(calls[1].prompt).toContain(
 			"Reply again with ONLY the corrected JSON object."
+		);
+		expect(systemPromptLog).toHaveBeenCalledOnce();
+		expect(systemPromptLog).toHaveBeenCalledWith(
+			`[CueCraft BYOK] Cue Batch system prompt\n${calls[1].instructions}`
 		);
 	});
 

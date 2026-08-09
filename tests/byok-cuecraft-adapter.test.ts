@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	applyCueCraftListedModels,
 	applyCueCraftModelRefreshFailure,
@@ -80,6 +80,10 @@ function settings(
 
 const http: ByokHttpClient = async () => ({ status: 200, text: "{}", json: {} });
 const fetchImpl = (async () => new Response("{}")) as typeof fetch;
+
+afterEach(() => {
+	vi.restoreAllMocks();
+});
 
 const openrouterOption: ByokModelOption = {
 	id: "anthropic/claude-sonnet-4",
@@ -439,6 +443,9 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("keeps protected Cue policy isolated on text-provider initial and repair requests", async () => {
 		const calls: Array<{ body?: string }> = [];
+		const systemPromptLog = vi
+			.spyOn(console, "info")
+			.mockImplementation(() => undefined);
 		const cuePolicy = "CUE_TEXT_POLICY_SENTINEL: use prose instead of JSON.";
 		const reviewPolicy = "REVIEW_TEXT_POLICY_SENTINEL: review-only guidance.";
 		const http: ByokHttpClient = async (request) => {
@@ -491,6 +498,10 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			expect(body.format).toBe("json");
 		}
 		const repairBody = JSON.parse(calls[1].body ?? "{}");
+		expect(systemPromptLog).toHaveBeenCalledOnce();
+		expect(systemPromptLog).toHaveBeenCalledWith(
+			`[CueCraft BYOK] Cue system prompt\n${repairBody.system}`
+		);
 		expect(repairBody.prompt).toContain(
 			"Your previous reply could not be validated (response was not valid JSON)."
 		);
@@ -573,6 +584,9 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("keeps summary instructions on text-provider repair requests", async () => {
 		const calls: Array<{ body?: string }> = [];
+		const systemPromptLog = vi
+			.spyOn(console, "info")
+			.mockImplementation(() => undefined);
 		const instructions =
 			"SUMMARY_TEXT_POLICY_SENTINEL: focus on relationships, but omit JSON.";
 		const cuePolicy = "CUE_TEXT_SUMMARY_ISOLATION_SENTINEL";
@@ -623,6 +637,10 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			expect(body.prompt).toContain("Outputs alter later inputs.");
 		}
 		const repairBody = JSON.parse(calls[1].body ?? "{}");
+		expect(systemPromptLog).toHaveBeenCalledOnce();
+		expect(systemPromptLog).toHaveBeenCalledWith(
+			`[CueCraft BYOK] Summary system prompt\n${repairBody.system}`
+		);
 		expect(repairBody.prompt).toContain(
 			"Your previous reply could not be validated (response was not valid JSON)."
 		);
@@ -720,6 +738,9 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("keeps protected Note Brief policy isolated on text initial and repair requests", async () => {
 		const calls: Array<{ body?: string }> = [];
+		const systemPromptLog = vi
+			.spyOn(console, "info")
+			.mockImplementation(() => undefined);
 		const reviewPolicy =
 			"NOTE_BRIEF_TEXT_POLICY_SENTINEL: use prose and omit review cards.";
 		const cuePolicy = "CUE_NOTE_BRIEF_TEXT_ISOLATION_SENTINEL";
@@ -788,6 +809,10 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			expect(body.prompt).not.toContain(cuePolicy);
 		}
 		const repairBody = JSON.parse(calls[1].body ?? "{}");
+		expect(systemPromptLog).toHaveBeenCalledOnce();
+		expect(systemPromptLog).toHaveBeenCalledWith(
+			`[CueCraft BYOK] Note Brief system prompt\n${repairBody.system}`
+		);
 		expect(repairBody.prompt).toContain(
 			"Your previous reply could not be validated (response was not valid JSON)."
 		);
