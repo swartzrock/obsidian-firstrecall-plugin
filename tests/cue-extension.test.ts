@@ -24,12 +24,17 @@ import {
 	renderCueElement,
 	setCuesEffect,
 	setRailSpacersEffect,
+	type CueEditorRenderState,
 	type CueLineData,
 } from "../src/cue-extension";
 import { EDITOR_CUE_DISPLAY_OPTIONS } from "../src/editor-cue-display";
 import { buildNoteCache, migrateCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
+import type {
+	CueSectionCollapseController,
+	CueSectionKind,
+} from "../src/cue-section-collapse";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
 const SECTION_LENS = {
@@ -85,6 +90,83 @@ function withDocument<T>(fn: () => T): T {
 			delete (globalThis as { document?: Document }).document;
 		}
 	}
+}
+
+function collapseController(initial: readonly CueSectionKind[] = []): {
+	controller: CueSectionCollapseController;
+	collapsed: Set<CueSectionKind>;
+	calls: Array<[string, string, CueSectionKind, boolean]>;
+} {
+	const collapsed = new Set(initial);
+	const calls: Array<[string, string, CueSectionKind, boolean]> = [];
+	return {
+		collapsed,
+		calls,
+		controller: {
+			isCollapsed: (_notePath, _sectionId, kind) => collapsed.has(kind),
+			setCollapsed: (notePath, sectionId, kind, value) => {
+				calls.push([notePath, sectionId, kind, value]);
+				if (value) collapsed.add(kind);
+				else collapsed.delete(kind);
+				return Promise.resolve();
+			},
+		},
+	};
+}
+
+function anchoredCue(overrides: Partial<CueLineData> = {}): CueLineData {
+	return {
+		line: 1,
+		sectionId: "section-terms",
+		heading: "Terms",
+		question: "How do agents differ from chatbots?",
+		keywords: ["agents", "tools"],
+		confidence: "medium",
+		sectionLens: SECTION_LENS,
+		error: null,
+		...overrides,
+	};
+}
+
+function renderAnchoredMarker(
+	controller: CueSectionCollapseController,
+	cue: CueLineData = anchoredCue(),
+	options: Pick<
+		CueEditorRenderState,
+		"showRailQuestions" | "showRailSupportTerms"
+	> = {}
+): HTMLElement {
+	const state = EditorState.create({ doc: "# Terms\nbody" });
+	const elements: HTMLElement[] = [];
+	buildCueGutterMarkers(state, {
+		cues: [cue],
+		display: "anchored-card-rail",
+		notePath: "notes/agents.md",
+		collapseController: controller,
+		...options,
+	}).between(0, state.doc.length, (_from, _to, marker) => {
+		elements.push(marker.toDOM(null as never) as HTMLElement);
+	});
+	const element = elements[0];
+	if (!element) throw new Error("Expected anchored cue marker");
+	return element;
+}
+
+function disclosureButtons(element: HTMLElement): HTMLButtonElement[] {
+	return Array.from(
+		element.querySelectorAll<HTMLButtonElement>(
+			".cuecraft-editor-hook-section-toggle"
+		)
+	);
+}
+
+function disclosureBody(
+	element: HTMLElement,
+	button: HTMLButtonElement
+): HTMLElement | null {
+	return element.querySelector<HTMLElement>(
+		`#${button.getAttribute("aria-controls")}`
+	);
 }
 
 function cacheFrom(
@@ -411,6 +493,166 @@ describe("renderCueElement", () => {
 			).toBe("Agents use tools to complete multi-step work.");
 			expect(el.querySelector(".cuecraft-section-lens-phrase")).toBeNull();
 			expect(el.querySelector(".cuecraft-section-lens-explanation")).toBeNull();
+		});
+	});
+
+	it("renders accessible disclosures from saved state and displayed content", () => {
+		withDocument(() => {
+			const expanded = renderCueElement(anchoredCue(), "anchored-card-rail");
+			const expandedButtons = disclosureButtons(expanded);
+			expect(expandedButtons.map((button) => button.dataset.section)).toEqual([
+				"summary",
+				"question",
+				"terms",
+			]);
+			for (const button of expandedButtons) {
+				expect(button.type).toBe("button");
+				expect(button.getAttribute("aria-expanded")).toBe("true");
+				expect(
+					button.querySelector(".cuecraft-editor-hook-section-label")
+				).not.toBeNull();
+				expect(
+					button.querySelector(".cuecraft-editor-hook-section-preview")?.hidden
+				).toBe(true);
+				expect(
+					button
+						.querySelector(".cuecraft-editor-hook-section-chevron")
+						?.getAttribute("data-icon")
+				).toBe("chevron-down");
+				expect(disclosureBody(expanded, button)?.getAttribute("aria-hidden")).toBe(
+					"false"
+				);
+			}
+			const second = renderCueElement(
+				anchoredCue({ sectionId: "section-tools" }),
+				"anchored-card-rail"
+			);
+			const bodyIds = [...expandedButtons, ...disclosureButtons(second)].map(
+				(button) => button.getAttribute("aria-controls")
+			);
+			expect(new Set(bodyIds).size).toBe(6);
+
+			const { controller } = collapseController([
+				"summary",
+				"question",
+				"terms",
+			]);
+			const collapsed = renderAnchoredMarker(
+				controller,
+				anchoredCue({
+					keywords: ["agents", "tools", "planning", "autonomy", "memory"],
+				})
+			);
+			expect(
+				disclosureButtons(collapsed).map((button) => ({
+					expanded: button.getAttribute("aria-expanded"),
+					preview: button.querySelector<HTMLElement>(
+						".cuecraft-editor-hook-section-preview"
+					)?.textContent,
+					previewHidden: button.querySelector<HTMLElement>(
+						".cuecraft-editor-hook-section-preview"
+					)?.hidden,
+					bodyHidden: disclosureBody(collapsed, button)?.getAttribute("aria-hidden"),
+				}))
+			).toEqual([
+				{
+					expanded: "false",
+					preview: "Agents use tools to complete multi-step work.",
+					previewHidden: false,
+					bodyHidden: "true",
+				},
+				{
+					expanded: "false",
+					preview: "How do agents differ from chatbots",
+					previewHidden: false,
+					bodyHidden: "true",
+				},
+				{
+					expanded: "false",
+					preview: "agents, tools, planning, autonomy",
+					previewHidden: false,
+					bodyHidden: "true",
+				},
+			]);
+		});
+	});
+
+	it("toggles one disclosure synchronously without changing card expansion", () => {
+		withDocument(() => {
+			const { controller, collapsed, calls } = collapseController();
+			const element = renderAnchoredMarker(controller);
+			const [summary, question] = disclosureButtons(element);
+			if (!summary) throw new Error("Expected Summary disclosure");
+			const body = disclosureBody(element, summary);
+
+			summary.click();
+			expect(collapsed.has("summary")).toBe(true);
+			expect(calls).toEqual([
+				["notes/agents.md", "section-terms", "summary", true],
+			]);
+			expect(summary.getAttribute("aria-expanded")).toBe("false");
+			expect(body?.hidden).toBe(true);
+			expect(
+				summary
+					.querySelector(".cuecraft-editor-hook-section-chevron")
+					?.getAttribute("data-icon")
+			).toBe("chevron-right");
+			expect(question?.getAttribute("aria-expanded")).toBe("true");
+			expect(element.dataset.expanded).toBe("false");
+
+			summary
+				.querySelector<HTMLElement>(".cuecraft-editor-hook-section-preview")
+				?.click();
+			expect(calls.at(-1)).toEqual([
+				"notes/agents.md",
+				"section-terms",
+				"summary",
+				false,
+			]);
+			expect(summary.getAttribute("aria-expanded")).toBe("true");
+			expect(body?.hidden).toBe(false);
+		});
+	});
+
+	it("omits unavailable disclosures without changing saved or alternate surfaces", () => {
+		withDocument(() => {
+			const { controller, collapsed, calls } = collapseController([
+				"question",
+				"terms",
+			]);
+			const hidden = renderAnchoredMarker(controller, anchoredCue(), {
+				showRailQuestions: false,
+				showRailSupportTerms: false,
+			});
+			expect(disclosureButtons(hidden).map((button) => button.dataset.section)).toEqual([
+				"summary",
+			]);
+			expect(collapsed).toEqual(new Set(["question", "terms"]));
+			expect(calls).toEqual([]);
+
+			const missing = renderCueElement(
+				anchoredCue({ sectionLens: null, keywords: [] }),
+				"anchored-card-rail"
+			);
+			expect(disclosureButtons(missing).map((button) => button.dataset.section)).toEqual([
+				"question",
+			]);
+			const failed = renderCueElement(
+				anchoredCue({
+					question: "",
+					keywords: [],
+					confidence: null,
+					sectionLens: null,
+					error: "boom",
+				}),
+				"anchored-card-rail"
+			);
+			expect(disclosureButtons(failed)).toEqual([]);
+			for (const display of ["inline-cues", "cornell"] as const) {
+				expect(disclosureButtons(renderCueElement(anchoredCue(), display))).toEqual(
+					[]
+				);
+			}
 		});
 	});
 
@@ -846,11 +1088,11 @@ describe("cue editor placement", () => {
 					cards.push(marker.toDOM(null as never) as HTMLElement);
 				});
 
-				expect(cards[0].dataset.supportTermsVisible).toBe("false");
+				expect(cards[0].dataset.supportTermsVisible).toBe("true");
 				expect(cards[0].dataset.space).toBe("compact");
 				expect(
 					cards[0].querySelector(".cuecraft-editor-hook-keywords")
-				).toBeNull();
+				).not.toBeNull();
 				expect(
 					cards[0].querySelector(".cuecraft-editor-hook-title")?.textContent
 				).toBe(question.replace(/\?$/, ""));

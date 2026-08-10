@@ -54,6 +54,7 @@ const QUESTION_ICON_CANDIDATES = [
 ] as const;
 const SUMMARY_ICON_CANDIDATES = ["notebook-text", "file-text"] as const;
 const TERMS_ICON_CANDIDATES = ["tags", "tag"] as const;
+let nextEditorHookSectionBodyId = 0;
 
 /** One renderable cue, resolved to a current document line. */
 export interface CueLineData {
@@ -427,18 +428,22 @@ function renderEditorHookElement(
 
 	let hasContent = false;
 	if (card.sectionLens && showSectionLabels) {
-		appendEditorHookSectionLabel(root, "Summary");
 		const summary = cueDocument().createElement("div");
 		summary.className = "cuecraft-section-lens";
 		const takeaway = cueDocument().createElement("span");
 		takeaway.className = "cuecraft-section-lens-takeaway";
 		takeaway.textContent = card.sectionLens.takeaway;
 		summary.appendChild(takeaway);
-		root.appendChild(summary);
+		appendEditorHookDisclosure(
+			root,
+			"Summary",
+			card.sectionLens.takeaway,
+			summary,
+			options.collapse
+		);
 		hasContent = true;
 	}
 	if (card.showQuestion || card.kind === "failed") {
-		if (showSectionLabels) appendEditorHookSectionLabel(root, "Question");
 		const title = cueDocument().createElement("div");
 		title.className = "cuecraft-editor-hook-title";
 		title.textContent =
@@ -447,7 +452,17 @@ function renderEditorHookElement(
 			card.display === "hook-minimap"
 				? card.originalQuestion
 				: card.hookTitle;
-		root.appendChild(title);
+		if (showSectionLabels) {
+			appendEditorHookDisclosure(
+				root,
+				"Question",
+				title.textContent,
+				title,
+				options.collapse
+			);
+		} else {
+			root.appendChild(title);
+		}
 		hasContent = true;
 	}
 
@@ -468,15 +483,24 @@ function renderEditorHookElement(
 	}
 
 	if (card.showSupportTerms && card.keywords.length) {
-		if (showSectionLabels) appendEditorHookSectionLabel(root, "Terms");
 		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
-		if (card.display === "anchored-card-rail") {
-			appendCueTerms(keywords, card.keywords.slice(0, 4));
+		const renderedKeywords =
+			card.display === "anchored-card-rail"
+				? card.keywords.slice(0, 4)
+				: card.keywords;
+		appendCueTerms(keywords, renderedKeywords);
+		if (showSectionLabels) {
+			appendEditorHookDisclosure(
+				root,
+				"Terms",
+				renderedKeywords.join(", "),
+				keywords,
+				options.collapse
+			);
 		} else {
-			appendCueTerms(keywords, card.keywords);
+			root.appendChild(keywords);
 		}
-		root.appendChild(keywords);
 		hasContent = true;
 	}
 	if (!hasContent) root.classList.add("cuecraft-editor-hook-empty");
@@ -722,13 +746,23 @@ export function applyRailOverflowMeasurements(
 	}
 }
 
-function appendEditorHookSectionLabel(
+function appendEditorHookDisclosure(
 	parent: HTMLElement,
-	label: "Question" | "Summary" | "Terms"
+	label: "Question" | "Summary" | "Terms",
+	previewText: string,
+	content: HTMLElement,
+	collapse: CueSectionCollapseRenderState | undefined
 ): void {
-	const sectionLabel = cueDocument().createElement("div");
+	const doc = parent.ownerDocument;
+	const kind = label.toLowerCase() as CueSectionKind;
+	const button = doc.createElement("button");
+	button.type = "button";
+	button.className = "cuecraft-editor-hook-section-toggle";
+	button.dataset.section = kind;
+
+	const sectionLabel = doc.createElement("span");
 	sectionLabel.className = "cuecraft-editor-hook-section-label";
-	sectionLabel.dataset.section = label.toLowerCase();
+	sectionLabel.dataset.section = kind;
 	let icon: readonly string[] = TERMS_ICON_CANDIDATES;
 	if (label === "Question") {
 		icon = QUESTION_ICON_CANDIDATES;
@@ -737,7 +771,64 @@ function appendEditorHookSectionLabel(
 	}
 	appendLabelIcon(sectionLabel, icon);
 	appendLabelText(sectionLabel, label.toUpperCase());
-	parent.appendChild(sectionLabel);
+
+	const chevron = doc.createElement("span");
+	chevron.className = "cuecraft-editor-hook-section-chevron";
+	chevron.setAttribute("aria-hidden", "true");
+	sectionLabel.appendChild(chevron);
+	button.appendChild(sectionLabel);
+
+	const preview = doc.createElement("span");
+	preview.className = "cuecraft-editor-hook-section-preview";
+	preview.textContent = previewText;
+	button.appendChild(preview);
+
+	const body = doc.createElement("div");
+	body.className = "cuecraft-editor-hook-section-body";
+	body.dataset.section = kind;
+	body.id = editorHookSectionBodyId(doc);
+	const bodyContent = doc.createElement("div");
+	bodyContent.className = "cuecraft-editor-hook-section-content";
+	bodyContent.appendChild(content);
+	body.appendChild(bodyContent);
+	button.setAttribute("aria-controls", body.id);
+
+	let collapsed = collapse?.collapsed[kind] ?? false;
+	const updateDom = (): void => {
+		button.setAttribute("aria-expanded", String(!collapsed));
+		body.setAttribute("aria-hidden", String(collapsed));
+		body.dataset.collapsed = String(collapsed);
+		body.hidden = collapsed;
+		preview.hidden = !collapsed;
+		chevron.replaceChildren();
+		setIcon(chevron, collapsed ? "chevron-right" : "chevron-down");
+	};
+	updateDom();
+	button.addEventListener("click", (event) => {
+		event.preventDefault();
+		event.stopPropagation();
+		collapsed = !collapsed;
+		if (collapse) {
+			void collapse.controller.setCollapsed(
+				collapse.notePath,
+				collapse.sectionId,
+				kind,
+				collapsed
+			);
+		}
+		updateDom();
+	});
+
+	parent.append(button, body);
+}
+
+function editorHookSectionBodyId(doc: Document): string {
+	let id: string;
+	do {
+		nextEditorHookSectionBodyId += 1;
+		id = `cuecraft-editor-hook-section-body-${nextEditorHookSectionBodyId}`;
+	} while (doc.getElementById(id));
+	return id;
 }
 
 const noteBriefCardOrder = [
@@ -957,7 +1048,6 @@ export function buildCueGutterMarkers(
 			? {
 					...options,
 					...cueCollapseRenderOptions(payload, cue),
-					showSupportTerms: false,
 					compactForSpace: true,
 				}
 			: { ...options, ...cueCollapseRenderOptions(payload, cue) };
