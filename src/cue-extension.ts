@@ -47,6 +47,8 @@ const QUESTION_ICON_CANDIDATES = [
 	"circle-help",
 	"help-circle",
 ] as const;
+const SUMMARY_ICON_CANDIDATES = ["notebook-text", "file-text"] as const;
+const TERMS_ICON_CANDIDATES = ["tags", "tag"] as const;
 
 /** One renderable cue, resolved to a current document line. */
 export interface CueLineData {
@@ -703,9 +705,13 @@ function appendEditorHookSectionLabel(
 	const sectionLabel = cueDocument().createElement("div");
 	sectionLabel.className = "cuecraft-editor-hook-section-label";
 	sectionLabel.dataset.section = label.toLowerCase();
+	let icon: readonly string[] = TERMS_ICON_CANDIDATES;
 	if (label === "Question") {
-		appendLabelIcon(sectionLabel, QUESTION_ICON_CANDIDATES);
+		icon = QUESTION_ICON_CANDIDATES;
+	} else if (label === "Summary") {
+		icon = SUMMARY_ICON_CANDIDATES;
 	}
+	appendLabelIcon(sectionLabel, icon);
 	appendLabelText(sectionLabel, label.toUpperCase());
 	parent.appendChild(sectionLabel);
 }
