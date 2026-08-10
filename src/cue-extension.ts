@@ -775,6 +775,7 @@ function appendEditorHookDisclosure(
 	const chevron = doc.createElement("span");
 	chevron.className = "cuecraft-editor-hook-section-chevron";
 	chevron.setAttribute("aria-hidden", "true");
+	setIcon(chevron, "chevron-down");
 	sectionLabel.appendChild(chevron);
 	button.appendChild(sectionLabel);
 
@@ -798,11 +799,20 @@ function appendEditorHookDisclosure(
 		button.setAttribute("aria-expanded", String(!collapsed));
 		body.setAttribute("aria-hidden", String(collapsed));
 		body.dataset.collapsed = String(collapsed);
-		body.hidden = collapsed;
 		preview.hidden = !collapsed;
-		chevron.replaceChildren();
-		setIcon(chevron, collapsed ? "chevron-right" : "chevron-down");
 	};
+	let transitionMeasurePending = false;
+	body.addEventListener("transitionend", (event) => {
+		if (
+			event.target !== body ||
+			event.propertyName !== "grid-template-rows" ||
+			!transitionMeasurePending
+		) {
+			return;
+		}
+		transitionMeasurePending = false;
+		dispatchRailCardToggleEvent(parent);
+	});
 	updateDom();
 	button.addEventListener("click", (event) => {
 		event.preventDefault();
@@ -816,7 +826,9 @@ function appendEditorHookDisclosure(
 				collapsed
 			);
 		}
+		transitionMeasurePending = true;
 		updateDom();
+		dispatchRailCardToggleEvent(parent);
 	});
 
 	parent.append(button, body);

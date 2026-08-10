@@ -168,23 +168,12 @@ describe("settings CSS", () => {
 		expect(cueLabelRule).toContain("align-items: center");
 		expect(cueLabelRule).toContain("gap: 0.48em");
 
-		const editorLabelRules =
-			styles.match(/\.cuecraft-editor-hook-section-label\s*\{[^}]*\}/g) ?? [];
-		expect(
-			editorLabelRules.some(
-				(rule) =>
-					rule.includes("display: flex") &&
-					rule.includes("align-items: center") &&
-					rule.includes("gap: 0.48em")
-			)
-		).toBe(true);
-
-		const editorDividerRule = ruleFor(
-			".cuecraft-editor-hook-section-label:not(:first-child)"
+		const editorLabelRule = ruleFor(
+			".cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-section-label"
 		);
-		expect(editorDividerRule).toContain("border-top: 1px solid var(--cc-border)");
-		expect(editorDividerRule).toContain("margin-top: 0.95em");
-		expect(editorDividerRule).toContain("padding-top: 0.85em");
+		expect(editorLabelRule).toContain("display: flex");
+		expect(editorLabelRule).toContain("align-items: center");
+		expect(editorLabelRule).toContain("gap: 0.48em");
 
 		const iconRule = ruleFor(".cuecraft-label-icon");
 		expect(iconRule).toContain("width: 1.25em");
@@ -195,6 +184,65 @@ describe("settings CSS", () => {
 			".cuecraft-note-brief-label .cuecraft-label-icon"
 		);
 		expect(briefIconRule).toBe("");
+	});
+
+	it("animates accessible anchored rail section disclosures", () => {
+		const root = ".cuecraft-editor-hook-anchored-card-rail";
+		const toggleRule = ruleFor(`${root} .cuecraft-editor-hook-section-toggle`);
+		expect(toggleRule).toContain("display: block");
+		expect(toggleRule).toContain("width: 100%");
+		expect(toggleRule).toContain("background: transparent");
+		expect(toggleRule).toContain("color: var(--text-normal)");
+
+		const dividerRule = ruleFor(
+			`${root} .cuecraft-editor-hook-section-body+.cuecraft-editor-hook-section-toggle`
+		);
+		expect(dividerRule).toContain("border-top: 1px solid var(--cc-border)");
+		expect(dividerRule).toContain("margin-top: 0.95em");
+		expect(dividerRule).toContain("padding-top: 0.85em");
+
+		const bodyRule = ruleFor(`${root} .cuecraft-editor-hook-section-body`);
+		expect(bodyRule).toContain("display: grid");
+		expect(bodyRule).toContain("grid-template-rows: 1fr");
+		expect(bodyRule).toContain("opacity: 1");
+		expect(bodyRule).toContain("grid-template-rows 200ms ease");
+		expect(bodyRule).toContain("opacity 200ms ease");
+
+		const collapsedBodyRule = ruleFor(
+			`${root} .cuecraft-editor-hook-section-body[data-collapsed="true"]`
+		);
+		expect(collapsedBodyRule).toContain("grid-template-rows: 0fr");
+		expect(collapsedBodyRule).toContain("opacity: 0");
+
+		const contentRule = ruleFor(`${root} .cuecraft-editor-hook-section-content`);
+		expect(contentRule).toContain("min-height: 0");
+		expect(contentRule).toContain("overflow: hidden");
+
+		const chevronRule = ruleFor(
+			`${root} .cuecraft-editor-hook-section-chevron`
+		);
+		expect(chevronRule).toContain("transition: transform 200ms ease");
+		const collapsedChevronRule = ruleFor(
+			`${root} .cuecraft-editor-hook-section-toggle[aria-expanded="false"] .cuecraft-editor-hook-section-chevron`
+		);
+		expect(collapsedChevronRule).toContain("transform: rotate(-90deg)");
+
+		const previewRule = ruleFor(`${root} .cuecraft-editor-hook-section-preview`);
+		expect(previewRule).toContain("color: var(--cc-muted)");
+		expect(previewRule).toContain("font-style: italic");
+		expect(previewRule).toContain("white-space: nowrap");
+		expect(previewRule).toContain("overflow: hidden");
+		expect(previewRule).toContain("text-overflow: ellipsis");
+
+		const focusRule = ruleFor(
+			`${root} .cuecraft-editor-hook-section-toggle:focus-visible`
+		);
+		expect(focusRule).toContain("outline: 2px solid var(--interactive-accent)");
+		expect(focusRule).toContain("outline-offset: 3px");
+
+		expect(styles).toMatch(
+			/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.cuecraft-editor-hook-anchored-card-rail \.cuecraft-editor-hook-section-body,[\s\S]*?\.cuecraft-editor-hook-anchored-card-rail \.cuecraft-editor-hook-section-chevron\s*\{[^}]*transition: none/
+		);
 	});
 
 	it("keeps anchored rail cards compact and quiet", () => {

@@ -584,6 +584,11 @@ describe("renderCueElement", () => {
 			const [summary, question] = disclosureButtons(element);
 			if (!summary) throw new Error("Expected Summary disclosure");
 			const body = disclosureBody(element, summary);
+			if (!body) throw new Error("Expected Summary disclosure body");
+			const measurementEvents: string[] = [];
+			element.addEventListener(RAIL_CARD_TOGGLE_EVENT, () => {
+				measurementEvents.push("measure");
+			});
 
 			summary.click();
 			expect(collapsed.has("summary")).toBe(true);
@@ -591,14 +596,35 @@ describe("renderCueElement", () => {
 				["notes/agents.md", "section-terms", "summary", true],
 			]);
 			expect(summary.getAttribute("aria-expanded")).toBe("false");
-			expect(body?.hidden).toBe(true);
+			expect(body.hidden).toBe(false);
+			expect(body.dataset.collapsed).toBe("true");
+			expect(body.getAttribute("aria-hidden")).toBe("true");
 			expect(
 				summary
 					.querySelector(".cuecraft-editor-hook-section-chevron")
 					?.getAttribute("data-icon")
-			).toBe("chevron-right");
+			).toBe("chevron-down");
 			expect(question?.getAttribute("aria-expanded")).toBe("true");
 			expect(element.dataset.expanded).toBe("false");
+			expect(measurementEvents).toEqual(["measure"]);
+
+			const dispatchTransitionEnd = (
+				target: HTMLElement,
+				propertyName: string
+			): void => {
+				const event = new target.ownerDocument.defaultView!.Event(
+					"transitionend",
+					{ bubbles: true }
+				);
+				Object.defineProperty(event, "propertyName", { value: propertyName });
+				target.dispatchEvent(event);
+			};
+			dispatchTransitionEnd(body.firstElementChild as HTMLElement, "grid-template-rows");
+			dispatchTransitionEnd(body, "opacity");
+			expect(measurementEvents).toEqual(["measure"]);
+			dispatchTransitionEnd(body, "grid-template-rows");
+			dispatchTransitionEnd(body, "grid-template-rows");
+			expect(measurementEvents).toEqual(["measure", "measure"]);
 
 			summary
 				.querySelector<HTMLElement>(".cuecraft-editor-hook-section-preview")
@@ -610,7 +636,8 @@ describe("renderCueElement", () => {
 				false,
 			]);
 			expect(summary.getAttribute("aria-expanded")).toBe("true");
-			expect(body?.hidden).toBe(false);
+			expect(body.hidden).toBe(false);
+			expect(measurementEvents).toEqual(["measure", "measure", "measure"]);
 		});
 	});
 
