@@ -400,6 +400,17 @@ function renderEditorHookElement(
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
 	let hasContent = false;
+	if (card.sectionLens && showSectionLabels) {
+		appendEditorHookSectionLabel(root, "Summary");
+		const summary = cueDocument().createElement("div");
+		summary.className = "cuecraft-section-lens";
+		const takeaway = cueDocument().createElement("span");
+		takeaway.className = "cuecraft-section-lens-takeaway";
+		takeaway.textContent = card.sectionLens.takeaway;
+		summary.appendChild(takeaway);
+		root.appendChild(summary);
+		hasContent = true;
+	}
 	if (card.showQuestion || card.kind === "failed") {
 		if (showSectionLabels) appendEditorHookSectionLabel(root, "Question");
 		const title = cueDocument().createElement("div");
@@ -425,10 +436,7 @@ function renderEditorHookElement(
 			: root;
 	}
 
-	if (card.sectionLens && showSectionLabels) {
-		appendEditorHookSectionLabel(root, "Lens");
-	}
-	if (card.sectionLens) {
+	if (card.sectionLens && !showSectionLabels) {
 		appendSectionLens(root, card.sectionLens);
 		hasContent = true;
 	}
@@ -690,7 +698,7 @@ export function applyRailOverflowMeasurements(
 
 function appendEditorHookSectionLabel(
 	parent: HTMLElement,
-	label: "Question" | "Lens" | "Terms"
+	label: "Question" | "Summary" | "Terms"
 ): void {
 	const sectionLabel = cueDocument().createElement("div");
 	sectionLabel.className = "cuecraft-editor-hook-section-label";
