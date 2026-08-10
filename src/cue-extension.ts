@@ -54,6 +54,14 @@ const QUESTION_ICON_CANDIDATES = [
 ] as const;
 const SUMMARY_ICON_CANDIDATES = ["notebook-text", "file-text"] as const;
 const TERMS_ICON_CANDIDATES = ["tags", "tag"] as const;
+const CUE_SECTION_ICON_CANDIDATES: Record<
+	CueSectionKind,
+	readonly string[]
+> = {
+	summary: SUMMARY_ICON_CANDIDATES,
+	question: QUESTION_ICON_CANDIDATES,
+	terms: TERMS_ICON_CANDIDATES,
+};
 let nextEditorHookSectionBodyId = 0;
 
 /** One renderable cue, resolved to a current document line. */
@@ -264,12 +272,26 @@ class CueGutterMarker extends GutterMarker {
 	}
 
 	toDOM(): HTMLElement {
+		const collapse = this.options.collapse;
+		const options = collapse
+			? {
+					...this.options,
+					collapse: {
+						...collapse,
+						collapsed: cueSectionCollapsedState(
+							collapse.controller,
+							collapse.notePath,
+							collapse.sectionId
+						),
+					},
+				}
+			: this.options;
 		return renderCueElement(
 			this.cue,
 			this.display,
 			this.index,
 			this.state,
-			this.options
+			options
 		);
 	}
 }
@@ -436,7 +458,7 @@ function renderEditorHookElement(
 		summary.appendChild(takeaway);
 		appendEditorHookDisclosure(
 			root,
-			"Summary",
+			"summary",
 			card.sectionLens.takeaway,
 			summary,
 			options.collapse
@@ -455,7 +477,7 @@ function renderEditorHookElement(
 		if (showSectionLabels) {
 			appendEditorHookDisclosure(
 				root,
-				"Question",
+				"question",
 				title.textContent,
 				title,
 				options.collapse
@@ -493,7 +515,7 @@ function renderEditorHookElement(
 		if (showSectionLabels) {
 			appendEditorHookDisclosure(
 				root,
-				"Terms",
+				"terms",
 				renderedKeywords.join(", "),
 				keywords,
 				options.collapse
@@ -740,21 +762,17 @@ export function applyRailOverflowMeasurements(
 		);
 		if (!toggle) continue;
 		toggle.hidden = !overflowing;
-		if (!overflowing) {
-			setRailCardExpanded(card, toggle, false);
-		}
 	}
 }
 
 function appendEditorHookDisclosure(
 	parent: HTMLElement,
-	label: "Question" | "Summary" | "Terms",
+	kind: CueSectionKind,
 	previewText: string,
 	content: HTMLElement,
 	collapse: CueSectionCollapseRenderState | undefined
 ): void {
 	const doc = parent.ownerDocument;
-	const kind = label.toLowerCase() as CueSectionKind;
 	const button = doc.createElement("button");
 	button.type = "button";
 	button.className = "cuecraft-editor-hook-section-toggle";
@@ -763,14 +781,8 @@ function appendEditorHookDisclosure(
 	const sectionLabel = doc.createElement("span");
 	sectionLabel.className = "cuecraft-editor-hook-section-label";
 	sectionLabel.dataset.section = kind;
-	let icon: readonly string[] = TERMS_ICON_CANDIDATES;
-	if (label === "Question") {
-		icon = QUESTION_ICON_CANDIDATES;
-	} else if (label === "Summary") {
-		icon = SUMMARY_ICON_CANDIDATES;
-	}
-	appendLabelIcon(sectionLabel, icon);
-	appendLabelText(sectionLabel, label.toUpperCase());
+	appendLabelIcon(sectionLabel, CUE_SECTION_ICON_CANDIDATES[kind]);
+	appendLabelText(sectionLabel, kind.toUpperCase());
 
 	const chevron = doc.createElement("span");
 	chevron.className = "cuecraft-editor-hook-section-chevron";
@@ -787,7 +799,7 @@ function appendEditorHookDisclosure(
 	const body = doc.createElement("div");
 	body.className = "cuecraft-editor-hook-section-body";
 	body.dataset.section = kind;
-	body.id = editorHookSectionBodyId(doc);
+	body.id = editorHookSectionBodyId();
 	const bodyContent = doc.createElement("div");
 	bodyContent.className = "cuecraft-editor-hook-section-content";
 	bodyContent.appendChild(content);
@@ -819,12 +831,19 @@ function appendEditorHookDisclosure(
 		event.stopPropagation();
 		collapsed = !collapsed;
 		if (collapse) {
-			void collapse.controller.setCollapsed(
-				collapse.notePath,
-				collapse.sectionId,
-				kind,
-				collapsed
-			);
+			void collapse.controller
+				.setCollapsed(
+					collapse.notePath,
+					collapse.sectionId,
+					kind,
+					collapsed
+				)
+				.catch((error: unknown) => {
+					console.error(
+						"CueCraft cue section collapse persistence failed",
+						error
+					);
+				});
 		}
 		transitionMeasurePending = true;
 		updateDom();
@@ -834,13 +853,9 @@ function appendEditorHookDisclosure(
 	parent.append(button, body);
 }
 
-function editorHookSectionBodyId(doc: Document): string {
-	let id: string;
-	do {
-		nextEditorHookSectionBodyId += 1;
-		id = `cuecraft-editor-hook-section-body-${nextEditorHookSectionBodyId}`;
-	} while (doc.getElementById(id));
-	return id;
+function editorHookSectionBodyId(): string {
+	nextEditorHookSectionBodyId += 1;
+	return `cuecraft-editor-hook-section-body-${nextEditorHookSectionBodyId}`;
 }
 
 const noteBriefCardOrder = [
@@ -1056,13 +1071,11 @@ export function buildCueGutterMarkers(
 			markerLine.number,
 			cue
 		);
-		const markerOptions = compactForSpace
-			? {
-					...options,
-					...cueCollapseRenderOptions(payload, cue),
-					compactForSpace: true,
-				}
-			: { ...options, ...cueCollapseRenderOptions(payload, cue) };
+		const markerOptions = {
+			...options,
+			...cueCollapseRenderOptions(payload, cue),
+			...(compactForSpace ? { compactForSpace: true } : {}),
+		};
 		builder.add(
 			markerLine.from,
 			markerLine.from,
@@ -1169,18 +1182,29 @@ function cueCollapseRenderOptions(
 	}
 	const notePath = payload.notePath;
 	const controller = payload.collapseController;
-	const collapsed: Record<CueSectionKind, boolean> = {
-		summary: controller.isCollapsed(notePath, cue.sectionId, "summary"),
-		question: controller.isCollapsed(notePath, cue.sectionId, "question"),
-		terms: controller.isCollapsed(notePath, cue.sectionId, "terms"),
-	};
 	return {
 		collapse: {
 			notePath,
 			sectionId: cue.sectionId,
 			controller,
-			collapsed,
+			collapsed: cueSectionCollapsedState(
+				controller,
+				notePath,
+				cue.sectionId
+			),
 		},
+	};
+}
+
+function cueSectionCollapsedState(
+	controller: CueSectionCollapseController,
+	notePath: string,
+	sectionId: string
+): Record<CueSectionKind, boolean> {
+	return {
+		summary: controller.isCollapsed(notePath, sectionId, "summary"),
+		question: controller.isCollapsed(notePath, sectionId, "question"),
+		terms: controller.isCollapsed(notePath, sectionId, "terms"),
 	};
 }
 
@@ -1446,7 +1470,7 @@ const cueRailOverflowPlugin = ViewPlugin.fromClass(
 		};
 
 		constructor(private readonly view: EditorView) {
-			view.dom.ownerDocument.addEventListener(
+			view.dom.addEventListener(
 				RAIL_CARD_TOGGLE_EVENT,
 				this.onRailCardToggle
 			);
@@ -1460,7 +1484,7 @@ const cueRailOverflowPlugin = ViewPlugin.fromClass(
 		}
 
 		destroy(): void {
-			this.view.dom.ownerDocument.removeEventListener(
+			this.view.dom.removeEventListener(
 				RAIL_CARD_TOGGLE_EVENT,
 				this.onRailCardToggle
 			);

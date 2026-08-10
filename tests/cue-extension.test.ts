@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { JSDOM } from "jsdom";
 import { EditorState } from "@codemirror/state";
 import { Decoration, EditorView } from "@codemirror/view";
@@ -641,6 +641,55 @@ describe("renderCueElement", () => {
 		});
 	});
 
+	it("reports persistence rejection without rolling back newer state", async () => {
+		const error = new Error("save failed");
+		const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+		let rejectFirstWrite: ((error: Error) => void) | undefined;
+		let summary: HTMLButtonElement | undefined;
+		const collapsed = new Set<CueSectionKind>();
+		const controller: CueSectionCollapseController = {
+			isCollapsed: (_notePath, _sectionId, kind) => collapsed.has(kind),
+			setCollapsed: (_notePath, _sectionId, kind, value) => {
+				if (value) collapsed.add(kind);
+				else collapsed.delete(kind);
+				if (!rejectFirstWrite) {
+					return new Promise<void>((_resolve, reject) => {
+						rejectFirstWrite = reject;
+					});
+				}
+				return Promise.resolve();
+			},
+		};
+
+		try {
+			withDocument(() => {
+				const element = renderAnchoredMarker(controller);
+				summary = disclosureButtons(element).find(
+					(button) => button.dataset.section === "summary"
+				);
+				if (!summary) throw new Error("Expected Summary disclosure");
+
+				summary.click();
+				summary.click();
+				expect(summary.getAttribute("aria-expanded")).toBe("true");
+				expect(collapsed.has("summary")).toBe(false);
+			});
+
+			if (!rejectFirstWrite) throw new Error("Expected pending persistence");
+			rejectFirstWrite(error);
+			await Promise.resolve();
+
+			expect(consoleError).toHaveBeenCalledWith(
+				"CueCraft cue section collapse persistence failed",
+				error
+			);
+			expect(summary?.getAttribute("aria-expanded")).toBe("true");
+			expect(collapsed.has("summary")).toBe(false);
+		} finally {
+			consoleError.mockRestore();
+		}
+	});
+
 	it("omits unavailable disclosures without changing saved or alternate surfaces", () => {
 		withDocument(() => {
 			const { controller, collapsed, calls } = collapseController([
@@ -1040,6 +1089,38 @@ describe("cue editor placement", () => {
 			state.doc.line(2).from,
 			state.doc.line(4).from,
 		]);
+	});
+
+	it("rereads collapse state when the same gutter marker remounts", () => {
+		withDocument(() => {
+			const { controller } = collapseController();
+			const state = EditorState.create({ doc: "# Terms\nbody" });
+			const marker = buildCueGutterMarkers(state, {
+				cues: [anchoredCue()],
+				display: "anchored-card-rail",
+				notePath: "notes/agents.md",
+				collapseController: controller,
+			}).iter().value;
+			if (!marker?.toDOM) throw new Error("Expected anchored gutter marker");
+
+			const first = marker.toDOM(null as never) as HTMLElement;
+			const firstQuestion = disclosureButtons(first).find(
+				(button) => button.dataset.section === "question"
+			);
+			expect(firstQuestion?.getAttribute("aria-expanded")).toBe("true");
+
+			void controller.setCollapsed(
+				"notes/agents.md",
+				"section-terms",
+				"question",
+				true
+			);
+			const remounted = marker.toDOM(null as never) as HTMLElement;
+			const remountedQuestion = disclosureButtons(remounted).find(
+				(button) => button.dataset.section === "question"
+			);
+			expect(remountedQuestion?.getAttribute("aria-expanded")).toBe("false");
+		});
 	});
 
 	it.each([
@@ -1575,6 +1656,36 @@ describe("rail card overflow", () => {
 			expect(el.dataset.expanded).toBe("false");
 			expect(toggle!.textContent).toBe("Show more");
 			expect(toggle!.getAttribute("aria-expanded")).toBe("false");
+		});
+	});
+
+	it("preserves card-wide expansion across section overflow changes", () => {
+		withDocument(() => {
+			const el = renderCueElement(cue, "anchored-card-rail");
+			const toggle = el.querySelector<HTMLButtonElement>(
+				".cuecraft-editor-rail-card-toggle"
+			);
+			if (!toggle) throw new Error("Expected rail card toggle");
+
+			applyRailOverflowMeasurements([
+				{ card: el, collapsedHeight: 176, overflowing: true },
+			]);
+			toggle.click();
+			expect(el.dataset.expanded).toBe("true");
+
+			applyRailOverflowMeasurements([
+				{ card: el, collapsedHeight: 176, overflowing: false },
+			]);
+			expect(toggle.hidden).toBe(true);
+			expect(el.dataset.expanded).toBe("true");
+
+			applyRailOverflowMeasurements([
+				{ card: el, collapsedHeight: 176, overflowing: true },
+			]);
+			expect(toggle.hidden).toBe(false);
+			expect(el.dataset.expanded).toBe("true");
+			expect(toggle.textContent).toBe("Show less");
+			expect(toggle.getAttribute("aria-expanded")).toBe("true");
 		});
 	});
 
