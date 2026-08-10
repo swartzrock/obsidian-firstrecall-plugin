@@ -39,6 +39,11 @@ import {
 } from "./editor-hook-card-style";
 import { isCueEligibleSection, type Section } from "./parser";
 import type { NoteBriefOutput, SectionLens } from "./schemas";
+import {
+	CUE_SECTION_KINDS,
+	type CueSectionCollapseController,
+	type CueSectionKind,
+} from "./cue-section-collapse";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -54,6 +59,8 @@ const TERMS_ICON_CANDIDATES = ["tags", "tag"] as const;
 export interface CueLineData {
 	/** 1-based line of the heading the cue belongs to. */
 	line: number;
+	/** Stable cached section identity, independent of the current heading line. */
+	sectionId: string;
 	heading: string;
 	question: string;
 	keywords: string[];
@@ -71,6 +78,8 @@ export interface CueLineDataOptions {
 export interface CueEditorRenderState {
 	cues: CueLineData[];
 	display: EditorCueDisplay;
+	notePath?: string;
+	collapseController?: CueSectionCollapseController;
 	noteBrief?: NoteBriefOutput | null;
 	showRailQuestions?: boolean;
 	showRailSupportTerms?: boolean;
@@ -82,6 +91,14 @@ export interface CueEditorRenderState {
 interface CueRenderOptions extends EditorHookCardOptions {
 	cueColumnWidth?: CueColumnWidth;
 	cueFontSize?: CueFontSize;
+	collapse?: CueSectionCollapseRenderState;
+}
+
+interface CueSectionCollapseRenderState {
+	notePath: string;
+	sectionId: string;
+	controller: CueSectionCollapseController;
+	collapsed: Record<CueSectionKind, boolean>;
 }
 
 export const RAIL_CARD_COLLAPSED_MIN_HEIGHT = 112;
@@ -119,6 +136,7 @@ export function buildCueLineData(
 		const failed = Boolean(sec.error) || !sec.question;
 		out.push({
 			line,
+			sectionId: sec.id,
 			heading: sec.heading,
 			question: failed ? "" : (sec.question ?? ""),
 			keywords: failed || !showKeywords ? [] : sec.keywords ?? [],
@@ -148,6 +166,9 @@ class CueWidget extends WidgetType {
 			other.index === this.index &&
 			editorHookCardOptionsKey(other.options) ===
 				editorHookCardOptionsKey(this.options) &&
+			other.options.collapse?.controller ===
+				this.options.collapse?.controller &&
+			other.cue.sectionId === this.cue.sectionId &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
@@ -230,6 +251,9 @@ class CueGutterMarker extends GutterMarker {
 			other.state === this.state &&
 			editorHookCardOptionsKey(other.options) ===
 				editorHookCardOptionsKey(this.options) &&
+			other.options.collapse?.controller ===
+				this.options.collapse?.controller &&
+			other.cue.sectionId === this.cue.sectionId &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
@@ -930,8 +954,13 @@ export function buildCueGutterMarkers(
 			cue
 		);
 		const markerOptions = compactForSpace
-			? { ...options, showSupportTerms: false, compactForSpace: true }
-			: options;
+			? {
+					...options,
+					...cueCollapseRenderOptions(payload, cue),
+					showSupportTerms: false,
+					compactForSpace: true,
+				}
+			: { ...options, ...cueCollapseRenderOptions(payload, cue) };
 		builder.add(
 			markerLine.from,
 			markerLine.from,
@@ -1017,7 +1046,40 @@ function editorHookCardOptionsKey(options: CueRenderOptions): string {
 		options.cardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
 		options.cueColumnWidth ?? "",
 		options.cueFontSize ?? "",
+		options.collapse?.notePath ?? "",
+		options.collapse?.sectionId ?? "",
+		...CUE_SECTION_KINDS.map((kind) =>
+			String(options.collapse?.collapsed[kind] ?? false)
+		),
 	].join("\u0001");
+}
+
+function cueCollapseRenderOptions(
+	payload: CueEditorRenderState,
+	cue: CueLineData
+): Pick<CueRenderOptions, "collapse"> {
+	if (
+		payload.display !== "anchored-card-rail" ||
+		!payload.notePath ||
+		!payload.collapseController
+	) {
+		return {};
+	}
+	const notePath = payload.notePath;
+	const controller = payload.collapseController;
+	const collapsed: Record<CueSectionKind, boolean> = {
+		summary: controller.isCollapsed(notePath, cue.sectionId, "summary"),
+		question: controller.isCollapsed(notePath, cue.sectionId, "question"),
+		terms: controller.isCollapsed(notePath, cue.sectionId, "terms"),
+	};
+	return {
+		collapse: {
+			notePath,
+			sectionId: cue.sectionId,
+			controller,
+			collapsed,
+		},
+	};
 }
 
 function applyCueLayoutClasses(

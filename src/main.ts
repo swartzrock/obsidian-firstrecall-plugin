@@ -99,6 +99,11 @@ import {
 	visibilityMenuLabel,
 } from "./visibility";
 import {
+	CueSectionCollapseStore,
+	loadCueSectionCollapseMap,
+	type CueSectionCollapseMap,
+} from "./cue-section-collapse";
+import {
 	buildCornellModel,
 	type CornellModel,
 } from "./cornell";
@@ -133,6 +138,7 @@ interface PluginData {
 	settings: CueCraftSettings;
 	caches: Record<string, NoteCache>;
 	hidden: Record<string, true>;
+	cueSectionCollapse: CueSectionCollapseMap;
 }
 
 const RIBBON_ICON = "graduation-cap";
@@ -151,11 +157,18 @@ export default class CueCraftPlugin extends Plugin {
 	private editorLayoutFrame: number | null = null;
 	private editorHookLayout = new EditorHookLayoutController();
 	private cueSettingsChanged = false;
-	private data: PluginData = { settings: DEFAULT_SETTINGS, caches: {}, hidden: {} };
+	private data: PluginData = {
+		settings: DEFAULT_SETTINGS,
+		caches: {},
+		hidden: {},
+		cueSectionCollapse: {},
+	};
 	private retainedCaches: Record<string, unknown> = {};
+	private pluginDataWrite: Promise<void> = Promise.resolve();
 	private settingTab!: CueCraftSettingTab;
 	private cacheStore!: CacheStore;
 	private visibility!: VisibilityStore;
+	private cueSectionCollapse!: CueSectionCollapseStore;
 	private credentialStore!: SecureCredentialStore;
 	private credentialMigrationWarnings: string[] = [];
 
@@ -176,6 +189,13 @@ export default class CueCraftPlugin extends Plugin {
 			this.data.hidden = map;
 			await this.persistPluginData();
 		});
+		this.cueSectionCollapse = new CueSectionCollapseStore(
+			this.data.cueSectionCollapse,
+			async (map) => {
+				this.data.cueSectionCollapse = map;
+				await this.persistPluginData();
+			}
+		);
 
 		this.settingTab = new CueCraftSettingTab(this.app, this);
 		this.addSettingTab(this.settingTab);
@@ -338,8 +358,11 @@ export default class CueCraftPlugin extends Plugin {
 			changed: cachesChanged,
 		} = normalizeCacheMap(rawCaches);
 		const hidden = loadHiddenMap(loaded?.hidden);
+		const cueSectionCollapse = loadCueSectionCollapseMap(
+			loaded?.cueSectionCollapse
+		);
 		this.retainedCaches = retainedCaches;
-		this.data = { settings, caches, hidden };
+		this.data = { settings, caches, hidden, cueSectionCollapse };
 		this.settings = this.data.settings;
 		if (credentialMigration.settingsChanged || cachesChanged) {
 			await this.persistPluginData();
@@ -347,10 +370,14 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private async persistPluginData(): Promise<void> {
-		await this.saveData({
-			...this.data,
-			caches: { ...this.retainedCaches, ...this.data.caches },
+		const write = this.pluginDataWrite.catch(() => {}).then(async () => {
+			await this.saveData({
+				...this.data,
+				caches: { ...this.retainedCaches, ...this.data.caches },
+			});
 		});
+		this.pluginDataWrite = write;
+		await write;
 	}
 
 	async saveSettings(): Promise<void> {
@@ -431,6 +458,8 @@ export default class CueCraftPlugin extends Plugin {
 			effects: setCuesEffect.of({
 				cues,
 				display: this.settings.editorCueDisplay,
+				notePath: file.path,
+				collapseController: this.cueSectionCollapse,
 				showRailQuestions: this.settings.showRailQuestions,
 				showRailSupportTerms: this.settings.showRailSupportTerms,
 				editorHookCardStyle: this.settings.editorHookCardStyle,
