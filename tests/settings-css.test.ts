@@ -211,19 +211,30 @@ describe("settings CSS", () => {
 		const titleRule = ruleFor(
 			".cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-title"
 		);
-		expect(titleRule).toContain("font-size: 15.5px");
-		expect(titleRule).toContain("font-weight: var(--font-semibold)");
-		expect(titleRule).toContain("line-height: 1.34");
+		expect(titleRule).toContain("color: var(--text-normal)");
+		expect(titleRule).toContain("font-size: var(--font-ui-small)");
+		expect(titleRule).toContain("font-weight: var(--font-normal, 400)");
+		expect(titleRule).toContain("line-height: 1.45");
 
 		const longTitleRule = ruleFor(
 			'.cuecraft-editor-hook-anchored-card-rail[data-title-density="long"] .cuecraft-editor-hook-title'
 		);
-		expect(longTitleRule).toContain("font-size: 14px");
+		expect(longTitleRule).toContain("font-size: var(--font-ui-small)");
+		expect(longTitleRule).toContain("line-height: 1.45");
 
 		const denseTitleRule = ruleFor(
 			'.cuecraft-editor-hook-anchored-card-rail[data-title-density="dense"] .cuecraft-editor-hook-title'
 		);
-		expect(denseTitleRule).toContain("font-size: 12.5px");
+		expect(denseTitleRule).toContain("font-size: var(--font-ui-small)");
+		expect(denseTitleRule).toContain("line-height: 1.45");
+
+		const summaryRule = ruleFor(
+			".cuecraft-editor-hook-anchored-card-rail .cuecraft-section-lens"
+		);
+		expect(summaryRule).toContain("color: var(--text-normal)");
+		expect(summaryRule).toContain("font-size: var(--font-ui-small)");
+		expect(summaryRule).toContain("font-weight: var(--font-normal, 400)");
+		expect(summaryRule).toContain("line-height: 1.45");
 
 		const termRule = ruleFor(
 			".cuecraft-editor-hook-anchored-card-rail .cuecraft-cue-term"
