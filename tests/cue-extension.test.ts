@@ -6,20 +6,13 @@ import {
 	buildCueGutterMarkers,
 	buildCueLineData,
 	buildCueWidgetDecorations,
-	applyRailOverflowMeasurements,
 	cueGutterField,
-	measureRailOverflowCards,
-	railCardCollapsedHeightForAvailable,
-	railCardContentOverflows,
-	RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT,
-	RAIL_CARD_COLLAPSED_MAX_HEIGHT,
-	RAIL_CARD_COLLAPSED_MIN_HEIGHT,
-	RAIL_CARD_TOGGLE_EVENT,
+	RAIL_CARD_LAYOUT_EVENT,
 	buildRailSpacerDecorations,
 	cueRailSpacerField,
 	measureRailSpacerHeights,
 	railSpacerHeightForOverlap,
-	railOverflowUpdateNeedsMeasure,
+	railLayoutUpdateNeedsMeasure,
 	renderNoteBriefElement,
 	renderCueElement,
 	setCuesEffect,
@@ -451,14 +444,10 @@ describe("renderCueElement", () => {
 			expect(el.dataset.confidence).toBe("medium");
 			expectNoLegacyCategoryPresentation(el);
 			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(true);
-			expect(el.dataset.overflowing).toBe("false");
-			expect(
-				el.querySelector(".cuecraft-editor-rail-card-content")
-			).not.toBeNull();
-			expect(
-				el.querySelector<HTMLButtonElement>(".cuecraft-editor-rail-card-toggle")
-					?.hidden
-			).toBe(true);
+			expect(el.dataset.overflowing).toBeUndefined();
+			expect(el.dataset.expanded).toBeUndefined();
+			expect(el.querySelector(".cuecraft-editor-rail-card-content")).toBeNull();
+			expect(el.querySelector(".cuecraft-editor-rail-card-toggle")).toBeNull();
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(el.querySelector(".cuecraft-section-tag")).toBeNull();
 			expect(
@@ -577,7 +566,7 @@ describe("renderCueElement", () => {
 		});
 	});
 
-	it("toggles one disclosure synchronously without changing card expansion", () => {
+	it("toggles one disclosure synchronously and requests rail layout", () => {
 		withDocument(() => {
 			const { controller, collapsed, calls } = collapseController();
 			const element = renderAnchoredMarker(controller);
@@ -586,7 +575,7 @@ describe("renderCueElement", () => {
 			const body = disclosureBody(element, summary);
 			if (!body) throw new Error("Expected Summary disclosure body");
 			const measurementEvents: string[] = [];
-			element.addEventListener(RAIL_CARD_TOGGLE_EVENT, () => {
+			element.addEventListener(RAIL_CARD_LAYOUT_EVENT, () => {
 				measurementEvents.push("measure");
 			});
 
@@ -605,7 +594,7 @@ describe("renderCueElement", () => {
 					?.getAttribute("data-icon")
 			).toBe("chevron-down");
 			expect(question?.getAttribute("aria-expanded")).toBe("true");
-			expect(element.dataset.expanded).toBe("false");
+			expect(element.dataset.expanded).toBeUndefined();
 			expect(measurementEvents).toEqual(["measure"]);
 
 			const dispatchTransitionEnd = (
@@ -1546,159 +1535,6 @@ describe("cue editor placement", () => {
 	});
 });
 
-describe("rail card overflow", () => {
-	const cue = {
-		line: 1,
-		heading: "A",
-		question: "What is A?",
-		keywords: ["alpha"],
-		confidence: "high" as const,
-		sectionLens: SECTION_LENS,
-		error: null,
-	};
-
-	it("clamps collapsed height to the next section gap with a fallback", () => {
-		expect(railCardCollapsedHeightForAvailable(null)).toBe(
-			RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT
-		);
-		expect(railCardCollapsedHeightForAvailable(Number.NaN)).toBe(
-			RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT
-		);
-		expect(railCardCollapsedHeightForAvailable(60)).toBe(
-			RAIL_CARD_COLLAPSED_MIN_HEIGHT
-		);
-		expect(railCardCollapsedHeightForAvailable(220)).toBe(208);
-		expect(railCardCollapsedHeightForAvailable(999)).toBe(
-			RAIL_CARD_COLLAPSED_MAX_HEIGHT
-		);
-	});
-
-	it("uses a small tolerance when deciding whether content overflows", () => {
-		expect(railCardContentOverflows(178, 176)).toBe(true);
-		expect(railCardContentOverflows(177, 176)).toBe(false);
-		expect(railCardContentOverflows(176, 176)).toBe(false);
-	});
-
-	it("measures rail card content against the next card position", () => {
-		withDocument(() => {
-			const root = document.createElement("div");
-			const first = document.createElement("div");
-			first.className = "cuecraft-editor-rail-card";
-			const firstContent = document.createElement("div");
-			firstContent.className = "cuecraft-editor-rail-card-content";
-			const firstToggle = document.createElement("button");
-			firstToggle.className = "cuecraft-editor-rail-card-toggle";
-			firstToggle.hidden = true;
-			first.append(firstContent, firstToggle);
-			Object.defineProperty(firstContent, "scrollHeight", {
-				configurable: true,
-				value: 260,
-			});
-			first.getBoundingClientRect = () =>
-				({ top: 10 }) as DOMRect;
-
-			const second = document.createElement("div");
-			second.className = "cuecraft-editor-rail-card";
-			const secondContent = document.createElement("div");
-			secondContent.className = "cuecraft-editor-rail-card-content";
-			const secondToggle = document.createElement("button");
-			secondToggle.className = "cuecraft-editor-rail-card-toggle";
-			secondToggle.hidden = true;
-			second.append(secondContent, secondToggle);
-			Object.defineProperty(secondContent, "scrollHeight", {
-				configurable: true,
-				value: 80,
-			});
-			second.getBoundingClientRect = () =>
-				({ top: 210 }) as DOMRect;
-			root.append(first, second);
-
-			const measurements = measureRailOverflowCards(root);
-			expect(measurements).toHaveLength(2);
-			expect(measurements[0]).toMatchObject({
-				card: first,
-				collapsedHeight: 188,
-				overflowing: true,
-			});
-			expect(measurements[1]).toMatchObject({
-				card: second,
-				collapsedHeight: RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT,
-				overflowing: false,
-			});
-
-			applyRailOverflowMeasurements(measurements);
-			expect(first.dataset.overflowing).toBe("true");
-			expect(first.style.getPropertyValue("--cuecraft-rail-collapsed-max-height")).toBe(
-				"188px"
-			);
-			expect(firstToggle.hidden).toBe(false);
-			expect(second.dataset.overflowing).toBe("false");
-			expect(secondToggle.hidden).toBe(true);
-		});
-	});
-
-	it("toggles overflowing rail cards between collapsed and expanded states", () => {
-		withDocument(() => {
-			const el = renderCueElement(cue, "anchored-card-rail");
-			const toggle = el.querySelector<HTMLButtonElement>(
-				".cuecraft-editor-rail-card-toggle"
-			);
-			expect(toggle).not.toBeNull();
-			el.dataset.overflowing = "true";
-			toggle!.hidden = false;
-
-			toggle!.click();
-			expect(el.dataset.expanded).toBe("true");
-			expect(toggle!.textContent).toBe("Show less");
-			expect(toggle!.getAttribute("aria-expanded")).toBe("true");
-
-			toggle!.click();
-			expect(el.dataset.expanded).toBe("false");
-			expect(toggle!.textContent).toBe("Show more");
-			expect(toggle!.getAttribute("aria-expanded")).toBe("false");
-		});
-	});
-
-	it("preserves card-wide expansion across section overflow changes", () => {
-		withDocument(() => {
-			const el = renderCueElement(cue, "anchored-card-rail");
-			const toggle = el.querySelector<HTMLButtonElement>(
-				".cuecraft-editor-rail-card-toggle"
-			);
-			if (!toggle) throw new Error("Expected rail card toggle");
-
-			applyRailOverflowMeasurements([
-				{ card: el, collapsedHeight: 176, overflowing: true },
-			]);
-			toggle.click();
-			expect(el.dataset.expanded).toBe("true");
-
-			applyRailOverflowMeasurements([
-				{ card: el, collapsedHeight: 176, overflowing: false },
-			]);
-			expect(toggle.hidden).toBe(true);
-			expect(el.dataset.expanded).toBe("true");
-
-			applyRailOverflowMeasurements([
-				{ card: el, collapsedHeight: 176, overflowing: true },
-			]);
-			expect(toggle.hidden).toBe(false);
-			expect(el.dataset.expanded).toBe("true");
-			expect(toggle.textContent).toBe("Show less");
-			expect(toggle.getAttribute("aria-expanded")).toBe("true");
-		});
-	});
-
-	it("does not add rail overflow controls to inline cues", () => {
-		withDocument(() => {
-			const el = renderCueElement(cue, "inline-cues");
-			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(false);
-			expect(el.querySelector(".cuecraft-editor-rail-card-content")).toBeNull();
-			expect(el.querySelector(".cuecraft-editor-rail-card-toggle")).toBeNull();
-		});
-	});
-});
-
 describe("rail spacers", () => {
 	const cues = [
 		{
@@ -1821,37 +1657,18 @@ describe("rail spacers", () => {
 		expect(positions).toEqual([state.doc.line(5).from]);
 	});
 
-	it("dispatches a rail toggle event after Show more changes expansion state", () => {
-		withDocument(() => {
-			const el = renderCueElement(cues[0], "anchored-card-rail");
-			const events: string[] = [];
-			el.addEventListener(RAIL_CARD_TOGGLE_EVENT, () => {
-				events.push("toggle");
-			});
-			const toggle = el.querySelector<HTMLButtonElement>(
-				".cuecraft-editor-rail-card-toggle"
-			);
-			expect(toggle).not.toBeNull();
-			toggle!.hidden = false;
-			toggle!.click();
-
-			expect(el.dataset.expanded).toBe("true");
-			expect(events).toEqual(["toggle"]);
-		});
-	});
-
 	it("requests another measurement after spacer decorations are applied", () => {
 		const state = EditorState.create({ doc: NOTE });
 		const transaction = state.update({
 			effects: setRailSpacersEffect.of(new Map([[3, 120]])),
 		});
 		expect(
-			railOverflowUpdateNeedsMeasure({
+			railLayoutUpdateNeedsMeasure({
 				docChanged: false,
 				viewportChanged: false,
 				selectionSet: false,
 				transactions: [transaction],
-			} as Parameters<typeof railOverflowUpdateNeedsMeasure>[0])
+			} as Parameters<typeof railLayoutUpdateNeedsMeasure>[0])
 		).toBe(true);
 	});
 });
