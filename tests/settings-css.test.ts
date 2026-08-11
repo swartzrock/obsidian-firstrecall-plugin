@@ -233,6 +233,10 @@ describe("settings CSS", () => {
 		expect(previewRule).toContain("white-space: nowrap");
 		expect(previewRule).toContain("overflow: hidden");
 		expect(previewRule).toContain("text-overflow: ellipsis");
+		const hiddenPreviewRule = ruleFor(
+			`${root} .cuecraft-editor-hook-section-preview[hidden]`
+		);
+		expect(hiddenPreviewRule).toContain("display: none");
 
 		const focusRule = ruleFor(
 			`${root} .cuecraft-editor-hook-section-toggle:focus-visible`

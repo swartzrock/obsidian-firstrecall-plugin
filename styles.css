@@ -1814,6 +1814,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	white-space: nowrap;
 }
 
+.cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-section-preview[hidden] {
+	display: none;
+}
+
 .cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-section-body {
 	display: grid;
 	grid-template-rows: 1fr;
