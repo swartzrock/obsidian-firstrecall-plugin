@@ -679,7 +679,7 @@ describe("renderCueElement", () => {
 		}
 	});
 
-	it("omits unavailable disclosures without changing saved or alternate surfaces", () => {
+	it("omits unavailable disclosures without changing saved state", () => {
 		withDocument(() => {
 			const { controller, collapsed, calls } = collapseController([
 				"question",
@@ -713,11 +713,14 @@ describe("renderCueElement", () => {
 				"anchored-card-rail"
 			);
 			expect(disclosureButtons(failed)).toEqual([]);
-			for (const display of ["inline-cues", "cornell"] as const) {
-				expect(disclosureButtons(renderCueElement(anchoredCue(), display))).toEqual(
-					[]
-				);
-			}
+			expect(
+				disclosureButtons(renderCueElement(anchoredCue(), "inline-cues"))
+			).toEqual([]);
+			expect(
+				disclosureButtons(renderCueElement(anchoredCue(), "cornell")).map(
+					(button) => button.dataset.section
+				)
+			).toEqual(["summary", "question", "terms"]);
 		});
 	});
 
@@ -1497,6 +1500,38 @@ describe("cue editor placement", () => {
 		});
 	});
 
+	it("renders wide Cornell cards with section controls and saved state", () => {
+		withDocument(() => {
+			const { controller } = collapseController(["question"]);
+			const state = EditorState.create({ doc: "# Terms\nbody" });
+			const marker = buildCueGutterMarkers(state, {
+				cues: [anchoredCue()],
+				display: "cornell",
+				notePath: "notes/agents.md",
+				collapseController: controller,
+				cueColumnWidth: "wide",
+				cueFontSize: "large",
+			}).iter().value;
+			if (!marker?.toDOM) throw new Error("Expected Cornell gutter marker");
+
+			const element = marker.toDOM(null as never) as HTMLElement;
+			expect(element.classList.contains("cuecraft-cuewidth-wide")).toBe(true);
+			expect(element.classList.contains("cuecraft-cuefont-large")).toBe(true);
+			expect(
+				disclosureButtons(element).map((button) => button.dataset.section)
+			).toEqual(["summary", "question", "terms"]);
+			expect(
+				disclosureButtons(element).map((button) =>
+					button.getAttribute("aria-expanded")
+				)
+			).toEqual(["true", "false", "true"]);
+			expect(element.querySelector(".cuecraft-section-lens-phrase")).toBeNull();
+			expect(
+				element.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+		});
+	});
+
 	it("renders Cornell Exam Prep and Minimal displays with Cornell style classes", () => {
 		withDocument(() => {
 			const examPrep = renderCueElement(cues[0], "cornell-exam-prep");
@@ -1504,6 +1539,9 @@ describe("cue editor placement", () => {
 			expect(examPrep.classList.contains("cuecraft-editor-rail-card")).toBe(true);
 			expect(examPrep.classList.contains("cuecraft-style-exam-prep")).toBe(true);
 			expect(examPrep.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
+			expect(
+				disclosureButtons(examPrep).map((button) => button.dataset.section)
+			).toEqual(["summary", "question", "terms"]);
 			expect(examPrep.textContent).toContain("What is A?");
 			expect(
 				examPrep.querySelector(".cuecraft-section-lens-takeaway")?.textContent
@@ -1514,6 +1552,9 @@ describe("cue editor placement", () => {
 			expect(minimal.classList.contains("cuecraft-editor-rail-card")).toBe(true);
 			expect(minimal.classList.contains("cuecraft-style-minimal")).toBe(true);
 			expect(minimal.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
+			expect(
+				disclosureButtons(minimal).map((button) => button.dataset.section)
+			).toEqual(["summary", "question", "terms"]);
 			expect(minimal.textContent).toContain("What is A?");
 			expect(
 				minimal.querySelector(".cuecraft-section-lens-takeaway")?.textContent

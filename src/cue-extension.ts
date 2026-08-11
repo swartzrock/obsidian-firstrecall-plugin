@@ -354,25 +354,49 @@ function renderCornellCueElement(
 	if (cue.confidence) {
 		card.dataset.confidence = cue.confidence;
 	}
+	root.classList.add("cuecraft-editor-hook-sectioned");
+	if (cue.sectionLens) {
+		const summary = doc.createElement("div");
+		summary.className = "cuecraft-section-lens";
+		const takeaway = doc.createElement("span");
+		takeaway.className = "cuecraft-section-lens-takeaway";
+		takeaway.textContent = cue.sectionLens.takeaway;
+		summary.appendChild(takeaway);
+		appendEditorHookDisclosure(
+			card,
+			"summary",
+			cue.sectionLens.takeaway,
+			summary,
+			options.collapse
+		);
+	}
 	if (options.showQuestion ?? true) {
-		appendCueSectionLabel(card, "QUESTION");
 		const q = doc.createElement("div");
 		q.className = "cuecraft-cornell-q";
 		q.textContent = cue.question;
-		card.appendChild(q);
+		appendEditorHookDisclosure(
+			card,
+			"question",
+			cue.question,
+			q,
+			options.collapse
+		);
 	}
-
-	appendSectionLens(card, cue.sectionLens);
 
 	const supports = buildCornellSupportPresentation({
 		keywords: cue.keywords,
 	});
 	if ((options.showSupportTerms ?? true) && supports.terms.length) {
-		appendCueSectionLabel(card, "TERMS");
 		const kw = doc.createElement("div");
 		kw.className = "cuecraft-cornell-kw";
 		appendCueTerms(kw, supports.terms, "cuecraft-cornell-support-term");
-		card.appendChild(kw);
+		appendEditorHookDisclosure(
+			card,
+			"terms",
+			supports.terms.join(", "),
+			kw,
+			options.collapse
+		);
 	}
 
 	return finalizeRailCard(root);
@@ -428,7 +452,9 @@ function renderEditorHookElement(
 	const root = cueDocument().createElement("div");
 	root.className = `cuecraft-editor-hook cuecraft-editor-hook-${card.display}`;
 	applyCueLayoutClasses(root, options);
-	const showSectionLabels = card.display === "anchored-card-rail" && !card.error;
+	const showSectionLabels =
+		sectionDisclosuresApplyToDisplay(card.display) && !card.error;
+	if (showSectionLabels) root.classList.add("cuecraft-editor-hook-sectioned");
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");
 	root.dataset.display = card.display;
@@ -577,6 +603,13 @@ function railLayoutAppliesToDisplay(display: EditorCueDisplay): boolean {
 	return (
 		display === "anchored-card-rail" ||
 		display === "threaded-margin-notes" ||
+		cornellEditorDisplayStyle(display) !== null
+	);
+}
+
+function sectionDisclosuresApplyToDisplay(display: EditorCueDisplay): boolean {
+	return (
+		display === "anchored-card-rail" ||
 		cornellEditorDisplayStyle(display) !== null
 	);
 }
@@ -1067,7 +1100,7 @@ function cueCollapseRenderOptions(
 	cue: CueLineData
 ): Pick<CueRenderOptions, "collapse"> {
 	if (
-		payload.display !== "anchored-card-rail" ||
+		!sectionDisclosuresApplyToDisplay(payload.display) ||
 		!payload.notePath ||
 		!payload.collapseController
 	) {

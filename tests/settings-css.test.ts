@@ -169,7 +169,7 @@ describe("settings CSS", () => {
 		expect(cueLabelRule).toContain("gap: 0.48em");
 
 		const editorLabelRule = ruleFor(
-			".cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-section-label"
+			".cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-label"
 		);
 		expect(editorLabelRule).toContain("display: flex");
 		expect(editorLabelRule).toContain("align-items: center");
@@ -186,8 +186,8 @@ describe("settings CSS", () => {
 		expect(briefIconRule).toBe("");
 	});
 
-	it("animates accessible anchored rail section disclosures", () => {
-		const root = ".cuecraft-editor-hook-anchored-card-rail";
+	it("animates accessible editor card section disclosures", () => {
+		const root = ".cuecraft-editor-hook-sectioned";
 		const toggleRule = ruleFor(`${root} .cuecraft-editor-hook-section-toggle`);
 		expect(toggleRule).toContain("display: block");
 		expect(toggleRule).toContain("width: 100%");
@@ -229,6 +229,7 @@ describe("settings CSS", () => {
 
 		const previewRule = ruleFor(`${root} .cuecraft-editor-hook-section-preview`);
 		expect(previewRule).toContain("color: var(--cc-muted)");
+		expect(previewRule).toContain("font-size: 0.84em");
 		expect(previewRule).toContain("font-style: italic");
 		expect(previewRule).toContain("white-space: nowrap");
 		expect(previewRule).toContain("overflow: hidden");
@@ -245,7 +246,7 @@ describe("settings CSS", () => {
 		expect(focusRule).toContain("outline-offset: 3px");
 
 		expect(styles).toMatch(
-			/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.cuecraft-editor-hook-anchored-card-rail \.cuecraft-editor-hook-section-body,[\s\S]*?\.cuecraft-editor-hook-anchored-card-rail \.cuecraft-editor-hook-section-chevron\s*\{[^}]*transition: none/
+			/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.cuecraft-editor-hook-sectioned \.cuecraft-editor-hook-section-body,[\s\S]*?\.cuecraft-editor-hook-sectioned \.cuecraft-editor-hook-section-chevron\s*\{[^}]*transition: none/
 		);
 	});
 
@@ -266,38 +267,59 @@ describe("settings CSS", () => {
 		expect(emptyRule).toContain("display: none");
 
 		const titleRule = ruleFor(
-			".cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-title"
+			".cuecraft-editor-hook-sectioned .cuecraft-editor-hook-title"
 		);
 		expect(titleRule).toContain("color: var(--text-normal)");
-		expect(titleRule).toContain("font-size: var(--font-ui-small)");
+		expect(titleRule).toContain("font-size: inherit");
 		expect(titleRule).toContain("font-weight: var(--font-normal, 400)");
 		expect(titleRule).toContain("line-height: 1.45");
 
 		const longTitleRule = ruleFor(
-			'.cuecraft-editor-hook-anchored-card-rail[data-title-density="long"] .cuecraft-editor-hook-title'
+			'.cuecraft-editor-hook-sectioned[data-title-density="long"] .cuecraft-editor-hook-title'
 		);
-		expect(longTitleRule).toContain("font-size: var(--font-ui-small)");
+		expect(longTitleRule).toContain("font-size: inherit");
 		expect(longTitleRule).toContain("line-height: 1.45");
 
 		const denseTitleRule = ruleFor(
-			'.cuecraft-editor-hook-anchored-card-rail[data-title-density="dense"] .cuecraft-editor-hook-title'
+			'.cuecraft-editor-hook-sectioned[data-title-density="dense"] .cuecraft-editor-hook-title'
 		);
-		expect(denseTitleRule).toContain("font-size: var(--font-ui-small)");
+		expect(denseTitleRule).toContain("font-size: inherit");
 		expect(denseTitleRule).toContain("line-height: 1.45");
 
 		const summaryRule = ruleFor(
-			".cuecraft-editor-hook-anchored-card-rail .cuecraft-section-lens"
+			".cuecraft-editor-hook-sectioned .cuecraft-section-lens"
 		);
 		expect(summaryRule).toContain("color: var(--text-normal)");
-		expect(summaryRule).toContain("font-size: var(--font-ui-small)");
+		expect(summaryRule).toContain("font-size: inherit");
 		expect(summaryRule).toContain("font-weight: var(--font-normal, 400)");
 		expect(summaryRule).toContain("line-height: 1.45");
 
 		const termRule = ruleFor(
-			".cuecraft-editor-hook-anchored-card-rail .cuecraft-cue-term"
+			".cuecraft-editor-hook-sectioned .cuecraft-cue-term,\n.cuecraft-editor-hook-sectioned .cuecraft-cornell-support-term"
 		);
-		expect(termRule).toContain("font-size: 10.75px");
-		expect(termRule).toContain("line-height: 18px");
+		expect(termRule).toContain("font-size: 0.84em");
+		expect(termRule).toContain("line-height: 1.65");
+
+		const cornellQuestionRule = ruleFor(
+			".cuecraft-editor-hook-sectioned .cuecraft-cornell-q"
+		);
+		expect(cornellQuestionRule).toContain("font-size: inherit");
+		expect(cornellQuestionRule).toContain(
+			"font-weight: var(--font-normal, 400)"
+		);
+		const examPrepLabelRule = ruleFor(
+			".cuecraft-editor-hook-sectioned.cuecraft-style-exam-prep .cuecraft-cornell-cue::before"
+		);
+		expect(examPrepLabelRule).toContain("content: none");
+
+		const responsiveMediumRule = ruleFor(
+			".markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-medium"
+		);
+		expect(responsiveMediumRule).toContain("font-size: var(--font-ui-small)");
+		const responsiveLargeRule = ruleFor(
+			".markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-large"
+		);
+		expect(responsiveLargeRule).toContain("font-size: var(--font-ui-medium)");
 
 		expect(styles).toContain("width: min(16rem, 28vw)");
 		expect(styles).toContain("width: clamp(13.5rem, 19vw, 16rem)");
