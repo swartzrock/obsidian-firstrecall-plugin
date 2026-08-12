@@ -666,7 +666,7 @@ export function measureRailSpacerHeights(
 	currentSpacers: ReadonlyMap<number, number> = emptyRailSpacerMap
 ): Map<number, number> {
 	const cards = railCardsIn(root);
-	const spacers = new Map<number, number>();
+	const spacers = new Map(currentSpacers);
 	for (const [index, card] of cards.entries()) {
 		const nextCard = cards[index + 1];
 		if (!nextCard) continue;
@@ -674,13 +674,24 @@ export function measureRailSpacerHeights(
 		if (nextLine === null) continue;
 		const cardRect = card.getBoundingClientRect();
 		const nextRect = nextCard.getBoundingClientRect();
+		const distanceToNextCard = nextRect.top - cardRect.top;
+		if (
+			!Number.isFinite(cardRect.height) ||
+			!Number.isFinite(distanceToNextCard) ||
+			cardRect.height <= 0 ||
+			distanceToNextCard <= 0
+		) {
+			continue;
+		}
 		const spacerHeight = railSpacerHeightForOverlap(
 			cardRect.height,
-			nextRect.top - cardRect.top,
+			distanceToNextCard,
 			currentSpacers.get(nextLine) ?? 0
 		);
 		if (spacerHeight > 0) {
 			spacers.set(nextLine, spacerHeight);
+		} else {
+			spacers.delete(nextLine);
 		}
 	}
 	return spacers;

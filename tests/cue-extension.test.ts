@@ -1636,6 +1636,33 @@ describe("rail spacers", () => {
 		});
 	});
 
+	it("keeps a spacer when its target cue leaves the rendered viewport", () => {
+		withDocument(() => {
+			const root = document.createElement("div");
+			const first = document.createElement("div");
+			first.className = "cuecraft-editor-rail-card";
+			first.dataset.line = "1";
+			first.getBoundingClientRect = () =>
+				({ top: 10, height: 200 }) as DOMRect;
+
+			const second = document.createElement("div");
+			second.className = "cuecraft-editor-rail-card";
+			second.dataset.line = "3";
+			second.getBoundingClientRect = () =>
+				({ top: 130, height: 90 }) as DOMRect;
+			root.append(first, second);
+
+			let measured = measureRailSpacerHeights(root);
+			expect(Array.from(measured)).toEqual([[3, 92]]);
+
+			second.remove();
+			for (let pass = 0; pass < 20; pass += 1) {
+				measured = measureRailSpacerHeights(root, measured);
+				expect(Array.from(measured)).toEqual([[3, 92]]);
+			}
+		});
+	});
+
 	it("reserves space when wide Cornell cards overlap after rendering", async () => {
 		const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
 			pretendToBeVisual: true,
