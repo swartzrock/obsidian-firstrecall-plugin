@@ -1798,7 +1798,7 @@ describe("rail spacers", () => {
 		expect(positions).toEqual([state.doc.line(5).from]);
 	});
 
-	it("requests another measurement after spacer decorations are applied", () => {
+	it("does not measure again in response to its own spacer transaction", () => {
 		const state = EditorState.create({ doc: NOTE });
 		const transaction = state.update({
 			effects: setRailSpacersEffect.of(new Map([[3, 120]])),
@@ -1806,11 +1806,11 @@ describe("rail spacers", () => {
 		expect(
 			railLayoutUpdateNeedsMeasure({
 				docChanged: false,
-				viewportChanged: false,
+				viewportChanged: true,
 				selectionSet: false,
 				transactions: [transaction],
 			} as Parameters<typeof railLayoutUpdateNeedsMeasure>[0])
-		).toBe(true);
+		).toBe(false);
 	});
 
 	it("does not starve the renderer when editor state changes during measurement", () => {

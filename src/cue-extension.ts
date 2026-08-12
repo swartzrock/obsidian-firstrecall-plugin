@@ -1437,16 +1437,20 @@ const cueRailLayoutPlugin = ViewPlugin.fromClass(
 );
 
 export function railLayoutUpdateNeedsMeasure(update: ViewUpdate): boolean {
+	const cuesChanged = update.transactions.some((tr) =>
+		tr.effects.some((effect) => effect.is(setCuesEffect))
+	);
+	const spacersChanged = update.transactions.some((tr) =>
+		tr.effects.some((effect) => effect.is(setRailSpacersEffect))
+	);
+	if (spacersChanged && !cuesChanged && !update.docChanged) {
+		return false;
+	}
 	return (
 		update.docChanged ||
 		update.viewportChanged ||
 		update.selectionSet ||
-		update.transactions.some((tr) =>
-			tr.effects.some(
-				(effect) =>
-					effect.is(setCuesEffect) || effect.is(setRailSpacersEffect)
-			)
-		)
+		cuesChanged
 	);
 }
 
