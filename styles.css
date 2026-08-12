@@ -3272,6 +3272,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	color: var(--text-muted);
 }
 
+.cuecraft-style-minimal.cuecraft-editor-hook-sectioned .cuecraft-cornell-q {
+	color: var(--text-normal);
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: var(--font-normal, 400);
+	line-height: 1.45;
+}
+
 .cuecraft-style-minimal .cuecraft-cornell-support-text {
 	color: var(--text-faint);
 }

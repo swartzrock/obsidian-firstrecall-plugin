@@ -307,6 +307,16 @@ describe("settings CSS", () => {
 		expect(cornellQuestionRule).toContain(
 			"font-weight: var(--font-normal, 400)"
 		);
+		const minimalQuestionRule = ruleFor(
+			".cuecraft-style-minimal.cuecraft-editor-hook-sectioned .cuecraft-cornell-q"
+		);
+		expect(minimalQuestionRule).toContain("color: var(--text-normal)");
+		expect(minimalQuestionRule).toContain("font-family: inherit");
+		expect(minimalQuestionRule).toContain("font-size: inherit");
+		expect(minimalQuestionRule).toContain(
+			"font-weight: var(--font-normal, 400)"
+		);
+		expect(minimalQuestionRule).toContain("line-height: 1.45");
 		const examPrepLabelRule = ruleFor(
 			".cuecraft-editor-hook-sectioned.cuecraft-style-exam-prep .cuecraft-cornell-cue::before"
 		);
