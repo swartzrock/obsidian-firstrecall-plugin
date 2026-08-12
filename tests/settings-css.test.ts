@@ -317,6 +317,13 @@ describe("settings CSS", () => {
 			"font-weight: var(--font-normal, 400)"
 		);
 		expect(minimalQuestionRule).toContain("line-height: 1.45");
+		const minimalCardRule = ruleFor(
+			".cuecraft-style-minimal .cuecraft-cornell-cue"
+		);
+		expect(minimalCardRule).toContain("border: 1px solid var(--cc-border)");
+		expect(minimalCardRule).toContain(
+			"border-inline-start: 3px solid var(--cc-border)"
+		);
 		const examPrepLabelRule = ruleFor(
 			".cuecraft-editor-hook-sectioned.cuecraft-style-exam-prep .cuecraft-cornell-cue::before"
 		);

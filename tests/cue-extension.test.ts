@@ -1664,6 +1664,27 @@ describe("rail spacers", () => {
 		});
 	});
 
+	it("measures cue content that overflows its gutter marker box", () => {
+		withDocument(() => {
+			const root = document.createElement("div");
+			const first = document.createElement("div");
+			first.className = "cuecraft-editor-rail-card";
+			first.dataset.line = "1";
+			first.getBoundingClientRect = () =>
+				({ top: 10, height: 200 }) as DOMRect;
+			Object.defineProperty(first, "scrollHeight", { value: 260 });
+
+			const second = document.createElement("div");
+			second.className = "cuecraft-editor-rail-card";
+			second.dataset.line = "3";
+			second.getBoundingClientRect = () =>
+				({ top: 230, height: 90 }) as DOMRect;
+			root.append(first, second);
+
+			expect(Array.from(measureRailSpacerHeights(root))).toEqual([[3, 52]]);
+		});
+	});
+
 	it("reserves space when wide Cornell cards overlap after rendering", async () => {
 		const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
 			pretendToBeVisual: true,

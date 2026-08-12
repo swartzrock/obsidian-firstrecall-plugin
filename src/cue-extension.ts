@@ -674,17 +674,18 @@ export function measureRailSpacerHeights(
 		if (nextLine === null) continue;
 		const cardRect = card.getBoundingClientRect();
 		const nextRect = nextCard.getBoundingClientRect();
+		const cardHeight = Math.max(cardRect.height, card.scrollHeight);
 		const distanceToNextCard = nextRect.top - cardRect.top;
 		if (
-			!Number.isFinite(cardRect.height) ||
+			!Number.isFinite(cardHeight) ||
 			!Number.isFinite(distanceToNextCard) ||
-			cardRect.height <= 0 ||
+			cardHeight <= 0 ||
 			distanceToNextCard <= 0
 		) {
 			continue;
 		}
 		const spacerHeight = railSpacerHeightForOverlap(
-			cardRect.height,
+			cardHeight,
 			distanceToNextCard,
 			currentSpacers.get(nextLine) ?? 0
 		);
