@@ -1369,7 +1369,7 @@ const cueGutter = gutter({
 	markers: (view) => view.state.field(cueGutterField).markers,
 });
 
-function scheduleRailLayoutMeasure(view: EditorView): void {
+export function scheduleRailLayoutMeasure(view: EditorView): void {
 	if (!viewHasRailCards(view)) return;
 	view.requestMeasure({
 		read: () => {
@@ -1385,7 +1385,6 @@ function scheduleRailLayoutMeasure(view: EditorView): void {
 		write: (measurement) => {
 			queueMicrotask(() => {
 				if (view.state !== measurement.state) {
-					scheduleRailLayoutMeasure(view);
 					return;
 				}
 				const latestSpacers =

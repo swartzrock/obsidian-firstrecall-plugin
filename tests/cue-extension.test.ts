@@ -14,6 +14,7 @@ import {
 	measureRailSpacerHeights,
 	railSpacerHeightForOverlap,
 	railLayoutUpdateNeedsMeasure,
+	scheduleRailLayoutMeasure,
 	renderNoteBriefElement,
 	renderCueElement,
 	setCuesEffect,
@@ -1810,5 +1811,50 @@ describe("rail spacers", () => {
 				transactions: [transaction],
 			} as Parameters<typeof railLayoutUpdateNeedsMeasure>[0])
 		).toBe(true);
+	});
+
+	it("does not starve the renderer when editor state changes during measurement", () => {
+		withDocument(() => {
+			const queuedMicrotasks: Array<() => void> = [];
+			const originalQueueMicrotask = globalThis.queueMicrotask;
+			let requestCount = 0;
+			const view = {
+				dom: document.createElement("div"),
+				get state() {
+					return {
+						field(field: unknown) {
+							if (field === cueGutterField) {
+								return { payload: { display: "anchored-card-rail" } };
+							}
+							if (field === cueRailSpacerField) {
+								return { spacers: new Map<number, number>() };
+							}
+							return undefined;
+						},
+					};
+				},
+				requestMeasure(request: {
+					read(): unknown;
+					write(value: unknown): void;
+				}) {
+					requestCount += 1;
+					request.write(request.read());
+				},
+				dispatch: vi.fn(),
+			} as unknown as EditorView;
+
+			globalThis.queueMicrotask = (callback) => {
+				queuedMicrotasks.push(callback);
+			};
+			try {
+				scheduleRailLayoutMeasure(view);
+				for (let pass = 0; pass < 5; pass += 1) {
+					queuedMicrotasks.shift()?.();
+				}
+				expect(requestCount).toBeLessThanOrEqual(2);
+			} finally {
+				globalThis.queueMicrotask = originalQueueMicrotask;
+			}
+		});
 	});
 });
