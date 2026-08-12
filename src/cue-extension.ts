@@ -1360,20 +1360,32 @@ const cueGutter = gutter({
 
 function scheduleRailLayoutMeasure(view: EditorView): void {
 	if (!viewHasRailCards(view)) return;
-	const currentSpacers =
-		view.state.field(cueRailSpacerField, false)?.spacers ??
-		emptyRailSpacerMap;
 	view.requestMeasure({
-		read: () => measureRailSpacerHeights(view.dom, currentSpacers),
-		write: (spacers) => {
-			const latestSpacers =
-				view.state.field(cueRailSpacerField, false)?.spacers ??
+		read: () => {
+			const state = view.state;
+			const currentSpacers =
+				state.field(cueRailSpacerField, false)?.spacers ??
 				emptyRailSpacerMap;
-			if (!railSpacerMapsEqual(latestSpacers, spacers)) {
-				view.dispatch({
-					effects: setRailSpacersEffect.of(spacers),
-				});
-			}
+			return {
+				state,
+				spacers: measureRailSpacerHeights(view.dom, currentSpacers),
+			};
+		},
+		write: (measurement) => {
+			queueMicrotask(() => {
+				if (view.state !== measurement.state) {
+					scheduleRailLayoutMeasure(view);
+					return;
+				}
+				const latestSpacers =
+					view.state.field(cueRailSpacerField, false)?.spacers ??
+					emptyRailSpacerMap;
+				if (!railSpacerMapsEqual(latestSpacers, measurement.spacers)) {
+					view.dispatch({
+						effects: setRailSpacersEffect.of(measurement.spacers),
+					});
+				}
+			});
 		},
 	});
 }

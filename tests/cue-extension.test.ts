@@ -6,6 +6,7 @@ import {
 	buildCueGutterMarkers,
 	buildCueLineData,
 	buildCueWidgetDecorations,
+	cueEditorExtension,
 	cueGutterField,
 	RAIL_CARD_LAYOUT_EVENT,
 	buildRailSpacerDecorations,
@@ -1633,6 +1634,77 @@ describe("rail spacers", () => {
 				({ top: 230, height: 90 }) as DOMRect;
 			expect(Array.from(measureRailSpacerHeights(root))).toEqual([]);
 		});
+	});
+
+	it("reserves space when wide Cornell cards overlap after rendering", async () => {
+		const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
+			pretendToBeVisual: true,
+		});
+		const previousGlobals = new Map<PropertyKey, PropertyDescriptor | undefined>();
+		const testGlobals: Record<PropertyKey, unknown> = {
+			window: dom.window,
+			document: dom.window.document,
+			navigator: dom.window.navigator,
+			MutationObserver: dom.window.MutationObserver,
+			HTMLElement: dom.window.HTMLElement,
+			Node: dom.window.Node,
+			DOMRect: dom.window.DOMRect,
+			getComputedStyle: dom.window.getComputedStyle.bind(dom.window),
+		};
+		for (const [key, value] of Object.entries(testGlobals)) {
+			previousGlobals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
+			Object.defineProperty(globalThis, key, {
+				configurable: true,
+				value,
+			});
+		}
+
+		const parent = dom.window.document.querySelector("main");
+		if (!(parent instanceof dom.window.HTMLElement)) {
+			throw new Error("Missing editor parent");
+		}
+		let view: EditorView | null = null;
+		try {
+			view = new EditorView({
+				state: EditorState.create({
+					doc: NOTE,
+					extensions: [cueEditorExtension],
+				}),
+				parent,
+			});
+			view.dispatch({
+				effects: setCuesEffect.of({
+					cues,
+					display: "cornell",
+					cueColumnWidth: "wide",
+					cueFontSize: "large",
+				}),
+			});
+			const cards = Array.from(
+				parent.querySelectorAll<HTMLElement>(".cuecraft-editor-rail-card")
+			);
+			expect(cards).toHaveLength(2);
+			cards[0].getBoundingClientRect = () =>
+				({ top: 10, height: 400 }) as DOMRect;
+			cards[1].getBoundingClientRect = () => {
+				const spacer = view?.state.field(cueRailSpacerField).spacers.get(3) ?? 0;
+				return { top: 230 + spacer, height: 100 } as DOMRect;
+			};
+			await new Promise((resolve) => dom.window.setTimeout(resolve, 50));
+			expect(Array.from(view.state.field(cueRailSpacerField).spacers)).toEqual([
+				[3, 192],
+			]);
+		} finally {
+			view?.destroy();
+			dom.window.close();
+			for (const [key, descriptor] of previousGlobals) {
+				if (descriptor) {
+					Object.defineProperty(globalThis, key, descriptor);
+				} else {
+					delete (globalThis as Record<PropertyKey, unknown>)[key];
+				}
+			}
+		}
 	});
 
 	it("builds invisible block spacer widgets for rail displays only", () => {
