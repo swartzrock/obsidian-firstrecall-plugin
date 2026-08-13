@@ -330,6 +330,18 @@ describe("buildCueLineData", () => {
 	});
 });
 
+function createEditorCueWidthController(committedWidthPx: number | null = 240) {
+	const applyPreview = (widthPx: number | null) => {
+		applyEditorCueWidthPreview(document, widthPx);
+	};
+	return {
+		getCommittedWidthPx: () => committedWidthPx,
+		previewWidthPx: vi.fn(applyPreview),
+		flushWidthPreview: vi.fn(applyPreview),
+		commitWidthPx: vi.fn(),
+	};
+}
+
 describe("renderCueElement", () => {
 	it("coalesces live width previews into one rail layout event per frame", () => {
 		withDocument(() => {
@@ -339,12 +351,7 @@ describe("renderCueElement", () => {
 				callbacks.push(callback);
 				return callbacks.length;
 			});
-			const controller = {
-				getCommittedWidthPx: () => null,
-				previewWidthPx: vi.fn(),
-				commitWidthPx: vi.fn(),
-				cancelWidthPreview: vi.fn(),
-			};
+			const controller = createEditorCueWidthController(null);
 			const editor = document.createElement("div");
 			editor.className = "cm-editor";
 			editor.append(
@@ -378,12 +385,7 @@ describe("renderCueElement", () => {
 
 	it("adds an accessible left-edge width separator only to eligible editor rail cards", () => {
 		withDocument(() => {
-			const widthController = {
-				getCommittedWidthPx: () => 240,
-				previewWidthPx: vi.fn(),
-				commitWidthPx: vi.fn(),
-				cancelWidthPreview: vi.fn(),
-			};
+			const widthController = createEditorCueWidthController();
 			for (const display of [
 				"anchored-card-rail",
 				"threaded-margin-notes",
@@ -424,14 +426,51 @@ describe("renderCueElement", () => {
 		});
 	});
 
+	it("clamps the same requested width to each editor workspace", () => {
+		withDocument(() => {
+			const controller = createEditorCueWidthController();
+			const makeEditor = (workspaceLeft: number, sectionId: string) => {
+				const workspace = document.createElement("div");
+				workspace.className = "workspace-leaf-content";
+				workspace.getBoundingClientRect = () =>
+					({ left: workspaceLeft }) as DOMRect;
+				const editor = document.createElement("div");
+				editor.className = "cm-editor";
+				const card = renderCueElement(
+					anchoredCue({ sectionId }),
+					"anchored-card-rail",
+					0,
+					"upcoming",
+					{ editorCueWidthController: controller }
+				);
+				card.getBoundingClientRect = () =>
+					({ width: 240, right: 500 }) as DOMRect;
+				editor.appendChild(card);
+				workspace.appendChild(editor);
+				document.body.appendChild(workspace);
+				return card;
+			};
+			const wideWorkspaceCard = makeEditor(100, "wide-workspace");
+			const narrowWorkspaceCard = makeEditor(300, "narrow-workspace");
+
+			applyEditorCueWidthPreview(document, 400);
+
+			expect(
+				wideWorkspaceCard.style.getPropertyValue(
+					"--cuecraft-editor-cue-width"
+				)
+			).toBe("388px");
+			expect(
+				narrowWorkspaceCard.style.getPropertyValue(
+					"--cuecraft-editor-cue-width"
+				)
+			).toBe("188px");
+		});
+	});
+
 	it("previews every visible eligible card during a captured left-edge drag and commits once", () => {
 		withDocument(() => {
-			const controller = {
-				getCommittedWidthPx: () => 240,
-				previewWidthPx: vi.fn(),
-				commitWidthPx: vi.fn(),
-				cancelWidthPreview: vi.fn(),
-			};
+			const controller = createEditorCueWidthController();
 			const editor = document.createElement("div");
 			editor.className = "cm-editor";
 			editor.getBoundingClientRect = () => ({ left: 100 }) as DOMRect;
@@ -483,19 +522,13 @@ describe("renderCueElement", () => {
 			dispatchPointer(grip, "pointerup", { pointerId: 7, clientX: 360 });
 			expect(controller.commitWidthPx).toHaveBeenCalledOnce();
 			expect(controller.commitWidthPx).toHaveBeenCalledWith(280);
-			expect(controller.cancelWidthPreview).not.toHaveBeenCalled();
 			expect(capturedPointer).toBeNull();
 		});
 	});
 
 	it("rejects non-primary drags and reverts cancellation without saving", () => {
 		withDocument(() => {
-			const controller = {
-				getCommittedWidthPx: () => 240,
-				previewWidthPx: vi.fn(),
-				commitWidthPx: vi.fn(),
-				cancelWidthPreview: vi.fn(),
-			};
+			const controller = createEditorCueWidthController();
 			const editor = document.createElement("div");
 			editor.className = "cm-editor";
 			editor.getBoundingClientRect = () => ({ left: 100 }) as DOMRect;
@@ -532,18 +565,21 @@ describe("renderCueElement", () => {
 				"290px"
 			);
 			dispatchPointer(grip, "lostpointercapture", { pointerId: 3 });
-			expect(controller.cancelWidthPreview).toHaveBeenCalledOnce();
+			expect(controller.flushWidthPreview).toHaveBeenLastCalledWith(240);
 			expect(controller.commitWidthPx).not.toHaveBeenCalled();
 			expect(card.style.getPropertyValue("--cuecraft-editor-cue-width")).toBe(
 				"240px"
 			);
 			dispatchPointer(grip, "pointercancel", { pointerId: 3 });
-			expect(controller.cancelWidthPreview).toHaveBeenCalledOnce();
+			expect(controller.previewWidthPx).toHaveBeenCalledOnce();
+			expect(controller.flushWidthPreview).toHaveBeenCalledOnce();
 
 			dispatchPointer(grip, "pointerdown", { pointerId: 4, clientX: 400 });
 			dispatchPointer(grip, "pointermove", { pointerId: 4, clientX: 375 });
 			grip.dispatchEvent(new document.defaultView!.FocusEvent("blur"));
-			expect(controller.cancelWidthPreview).toHaveBeenCalledTimes(2);
+			expect(controller.previewWidthPx).toHaveBeenCalledTimes(2);
+			expect(controller.flushWidthPreview).toHaveBeenCalledTimes(2);
+			expect(controller.flushWidthPreview).toHaveBeenLastCalledWith(240);
 			expect(controller.commitWidthPx).not.toHaveBeenCalled();
 			expect(card.style.getPropertyValue("--cuecraft-editor-cue-width")).toBe(
 				"240px"
@@ -553,12 +589,7 @@ describe("renderCueElement", () => {
 
 	it("cancels an active drag when CodeMirror destroys the marker", () => {
 		withDocument(() => {
-			const controller = {
-				getCommittedWidthPx: () => 240,
-				previewWidthPx: vi.fn(),
-				commitWidthPx: vi.fn(),
-				cancelWidthPreview: vi.fn(),
-			};
+			const controller = createEditorCueWidthController();
 			const state = EditorState.create({ doc: "# Terms\nbody" });
 			const marker = buildCueGutterMarkers(state, {
 				cues: [anchoredCue()],
@@ -584,7 +615,7 @@ describe("renderCueElement", () => {
 			dispatchPointer(grip, "pointermove", { pointerId: 5, clientX: 360 });
 			(marker as unknown as { destroy(dom: Node): void }).destroy(card);
 
-			expect(controller.cancelWidthPreview).toHaveBeenCalledOnce();
+			expect(controller.flushWidthPreview).toHaveBeenLastCalledWith(240);
 			expect(controller.commitWidthPx).not.toHaveBeenCalled();
 			expect(card.style.getPropertyValue("--cuecraft-editor-cue-width")).toBe(
 				"240px"
@@ -596,12 +627,7 @@ describe("renderCueElement", () => {
 
 	it("previews repeated separator keys and commits once on matching keyup", () => {
 		withDocument(() => {
-			const controller = {
-				getCommittedWidthPx: () => 240,
-				previewWidthPx: vi.fn(),
-				commitWidthPx: vi.fn(),
-				cancelWidthPreview: vi.fn(),
-			};
+			const controller = createEditorCueWidthController();
 			const editor = document.createElement("div");
 			editor.className = "cm-editor";
 			editor.getBoundingClientRect = () => ({ left: 100 }) as DOMRect;
@@ -647,7 +673,47 @@ describe("renderCueElement", () => {
 			);
 			expect(controller.commitWidthPx).toHaveBeenCalledOnce();
 			expect(controller.commitWidthPx).toHaveBeenCalledWith(256);
-			expect(controller.cancelWidthPreview).not.toHaveBeenCalled();
+		});
+	});
+
+	it("waits for every held separator key before committing keyboard resize", () => {
+		withDocument(() => {
+			const controller = createEditorCueWidthController();
+			const editor = document.createElement("div");
+			editor.className = "cm-editor";
+			editor.getBoundingClientRect = () => ({ left: 100 }) as DOMRect;
+			const card = renderCueElement(
+				anchoredCue(),
+				"cornell-minimal",
+				0,
+				"upcoming",
+				{ editorCueWidthController: controller }
+			);
+			card.getBoundingClientRect = () =>
+				({ width: 240, right: 500 }) as DOMRect;
+			editor.appendChild(card);
+			document.body.appendChild(editor);
+			const grip = card.querySelector<HTMLElement>(
+				".cuecraft-editor-cue-width-grip"
+			);
+			if (!grip) throw new Error("Expected resize grip");
+			const dispatchKey = (type: "keydown" | "keyup", key: string) => {
+				grip.dispatchEvent(
+					new document.defaultView!.KeyboardEvent(type, {
+						key,
+						bubbles: true,
+						cancelable: true,
+					})
+				);
+			};
+
+			dispatchKey("keydown", "ArrowLeft");
+			dispatchKey("keydown", "ArrowRight");
+			dispatchKey("keyup", "ArrowLeft");
+			expect(controller.commitWidthPx).not.toHaveBeenCalled();
+			dispatchKey("keyup", "ArrowRight");
+			expect(controller.commitWidthPx).toHaveBeenCalledOnce();
+			expect(controller.commitWidthPx).toHaveBeenCalledWith(240);
 		});
 	});
 

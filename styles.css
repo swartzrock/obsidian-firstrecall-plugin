@@ -2428,21 +2428,32 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	width: clamp(11.5rem, 20vw, 16rem);
 }
 
+.markdown-source-view.mod-cm6 .cuecraft-editor-cue-width-custom {
+	--cuecraft-editor-cue-width-resolved: clamp(6rem, var(--cuecraft-editor-cue-width, 13rem), 32rem);
+}
+
 .markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-rail-card.cuecraft-editor-cue-width-custom {
 	box-sizing: border-box;
-	width: clamp(6rem, var(--cuecraft-editor-cue-width, 13rem), 32rem);
+	width: var(--cuecraft-editor-cue-width-resolved);
 	max-width: none;
 }
 
 .cuecraft-editor-rail-card {
 	position: relative;
+	box-sizing: border-box;
+}
+
+.cuecraft-editor-hook-anchored-card-rail.cuecraft-editor-rail-card,
+.cuecraft-editor-hook-threaded-margin-notes.cuecraft-editor-rail-card,
+.cuecraft-editor-cornell-card.cuecraft-editor-rail-card {
+	padding-left: 28px;
 }
 
 .cuecraft-editor-cue-width-grip {
 	position: absolute;
 	z-index: 5;
 	inset-block: 0;
-	inset-inline-start: 0;
+	left: 0;
 	width: 24px;
 	min-width: 24px;
 	padding: 0;
@@ -2456,7 +2467,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	content: "";
 	position: absolute;
 	inset-block: 8px;
-	inset-inline-start: 2px;
+	left: 2px;
 	width: 2px;
 	border-radius: var(--radius-s);
 	background: color-mix(in srgb, var(--text-muted) 55%, transparent);
@@ -2482,13 +2493,13 @@ html.cuecraft-editor-cue-width-resizing * {
 
 @media (min-width: 1180px) {
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift.cuecraft-editor-cue-width-custom[data-cuecraft-editor-display="anchored-card-rail"] {
-		--cuecraft-editor-masthead-offset: calc(clamp(6rem, var(--cuecraft-editor-cue-width, 13rem), 32rem) + 2.25rem);
+		--cuecraft-editor-masthead-offset: calc(var(--cuecraft-editor-cue-width-resolved) + 2.25rem);
 	}
 }
 
 @media (min-width: 980px) and (max-width: 1179.98px) {
 	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift.cuecraft-editor-cue-width-custom[data-cuecraft-editor-display="anchored-card-rail"] {
-		--cuecraft-editor-masthead-offset: calc(clamp(6rem, var(--cuecraft-editor-cue-width, 13rem), 32rem) + 1.5rem);
+		--cuecraft-editor-masthead-offset: calc(var(--cuecraft-editor-cue-width-resolved) + 1.5rem);
 	}
 }
 

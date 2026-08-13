@@ -109,9 +109,9 @@ export interface CueEditorRenderState {
 
 export interface EditorCueWidthController {
 	getCommittedWidthPx(): number | null;
-	previewWidthPx(widthPx: number): void;
+	previewWidthPx(widthPx: number | null): void;
+	flushWidthPreview(widthPx: number | null): void;
 	commitWidthPx(widthPx: number): void;
-	cancelWidthPreview(): void;
 }
 
 interface CueRenderOptions extends EditorHookCardOptions {
@@ -631,18 +631,12 @@ function appendCueTerms(
 	}
 }
 
-function railLayoutAppliesToDisplay(display: EditorCueDisplay): boolean {
+export function railLayoutAppliesToDisplay(display: EditorCueDisplay): boolean {
 	return (
 		display === "anchored-card-rail" ||
 		display === "threaded-margin-notes" ||
 		cornellEditorDisplayStyle(display) !== null
 	);
-}
-
-export function editorCueWidthAppliesToDisplay(
-	display: EditorCueDisplay
-): boolean {
-	return railLayoutAppliesToDisplay(display);
 }
 
 function sectionDisclosuresApplyToDisplay(display: EditorCueDisplay): boolean {
@@ -697,10 +691,27 @@ export function applyEditorCueWidthPreview(
 	root: ParentNode,
 	widthPx: number | null
 ): void {
+	const rootElement = root as HTMLElement;
+	const editorRoots = rootElement.matches?.(".cm-editor")
+		? [rootElement]
+		: Array.from(root.querySelectorAll<HTMLElement>(".cm-editor"));
+	if (editorRoots.length > 0) {
+		for (const editorRoot of editorRoots) {
+			applyEditorCueWidthToScope(editorRoot, widthPx);
+		}
+		return;
+	}
+	applyEditorCueWidthToScope(root, widthPx);
+}
+
+function applyEditorCueWidthToScope(
+	root: ParentNode,
+	widthPx: number | null
+): void {
 	const normalizedWidth =
 		widthPx === null
 			? null
-			: clampEditorCueWidthPx(widthPx, EDITOR_CUE_WIDTH_MAX_PX);
+			: effectiveEditorCueWidthPx(root, widthPx);
 	if ((root as Node).nodeType === (root as Node).ELEMENT_NODE) {
 		applyEditorCueWidthToElement(root as HTMLElement, normalizedWidth);
 	}
@@ -715,10 +726,43 @@ export function applyEditorCueWidthPreview(
 			);
 		}
 		if (normalizedWidth !== null) {
-			grip.setAttribute("aria-valuenow", String(normalizedWidth));
+			const valueNow = String(normalizedWidth);
+			if (grip.getAttribute("aria-valuenow") !== valueNow) {
+				grip.setAttribute("aria-valuenow", valueNow);
+			}
 		}
 	}
 	for (const target of layoutTargets) scheduleEditorCueWidthLayout(target);
+}
+
+function effectiveEditorCueWidthPx(
+	root: ParentNode,
+	requestedWidthPx: number
+): number {
+	const absoluteWidth = clampEditorCueWidthPx(
+		requestedWidthPx,
+		EDITOR_CUE_WIDTH_MAX_PX
+	);
+	const rootElement = root as HTMLElement;
+	const card = rootElement.matches?.(".cuecraft-editor-rail-card")
+		? rootElement
+		: root.querySelector<HTMLElement>(".cuecraft-editor-rail-card");
+	if (!card?.isConnected) return absoluteWidth;
+	const boundary = editorCueWorkspaceBoundary(card);
+	if (!boundary) return absoluteWidth;
+	const cardRight = card.getBoundingClientRect().right;
+	const boundaryLeft = boundary.getBoundingClientRect().left;
+	if (
+		!Number.isFinite(cardRight) ||
+		!Number.isFinite(boundaryLeft) ||
+		cardRight <= boundaryLeft
+	) {
+		return absoluteWidth;
+	}
+	return clampEditorCueWidthPx(
+		requestedWidthPx,
+		editorCueDynamicMaxWidthPx(cardRight, boundaryLeft)
+	);
 }
 
 function applyEditorCueWidthToElement(
@@ -731,16 +775,18 @@ function applyEditorCueWidthToElement(
 	const previousWidth = element.style.getPropertyValue(
 		EDITOR_CUE_WIDTH_PROPERTY
 	);
-	element.classList.toggle(EDITOR_CUE_WIDTH_CUSTOM_CLASS, widthPx !== null);
+	const nextCustom = widthPx !== null;
+	const nextWidth = widthPx === null ? "" : `${widthPx}px`;
+	if (previousCustom === nextCustom && previousWidth === nextWidth) {
+		return false;
+	}
+	element.classList.toggle(EDITOR_CUE_WIDTH_CUSTOM_CLASS, nextCustom);
 	if (widthPx === null) {
 		element.style.removeProperty(EDITOR_CUE_WIDTH_PROPERTY);
 	} else {
-		element.style.setProperty(EDITOR_CUE_WIDTH_PROPERTY, `${widthPx}px`);
+		element.style.setProperty(EDITOR_CUE_WIDTH_PROPERTY, nextWidth);
 	}
-	return (
-		previousCustom !== (widthPx !== null) ||
-		previousWidth !== (widthPx === null ? "" : `${widthPx}px`)
-	);
+	return true;
 }
 
 function scheduleEditorCueWidthLayout(target: HTMLElement): void {
@@ -796,6 +842,7 @@ function installEditorCueWidthInteraction(
 ): void {
 	let pointerSession: EditorCuePointerSession | null = null;
 	let keyboardSession: EditorCueKeyboardSession | null = null;
+	let lastPreviewWidthPx: number | null = controller.getCommittedWidthPx();
 	let destroyed = false;
 
 	const setResizing = (resizing: boolean): void => {
@@ -807,11 +854,11 @@ function installEditorCueWidthInteraction(
 		);
 	};
 	const restoreCommittedWidth = (): void => {
-		controller.cancelWidthPreview();
-		applyEditorCueWidthPreview(
-			card.ownerDocument,
-			controller.getCommittedWidthPx()
-		);
+		const committedWidthPx = controller.getCommittedWidthPx();
+		if (lastPreviewWidthPx !== committedWidthPx) {
+			controller.flushWidthPreview(committedWidthPx);
+		}
+		lastPreviewWidthPx = committedWidthPx;
 	};
 	const cancel = (): void => {
 		if (!pointerSession && !keyboardSession) return;
@@ -822,10 +869,11 @@ function installEditorCueWidthInteraction(
 	};
 	const preview = (widthPx: number, dynamicMaxWidthPx: number): void => {
 		const width = clampEditorCueWidthPx(widthPx, dynamicMaxWidthPx);
-		applyEditorCueWidthPreview(card.ownerDocument, width);
-		controller.previewWidthPx(width);
 		grip.setAttribute("aria-valuemax", String(dynamicMaxWidthPx));
 		grip.setAttribute("aria-valuenow", String(width));
+		if (lastPreviewWidthPx === width) return;
+		lastPreviewWidthPx = width;
+		controller.previewWidthPx(width);
 	};
 	const finish = (widthPx: number): void => {
 		pointerSession = null;
@@ -892,7 +940,6 @@ function installEditorCueWidthInteraction(
 			session.dynamicMaxWidthPx
 		);
 		pointerSession = null;
-		setResizing(false);
 		if (grip.hasPointerCapture(event.pointerId)) {
 			grip.releasePointerCapture(event.pointerId);
 		}
@@ -939,7 +986,10 @@ function installEditorCueWidthInteraction(
 	const onKeyUp = (event: KeyboardEvent): void => {
 		const session = keyboardSession;
 		if (!session || !session.heldKeys.has(event.key)) return;
-		finish(session.currentWidthPx);
+		session.heldKeys.delete(event.key);
+		if (session.heldKeys.size === 0) {
+			finish(session.currentWidthPx);
+		}
 		event.preventDefault();
 		event.stopPropagation();
 	};
@@ -978,8 +1028,10 @@ function installEditorCueWidthInteraction(
 }
 
 function editorCueWorkspaceBoundary(card: HTMLElement): HTMLElement | null {
-	return card.closest<HTMLElement>(
-		".workspace-leaf-content, .markdown-source-view, .cm-editor"
+	return (
+		card.closest<HTMLElement>(".workspace-leaf-content") ??
+		card.closest<HTMLElement>(".markdown-source-view") ??
+		card.closest<HTMLElement>(".cm-editor")
 	);
 }
 

@@ -347,17 +347,31 @@ describe("settings CSS", () => {
 		const customRule = ruleFor(
 			".markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-rail-card.cuecraft-editor-cue-width-custom"
 		);
-		expect(customRule).toContain(
-			"width: clamp(6rem, var(--cuecraft-editor-cue-width, 13rem), 32rem)"
-		);
+		expect(customRule).toContain("width: var(--cuecraft-editor-cue-width-resolved)");
 		expect(customRule).toContain("max-width: none");
+		const resolvedWidthRule = ruleFor(
+			".markdown-source-view.mod-cm6 .cuecraft-editor-cue-width-custom"
+		);
+		expect(resolvedWidthRule).toContain(
+			"--cuecraft-editor-cue-width-resolved: clamp(6rem, var(--cuecraft-editor-cue-width, 13rem), 32rem)"
+		);
 
 		const gripRule = ruleFor(".cuecraft-editor-cue-width-grip");
 		expect(gripRule).toContain("width: 24px");
 		expect(gripRule).toContain("min-width: 24px");
 		expect(gripRule).toContain("cursor: ew-resize");
 		expect(gripRule).toContain("touch-action: none");
+		expect(gripRule).toContain("left: 0");
+		expect(gripRule).not.toContain("inset-inline-start");
 		expect(gripRule).not.toContain("transition:");
+
+		const reservedEdgeRule = ruleFor(
+			".cuecraft-editor-cornell-card.cuecraft-editor-rail-card"
+		);
+		expect(reservedEdgeRule).toContain("padding-left: 28px");
+		expect(styles).toContain(
+			".cuecraft-editor-hook-anchored-card-rail.cuecraft-editor-rail-card"
+		);
 
 		const focusRule = ruleFor(
 			".cuecraft-editor-cue-width-grip:focus-visible"

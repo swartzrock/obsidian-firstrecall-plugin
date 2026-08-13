@@ -275,6 +275,7 @@ type MockPlugin = {
 	settings: CueCraftSettings;
 	saveSettings: ReturnType<typeof vi.fn>;
 	refreshEditorCues: ReturnType<typeof vi.fn>;
+	refreshEditorCueWidths: ReturnType<typeof vi.fn>;
 	refreshCornellViews: ReturnType<typeof vi.fn>;
 	refreshReadingModeSurface: ReturnType<typeof vi.fn>;
 	noteCueSettingsChanged: ReturnType<typeof vi.fn>;
@@ -360,6 +361,7 @@ async function setupSettingsTab(): Promise<{
 		settings: structuredClone(DEFAULT_SETTINGS),
 		saveSettings: vi.fn(async () => undefined),
 		refreshEditorCues: vi.fn(),
+		refreshEditorCueWidths: vi.fn(),
 		refreshCornellViews: vi.fn(),
 		refreshReadingModeSurface: vi.fn(),
 		noteCueSettingsChanged: vi.fn(),
@@ -1019,6 +1021,7 @@ describe("settings defaults", () => {
 		expect(plugin.settings.cueFontSize).toBe("large");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
+		expect(plugin.refreshEditorCueWidths).toHaveBeenCalledOnce();
 		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
 	});
 
@@ -1038,6 +1041,7 @@ describe("settings defaults", () => {
 			expect(plugin.settings.cueColumnWidth).toBe("wide");
 			expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
 			expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
+			expect(plugin.refreshEditorCueWidths).toHaveBeenCalledOnce();
 			expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
 		}
 	});

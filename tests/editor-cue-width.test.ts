@@ -8,7 +8,6 @@ import {
 	editorCueDynamicMaxWidthPx,
 	normalizeEditorCueCustomWidthPx,
 	normalizeEditorCueWidthPreset,
-	resolveEditorCueWidth,
 } from "../src/editor-cue-width";
 
 describe("Editing View cue width preferences", () => {
@@ -39,21 +38,6 @@ describe("Editing View cue width preferences", () => {
 		]) {
 			expect(normalizeEditorCueCustomWidthPx(invalid)).toBeNull();
 		}
-	});
-
-	it("resolves Custom only for an eligible editor rail", () => {
-		expect(resolveEditorCueWidth("wide", 240, true)).toEqual({
-			mode: "custom",
-			widthPx: 240,
-		});
-		expect(resolveEditorCueWidth("wide", 240, false)).toEqual({
-			mode: "preset",
-			preset: "wide",
-		});
-		expect(resolveEditorCueWidth("wide", null, true)).toEqual({
-			mode: "preset",
-			preset: "wide",
-		});
 	});
 
 	it("applies left-edge drag direction and absolute or dynamic bounds", () => {

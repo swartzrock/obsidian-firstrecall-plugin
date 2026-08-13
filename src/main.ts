@@ -21,6 +21,7 @@ import {
 	normalizeEditorCueCustomWidthPx,
 	normalizeEditorCueWidthPreset,
 } from "./editor-cue-width";
+import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import {
 	normalizeAutoGenerationSettleDelaySeconds,
 	scheduleAutoGenerationTimer,
@@ -70,7 +71,7 @@ import {
 	appendSectionLens,
 	buildCueLineData,
 	cueEditorExtension,
-	editorCueWidthAppliesToDisplay,
+	railLayoutAppliesToDisplay,
 	renderNoteBriefElement,
 	setCuesEffect,
 	type EditorCueWidthController,
@@ -162,6 +163,8 @@ export default class CueCraftPlugin extends Plugin {
 	private autoGenerateTimers = new Map<string, number>();
 	private studyAreaMaintenanceTimers = new Map<string, number>();
 	private editorLayoutFrame: number | null = null;
+	private editorCueWidthPreviewScheduler: EditorCueWidthPreviewScheduler | null =
+		null;
 	private editorHookLayout = new EditorHookLayoutController();
 	private cueSettingsChanged = false;
 	private data: PluginData = {
@@ -181,9 +184,9 @@ export default class CueCraftPlugin extends Plugin {
 	private readonly editorCueWidthController: EditorCueWidthController = {
 		getCommittedWidthPx: () => this.settings.editorCueCustomWidthPx,
 		previewWidthPx: (widthPx) => this.previewEditorCueWidth(widthPx),
+		flushWidthPreview: (widthPx) =>
+			this.flushEditorCueWidthPreview(widthPx),
 		commitWidthPx: (widthPx) => this.commitEditorCueWidth(widthPx),
-		cancelWidthPreview: () =>
-			this.previewEditorCueWidth(this.settings.editorCueCustomWidthPx),
 	};
 
 	async onload(): Promise<void> {
@@ -191,6 +194,15 @@ export default class CueCraftPlugin extends Plugin {
 			secretStorage: this.app.secretStorage,
 		});
 		await this.loadPluginData();
+		this.editorCueWidthPreviewScheduler = new EditorCueWidthPreviewScheduler(
+			this.settings.editorCueCustomWidthPx,
+			{
+				requestAnimationFrame: (callback) =>
+					window.requestAnimationFrame(callback),
+				cancelAnimationFrame: (id) => window.cancelAnimationFrame(id),
+			},
+			(widthPx) => this.applyEditorCueWidthNow(widthPx)
+		);
 
 		this.cacheStore = new CacheStore(this.data.caches, async (map) => {
 			for (const path of Object.keys(map)) {
@@ -286,7 +298,8 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	onunload(): void {
-		this.previewEditorCueWidth(null);
+		this.flushEditorCueWidthPreview(null);
+		this.editorCueWidthPreviewScheduler = null;
 		for (const timer of this.autoGenerateTimers.values()) {
 			window.clearTimeout(timer);
 		}
@@ -474,7 +487,7 @@ export default class CueCraftPlugin extends Plugin {
 		cm.dom.dataset.cuecraftEditorDisplay = this.settings.editorCueDisplay;
 		applyEditorCueWidthPreview(
 			cm.dom,
-			editorCueWidthAppliesToDisplay(this.settings.editorCueDisplay)
+			railLayoutAppliesToDisplay(this.settings.editorCueDisplay)
 				? this.settings.editorCueCustomWidthPx
 				: null
 		);
@@ -506,6 +519,22 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private previewEditorCueWidth(widthPx: number | null): void {
+		if (this.editorCueWidthPreviewScheduler) {
+			this.editorCueWidthPreviewScheduler.preview(widthPx);
+			return;
+		}
+		this.applyEditorCueWidthNow(widthPx);
+	}
+
+	private flushEditorCueWidthPreview(widthPx: number | null): void {
+		if (this.editorCueWidthPreviewScheduler) {
+			this.editorCueWidthPreviewScheduler.flush(widthPx);
+			return;
+		}
+		this.applyEditorCueWidthNow(widthPx);
+	}
+
+	private applyEditorCueWidthNow(widthPx: number | null): void {
 		const seen = new Set<HTMLElement>();
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			const view = leaf.view;
@@ -517,7 +546,7 @@ export default class CueCraftPlugin extends Plugin {
 			seen.add(cm.dom);
 			applyEditorCueWidthPreview(
 				cm.dom,
-				editorCueWidthAppliesToDisplay(display) ? widthPx : null
+				railLayoutAppliesToDisplay(display) ? widthPx : null
 			);
 		});
 	}
@@ -525,12 +554,20 @@ export default class CueCraftPlugin extends Plugin {
 	private commitEditorCueWidth(widthPx: number): void {
 		const normalized = normalizeEditorCueCustomWidthPx(widthPx);
 		if (normalized === null) {
-			this.previewEditorCueWidth(this.settings.editorCueCustomWidthPx);
+			this.flushEditorCueWidthPreview(this.settings.editorCueCustomWidthPx);
+			return;
+		}
+		if (normalized === this.settings.editorCueCustomWidthPx) {
+			this.flushEditorCueWidthPreview(normalized);
 			return;
 		}
 		this.settings.editorCueCustomWidthPx = normalized;
-		this.previewEditorCueWidth(normalized);
+		this.flushEditorCueWidthPreview(normalized);
 		void this.saveSettings();
+	}
+
+	refreshEditorCueWidths(): void {
+		this.flushEditorCueWidthPreview(this.settings.editorCueCustomWidthPx);
 	}
 
 	private scheduleEditorLayoutRefresh(): void {
@@ -540,6 +577,7 @@ export default class CueCraftPlugin extends Plugin {
 		this.editorLayoutFrame = window.requestAnimationFrame(() => {
 			this.editorLayoutFrame = null;
 			this.refreshEditorCues(true);
+			this.editorCueWidthPreviewScheduler?.flush();
 		});
 	}
 

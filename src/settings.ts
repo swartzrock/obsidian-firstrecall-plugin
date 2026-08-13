@@ -1410,6 +1410,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.plugin.settings.editorCueWidthPreset = value;
 				this.plugin.settings.editorCueCustomWidthPx = null;
 			},
+			afterSave: () => this.plugin.refreshEditorCueWidths(),
 			className: "cuecraft-thumbnail-group-cue-width",
 		});
 

@@ -13,10 +13,6 @@ export const EDITOR_CUE_WIDTH_MAX_PX = 512;
 export const EDITOR_CUE_WIDTH_KEYBOARD_STEP_PX = 8;
 export const EDITOR_CUE_WIDTH_WORKSPACE_INSET_PX = 12;
 
-export type ResolvedEditorCueWidth =
-	| { mode: "preset"; preset: EditorCueWidthPreset }
-	| { mode: "custom"; widthPx: number };
-
 export function normalizeEditorCueWidthPreset(
 	value: unknown,
 	legacyCueColumnWidth?: unknown
@@ -39,18 +35,6 @@ export function normalizeEditorCueCustomWidthPx(value: unknown): number | null {
 		return null;
 	}
 	return value;
-}
-
-export function resolveEditorCueWidth(
-	preset: unknown,
-	customWidthPx: unknown,
-	allowCustom: boolean
-): ResolvedEditorCueWidth {
-	const custom = normalizeEditorCueCustomWidthPx(customWidthPx);
-	if (allowCustom && custom !== null) {
-		return { mode: "custom", widthPx: custom };
-	}
-	return { mode: "preset", preset: normalizeEditorCueWidthPreset(preset) };
 }
 
 export function clampEditorCueWidthPx(
