@@ -66,11 +66,14 @@ import {
 	type NoteCache,
 } from "./cache";
 import {
+	applyEditorCueWidthPreview,
 	appendSectionLens,
 	buildCueLineData,
 	cueEditorExtension,
+	editorCueWidthAppliesToDisplay,
 	renderNoteBriefElement,
 	setCuesEffect,
+	type EditorCueWidthController,
 	type CueLineData,
 } from "./cue-extension";
 import {
@@ -175,6 +178,13 @@ export default class CueCraftPlugin extends Plugin {
 	private cueSectionCollapse!: CueSectionCollapseStore;
 	private credentialStore!: SecureCredentialStore;
 	private credentialMigrationWarnings: string[] = [];
+	private readonly editorCueWidthController: EditorCueWidthController = {
+		getCommittedWidthPx: () => this.settings.editorCueCustomWidthPx,
+		previewWidthPx: (widthPx) => this.previewEditorCueWidth(widthPx),
+		commitWidthPx: (widthPx) => this.commitEditorCueWidth(widthPx),
+		cancelWidthPreview: () =>
+			this.previewEditorCueWidth(this.settings.editorCueCustomWidthPx),
+	};
 
 	async onload(): Promise<void> {
 		this.credentialStore = createSecureCredentialStore({
@@ -276,6 +286,7 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	onunload(): void {
+		this.previewEditorCueWidth(null);
 		for (const timer of this.autoGenerateTimers.values()) {
 			window.clearTimeout(timer);
 		}
@@ -461,6 +472,12 @@ export default class CueCraftPlugin extends Plugin {
 					})
 				: [];
 		cm.dom.dataset.cuecraftEditorDisplay = this.settings.editorCueDisplay;
+		applyEditorCueWidthPreview(
+			cm.dom,
+			editorCueWidthAppliesToDisplay(this.settings.editorCueDisplay)
+				? this.settings.editorCueCustomWidthPx
+				: null
+		);
 		this.updateEditorHookLayout(
 			cm,
 			cues.length > 0 && this.settings.editorCueDisplay !== "inline-cues",
@@ -477,6 +494,7 @@ export default class CueCraftPlugin extends Plugin {
 				editorHookCardStyle: this.settings.editorHookCardStyle,
 				cueColumnWidth: this.settings.editorCueWidthPreset,
 				cueFontSize: this.settings.cueFontSize,
+				editorCueWidthController: this.editorCueWidthController,
 				noteBrief:
 					cache &&
 					this.settings.showNoteBrief &&
@@ -485,6 +503,34 @@ export default class CueCraftPlugin extends Plugin {
 						: null,
 			}),
 		});
+	}
+
+	private previewEditorCueWidth(widthPx: number | null): void {
+		const seen = new Set<HTMLElement>();
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			const view = leaf.view;
+			if (!(view instanceof MarkdownView)) return;
+			const cm = (view.editor as unknown as { cm?: EditorView }).cm;
+			if (!cm || seen.has(cm.dom)) return;
+			const display = cm.dom.dataset.cuecraftEditorDisplay;
+			if (!isEditorCueDisplay(display)) return;
+			seen.add(cm.dom);
+			applyEditorCueWidthPreview(
+				cm.dom,
+				editorCueWidthAppliesToDisplay(display) ? widthPx : null
+			);
+		});
+	}
+
+	private commitEditorCueWidth(widthPx: number): void {
+		const normalized = normalizeEditorCueCustomWidthPx(widthPx);
+		if (normalized === null) {
+			this.previewEditorCueWidth(this.settings.editorCueCustomWidthPx);
+			return;
+		}
+		this.settings.editorCueCustomWidthPx = normalized;
+		this.previewEditorCueWidth(normalized);
+		void this.saveSettings();
 	}
 
 	private scheduleEditorLayoutRefresh(): void {

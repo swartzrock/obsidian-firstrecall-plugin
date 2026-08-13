@@ -11,6 +11,7 @@ export const DEFAULT_EDITOR_CUE_WIDTH_PRESET: EditorCueWidthPreset =
 export const EDITOR_CUE_WIDTH_MIN_PX = 96;
 export const EDITOR_CUE_WIDTH_MAX_PX = 512;
 export const EDITOR_CUE_WIDTH_KEYBOARD_STEP_PX = 8;
+export const EDITOR_CUE_WIDTH_WORKSPACE_INSET_PX = 12;
 
 export type ResolvedEditorCueWidth =
 	| { mode: "preset"; preset: EditorCueWidthPreset }
@@ -77,6 +78,16 @@ export function editorCueWidthFromLeftEdgeDrag(
 	return clampEditorCueWidthPx(
 		startWidthPx + startPointerX - currentPointerX,
 		dynamicMaxWidthPx
+	);
+}
+
+export function editorCueDynamicMaxWidthPx(
+	cardRightPx: number,
+	workspaceLeftPx: number
+): number {
+	return clampEditorCueWidthPx(
+		EDITOR_CUE_WIDTH_MAX_PX,
+		cardRightPx - workspaceLeftPx - EDITOR_CUE_WIDTH_WORKSPACE_INSET_PX
 	);
 }
 

@@ -5,6 +5,7 @@ import {
 	EDITOR_CUE_WIDTH_MIN_PX,
 	editorCueWidthFromKeyboard,
 	editorCueWidthFromLeftEdgeDrag,
+	editorCueDynamicMaxWidthPx,
 	normalizeEditorCueCustomWidthPx,
 	normalizeEditorCueWidthPreset,
 	resolveEditorCueWidth,
@@ -64,6 +65,16 @@ describe("Editing View cue width preferences", () => {
 		);
 		expect(editorCueWidthFromLeftEdgeDrag(500, 400, 300, 900)).toBe(
 			EDITOR_CUE_WIDTH_MAX_PX
+		);
+	});
+
+	it("derives the dynamic maximum from the fixed card edge and inset workspace boundary", () => {
+		expect(editorCueDynamicMaxWidthPx(500, 100)).toBe(388);
+		expect(editorCueDynamicMaxWidthPx(900, 100)).toBe(
+			EDITOR_CUE_WIDTH_MAX_PX
+		);
+		expect(editorCueDynamicMaxWidthPx(180, 100)).toBe(
+			EDITOR_CUE_WIDTH_MIN_PX
 		);
 	});
 
