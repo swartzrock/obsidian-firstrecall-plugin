@@ -2443,9 +2443,19 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	box-sizing: border-box;
 }
 
-.cuecraft-editor-hook-anchored-card-rail.cuecraft-editor-rail-card,
-.cuecraft-editor-hook-threaded-margin-notes.cuecraft-editor-rail-card,
+.cuecraft-editor-hook-anchored-card-rail.cuecraft-editor-rail-card {
+	padding-left: 28px;
+}
+
+.cuecraft-editor-hook-threaded-margin-notes.cuecraft-editor-rail-card {
+	padding-left: 28px;
+}
+
 .cuecraft-editor-cornell-card.cuecraft-editor-rail-card {
+	padding-left: 0;
+}
+
+.cuecraft-editor-cornell-card.cuecraft-editor-rail-card .cuecraft-cornell-cue {
 	padding-left: 28px;
 }
 
@@ -2466,23 +2476,45 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-editor-cue-width-grip::before {
 	content: "";
 	position: absolute;
-	inset-block: 8px;
+	top: 50%;
 	left: 2px;
-	width: 2px;
+	width: 9px;
+	height: 52px;
+	border: 1px solid color-mix(in srgb, var(--text-muted) 48%, var(--background-modifier-border));
 	border-radius: var(--radius-s);
-	background: color-mix(in srgb, var(--text-muted) 55%, transparent);
+	background: var(--background-primary);
+	box-shadow: var(--shadow-s);
+	transform: translateY(-50%);
+	transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.cuecraft-editor-cue-width-grip::after {
+	content: "";
+	position: absolute;
+	top: 50%;
+	left: 6px;
+	width: 2px;
+	height: 17px;
+	background: radial-gradient(circle, var(--text-muted) 1px, transparent 1.2px) center top / 2px 5px repeat-y;
+	transform: translate(-50%, -50%);
 }
 
 .cuecraft-editor-cue-width-grip:hover::before,
 .cuecraft-editor-cue-width-grip:focus-visible::before,
 .cuecraft-editor-cue-width-grip.cuecraft-editor-cue-width-resizing::before {
-	width: 3px;
-	background: var(--interactive-accent);
+	border-color: var(--interactive-accent);
+	background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary));
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--interactive-accent) 16%, transparent), var(--shadow-s);
+}
+
+.cuecraft-editor-cue-width-grip:hover::after,
+.cuecraft-editor-cue-width-grip:focus-visible::after,
+.cuecraft-editor-cue-width-grip.cuecraft-editor-cue-width-resizing::after {
+	background: radial-gradient(circle, var(--interactive-accent) 1px, transparent 1.2px) center top / 2px 5px repeat-y;
 }
 
 .cuecraft-editor-cue-width-grip:focus-visible {
-	outline: 2px solid var(--interactive-accent);
-	outline-offset: -3px;
+	outline: none;
 }
 
 html.cuecraft-editor-cue-width-resizing,

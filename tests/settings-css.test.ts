@@ -365,20 +365,36 @@ describe("settings CSS", () => {
 		expect(gripRule).not.toContain("inset-inline-start");
 		expect(gripRule).not.toContain("transition:");
 
-		const reservedEdgeRule = ruleFor(
-			".cuecraft-editor-cornell-card.cuecraft-editor-rail-card"
-		);
-		expect(reservedEdgeRule).toContain("padding-left: 28px");
-		expect(styles).toContain(
+		const anchoredReservedEdgeRule = ruleFor(
 			".cuecraft-editor-hook-anchored-card-rail.cuecraft-editor-rail-card"
 		);
+		expect(anchoredReservedEdgeRule).toContain("padding-left: 28px");
+		const cornellRootRule = ruleFor(
+			".cuecraft-editor-cornell-card.cuecraft-editor-rail-card"
+		);
+		expect(cornellRootRule).toContain("padding-left: 0");
+		const cornellContentRule = ruleFor(
+			".cuecraft-editor-cornell-card.cuecraft-editor-rail-card .cuecraft-cornell-cue"
+		);
+		expect(cornellContentRule).toContain("padding-left: 28px");
+
+		const compactGripRule = ruleFor(
+			".cuecraft-editor-cue-width-grip::before"
+		);
+		expect(compactGripRule).toContain("top: 50%");
+		expect(compactGripRule).toContain("width: 9px");
+		expect(compactGripRule).toContain("height: 52px");
+		expect(compactGripRule).toContain(
+			"background: var(--background-primary)"
+		);
+		expect(compactGripRule).not.toContain("inset-block");
+		const gripDotsRule = ruleFor(".cuecraft-editor-cue-width-grip::after");
+		expect(gripDotsRule).toContain("radial-gradient");
 
 		const focusRule = ruleFor(
 			".cuecraft-editor-cue-width-grip:focus-visible"
 		);
-		expect(focusRule).toContain(
-			"outline: 2px solid var(--interactive-accent)"
-		);
+		expect(focusRule).toContain("outline: none");
 		expect(styles).toContain(
 			".cuecraft-editor-cue-width-grip:hover::before"
 		);

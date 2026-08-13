@@ -671,7 +671,10 @@ function finalizeRailCard(
 		String(controller.getCommittedWidthPx() ?? EDITOR_CUE_WIDTH_MIN_PX)
 	);
 	grip.setAttribute("aria-controls", root.id);
-	root.prepend(grip);
+	const gripHost = root.querySelector<HTMLElement>(
+		":scope > .cuecraft-cornell-cue"
+	);
+	(gripHost ?? root).prepend(grip);
 	applyEditorCueWidthPreview(
 		root,
 		controller.getCommittedWidthPx()

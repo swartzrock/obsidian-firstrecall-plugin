@@ -408,6 +408,13 @@ describe("renderCueElement", () => {
 				expect(grip?.getAttribute("aria-valuemax")).toBe("512");
 				expect(grip?.getAttribute("aria-valuenow")).toBe("240");
 				expect(grip?.getAttribute("aria-controls")).toBe(card.id);
+				if (display.startsWith("cornell")) {
+					expect(
+						grip?.parentElement?.classList.contains("cuecraft-cornell-cue")
+					).toBe(true);
+				} else {
+					expect(grip?.parentElement).toBe(card);
+				}
 			}
 
 			for (const display of [
