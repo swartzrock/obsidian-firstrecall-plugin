@@ -343,6 +343,42 @@ describe("settings CSS", () => {
 		expect(styles).toContain("width: clamp(11.5rem, 20vw, 16rem)");
 	});
 
+	it("styles the Editing View resize grip and scopes Custom width to rail cards", () => {
+		const customRule = ruleFor(
+			".markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-rail-card.cuecraft-editor-cue-width-custom"
+		);
+		expect(customRule).toContain(
+			"width: clamp(6rem, var(--cuecraft-editor-cue-width, 13rem), 32rem)"
+		);
+		expect(customRule).toContain("max-width: none");
+
+		const gripRule = ruleFor(".cuecraft-editor-cue-width-grip");
+		expect(gripRule).toContain("width: 24px");
+		expect(gripRule).toContain("min-width: 24px");
+		expect(gripRule).toContain("cursor: ew-resize");
+		expect(gripRule).toContain("touch-action: none");
+		expect(gripRule).not.toContain("transition:");
+
+		const focusRule = ruleFor(
+			".cuecraft-editor-cue-width-grip:focus-visible"
+		);
+		expect(focusRule).toContain(
+			"outline: 2px solid var(--interactive-accent)"
+		);
+		expect(styles).toContain(
+			".cuecraft-editor-cue-width-grip:hover::before"
+		);
+		expect(styles).toContain(
+			"html.cuecraft-editor-cue-width-resizing *"
+		);
+		expect(styles).not.toMatch(
+			/\.cuecraft-cornell-view[^\n{]*cuecraft-editor-cue-width-custom/
+		);
+		expect(styles).not.toMatch(
+			/\.cuecraft-cue[^\n{]*cuecraft-editor-cue-width-custom/
+		);
+	});
+
 	it("aligns the anchored rail masthead without moving Markdown headings", () => {
 		const layoutSelector =
 			'.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"]';

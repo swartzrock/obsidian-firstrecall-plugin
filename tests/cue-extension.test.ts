@@ -3,6 +3,7 @@ import { JSDOM } from "jsdom";
 import { EditorState } from "@codemirror/state";
 import { Decoration, EditorView } from "@codemirror/view";
 import {
+	applyEditorCueWidthPreview,
 	buildCueGutterMarkers,
 	buildCueLineData,
 	buildCueWidgetDecorations,
@@ -330,6 +331,51 @@ describe("buildCueLineData", () => {
 });
 
 describe("renderCueElement", () => {
+	it("coalesces live width previews into one rail layout event per frame", () => {
+		withDocument(() => {
+			const callbacks: FrameRequestCallback[] = [];
+			const win = document.defaultView!;
+			win.requestAnimationFrame = vi.fn((callback: FrameRequestCallback) => {
+				callbacks.push(callback);
+				return callbacks.length;
+			});
+			const controller = {
+				getCommittedWidthPx: () => null,
+				previewWidthPx: vi.fn(),
+				commitWidthPx: vi.fn(),
+				cancelWidthPreview: vi.fn(),
+			};
+			const editor = document.createElement("div");
+			editor.className = "cm-editor";
+			editor.append(
+				renderCueElement(anchoredCue(), "anchored-card-rail", 0, "upcoming", {
+					editorCueWidthController: controller,
+				}),
+				renderCueElement(
+					anchoredCue({ line: 3, sectionId: "peer" }),
+					"cornell",
+					0,
+					"upcoming",
+					{ editorCueWidthController: controller }
+				)
+			);
+			document.body.appendChild(editor);
+			const events = vi.fn();
+			editor.addEventListener(RAIL_CARD_LAYOUT_EVENT, events);
+
+			applyEditorCueWidthPreview(editor, 200);
+			applyEditorCueWidthPreview(editor, 220);
+			applyEditorCueWidthPreview(editor, 240);
+
+			expect(win.requestAnimationFrame).toHaveBeenCalledOnce();
+			expect(events).not.toHaveBeenCalled();
+			callbacks[0]?.(0);
+			expect(events).toHaveBeenCalledOnce();
+			applyEditorCueWidthPreview(editor, 240);
+			expect(win.requestAnimationFrame).toHaveBeenCalledOnce();
+		});
+	});
+
 	it("adds an accessible left-edge width separator only to eligible editor rail cards", () => {
 		withDocument(() => {
 			const widthController = {

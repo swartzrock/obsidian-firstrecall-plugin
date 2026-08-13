@@ -135,6 +135,10 @@ const EDITOR_CUE_WIDTH_PROPERTY = "--cuecraft-editor-cue-width";
 const EDITOR_CUE_WIDTH_CUSTOM_CLASS = "cuecraft-editor-cue-width-custom";
 const EDITOR_CUE_WIDTH_RESIZING_CLASS = "cuecraft-editor-cue-width-resizing";
 const editorCueWidthInteractionCleanup = new WeakMap<HTMLElement, () => void>();
+const editorCueWidthLayoutFrames = new WeakMap<
+	HTMLElement,
+	{ id: number; kind: "animation-frame" | "timeout" }
+>();
 
 /**
  * Resolve a cache's cues to current document lines. Cues are matched to the
@@ -700,27 +704,76 @@ export function applyEditorCueWidthPreview(
 	if ((root as Node).nodeType === (root as Node).ELEMENT_NODE) {
 		applyEditorCueWidthToElement(root as HTMLElement, normalizedWidth);
 	}
+	const layoutTargets = new Set<HTMLElement>();
 	for (const grip of root.querySelectorAll<HTMLElement>(
 		".cuecraft-editor-cue-width-grip"
 	)) {
 		const card = grip.closest<HTMLElement>(".cuecraft-editor-rail-card");
-		if (card) applyEditorCueWidthToElement(card, normalizedWidth);
+		if (card && applyEditorCueWidthToElement(card, normalizedWidth)) {
+			layoutTargets.add(
+				card.closest<HTMLElement>(".cm-editor") ?? card
+			);
+		}
 		if (normalizedWidth !== null) {
 			grip.setAttribute("aria-valuenow", String(normalizedWidth));
 		}
 	}
+	for (const target of layoutTargets) scheduleEditorCueWidthLayout(target);
 }
 
 function applyEditorCueWidthToElement(
 	element: HTMLElement,
 	widthPx: number | null
-): void {
+): boolean {
+	const previousCustom = element.classList.contains(
+		EDITOR_CUE_WIDTH_CUSTOM_CLASS
+	);
+	const previousWidth = element.style.getPropertyValue(
+		EDITOR_CUE_WIDTH_PROPERTY
+	);
 	element.classList.toggle(EDITOR_CUE_WIDTH_CUSTOM_CLASS, widthPx !== null);
 	if (widthPx === null) {
 		element.style.removeProperty(EDITOR_CUE_WIDTH_PROPERTY);
 	} else {
 		element.style.setProperty(EDITOR_CUE_WIDTH_PROPERTY, `${widthPx}px`);
 	}
+	return (
+		previousCustom !== (widthPx !== null) ||
+		previousWidth !== (widthPx === null ? "" : `${widthPx}px`)
+	);
+}
+
+function scheduleEditorCueWidthLayout(target: HTMLElement): void {
+	if (editorCueWidthLayoutFrames.has(target)) return;
+	const win = target.ownerDocument.defaultView;
+	if (!win) return;
+	const dispatch = (): void => {
+		editorCueWidthLayoutFrames.delete(target);
+		dispatchRailCardLayoutEvent(target);
+	};
+	if (typeof win.requestAnimationFrame === "function") {
+		editorCueWidthLayoutFrames.set(target, {
+			id: win.requestAnimationFrame(dispatch),
+			kind: "animation-frame",
+		});
+		return;
+	}
+	editorCueWidthLayoutFrames.set(target, {
+		id: win.setTimeout(dispatch, 0),
+		kind: "timeout",
+	});
+}
+
+function cancelEditorCueWidthLayout(target: HTMLElement): void {
+	const pending = editorCueWidthLayoutFrames.get(target);
+	if (!pending) return;
+	const win = target.ownerDocument.defaultView;
+	if (pending.kind === "animation-frame") {
+		win?.cancelAnimationFrame(pending.id);
+	} else {
+		win?.clearTimeout(pending.id);
+	}
+	editorCueWidthLayoutFrames.delete(target);
 }
 
 interface EditorCuePointerSession {
@@ -1741,6 +1794,7 @@ const cueRailLayoutPlugin = ViewPlugin.fromClass(
 		}
 
 		destroy(): void {
+			cancelEditorCueWidthLayout(this.view.dom);
 			this.view.dom.removeEventListener(
 				RAIL_CARD_LAYOUT_EVENT,
 				this.onRailCardLayout
