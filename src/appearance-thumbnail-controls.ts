@@ -22,6 +22,8 @@ import {
 	type EditorHookCardStyle,
 } from "./editor-hook-card-style";
 
+export type EditorCueWidthSettingValue = CueColumnWidth | "custom";
+
 export interface AppearanceThumbnailOption<T extends string> {
 	id: T;
 	label: string;
@@ -196,6 +198,41 @@ export function cueColumnWidthThumbnailOptions(): AppearanceThumbnailOption<
 			);
 		},
 	}));
+}
+
+export function editorCueWidthThumbnailOptions(
+	customWidthPx: number | null
+): AppearanceThumbnailOption<EditorCueWidthSettingValue>[] {
+	const presets: AppearanceThumbnailOption<EditorCueWidthSettingValue>[] =
+		cueColumnWidthThumbnailOptions().map((option) => ({
+			id: option.id,
+			label: option.label,
+			description: option.description,
+			renderPreview: option.renderPreview
+				? (previewEl) => option.renderPreview?.(previewEl, option)
+				: undefined,
+		}));
+	if (customWidthPx === null) return presets;
+	return [
+		...presets,
+		{
+			id: "custom",
+			label: "Custom",
+			description: `${customWidthPx}px rail width. Choose a preset to replace it.`,
+			disabled: true,
+			renderPreview: (previewEl) => {
+				renderCuePreview(
+					previewEl,
+					[
+						"cuecraft-preview-width",
+						"cuecraft-preview-width-custom",
+						"cuecraft-preview-cue-only",
+					],
+					{ supports: null }
+				);
+			},
+		},
+	];
 }
 
 export function cueFontSizeThumbnailOptions(): AppearanceThumbnailOption<

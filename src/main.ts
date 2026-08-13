@@ -18,6 +18,10 @@ import {
 	DEFAULT_SETTINGS,
 } from "./settings";
 import {
+	normalizeEditorCueCustomWidthPx,
+	normalizeEditorCueWidthPreset,
+} from "./editor-cue-width";
+import {
 	normalizeAutoGenerationSettleDelaySeconds,
 	scheduleAutoGenerationTimer,
 } from "./auto-generation-delay";
@@ -314,6 +318,14 @@ export default class CueCraftPlugin extends Plugin {
 				(settings as { summaryInstructionsOverride?: unknown })
 					.summaryInstructionsOverride
 			);
+		settings.editorCueWidthPreset = normalizeEditorCueWidthPreset(
+			(rawSettings as { editorCueWidthPreset?: unknown }).editorCueWidthPreset,
+			(rawSettings as { cueColumnWidth?: unknown }).cueColumnWidth
+		);
+		settings.editorCueCustomWidthPx = normalizeEditorCueCustomWidthPx(
+			(rawSettings as { editorCueCustomWidthPx?: unknown })
+				.editorCueCustomWidthPx
+		);
 		for (const key of [
 			"showSectionLens",
 			"showNoteBrief",
@@ -463,7 +475,7 @@ export default class CueCraftPlugin extends Plugin {
 				showRailQuestions: this.settings.showRailQuestions,
 				showRailSupportTerms: this.settings.showRailSupportTerms,
 				editorHookCardStyle: this.settings.editorHookCardStyle,
-				cueColumnWidth: this.settings.cueColumnWidth,
+				cueColumnWidth: this.settings.editorCueWidthPreset,
 				cueFontSize: this.settings.cueFontSize,
 				noteBrief:
 					cache &&

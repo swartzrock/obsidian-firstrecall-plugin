@@ -74,6 +74,44 @@ function unavailableCredentialStore(): SecureCredentialStore {
 }
 
 describe("plugin data cache migration", () => {
+	it("loads independent Editing View width preferences with legacy preset migration", async () => {
+		for (const [storedSettings, expectedPreset, expectedCustom] of [
+			[{ cueColumnWidth: "wide" }, "wide", null],
+			[
+				{
+					cueColumnWidth: "narrow",
+					editorCueWidthPreset: "wide",
+					editorCueCustomWidthPx: 240,
+				},
+				"wide",
+				240,
+			],
+			[
+				{
+					cueColumnWidth: "wide",
+					editorCueWidthPreset: "invalid",
+					editorCueCustomWidthPx: 240.5,
+				},
+				"medium",
+				null,
+			],
+		] as const) {
+			const plugin = new CueCraftPlugin({} as never, {} as never);
+			Object.assign(plugin as unknown as Record<string, unknown>, {
+				credentialStore: unavailableCredentialStore(),
+				loadData: vi.fn(async () => ({ settings: storedSettings })),
+				saveData: vi.fn(async () => {}),
+			});
+
+			await (
+				plugin as unknown as { loadPluginData(): Promise<void> }
+			).loadPluginData();
+
+			expect(plugin.settings.editorCueWidthPreset).toBe(expectedPreset);
+			expect(plugin.settings.editorCueCustomWidthPx).toBe(expectedCustom);
+		}
+	});
+
 	it("loads malformed collapse data as empty without disturbing other data", async () => {
 		const loaded = {
 			settings: { showRailQuestions: false },

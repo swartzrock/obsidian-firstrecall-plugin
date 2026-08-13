@@ -648,7 +648,9 @@ describe("settings defaults", () => {
 		const settings = {
 			cornellDisplayMode: "hook",
 			cornellStyle: "legal-pad",
-			cueColumnWidth: "wide",
+			cueColumnWidth: "narrow",
+			editorCueWidthPreset: "wide",
+			editorCueCustomWidthPx: null,
 			cueFontSize: "large",
 			editorCueDisplay: "hook-minimap",
 			editorHookCardStyle: "gradient",
@@ -660,6 +662,12 @@ describe("settings defaults", () => {
 			"Hook minimap · Soft gradients · wide width · large text · questions hidden · supports shown"
 		);
 		expect(editingViewSettingsSummary(settings)).not.toContain("Legal Pad");
+		expect(
+			editingViewSettingsSummary({
+				...settings,
+				editorCueCustomWidthPx: 240,
+			})
+		).toContain("Custom width");
 	});
 
 	it("renders Cornell View and Editing View settings destinations", async () => {
@@ -998,17 +1006,57 @@ describe("settings defaults", () => {
 
 	it("refreshes editor cues for Editing View width and font controls", async () => {
 		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.editorCueCustomWidthPx = 240;
 
 		tab.display();
 		openSettingsCard(tab, "Editing View");
 		await clickThumbnail(tab.containerEl, "Cue column width", "wide");
 		await clickThumbnail(tab.containerEl, "Cue font size", "large");
 
-		expect(plugin.settings.cueColumnWidth).toBe("wide");
+		expect(plugin.settings.editorCueWidthPreset).toBe("wide");
+		expect(plugin.settings.editorCueCustomWidthPx).toBeNull();
+		expect(plugin.settings.cueColumnWidth).toBe("medium");
 		expect(plugin.settings.cueFontSize).toBe("large");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
+	});
+
+	it("replaces Custom with each Editing View preset in one editor-only save", async () => {
+		for (const preset of ["narrow", "medium", "wide"] as const) {
+			const { tab, plugin } = await setupSettingsTab();
+			plugin.settings.cueColumnWidth = "wide";
+			plugin.settings.editorCueWidthPreset = "medium";
+			plugin.settings.editorCueCustomWidthPx = 240;
+
+			tab.display();
+			openSettingsCard(tab, "Editing View");
+			await clickThumbnail(tab.containerEl, "Cue column width", preset);
+
+			expect(plugin.settings.editorCueWidthPreset).toBe(preset);
+			expect(plugin.settings.editorCueCustomWidthPx).toBeNull();
+			expect(plugin.settings.cueColumnWidth).toBe("wide");
+			expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+			expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
+			expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
+		}
+	});
+
+	it("keeps editor width preferences unchanged when Cornell width changes", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.editorCueWidthPreset = "narrow";
+		plugin.settings.editorCueCustomWidthPx = 240;
+
+		tab.display();
+		openSettingsCard(tab, "Cornell View");
+		await clickThumbnail(tab.containerEl, "Cue column width", "wide");
+
+		expect(plugin.settings.cueColumnWidth).toBe("wide");
+		expect(plugin.settings.editorCueWidthPreset).toBe("narrow");
+		expect(plugin.settings.editorCueCustomWidthPx).toBe(240);
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+		expect(plugin.refreshCornellViews).toHaveBeenCalledTimes(1);
+		expect(plugin.refreshEditorCues).not.toHaveBeenCalled();
 	});
 
 	it("refreshes Cornell views for Cornell View controls", async () => {

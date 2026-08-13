@@ -22,6 +22,10 @@ import {
 	type CueFontSize,
 } from "./cornell-layout";
 import {
+	DEFAULT_EDITOR_CUE_WIDTH_PRESET,
+	type EditorCueWidthPreset,
+} from "./editor-cue-width";
+import {
 	CUE_DENSITIES,
 	DEFAULT_CUE_DENSITY,
 	DEFAULT_QUESTION_STYLE,
@@ -43,10 +47,12 @@ import {
 	cueColumnWidthThumbnailOptions,
 	cueFontSizeThumbnailOptions,
 	editorCueDisplayThumbnailOptions,
+	editorCueWidthThumbnailOptions,
 	editorHookCardStyleThumbnailOptions,
 	renderAppearanceThumbnailGroup,
 	type AppearanceThumbnailGroup,
 	type AppearanceThumbnailOption,
+	type EditorCueWidthSettingValue,
 } from "./appearance-thumbnail-controls";
 import {
 	DEFAULT_READING_MODE_DISPLAY,
@@ -191,6 +197,8 @@ export interface CueCraftSettings {
 	editorCueDisplay: EditorCueDisplay;
 	cornellStyle: CornellStyle;
 	cueColumnWidth: CueColumnWidth;
+	editorCueWidthPreset: EditorCueWidthPreset;
+	editorCueCustomWidthPx: number | null;
 	cueFontSize: CueFontSize;
 	autoGenerateOnSave: boolean;
 	autoGenerationSettleDelaySeconds: AutoGenerationSettleDelaySeconds;
@@ -264,6 +272,8 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	editorCueDisplay: DEFAULT_EDITOR_CUE_DISPLAY,
 	cornellStyle: DEFAULT_CORNELL_STYLE,
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
+	editorCueWidthPreset: DEFAULT_EDITOR_CUE_WIDTH_PRESET,
+	editorCueCustomWidthPx: null,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
 	autoGenerateOnSave: false,
 	autoGenerationSettleDelaySeconds:
@@ -1380,16 +1390,25 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 
 		const editorWidthDesc = (): string =>
-			CUE_COLUMN_WIDTHS.find(
-				(w) => w.id === this.plugin.settings.cueColumnWidth
-			)?.description ?? "Width of editor cue cards and inline cue blocks.";
-		this.renderEditingViewThumbnailSetting<CueColumnWidth>(containerEl, {
+			this.plugin.settings.editorCueCustomWidthPx === null
+				? CUE_COLUMN_WIDTHS.find(
+						(w) => w.id === this.plugin.settings.editorCueWidthPreset
+					)?.description ?? "Width of editor cue cards and inline cue blocks."
+				: `${this.plugin.settings.editorCueCustomWidthPx}px Custom rail width. Choose a preset to replace it.`;
+		this.renderEditingViewThumbnailSetting<EditorCueWidthSettingValue>(containerEl, {
 			name: "Cue column width",
 			description: editorWidthDesc,
-			options: cueColumnWidthThumbnailOptions(),
-			value: () => this.plugin.settings.cueColumnWidth,
+			options: editorCueWidthThumbnailOptions(
+				this.plugin.settings.editorCueCustomWidthPx
+			),
+			value: () =>
+				this.plugin.settings.editorCueCustomWidthPx === null
+					? this.plugin.settings.editorCueWidthPreset
+					: "custom",
 			setValue: (value) => {
-				this.plugin.settings.cueColumnWidth = value;
+				if (value === "custom") return;
+				this.plugin.settings.editorCueWidthPreset = value;
+				this.plugin.settings.editorCueCustomWidthPx = null;
 			},
 			className: "cuecraft-thumbnail-group-cue-width",
 		});
