@@ -361,7 +361,7 @@ describe("settings CSS", () => {
 		expect(gripRule).toContain("min-width: 24px");
 		expect(gripRule).toContain("cursor: ew-resize");
 		expect(gripRule).toContain("touch-action: none");
-		expect(gripRule).toContain("left: 0");
+		expect(gripRule).toContain("left: -12px");
 		expect(gripRule).not.toContain("inset-inline-start");
 		expect(gripRule).not.toContain("transition:");
 
@@ -369,6 +369,7 @@ describe("settings CSS", () => {
 			".cuecraft-editor-hook-anchored-card-rail.cuecraft-editor-rail-card"
 		);
 		expect(anchoredReservedEdgeRule).toContain("padding-left: 28px");
+		expect(anchoredReservedEdgeRule).toContain("overflow: visible");
 		const cornellRootRule = ruleFor(
 			".cuecraft-editor-cornell-card.cuecraft-editor-rail-card"
 		);
@@ -382,8 +383,10 @@ describe("settings CSS", () => {
 			".cuecraft-editor-cue-width-grip::before"
 		);
 		expect(compactGripRule).toContain("top: 50%");
+		expect(compactGripRule).toContain("left: 50%");
 		expect(compactGripRule).toContain("width: 9px");
 		expect(compactGripRule).toContain("height: 52px");
+		expect(compactGripRule).toContain("transform: translate(-50%, -50%)");
 		expect(compactGripRule).toContain(
 			"background: var(--background-primary)"
 		);
