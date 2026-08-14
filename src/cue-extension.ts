@@ -663,7 +663,12 @@ function finalizeRailCard(
 	grip.tabIndex = 0;
 	grip.setAttribute("role", "separator");
 	grip.setAttribute("aria-orientation", "vertical");
-	grip.setAttribute("aria-label", `${editorCueDisplayLabel(display)} cue rail width`);
+	const gripLabel = root.ownerDocument.createElement("span");
+	gripLabel.id = `${root.id}-width-grip-label`;
+	gripLabel.className = "cuecraft-editor-cue-width-grip-label";
+	gripLabel.textContent = `${editorCueDisplayLabel(display)} cue rail width`;
+	grip.appendChild(gripLabel);
+	grip.setAttribute("aria-labelledby", gripLabel.id);
 	grip.setAttribute("aria-valuemin", String(EDITOR_CUE_WIDTH_MIN_PX));
 	grip.setAttribute("aria-valuemax", String(EDITOR_CUE_WIDTH_MAX_PX));
 	grip.setAttribute(
@@ -848,6 +853,19 @@ function installEditorCueWidthInteraction(
 	let lastPreviewWidthPx: number | null = controller.getCommittedWidthPx();
 	let destroyed = false;
 
+	const unlockGripTop = (): void => {
+		grip.style.removeProperty("--cuecraft-editor-cue-width-grip-top");
+	};
+	const lockGripTop = (): void => {
+		const gripHost = grip.parentElement ?? card;
+		const hostHeight = gripHost.getBoundingClientRect().height;
+		if (Number.isFinite(hostHeight) && hostHeight > 0) {
+			grip.style.setProperty(
+				"--cuecraft-editor-cue-width-grip-top",
+				`${hostHeight / 2}px`
+			);
+		}
+	};
 	const setResizing = (resizing: boolean): void => {
 		card.classList.toggle(EDITOR_CUE_WIDTH_RESIZING_CLASS, resizing);
 		grip.classList.toggle(EDITOR_CUE_WIDTH_RESIZING_CLASS, resizing);
@@ -867,6 +885,7 @@ function installEditorCueWidthInteraction(
 		if (!pointerSession && !keyboardSession) return;
 		pointerSession = null;
 		keyboardSession = null;
+		unlockGripTop();
 		setResizing(false);
 		restoreCommittedWidth();
 	};
@@ -881,6 +900,7 @@ function installEditorCueWidthInteraction(
 	const finish = (widthPx: number): void => {
 		pointerSession = null;
 		keyboardSession = null;
+		unlockGripTop();
 		setResizing(false);
 		controller.commitWidthPx(widthPx);
 	};
@@ -915,6 +935,7 @@ function installEditorCueWidthInteraction(
 			startWidthPx: geometry.widthPx,
 			dynamicMaxWidthPx: geometry.dynamicMaxWidthPx,
 		};
+		lockGripTop();
 		setResizing(true);
 		grip.setPointerCapture(event.pointerId);
 		event.preventDefault();

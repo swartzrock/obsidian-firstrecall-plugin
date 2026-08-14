@@ -2474,10 +2474,22 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	touch-action: none;
 }
 
+.cuecraft-editor-cue-width-grip-label {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
 .cuecraft-editor-cue-width-grip::before {
 	content: "";
 	position: absolute;
-	top: 50%;
+	top: var(--cuecraft-editor-cue-width-grip-top, 50%);
 	left: 50%;
 	width: 9px;
 	height: 52px;
@@ -2492,7 +2504,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-editor-cue-width-grip::after {
 	content: "";
 	position: absolute;
-	top: 50%;
+	top: var(--cuecraft-editor-cue-width-grip-top, 50%);
 	left: 50%;
 	width: 2px;
 	height: 17px;

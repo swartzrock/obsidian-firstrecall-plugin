@@ -382,7 +382,9 @@ describe("settings CSS", () => {
 		const compactGripRule = ruleFor(
 			".cuecraft-editor-cue-width-grip::before"
 		);
-		expect(compactGripRule).toContain("top: 50%");
+		expect(compactGripRule).toContain(
+			"top: var(--cuecraft-editor-cue-width-grip-top, 50%)"
+		);
 		expect(compactGripRule).toContain("left: 50%");
 		expect(compactGripRule).toContain("width: 9px");
 		expect(compactGripRule).toContain("height: 52px");

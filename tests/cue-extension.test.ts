@@ -403,7 +403,12 @@ describe("renderCueElement", () => {
 				expect(grip?.tabIndex).toBe(0);
 				expect(grip?.getAttribute("role")).toBe("separator");
 				expect(grip?.getAttribute("aria-orientation")).toBe("vertical");
-				expect(grip?.getAttribute("aria-label")).toContain("cue rail width");
+				expect(grip?.hasAttribute("aria-label")).toBe(false);
+				const gripLabel = card.querySelector<HTMLElement>(
+					".cuecraft-editor-cue-width-grip-label"
+				);
+				expect(gripLabel?.textContent).toContain("cue rail width");
+				expect(grip?.getAttribute("aria-labelledby")).toBe(gripLabel?.id);
 				expect(grip?.getAttribute("aria-valuemin")).toBe("96");
 				expect(grip?.getAttribute("aria-valuemax")).toBe("512");
 				expect(grip?.getAttribute("aria-valuenow")).toBe("240");
@@ -495,8 +500,9 @@ describe("renderCueElement", () => {
 				"upcoming",
 				{ editorCueWidthController: controller }
 			);
+			let sourceHeight = 480;
 			source.getBoundingClientRect = () =>
-				({ width: 240, right: 500 }) as DOMRect;
+				({ width: 240, right: 500, height: sourceHeight }) as DOMRect;
 			editor.append(source, peer);
 			document.body.appendChild(editor);
 			const grip = source.querySelector<HTMLElement>(
@@ -513,6 +519,10 @@ describe("renderCueElement", () => {
 			};
 
 			dispatchPointer(grip, "pointerdown", { pointerId: 7, clientX: 400 });
+			expect(
+				grip.style.getPropertyValue("--cuecraft-editor-cue-width-grip-top")
+			).toBe("240px");
+			sourceHeight = 640;
 			dispatchPointer(grip, "pointermove", { pointerId: 8, clientX: 360 });
 			expect(controller.previewWidthPx).not.toHaveBeenCalled();
 			dispatchPointer(grip, "pointermove", { pointerId: 7, clientX: 360 });
@@ -526,7 +536,13 @@ describe("renderCueElement", () => {
 			expect(
 				source.querySelector(".cuecraft-editor-cue-width-grip")
 			).toBe(grip);
+			expect(
+				grip.style.getPropertyValue("--cuecraft-editor-cue-width-grip-top")
+			).toBe("240px");
 			dispatchPointer(grip, "pointerup", { pointerId: 7, clientX: 360 });
+			expect(
+				grip.style.getPropertyValue("--cuecraft-editor-cue-width-grip-top")
+			).toBe("");
 			expect(controller.commitWidthPx).toHaveBeenCalledOnce();
 			expect(controller.commitWidthPx).toHaveBeenCalledWith(280);
 			expect(capturedPointer).toBeNull();
