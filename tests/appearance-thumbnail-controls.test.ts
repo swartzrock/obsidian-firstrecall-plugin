@@ -13,7 +13,6 @@ import {
 	cueColumnWidthThumbnailOptions,
 	cueFontSizeThumbnailOptions,
 	editorCueDisplayThumbnailOptions,
-	editorCueWidthThumbnailOptions,
 	editorHookCardStyleThumbnailOptions,
 	renderAppearanceThumbnailGroup,
 	type AppearanceThumbnailOption,
@@ -291,22 +290,6 @@ describe("Editing View thumbnail option recipes", () => {
 		expect(
 			editorHookCardStyleThumbnailOptions().map((option) => option.id)
 		).toEqual(EDITOR_HOOK_CARD_STYLE_OPTIONS.map((option) => option.id));
-	});
-
-	it("shows Custom as derived, disabled state without making it a preset", () => {
-		expect(editorCueWidthThumbnailOptions(null).map((option) => option.id)).toEqual(
-			CUE_COLUMN_WIDTHS.map((option) => option.id)
-		);
-		const customOptions = editorCueWidthThumbnailOptions(240);
-		expect(customOptions.map((option) => option.id)).toEqual([
-			...CUE_COLUMN_WIDTHS.map((option) => option.id),
-			"custom",
-		]);
-		expect(customOptions.at(-1)).toMatchObject({
-			id: "custom",
-			label: "Custom",
-			disabled: true,
-		});
 	});
 
 	it("renders editor-truth display previews with stable placement classes", () => {

@@ -7,19 +7,11 @@ import {
 	editorCueWidthFromLeftEdgeDrag,
 	editorCueDynamicMaxWidthPx,
 	normalizeEditorCueCustomWidthPx,
-	normalizeEditorCueWidthPreset,
 } from "../src/editor-cue-width";
 
 describe("Editing View cue width preferences", () => {
-	it("normalizes persisted presets and migrates a missing preset from legacy Cornell state", () => {
-		expect(normalizeEditorCueWidthPreset("wide", "narrow")).toBe("wide");
-		expect(normalizeEditorCueWidthPreset(undefined, "narrow")).toBe("narrow");
-		expect(normalizeEditorCueWidthPreset(undefined, "invalid")).toBe(
-			DEFAULT_EDITOR_CUE_WIDTH_PRESET
-		);
-		expect(normalizeEditorCueWidthPreset("invalid", "wide")).toBe(
-			DEFAULT_EDITOR_CUE_WIDTH_PRESET
-		);
+	it("uses Medium as the fixed starting width before a custom drag", () => {
+		expect(DEFAULT_EDITOR_CUE_WIDTH_PRESET).toBe("medium");
 	});
 
 	it("accepts only finite, whole custom pixel widths inside the stored bounds", () => {

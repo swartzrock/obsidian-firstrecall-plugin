@@ -1,3 +1,4 @@
+import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
 import CueCraftPlugin from "../src/main";
 import { CACHE_SCHEMA_VERSION, migrateCache } from "../src/cache";
@@ -74,8 +75,8 @@ function unavailableCredentialStore(): SecureCredentialStore {
 }
 
 describe("plugin data cache migration", () => {
-	it("loads independent Editing View width preferences with legacy preset migration", async () => {
-		for (const [storedSettings, expectedPreset, expectedCustom] of [
+	it("drops the removed Editing View preset while preserving custom rail widths", async () => {
+		for (const [storedSettings, expectedCornellWidth, expectedCustom] of [
 			[{ cueColumnWidth: "wide" }, "wide", null],
 			[
 				{
@@ -83,7 +84,7 @@ describe("plugin data cache migration", () => {
 					editorCueWidthPreset: "wide",
 					editorCueCustomWidthPx: 240,
 				},
-				"wide",
+				"narrow",
 				240,
 			],
 			[
@@ -92,7 +93,7 @@ describe("plugin data cache migration", () => {
 					editorCueWidthPreset: "invalid",
 					editorCueCustomWidthPx: 240.5,
 				},
-				"medium",
+				"wide",
 				null,
 			],
 		] as const) {
@@ -107,9 +108,63 @@ describe("plugin data cache migration", () => {
 				plugin as unknown as { loadPluginData(): Promise<void> }
 			).loadPluginData();
 
-			expect(plugin.settings.editorCueWidthPreset).toBe(expectedPreset);
+			expect(plugin.settings.cueColumnWidth).toBe(expectedCornellWidth);
+			expect("editorCueWidthPreset" in plugin.settings).toBe(false);
 			expect(plugin.settings.editorCueCustomWidthPx).toBe(expectedCustom);
 		}
+	});
+
+	it("dispatches Medium to Editing View without changing Cornell width", async () => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: {
+					cueColumnWidth: "wide",
+					editorCueWidthPreset: "narrow",
+					editorCueCustomWidthPx: null,
+				},
+			})),
+			saveData: vi.fn(async () => {}),
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		const document = new JSDOM("<div class='cm-editor'></div>").window.document;
+		const editorDom = document.querySelector<HTMLElement>(".cm-editor")!;
+		const dispatch = vi.fn();
+		const file = { path: "notes/width.md" };
+		const view = {
+			file,
+			editor: {
+				cm: { dom: editorDom, dispatch },
+				getValue: () => "# Width",
+			},
+		};
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			app: {
+				workspace: {
+					getActiveViewOfType: () => view,
+				},
+			},
+			cacheStore: { get: () => null },
+			cueSectionCollapse: {},
+			updateEditorHookLayout: vi.fn(),
+		});
+
+		(
+			plugin as unknown as {
+				renderCues(file: { path: string }): void;
+			}
+		).renderCues(file);
+
+		const effect = dispatch.mock.calls[0]?.[0].effects as {
+			value: { cueColumnWidth: string };
+		};
+		expect(effect.value.cueColumnWidth).toBe("medium");
+		expect(plugin.settings.cueColumnWidth).toBe("wide");
 	});
 
 	it("loads malformed collapse data as empty without disturbing other data", async () => {

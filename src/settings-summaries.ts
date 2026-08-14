@@ -26,8 +26,6 @@ export interface CornellViewSettingsSummaryInput {
 export interface EditingViewSettingsSummaryInput {
 	editorCueDisplay: EditorCueDisplay;
 	editorHookCardStyle: EditorHookCardStyle;
-	editorCueWidthPreset: CueColumnWidth;
-	editorCueCustomWidthPx: number | null;
 	cueFontSize: CueFontSize;
 	showRailQuestions: boolean;
 	showRailSupportTerms: boolean;
@@ -56,9 +54,5 @@ export function editingViewSettingsSummary(
 	const supportState = settings.showRailSupportTerms
 		? "supports shown"
 		: "supports hidden";
-	const width =
-		settings.editorCueCustomWidthPx === null
-			? `${settings.editorCueWidthPreset} width`
-			: "Custom width";
-	return `${editorDisplay} · ${hookCardStyle} · ${width} · ${settings.cueFontSize} text · ${questionState} · ${supportState}`;
+	return `${editorDisplay} · ${hookCardStyle} · ${settings.cueFontSize} text · ${questionState} · ${supportState}`;
 }

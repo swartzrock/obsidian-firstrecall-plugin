@@ -27,6 +27,10 @@ execution: code
 
 Editing View will gain a separate preset-or-custom cue width. Eligible rail cards will inherit a live width from their editor roots and expose a left-edge resize grip, while standalone Cornell View remains independent and inline cues stay preset-only and grip-free.
 
+#### Post-implementation product decision — August 13, 2026
+
+The shipped interaction supersedes the Editing View preset portions of this plan. Editing View no longer exposes Narrow, Medium, Wide, or Custom width controls in settings. It starts at Medium and saves a custom pixel width only after the user resizes the rail directly. Existing valid custom widths remain compatible; retired editor presets are discarded. Inline cues use Medium, while standalone Cornell View retains its separate width setting unchanged.
+
 ### Problem Frame
 
 The Narrow, Medium, and Wide presets cannot accommodate every window size, note layout, or reading preference. Users can see the width they need while reviewing a note, but changing it currently requires leaving that context for settings.

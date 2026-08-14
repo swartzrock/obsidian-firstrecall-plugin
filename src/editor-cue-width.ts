@@ -1,28 +1,12 @@
 import {
-	DEFAULT_CUE_COLUMN_WIDTH,
-	isCueColumnWidth,
 	type CueColumnWidth,
 } from "./cornell-layout";
 
-export type EditorCueWidthPreset = CueColumnWidth;
-
-export const DEFAULT_EDITOR_CUE_WIDTH_PRESET: EditorCueWidthPreset =
-	DEFAULT_CUE_COLUMN_WIDTH;
+export const DEFAULT_EDITOR_CUE_WIDTH_PRESET: CueColumnWidth = "medium";
 export const EDITOR_CUE_WIDTH_MIN_PX = 96;
 export const EDITOR_CUE_WIDTH_MAX_PX = 512;
 export const EDITOR_CUE_WIDTH_KEYBOARD_STEP_PX = 8;
 export const EDITOR_CUE_WIDTH_WORKSPACE_INSET_PX = 12;
-
-export function normalizeEditorCueWidthPreset(
-	value: unknown,
-	legacyCueColumnWidth?: unknown
-): EditorCueWidthPreset {
-	if (isCueColumnWidth(value)) return value;
-	if (value === undefined && isCueColumnWidth(legacyCueColumnWidth)) {
-		return legacyCueColumnWidth;
-	}
-	return DEFAULT_EDITOR_CUE_WIDTH_PRESET;
-}
 
 export function normalizeEditorCueCustomWidthPx(value: unknown): number | null {
 	if (

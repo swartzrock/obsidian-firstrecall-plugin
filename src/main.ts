@@ -18,8 +18,8 @@ import {
 	DEFAULT_SETTINGS,
 } from "./settings";
 import {
+	DEFAULT_EDITOR_CUE_WIDTH_PRESET,
 	normalizeEditorCueCustomWidthPx,
-	normalizeEditorCueWidthPreset,
 } from "./editor-cue-width";
 import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import {
@@ -342,10 +342,8 @@ export default class CueCraftPlugin extends Plugin {
 				(settings as { summaryInstructionsOverride?: unknown })
 					.summaryInstructionsOverride
 			);
-		settings.editorCueWidthPreset = normalizeEditorCueWidthPreset(
-			(rawSettings as { editorCueWidthPreset?: unknown }).editorCueWidthPreset,
-			(rawSettings as { cueColumnWidth?: unknown }).cueColumnWidth
-		);
+		delete (settings as unknown as Record<string, unknown>)
+			.editorCueWidthPreset;
 		settings.editorCueCustomWidthPx = normalizeEditorCueCustomWidthPx(
 			(rawSettings as { editorCueCustomWidthPx?: unknown })
 				.editorCueCustomWidthPx
@@ -505,7 +503,7 @@ export default class CueCraftPlugin extends Plugin {
 				showRailQuestions: this.settings.showRailQuestions,
 				showRailSupportTerms: this.settings.showRailSupportTerms,
 				editorHookCardStyle: this.settings.editorHookCardStyle,
-				cueColumnWidth: this.settings.editorCueWidthPreset,
+				cueColumnWidth: DEFAULT_EDITOR_CUE_WIDTH_PRESET,
 				cueFontSize: this.settings.cueFontSize,
 				editorCueWidthController: this.editorCueWidthController,
 				noteBrief:
@@ -564,10 +562,6 @@ export default class CueCraftPlugin extends Plugin {
 		this.settings.editorCueCustomWidthPx = normalized;
 		this.flushEditorCueWidthPreview(normalized);
 		void this.saveSettings();
-	}
-
-	refreshEditorCueWidths(): void {
-		this.flushEditorCueWidthPreview(this.settings.editorCueCustomWidthPx);
 	}
 
 	private scheduleEditorLayoutRefresh(): void {
