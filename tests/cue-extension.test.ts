@@ -1021,6 +1021,10 @@ describe("renderCueElement", () => {
 				element = widget?.toDOM();
 			});
 			if (!element) throw new Error("Expected inline cue widget");
+			expect(element.classList.contains("cuecraft-inline-cue-widget")).toBe(true);
+			expect(
+				element.querySelector(":scope > .cuecraft-cue")
+			).not.toBeNull();
 
 			const buttons = disclosureButtons(element);
 			expect(buttons.map((button) => button.dataset.section)).toEqual([

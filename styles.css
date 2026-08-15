@@ -1355,6 +1355,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	margin: 0.3em 0 1em;
 }
 
+.cuecraft-inline-cue-widget {
+	padding-bottom: 1em;
+}
+
+.cuecraft-inline-cue-widget>.cuecraft-cue {
+	margin-bottom: 0;
+}
+
 .cuecraft-label-icon {
 	display: inline-flex;
 	align-items: center;

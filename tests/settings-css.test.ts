@@ -67,13 +67,22 @@ describe("settings CSS", () => {
 		expect(cueRule).toContain("border: 1px solid var(--cc-border)");
 		expect(cueRule).toContain("border-inline-start: 3px solid");
 		expect(cueRule).toContain("box-shadow: var(--cc-shadow)");
-		expect(cueRule).toContain("margin: 0.3em 0 1em");
 
 		const briefRule = ruleFor(".cuecraft-note-brief");
 		expect(briefRule).toContain("background: var(--cc-card)");
 		expect(briefRule).toContain("border: 1px solid var(--cc-border)");
 		expect(briefRule).toContain("box-shadow: var(--cc-shadow)");
 		expect(briefRule).not.toContain("interactive-accent");
+	});
+
+	it("reserves measured space below Inline cue widgets", () => {
+		const wrapperRule = ruleFor(".cuecraft-inline-cue-widget");
+		expect(wrapperRule).toContain("padding-bottom: 1em");
+
+		const cueRule = ruleFor(
+			".cuecraft-inline-cue-widget>.cuecraft-cue"
+		);
+		expect(cueRule).toContain("margin-bottom: 0");
 	});
 
 	it("uses neutral rail tokens without legacy category styling", () => {

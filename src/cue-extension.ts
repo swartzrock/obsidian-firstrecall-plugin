@@ -232,8 +232,12 @@ class CueWidget extends WidgetType {
 		);
 		if (!isInlineEditorDisplay(this.display)) {
 			element.classList.add("cuecraft-editor-hook-inline-fallback");
+			return element;
 		}
-		return element;
+		const wrapper = element.ownerDocument.createElement("div");
+		wrapper.className = "cuecraft-inline-cue-widget";
+		wrapper.appendChild(element);
+		return wrapper;
 	}
 
 	ignoreEvent(event: Event): boolean {
