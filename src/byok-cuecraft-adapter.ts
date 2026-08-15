@@ -343,6 +343,10 @@ function buildSummaryPrompt(input: CueCraftSummaryInput): string {
 	);
 }
 
+function withProviderInstructions(instructions: string, prompt: string): string {
+	return `${instructions}\n\n${prompt}`;
+}
+
 async function generateCueFromObjectProvider(
 	runtime: ByokProviderRuntime,
 	input: CueCraftCueInput,
@@ -353,9 +357,8 @@ async function generateCueFromObjectProvider(
 		throw cueCraftProviderError("Provider does not support structured output.");
 	}
 	const raw = await runtime.generateObject({
-		instructions,
 		schema: cueGenerationSchema,
-		prompt: buildCuePrompt(input),
+		prompt: withProviderInstructions(instructions, buildCuePrompt(input)),
 	}, signal);
 	const parsed = cueOutputSchema.safeParse(raw);
 	if (!parsed.success) {
@@ -375,8 +378,7 @@ async function generateCueFromTextProvider(
 	const basePrompt = buildCuePrompt(input);
 	const raw = await runtime.generateText(
 		{
-			instructions,
-			prompt: basePrompt,
+			prompt: withProviderInstructions(instructions, basePrompt),
 			responseFormat: "json",
 			jsonSchema: CUE_JSON_SCHEMA,
 		},
@@ -392,8 +394,7 @@ async function generateCueFromTextProvider(
 			`Reply again with ONLY the corrected JSON object.`;
 		const retry = await runtime.generateText(
 			{
-				instructions,
-				prompt: repairPrompt,
+				prompt: withProviderInstructions(instructions, repairPrompt),
 				responseFormat: "json",
 				jsonSchema: CUE_JSON_SCHEMA,
 			},
@@ -420,9 +421,8 @@ async function generateSummaryFromObjectProvider(
 		throw cueCraftProviderError("Provider does not support structured output.");
 	}
 	const raw = await runtime.generateObject({
-		instructions,
 		schema: summaryGenerationSchema,
-		prompt: buildSummaryPrompt(input),
+		prompt: withProviderInstructions(instructions, buildSummaryPrompt(input)),
 	}, signal);
 	const parsed = summaryOutputSchema.safeParse(raw);
 	if (!parsed.success) {
@@ -442,8 +442,7 @@ async function generateSummaryFromTextProvider(
 	const basePrompt = buildSummaryPrompt(input);
 	const raw = await runtime.generateText(
 		{
-			instructions,
-			prompt: basePrompt,
+			prompt: withProviderInstructions(instructions, basePrompt),
 			responseFormat: "json",
 			jsonSchema: SUMMARY_JSON_SCHEMA,
 		},
@@ -458,8 +457,7 @@ async function generateSummaryFromTextProvider(
 			`Reply again with ONLY the corrected JSON object.`;
 		const retry = await runtime.generateText(
 			{
-				instructions,
-				prompt: repairPrompt,
+				prompt: withProviderInstructions(instructions, repairPrompt),
 				responseFormat: "json",
 				jsonSchema: SUMMARY_JSON_SCHEMA,
 			},
@@ -486,9 +484,8 @@ async function generateNoteBriefFromObjectProvider(
 		throw cueCraftProviderError("Provider does not support structured output.");
 	}
 	const raw = await runtime.generateObject({
-		instructions,
 		schema: noteBriefGenerationSchema,
-		prompt: buildNoteBriefPrompt(input),
+		prompt: withProviderInstructions(instructions, buildNoteBriefPrompt(input)),
 	}, signal);
 	const parsed = noteBriefOutputSchema.safeParse(raw);
 	if (!parsed.success) {
@@ -508,8 +505,7 @@ async function generateNoteBriefFromTextProvider(
 	const basePrompt = buildNoteBriefPrompt(input);
 	const raw = await runtime.generateText(
 		{
-			instructions,
-			prompt: basePrompt,
+			prompt: withProviderInstructions(instructions, basePrompt),
 			responseFormat: "json",
 			jsonSchema: NOTE_BRIEF_SCHEMA,
 		},
@@ -524,8 +520,7 @@ async function generateNoteBriefFromTextProvider(
 			`Reply again with ONLY the corrected JSON object.`;
 		const retry = await runtime.generateText(
 			{
-				instructions,
-				prompt: repairPrompt,
+				prompt: withProviderInstructions(instructions, repairPrompt),
 				responseFormat: "json",
 				jsonSchema: NOTE_BRIEF_SCHEMA,
 			},
@@ -553,8 +548,7 @@ async function generateCueBatchFromTextProvider(
 	const basePrompt = buildCueBatchPrompt(inputs, PRESET_GUIDANCE);
 	const raw = await runtime.generateText(
 		{
-			instructions,
-			prompt: basePrompt,
+			prompt: withProviderInstructions(instructions, basePrompt),
 			responseFormat: "json",
 			jsonSchema: schema,
 		},
@@ -570,8 +564,7 @@ async function generateCueBatchFromTextProvider(
 			`Reply again with ONLY the corrected JSON object.`;
 		const retry = await runtime.generateText(
 			{
-				instructions,
-				prompt: repairPrompt,
+				prompt: withProviderInstructions(instructions, repairPrompt),
 				responseFormat: "json",
 				jsonSchema: schema,
 			},

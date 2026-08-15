@@ -88,16 +88,16 @@ describe("local CLI cue batch prompt", () => {
 
 		expect(calls).toHaveLength(2);
 		for (const call of calls) {
-			expect(call.instructions).toContain(cuePolicy);
-			expect(call.instructions?.split(cuePolicy)).toHaveLength(2);
-			expect(call.instructions).not.toContain(reviewPolicy);
-			expect(call.instructions).toContain(
+			expect(call.prompt).toContain(cuePolicy);
+			expect(call.prompt.split(cuePolicy)).toHaveLength(2);
+			expect(call.prompt).not.toContain(reviewPolicy);
+			expect(call.prompt).toContain(
 				"CueCraft's protected Cue Batch contract requires"
 			);
-			expect(call.instructions).toContain(
+			expect(call.prompt).toContain(
 				"requires exactly one section-level active-recall cue for each of the 2 supplied sections, in input order."
 			);
-			expect(call.instructions).not.toContain(
+			expect(call.prompt).not.toContain(
 				"Create one section-level active-recall cue using"
 			);
 			for (const field of [
@@ -109,18 +109,10 @@ describe("local CLI cue batch prompt", () => {
 				"keyPhrase",
 				"explanation",
 			]) {
-				expect(call.instructions).toContain(field);
+				expect(call.prompt).toContain(field);
 			}
-			expect(call.instructions).not.toContain(
-				"A stack removes the newest item first."
-			);
-			expect(call.instructions).not.toContain(
-				"A queue removes the oldest item first."
-			);
 			expect(call.prompt).toContain("A stack removes the newest item first.");
 			expect(call.prompt).toContain("A queue removes the oldest item first.");
-			expect(call.prompt).not.toContain(cuePolicy);
-			expect(call.prompt).not.toContain(reviewPolicy);
 			expect(call.jsonSchema).toBe(cueBatchJsonSchema(2));
 		}
 		expect(calls[1].prompt).toContain(
@@ -132,7 +124,9 @@ describe("local CLI cue batch prompt", () => {
 		);
 		expect(systemPromptLog).toHaveBeenCalledOnce();
 		expect(systemPromptLog).toHaveBeenCalledWith(
-			`[CueCraft BYOK] Cue Batch system prompt\n${calls[1].instructions}`
+			expect.stringContaining(
+				`[CueCraft BYOK] Cue Batch system prompt\nBEGIN EDITABLE CUE BATCH POLICY\n${cuePolicy}`
+			)
 		);
 	});
 
@@ -168,7 +162,7 @@ describe("local CLI cue batch prompt", () => {
 			"Model output could not be validated: response was not valid JSON"
 		);
 		expect(calls).toHaveLength(2);
-		expect(calls.every((call) => call.instructions?.includes(cuePolicy))).toBe(
+		expect(calls.every((call) => call.prompt.includes(cuePolicy))).toBe(
 			true
 		);
 	});
