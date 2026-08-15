@@ -375,6 +375,10 @@
 	grid-template-columns: repeat(auto-fit, minmax(min(112px, 100%), 1fr));
 }
 
+.cuecraft-thumbnail-group-cue-font {
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .cuecraft-thumbnail-setting {
 	align-items: flex-start;
 }

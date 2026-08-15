@@ -225,6 +225,28 @@ describe("settings CSS", () => {
 		expect(inlineCardRule).toContain("inset-inline: 7%");
 	});
 
+	it("keeps all cue font size options in one laptop-width row", () => {
+		const cueFontGroupRule = ruleFor(".cuecraft-thumbnail-group-cue-font");
+		expect(cueFontGroupRule).toContain(
+			"grid-template-columns: repeat(3, minmax(0, 1fr))"
+		);
+
+		const cueFontGroupIndex = styles.indexOf(
+			".cuecraft-thumbnail-group-cue-font"
+		);
+		const narrowMediaIndex = styles.indexOf("@media (max-width: 700px)");
+		const narrowMediaEnd = styles.indexOf(
+			"@media (max-width: 420px)",
+			narrowMediaIndex
+		);
+		const narrowStyles = styles.slice(narrowMediaIndex, narrowMediaEnd);
+		expect(narrowMediaIndex).toBeGreaterThan(cueFontGroupIndex);
+		expect(narrowStyles).toContain(".cuecraft-thumbnail-group {");
+		expect(narrowStyles).toContain(
+			"grid-template-columns: repeat(auto-fit, minmax(min(138px, 100%), 1fr))"
+		);
+	});
+
 	it("animates accessible editor card section disclosures", () => {
 		const root = ".cuecraft-editor-hook-sectioned";
 		const toggleRule = ruleFor(`${root} .cuecraft-editor-hook-section-toggle`);
