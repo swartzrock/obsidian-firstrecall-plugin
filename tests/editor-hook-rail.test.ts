@@ -17,11 +17,11 @@ function cue(overrides: Partial<CueLineData> = {}): CueLineData {
 }
 
 describe("buildEditorHookCard", () => {
-	it("builds anchored hook cards from cue line data", () => {
-		const card = buildEditorHookCard(cue(), "anchored-card-rail");
+	it("builds editor hook cards from cue line data", () => {
+		const card = buildEditorHookCard(cue(), "collapsed-tabs");
 		expect(card).toMatchObject({
 			kind: "hook",
-			display: "anchored-card-rail",
+			display: "collapsed-tabs",
 			line: 3,
 			heading: "Terms",
 			hookTitle:
@@ -35,7 +35,6 @@ describe("buildEditorHookCard", () => {
 			gradientIndex: 0,
 			showQuestion: true,
 			showSupportTerms: true,
-			cardStyle: "classic",
 		});
 		expect(card).not.toHaveProperty("category");
 	});
@@ -48,24 +47,14 @@ describe("buildEditorHookCard", () => {
 		expect(card.tone).toBe("cool");
 	});
 
-	it("accepts display-only rail card options", () => {
-		const card = buildEditorHookCard(cue(), "anchored-card-rail", 4, "upcoming", {
+	it("accepts display-only hook card options", () => {
+		const card = buildEditorHookCard(cue(), "collapsed-tabs", 4, "upcoming", {
 			showQuestion: false,
 			showSupportTerms: false,
-			cardStyle: "gradient",
 		});
 		expect(card.showQuestion).toBe(false);
 		expect(card.showSupportTerms).toBe(false);
-		expect(card.compactForSpace).toBe(false);
-		expect(card.cardStyle).toBe("gradient");
 		expect(card.gradientIndex).toBe(1);
-	});
-
-	it("accepts automatic short-section compaction", () => {
-		const card = buildEditorHookCard(cue(), "anchored-card-rail", 0, "upcoming", {
-			compactForSpace: true,
-		});
-		expect(card.compactForSpace).toBe(true);
 	});
 
 	it("accepts explicit active section state", () => {
@@ -84,7 +73,7 @@ describe("buildEditorHookCard", () => {
 				question:
 					"How does tailoring AI with organizational knowledge upskill employees, and why does encoding that expertise into reusable plugins or agents make them faster and smarter?",
 			}),
-			"anchored-card-rail"
+			"collapsed-tabs"
 		);
 		expect(card.titleDensity).toBe("dense");
 	});
@@ -92,7 +81,7 @@ describe("buildEditorHookCard", () => {
 	it("preserves failed cue states", () => {
 		const card = buildEditorHookCard(
 			cue({ question: "", keywords: [], confidence: null, error: "boom" }),
-			"anchored-card-rail"
+			"collapsed-tabs"
 		);
 		expect(card).toMatchObject({
 			kind: "failed",

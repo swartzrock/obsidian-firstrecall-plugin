@@ -85,13 +85,9 @@ describe("settings CSS", () => {
 		expect(cueRule).toContain("margin-bottom: 0");
 	});
 
-	it("uses neutral rail tokens without legacy category styling", () => {
+	it("uses neutral cue tokens without legacy category styling", () => {
 		const cueRule = ruleFor(".cuecraft-cue");
 		expect(cueRule).toContain(
-			"border-inline-start: 3px solid var(--cc-border)"
-		);
-		const railRule = ruleFor(".cuecraft-editor-hook-anchored-card-rail");
-		expect(railRule).toContain(
 			"border-inline-start: 3px solid var(--cc-border)"
 		);
 		const cornellRules =
@@ -284,18 +280,11 @@ describe("settings CSS", () => {
 		);
 	});
 
-	it("keeps anchored rail cards compact and quiet", () => {
+	it("keeps sectioned editor cues compact and quiet", () => {
 		expect(styles).not.toContain("cuecraft-editor-rail-card-toggle");
 		expect(styles).not.toContain("cuecraft-editor-rail-card-content");
 		expect(styles).not.toContain('data-overflowing="true"');
 		expect(styles).not.toContain('data-expanded="false"');
-
-		const railRule = ruleFor(".cuecraft-editor-hook-anchored-card-rail");
-		expect(railRule).toContain("max-width: min(16.75rem, 100%)");
-		const compactRailRule = ruleFor(
-			'.cuecraft-editor-hook-anchored-card-rail[data-space="compact"]'
-		);
-		expect(compactRailRule).toContain("padding-bottom: 8px");
 
 		const emptyRule = ruleFor(".cuecraft-editor-hook-empty");
 		expect(emptyRule).toContain("display: none");
@@ -341,16 +330,6 @@ describe("settings CSS", () => {
 		expect(cornellQuestionRule).toContain(
 			"font-weight: var(--font-normal, 400)"
 		);
-		const minimalQuestionRule = ruleFor(
-			".cuecraft-style-minimal.cuecraft-editor-hook-sectioned .cuecraft-cornell-q"
-		);
-		expect(minimalQuestionRule).toContain("color: var(--text-normal)");
-		expect(minimalQuestionRule).toContain("font-family: inherit");
-		expect(minimalQuestionRule).toContain("font-size: inherit");
-		expect(minimalQuestionRule).toContain(
-			"font-weight: var(--font-normal, 400)"
-		);
-		expect(minimalQuestionRule).toContain("line-height: 1.45");
 		const minimalCardRule = ruleFor(
 			".cuecraft-style-minimal .cuecraft-cornell-cue"
 		);
@@ -358,11 +337,6 @@ describe("settings CSS", () => {
 		expect(minimalCardRule).toContain(
 			"border-inline-start: 3px solid var(--cc-border)"
 		);
-		const examPrepLabelRule = ruleFor(
-			".cuecraft-editor-hook-sectioned.cuecraft-style-exam-prep .cuecraft-cornell-cue::before"
-		);
-		expect(examPrepLabelRule).toContain("content: none");
-
 		const responsiveMediumRule = ruleFor(
 			".markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-medium"
 		);
@@ -373,7 +347,6 @@ describe("settings CSS", () => {
 		expect(responsiveLargeRule).toContain("font-size: var(--font-ui-medium)");
 
 		expect(styles).toContain("width: min(16rem, 28vw)");
-		expect(styles).toContain("width: clamp(13.5rem, 19vw, 16rem)");
 		expect(styles).toContain("width: clamp(11.5rem, 20vw, 16rem)");
 	});
 
@@ -399,11 +372,6 @@ describe("settings CSS", () => {
 		expect(gripRule).not.toContain("inset-inline-start");
 		expect(gripRule).not.toContain("transition:");
 
-		const anchoredReservedEdgeRule = ruleFor(
-			".cuecraft-editor-hook-anchored-card-rail.cuecraft-editor-rail-card"
-		);
-		expect(anchoredReservedEdgeRule).toContain("padding-left: 28px");
-		expect(anchoredReservedEdgeRule).toContain("overflow: visible");
 		const cornellRootRule = ruleFor(
 			".cuecraft-editor-cornell-card.cuecraft-editor-rail-card"
 		);
@@ -448,39 +416,11 @@ describe("settings CSS", () => {
 		);
 	});
 
-	it("aligns the anchored rail masthead without moving Markdown headings", () => {
-		const layoutSelector =
-			'.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift[data-cuecraft-editor-display="anchored-card-rail"]';
-		const layoutRule = ruleFor(layoutSelector);
-		expect(layoutRule).toContain("--cuecraft-editor-masthead-offset");
-		expect(layoutRule).toContain(
-			"--cuecraft-editor-masthead-title-inset: 4rem"
-		);
-		expect(
-			styles.match(/--cuecraft-editor-masthead-title-inset: 4rem/g)
-		).toHaveLength(2);
-
-		const titleSelector = `${layoutSelector} .inline-title`;
-		const titleRule = ruleFor(titleSelector);
-		expect(titleRule).toContain("var(--cuecraft-editor-masthead-offset)");
-
-		const briefSelector = `${layoutSelector} .cuecraft-note-brief-editor`;
-		const briefRule = ruleFor(briefSelector);
-		expect(briefRule).toContain(
-			"width: calc(100% + var(--cuecraft-editor-masthead-offset))"
-		);
-		expect(briefRule).toContain(
-			"margin-inline-start: calc(0px - var(--cuecraft-editor-masthead-offset))"
-		);
-		expect(briefRule).toContain(
-			"transform: translateX(calc(0px - var(--cuecraft-editor-masthead-offset)))"
-		);
-
+	it("positions editor cues when the page is shifted", () => {
 		const railSelector =
 			".markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cuecraft-editor-hook-gutter .cuecraft-editor-hook";
 		expect(ruleFor(railSelector)).toContain(
 			"transform: translateX(calc(-100% + 1rem))"
 		);
-		expect(styles).not.toContain(`${layoutSelector} .cm-line`);
 	});
 });

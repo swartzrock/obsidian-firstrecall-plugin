@@ -4,10 +4,6 @@ import {
 } from "./short-form-hook";
 import type { CueLineData, Confidence } from "./cue-extension";
 import type { EditorCueDisplay } from "./editor-cue-display";
-import {
-	DEFAULT_EDITOR_HOOK_CARD_STYLE,
-	type EditorHookCardStyle,
-} from "./editor-hook-card-style";
 import type { SectionLens } from "./schemas";
 
 export type EditorHookCardKind = "hook" | "failed";
@@ -17,8 +13,6 @@ export type EditorHookTone = "warm" | "cool";
 export interface EditorHookCardOptions {
 	showQuestion?: boolean;
 	showSupportTerms?: boolean;
-	compactForSpace?: boolean;
-	cardStyle?: EditorHookCardStyle;
 }
 
 export interface EditorHookCard {
@@ -38,14 +32,6 @@ export interface EditorHookCard {
 	gradientIndex: number;
 	showQuestion: boolean;
 	showSupportTerms: boolean;
-	compactForSpace: boolean;
-	cardStyle: EditorHookCardStyle;
-}
-
-export function editorHookTitleDensity(
-	cue: CueLineData
-): EditorHookCard["titleDensity"] {
-	return shortFormHookTitleDensity(editorHookTitle(cue));
 }
 
 export function buildEditorHookCard(
@@ -76,8 +62,6 @@ export function buildEditorHookCard(
 		gradientIndex: index % 3,
 		showQuestion,
 		showSupportTerms,
-		compactForSpace: options.compactForSpace ?? false,
-		cardStyle: options.cardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
 	};
 }
 

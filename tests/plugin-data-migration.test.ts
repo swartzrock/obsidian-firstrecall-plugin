@@ -75,6 +75,53 @@ function unavailableCredentialStore(): SecureCredentialStore {
 }
 
 describe("plugin data cache migration", () => {
+	it.each([
+		"cornell-exam-prep",
+		"cornell-minimal",
+		"anchored-card-rail",
+		"threaded-margin-notes",
+	])("replaces removed Editing View display %s with Inline cues", async (display) => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: {
+					editorCueDisplay: display,
+					editorHookCardStyle: "gradient",
+				},
+			})),
+			saveData: vi.fn(async () => {}),
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.editorCueDisplay).toBe("inline-cues");
+		expect("editorHookCardStyle" in plugin.settings).toBe(false);
+	});
+
+	it("drops the removed rail card style without changing a retained display", async () => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: {
+					editorCueDisplay: "cornell",
+					editorHookCardStyle: "gradient",
+				},
+			})),
+			saveData: vi.fn(async () => {}),
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.editorCueDisplay).toBe("cornell");
+		expect("editorHookCardStyle" in plugin.settings).toBe(false);
+	});
+
 	it("drops the removed Editing View preset while preserving custom rail widths", async () => {
 		for (const [storedSettings, expectedCornellWidth, expectedCustom] of [
 			[{ cueColumnWidth: "wide" }, "wide", null],

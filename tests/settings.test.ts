@@ -19,12 +19,6 @@ import {
 	isEditorCueDisplay,
 } from "../src/editor-cue-display";
 import {
-	DEFAULT_EDITOR_HOOK_CARD_STYLE,
-	EDITOR_HOOK_CARD_STYLE_OPTIONS,
-	editorHookCardStyleOption,
-	isEditorHookCardStyle,
-} from "../src/editor-hook-card-style";
-import {
 	DEFAULT_SHOW_NOTE_BRIEF,
 	DEFAULT_SHOW_SECTION_LENS,
 } from "../src/review-surfaces";
@@ -572,13 +566,6 @@ describe("settings defaults", () => {
 		expect(DEFAULT_SHOW_NOTE_BRIEF).toBe(true);
 	});
 
-	it("defaults rail cards to the classic style", () => {
-		expect(DEFAULT_EDITOR_HOOK_CARD_STYLE).toBe("classic");
-		expect(editorHookCardStyleOption(DEFAULT_EDITOR_HOOK_CARD_STYLE).label).toBe(
-			"Classic warm/cool"
-		);
-	});
-
 	it("validates persisted Cornell display mode values", () => {
 		expect(isCornellDisplayMode("classic")).toBe(true);
 		expect(isCornellDisplayMode("hook")).toBe(true);
@@ -590,40 +577,32 @@ describe("settings defaults", () => {
 	it("validates persisted editor cue display values", () => {
 		expect(EDITOR_CUE_DISPLAY_OPTIONS.map((option) => option.id)).toEqual([
 			"cornell",
-			"cornell-exam-prep",
-			"cornell-minimal",
 			"inline-cues",
-			"anchored-card-rail",
 			"collapsed-tabs",
-			"threaded-margin-notes",
 			"active-section-composer",
 			"hook-minimap",
 		]);
 		expect(isEditorCueDisplay("cornell")).toBe(true);
-		expect(isEditorCueDisplay("cornell-exam-prep")).toBe(true);
-		expect(isEditorCueDisplay("cornell-minimal")).toBe(true);
 		expect(isEditorCueDisplay("inline-cues")).toBe(true);
-		expect(isEditorCueDisplay("anchored-card-rail")).toBe(true);
 		expect(isEditorCueDisplay("collapsed-tabs")).toBe(true);
-		expect(isEditorCueDisplay("threaded-margin-notes")).toBe(true);
 		expect(isEditorCueDisplay("active-section-composer")).toBe(true);
 		expect(isEditorCueDisplay("hook-minimap")).toBe(true);
-		for (const bad of ["", "hook", "classic", null, undefined, 1, {}]) {
+		for (const bad of [
+			"",
+			"hook",
+			"classic",
+			"cornell-exam-prep",
+			"cornell-minimal",
+			"anchored-card-rail",
+			"threaded-margin-notes",
+			null,
+			undefined,
+			1,
+			{},
+		]) {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}
 	});
-	it("validates persisted editor hook card style values", () => {
-		expect(EDITOR_HOOK_CARD_STYLE_OPTIONS.map((option) => option.id)).toEqual([
-			"classic",
-			"gradient",
-		]);
-		expect(isEditorHookCardStyle("classic")).toBe(true);
-		expect(isEditorHookCardStyle("gradient")).toBe(true);
-		for (const bad of ["", "orange", "soft", null, undefined, 1, {}]) {
-			expect(isEditorHookCardStyle(bad)).toBe(false);
-		}
-	});
-
 	it("summarizes Cornell View settings without editor-only state", () => {
 		const settings = {
 			cornellDisplayMode: "hook",
@@ -631,7 +610,6 @@ describe("settings defaults", () => {
 			cueColumnWidth: "wide",
 			cueFontSize: "large",
 			editorCueDisplay: "hook-minimap",
-			editorHookCardStyle: "gradient",
 			showRailQuestions: false,
 			showRailSupportTerms: false,
 		} as const;
@@ -640,7 +618,6 @@ describe("settings defaults", () => {
 			"Hook rail · Legal Pad · wide width · large text"
 		);
 		expect(cornellViewSettingsSummary(settings)).not.toContain("Hook minimap");
-		expect(cornellViewSettingsSummary(settings)).not.toContain("Soft gradients");
 		expect(cornellViewSettingsSummary(settings)).not.toContain("questions");
 	});
 
@@ -651,13 +628,12 @@ describe("settings defaults", () => {
 			cueColumnWidth: "narrow",
 			cueFontSize: "large",
 			editorCueDisplay: "hook-minimap",
-			editorHookCardStyle: "gradient",
 			showRailQuestions: false,
 			showRailSupportTerms: true,
 		} as const;
 
 		expect(editingViewSettingsSummary(settings)).toBe(
-			"Hook minimap · Soft gradients · large text · questions hidden · supports shown"
+			"Hook minimap · large text · questions hidden · supports shown"
 		);
 		expect(editingViewSettingsSummary(settings)).not.toContain("Legal Pad");
 		expect(editingViewSettingsSummary(settings)).not.toContain("width");
@@ -911,16 +887,6 @@ describe("settings defaults", () => {
 		expect(text).not.toContain("Cue accent color");
 	});
 
-	it("shows Rail card background only for Anchored card rail", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.editorCueDisplay = "anchored-card-rail";
-
-		tab.display();
-		openSettingsCard(tab, "Editing View");
-
-		expect(settingText(tab.containerEl)).toContain("Rail card background");
-	});
-
 	it("keeps cross-view review controls in Note format", async () => {
 		const { tab } = await setupSettingsTab();
 
@@ -964,34 +930,20 @@ describe("settings defaults", () => {
 		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
 	});
 
-	it("refreshes editor cues for Editing View display and card-style thumbnails", async () => {
+	it("refreshes editor cues for Editing View display thumbnails", async () => {
 		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.editorCueDisplay = "anchored-card-rail";
+		plugin.settings.editorCueDisplay = "cornell";
 
 		tab.display();
 		openSettingsCard(tab, "Editing View");
 		await clickThumbnail(
 			tab.containerEl,
 			"Editor cue display",
-			"threaded-margin-notes"
+			"inline-cues"
 		);
 
-		expect(plugin.settings.editorCueDisplay).toBe("threaded-margin-notes");
+		expect(plugin.settings.editorCueDisplay).toBe("inline-cues");
 		expect(settingText(tab.containerEl)).not.toContain("Rail card background");
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
-	});
-
-	it("refreshes editor cues for Anchored card rail background thumbnails", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.editorCueDisplay = "anchored-card-rail";
-
-		tab.display();
-		openSettingsCard(tab, "Editing View");
-		await clickThumbnail(tab.containerEl, "Rail card background", "gradient");
-
-		expect(plugin.settings.editorHookCardStyle).toBe("gradient");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();

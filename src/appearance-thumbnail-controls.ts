@@ -17,10 +17,6 @@ import {
 	EDITOR_CUE_DISPLAY_OPTIONS,
 	type EditorCueDisplay,
 } from "./editor-cue-display";
-import {
-	EDITOR_HOOK_CARD_STYLE_OPTIONS,
-	type EditorHookCardStyle,
-} from "./editor-hook-card-style";
 
 export interface AppearanceThumbnailOption<T extends string> {
 	id: T;
@@ -257,19 +253,6 @@ export function editorCueDisplayThumbnailOptions(): AppearanceThumbnailOption<
 	}));
 }
 
-export function editorHookCardStyleThumbnailOptions(): AppearanceThumbnailOption<
-	EditorHookCardStyle
->[] {
-	return EDITOR_HOOK_CARD_STYLE_OPTIONS.map((option) => ({
-		id: option.id,
-		label: option.label,
-		description: option.description,
-		renderPreview: (previewEl) => {
-			renderEditorCardStylePreview(previewEl, option.id);
-		},
-	}));
-}
-
 function renderCuePreview(
 	previewEl: HTMLElement,
 	classes: string[],
@@ -331,22 +314,17 @@ function renderEditorCueDisplayPreview(
 	previewEl: HTMLElement,
 	display: EditorCueDisplay
 ): void {
-	if (
-		display === "cornell" ||
-		display === "cornell-exam-prep" ||
-		display === "cornell-minimal"
-	) {
-		const cornellStyle = editorCueDisplayCornellStyle(display);
+	if (display === "cornell") {
 		renderCuePreview(
 			previewEl,
 			[
 				"cuecraft-preview-display",
-				cornellStyle === "classic" ? "cuecraft-preview-display-classic" : "",
+				"cuecraft-preview-display-classic",
 				"cuecraft-preview-style",
-				`cuecraft-preview-style-${cornellStyle}`,
+				"cuecraft-preview-style-classic",
 				"cuecraft-preview-editor-display",
 				`cuecraft-preview-editor-display-${display}`,
-			].filter(Boolean),
+			],
 			{
 				question: DISPLAY_SAMPLE_QUESTION,
 				supports: DISPLAY_SAMPLE_SUPPORTS,
@@ -367,20 +345,10 @@ function renderEditorCueDisplayPreview(
 		case "inline-cues":
 			scene.appendChild(editorInlineCue(doc));
 			break;
-		case "anchored-card-rail":
-			scene.appendChild(editorHookCard(doc, "warm", "first", true));
-			scene.appendChild(editorHookCard(doc, "cool", "second"));
-			break;
 		case "collapsed-tabs":
 			scene.appendChild(editorTab(doc, "warm", "first"));
 			scene.appendChild(editorTab(doc, "cool", "second"));
 			scene.appendChild(editorPeek(doc));
-			break;
-		case "threaded-margin-notes":
-			scene.appendChild(editorThread(doc));
-			scene.appendChild(editorThreadDot(doc, "cool", "first"));
-			scene.appendChild(editorThreadNote(doc));
-			scene.appendChild(editorThreadDot(doc, "warm", "second"));
 			break;
 		case "active-section-composer":
 			scene.appendChild(editorComposerCard(doc));
@@ -393,47 +361,6 @@ function renderEditorCueDisplayPreview(
 			assertNever(display);
 	}
 
-	previewEl.appendChild(surface);
-}
-
-function editorCueDisplayCornellStyle(
-	display: EditorCueDisplay
-): CornellStyle | null {
-	switch (display) {
-		case "cornell":
-			return "classic";
-		case "cornell-exam-prep":
-			return "exam-prep";
-		case "cornell-minimal":
-			return "minimal";
-		default:
-			return null;
-	}
-}
-
-function renderEditorCardStylePreview(
-	previewEl: HTMLElement,
-	style: EditorHookCardStyle
-): void {
-	const doc = previewEl.ownerDocument;
-	const surface = editorPreviewSurface(doc, [
-		"cuecraft-preview-editor-card-style",
-		`cuecraft-preview-editor-card-style-${style}`,
-	]);
-	const scene = editorScene(doc);
-	switch (style) {
-		case "classic":
-			scene.appendChild(editorHookCard(doc, "warm", "first"));
-			scene.appendChild(editorHookCard(doc, "cool", "second"));
-			break;
-		case "gradient":
-			scene.appendChild(editorHookCard(doc, "gradient", "first"));
-			scene.appendChild(editorHookCard(doc, "gradient-alt", "second"));
-			break;
-		default:
-			assertNever(style);
-	}
-	surface.appendChild(scene);
 	previewEl.appendChild(surface);
 }
 
@@ -461,24 +388,6 @@ function editorInlineCue(doc: Document): HTMLElement {
 	return cue;
 }
 
-function editorHookCard(
-	doc: Document,
-	tone: "warm" | "cool" | "gradient" | "gradient-alt",
-	slot: "first" | "second",
-	showText = false
-): HTMLElement {
-	const card = doc.createElement("span");
-	card.className = [
-		"cuecraft-preview-editor-hook-card",
-		`cuecraft-preview-editor-hook-card-${tone}`,
-		`cuecraft-preview-editor-hook-card-${slot}`,
-	].join(" ");
-	if (showText) {
-		appendEditorCueText(doc, card);
-	}
-	return card;
-}
-
 function editorTab(
 	doc: Document,
 	tone: "warm" | "cool",
@@ -497,33 +406,6 @@ function editorPeek(doc: Document): HTMLElement {
 	const peek = doc.createElement("span");
 	peek.className = "cuecraft-preview-editor-peek";
 	return peek;
-}
-
-function editorThread(doc: Document): HTMLElement {
-	const thread = doc.createElement("span");
-	thread.className = "cuecraft-preview-editor-thread";
-	return thread;
-}
-
-function editorThreadDot(
-	doc: Document,
-	tone: "warm" | "cool",
-	slot: "first" | "second"
-): HTMLElement {
-	const dot = doc.createElement("span");
-	dot.className = [
-		"cuecraft-preview-editor-thread-dot",
-		`cuecraft-preview-editor-thread-dot-${tone}`,
-		`cuecraft-preview-editor-thread-dot-${slot}`,
-	].join(" ");
-	return dot;
-}
-
-function editorThreadNote(doc: Document): HTMLElement {
-	const note = doc.createElement("span");
-	note.className = "cuecraft-preview-editor-thread-note";
-	appendEditorCueText(doc, note);
-	return note;
 }
 
 function editorComposerCard(doc: Document): HTMLElement {

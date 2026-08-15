@@ -11,10 +11,6 @@ import {
 	editorCueDisplayOption,
 	type EditorCueDisplay,
 } from "./editor-cue-display";
-import {
-	editorHookCardStyleOption,
-	type EditorHookCardStyle,
-} from "./editor-hook-card-style";
 
 export interface CornellViewSettingsSummaryInput {
 	cornellDisplayMode: CornellDisplayMode;
@@ -25,7 +21,6 @@ export interface CornellViewSettingsSummaryInput {
 
 export interface EditingViewSettingsSummaryInput {
 	editorCueDisplay: EditorCueDisplay;
-	editorHookCardStyle: EditorHookCardStyle;
 	cueFontSize: CueFontSize;
 	showRailQuestions: boolean;
 	showRailSupportTerms: boolean;
@@ -45,14 +40,11 @@ export function editingViewSettingsSummary(
 	settings: EditingViewSettingsSummaryInput
 ): string {
 	const editorDisplay = editorCueDisplayOption(settings.editorCueDisplay).label;
-	const hookCardStyle = editorHookCardStyleOption(
-		settings.editorHookCardStyle
-	).label;
 	const questionState = settings.showRailQuestions
 		? "questions shown"
 		: "questions hidden";
 	const supportState = settings.showRailSupportTerms
 		? "supports shown"
 		: "supports hidden";
-	return `${editorDisplay} · ${hookCardStyle} · ${settings.cueFontSize} text · ${questionState} · ${supportState}`;
+	return `${editorDisplay} · ${settings.cueFontSize} text · ${questionState} · ${supportState}`;
 }

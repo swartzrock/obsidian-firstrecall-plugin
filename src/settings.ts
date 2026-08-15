@@ -43,7 +43,6 @@ import {
 	cueColumnWidthThumbnailOptions,
 	cueFontSizeThumbnailOptions,
 	editorCueDisplayThumbnailOptions,
-	editorHookCardStyleThumbnailOptions,
 	renderAppearanceThumbnailGroup,
 	type AppearanceThumbnailGroup,
 	type AppearanceThumbnailOption,
@@ -58,11 +57,6 @@ import {
 	editorCueDisplayOption,
 	type EditorCueDisplay,
 } from "./editor-cue-display";
-import {
-	DEFAULT_EDITOR_HOOK_CARD_STYLE,
-	editorHookCardStyleOption,
-	type EditorHookCardStyle,
-} from "./editor-hook-card-style";
 import {
 	cornellViewSettingsSummary,
 	editingViewSettingsSummary,
@@ -207,7 +201,6 @@ export interface CueCraftSettings {
 	showNoteBrief: boolean;
 	showRailQuestions: boolean;
 	showRailSupportTerms: boolean;
-	editorHookCardStyle: EditorHookCardStyle;
 	renderInReadingMode: boolean;
 	readingModeDisplay: ReadingModeDisplay;
 	foldCueColumnOnMobile: boolean;
@@ -282,7 +275,6 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
 	showRailQuestions: true,
 	showRailSupportTerms: true,
-	editorHookCardStyle: DEFAULT_EDITOR_HOOK_CARD_STYLE,
 	renderInReadingMode: true,
 	readingModeDisplay: DEFAULT_READING_MODE_DISPLAY,
 	foldCueColumnOnMobile: true,
@@ -1364,22 +1356,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			afterSave: () => this.display(),
 			className: "cuecraft-thumbnail-group-editor-display",
 		});
-
-		if (this.plugin.settings.editorCueDisplay === "anchored-card-rail") {
-			const railCardStyleDesc = (): string =>
-				editorHookCardStyleOption(this.plugin.settings.editorHookCardStyle)
-					.description;
-			this.renderEditingViewThumbnailSetting<EditorHookCardStyle>(containerEl, {
-				name: "Rail card background",
-				description: railCardStyleDesc,
-				options: editorHookCardStyleThumbnailOptions(),
-				value: () => this.plugin.settings.editorHookCardStyle,
-				setValue: (value) => {
-					this.plugin.settings.editorHookCardStyle = value;
-				},
-				className: "cuecraft-thumbnail-group-editor-card-style",
-			});
-		}
 
 		const editorFontDesc = (): string =>
 			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)

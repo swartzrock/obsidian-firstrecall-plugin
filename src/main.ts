@@ -92,10 +92,6 @@ import {
 	isEditorCueDisplay,
 } from "./editor-cue-display";
 import {
-	DEFAULT_EDITOR_HOOK_CARD_STYLE,
-	isEditorHookCardStyle,
-} from "./editor-hook-card-style";
-import {
 	selectExportableCues,
 	cuesToMarkdown,
 	cuesToAnki,
@@ -344,6 +340,8 @@ export default class CueCraftPlugin extends Plugin {
 			);
 		delete (settings as unknown as Record<string, unknown>)
 			.editorCueWidthPreset;
+		delete (settings as unknown as Record<string, unknown>)
+			.editorHookCardStyle;
 		settings.editorCueCustomWidthPx = normalizeEditorCueCustomWidthPx(
 			(rawSettings as { editorCueCustomWidthPx?: unknown })
 				.editorCueCustomWidthPx
@@ -370,13 +368,6 @@ export default class CueCraftPlugin extends Plugin {
 			)
 		) {
 			settings.editorCueDisplay = DEFAULT_EDITOR_CUE_DISPLAY;
-		}
-		if (
-			!isEditorHookCardStyle(
-				(settings as { editorHookCardStyle?: unknown }).editorHookCardStyle
-			)
-		) {
-			settings.editorHookCardStyle = DEFAULT_EDITOR_HOOK_CARD_STYLE;
 		}
 		if (
 			!isCornellDisplayMode(
@@ -502,7 +493,6 @@ export default class CueCraftPlugin extends Plugin {
 				collapseController: this.cueSectionCollapse,
 				showRailQuestions: this.settings.showRailQuestions,
 				showRailSupportTerms: this.settings.showRailSupportTerms,
-				editorHookCardStyle: this.settings.editorHookCardStyle,
 				cueColumnWidth: DEFAULT_EDITOR_CUE_WIDTH_PRESET,
 				cueFontSize: this.settings.cueFontSize,
 				editorCueWidthController: this.editorCueWidthController,
