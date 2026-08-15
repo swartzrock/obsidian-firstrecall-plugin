@@ -1,0 +1,650 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="color-scheme" content="light">
+	<title>CueCraft Editor Study Mode Interaction</title>
+	<style>
+		:root {
+			--chrome: #f2f3f3;
+			--sidebar: #f7f7f6;
+			--canvas: #ffffff;
+			--surface: #ffffff;
+			--surface-muted: #f5f7f6;
+			--ink: #242827;
+			--muted: #68716f;
+			--faint: #979e9c;
+			--line: #dcdFde;
+			--line-strong: #cbd1cf;
+			--study: #0d8078;
+			--study-strong: #086a64;
+			--study-soft: #e7f4f1;
+			--study-ring: rgba(13, 128, 120, 0.2);
+			--warning: #9b6a16;
+			--shadow: 0 6px 18px rgba(31, 38, 36, 0.08);
+			--editor-width: 980px;
+		}
+
+		* { box-sizing: border-box; }
+		html, body { height: 100%; }
+		body {
+			margin: 0;
+			overflow: hidden;
+			background: var(--chrome);
+			color: var(--ink);
+			font: 14px/1.48 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			letter-spacing: 0;
+		}
+		button { font: inherit; letter-spacing: 0; }
+		button:focus-visible {
+			outline: 2px solid var(--study);
+			outline-offset: 2px;
+		}
+		.icon {
+			display: block;
+			width: 18px;
+			height: 18px;
+			fill: none;
+			stroke: currentColor;
+			stroke-width: 1.8;
+			stroke-linecap: round;
+			stroke-linejoin: round;
+		}
+		.icon.small { width: 15px; height: 15px; }
+		.app {
+			display: grid;
+			grid-template-rows: 38px minmax(0, 1fr) 25px;
+			height: 100%;
+			min-height: 520px;
+		}
+		.titlebar {
+			display: grid;
+			grid-template-columns: 150px 1fr 150px;
+			align-items: center;
+			padding: 0 14px;
+			border-bottom: 1px solid var(--line);
+			background: var(--chrome);
+			color: #4f5755;
+			font-size: 12px;
+		}
+		.traffic { display: flex; gap: 8px; }
+		.traffic span { width: 11px; height: 11px; border-radius: 50%; }
+		.traffic span:nth-child(1) { background: #ff6058; }
+		.traffic span:nth-child(2) { background: #ffbd2e; }
+		.traffic span:nth-child(3) { background: #29c941; }
+		.window-title { justify-self: center; font-weight: 650; }
+		.workspace {
+			display: grid;
+			grid-template-columns: 46px 220px minmax(0, 1fr);
+			min-height: 0;
+		}
+		.ribbon {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 6px;
+			padding: 10px 0;
+			border-right: 1px solid var(--line);
+			background: var(--chrome);
+		}
+		.ribbon-spacer { flex: 1; }
+		.icon-button {
+			display: inline-grid;
+			place-items: center;
+			width: 32px;
+			height: 32px;
+			padding: 0;
+			border: 0;
+			border-radius: 6px;
+			background: transparent;
+			color: #626a68;
+			cursor: pointer;
+		}
+		.icon-button:hover { background: #e5e7e6; color: var(--ink); }
+		.icon-button.study-launcher {
+			position: relative;
+			margin-top: 5px;
+			color: var(--study-strong);
+		}
+		.icon-button.study-launcher::before {
+			content: "";
+			position: absolute;
+			left: -7px;
+			width: 3px;
+			height: 17px;
+			border-radius: 0 3px 3px 0;
+			background: transparent;
+		}
+		.study-active .icon-button.study-launcher {
+			background: var(--study-soft);
+			color: var(--study-strong);
+		}
+		.study-active .icon-button.study-launcher::before { background: var(--study); }
+		.sidebar {
+			min-width: 0;
+			padding: 10px 8px;
+			border-right: 1px solid var(--line);
+			background: var(--sidebar);
+		}
+		.sidebar-toolbar {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 0 7px 9px;
+			color: var(--muted);
+			font-size: 12px;
+			font-weight: 650;
+		}
+		.file-list { display: grid; gap: 2px; }
+		.file {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			min-width: 0;
+			padding: 7px 8px;
+			border-radius: 5px;
+			color: #59615f;
+		}
+		.file.active { background: #e7e9e8; color: var(--ink); font-weight: 620; }
+		.file span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+		.main-pane {
+			display: grid;
+			grid-template-rows: 41px 39px minmax(0, 1fr);
+			min-width: 0;
+			min-height: 0;
+			background: var(--canvas);
+		}
+		.tabs {
+			display: flex;
+			align-items: end;
+			border-bottom: 1px solid var(--line);
+			background: var(--chrome);
+		}
+		.tab {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			height: 33px;
+			min-width: 205px;
+			margin-left: 6px;
+			padding: 0 12px;
+			border: 1px solid var(--line);
+			border-bottom-color: var(--canvas);
+			border-radius: 7px 7px 0 0;
+			background: var(--canvas);
+			font-size: 12px;
+		}
+		.tab .close { margin-left: auto; color: var(--muted); }
+		.note-header {
+			display: grid;
+			grid-template-columns: 1fr auto 1fr;
+			align-items: center;
+			padding: 0 12px;
+			border-bottom: 1px solid var(--line);
+			background: var(--canvas);
+			color: var(--muted);
+			font-size: 12px;
+			z-index: 5;
+		}
+		.note-nav, .note-actions { display: flex; align-items: center; gap: 3px; }
+		.note-actions { justify-self: end; }
+		.note-name { color: #4e5654; font-weight: 570; }
+		.study-button {
+			display: inline-flex;
+			align-items: center;
+			gap: 7px;
+			height: 29px;
+			padding: 0 10px;
+			border: 1px solid var(--line-strong);
+			border-radius: 6px;
+			background: var(--surface);
+			color: #3f4947;
+			font-size: 12px;
+			font-weight: 680;
+			cursor: pointer;
+		}
+		.study-button:hover { border-color: var(--study); color: var(--study-strong); }
+		.study-active .study-button {
+			border-color: var(--study);
+			background: var(--study-soft);
+			color: var(--study-strong);
+			box-shadow: 0 0 0 2px var(--study-ring);
+		}
+		.scroller {
+			position: relative;
+			overflow: auto;
+			min-height: 0;
+			background: var(--canvas);
+			scroll-behavior: smooth;
+		}
+		.study-bar {
+			position: sticky;
+			top: 0;
+			z-index: 4;
+			display: none;
+			align-items: center;
+			gap: 12px;
+			width: min(calc(100% - 48px), var(--editor-width));
+			min-height: 44px;
+			margin: 0 auto;
+			padding: 7px 10px 7px 13px;
+			border: 1px solid #bddbd6;
+			border-top: 0;
+			border-radius: 0 0 7px 7px;
+			background: #f0f8f6;
+			box-shadow: 0 6px 15px rgba(21, 91, 83, 0.09);
+			color: var(--study-strong);
+		}
+		.study-active .study-bar { display: flex; }
+		.study-bar-title { display: flex; align-items: center; gap: 8px; font-weight: 750; }
+		.study-progress {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			margin-left: 4px;
+			color: #54716d;
+			font-size: 12px;
+		}
+		.progress-track {
+			width: 92px;
+			height: 4px;
+			overflow: hidden;
+			border-radius: 3px;
+			background: #cfe3df;
+		}
+		.progress-fill { width: 0; height: 100%; background: var(--study); transition: width 160ms ease; }
+		.study-bar-spacer { flex: 1; }
+		.bar-button {
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			height: 29px;
+			padding: 0 9px;
+			border: 1px solid transparent;
+			border-radius: 5px;
+			background: transparent;
+			color: var(--study-strong);
+			font-size: 12px;
+			font-weight: 660;
+			cursor: pointer;
+		}
+		.bar-button:hover { border-color: #b9d8d3; background: #e3f2ef; }
+		.bar-button.exit { color: #4c5a57; }
+		.note {
+			width: min(calc(100% - 48px), var(--editor-width));
+			margin: 0 auto;
+			padding: 48px 0 110px;
+		}
+		.note-title {
+			margin: 0 0 24px 290px;
+			font-size: 30px;
+			font-weight: 760;
+			line-height: 1.18;
+			letter-spacing: 0;
+		}
+		.note-brief {
+			margin: 0 0 44px 290px;
+			padding: 15px 17px;
+			border: 1px solid var(--line);
+			border-radius: 7px;
+			background: var(--surface-muted);
+		}
+		.note-brief-label {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			margin-bottom: 7px;
+			color: var(--study-strong);
+			font-size: 10px;
+			font-weight: 790;
+			text-transform: uppercase;
+			letter-spacing: 0;
+		}
+		.note-brief p { margin: 0; color: #454e4c; }
+		.study-row {
+			display: grid;
+			grid-template-columns: 250px minmax(0, 1fr);
+			gap: 40px;
+			align-items: start;
+			margin-bottom: 48px;
+		}
+		.cue-card {
+			position: relative;
+			width: 100%;
+			min-width: 0;
+			padding: 15px 16px 14px;
+			border: 1px solid var(--line-strong);
+			border-left: 3px solid var(--study);
+			border-radius: 7px;
+			background: var(--surface);
+			box-shadow: var(--shadow);
+			color: var(--ink);
+			text-align: left;
+			cursor: default;
+		}
+		.study-active .cue-card { cursor: pointer; }
+		.study-active .cue-card:hover {
+			border-color: #91c4bd;
+			box-shadow: 0 0 0 3px var(--study-ring), var(--shadow);
+		}
+		.cue-card[data-revealed="true"] { background: #f4faf8; border-color: #7bb8b0; }
+		.cue-label {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			padding-right: 24px;
+			color: var(--muted);
+			font-size: 10px;
+			font-weight: 780;
+			text-transform: uppercase;
+			letter-spacing: 0;
+		}
+		.reveal-icon {
+			position: absolute;
+			top: 12px;
+			right: 12px;
+			display: none;
+			color: var(--study);
+		}
+		.study-active .reveal-icon { display: block; }
+		.cue-question { margin-top: 7px; font-size: 15px; font-weight: 670; line-height: 1.35; }
+		.cue-divider { display: block; height: 1px; margin: 13px 0 10px; background: var(--line); }
+		.terms { display: flex; flex-wrap: wrap; gap: 5px; }
+		.term {
+			padding: 2px 7px;
+			border: 1px solid #e0e3e2;
+			border-radius: 5px;
+			background: #f7f8f8;
+			color: #747d7a;
+			font-size: 10px;
+		}
+		.section-content { min-width: 0; }
+		.section-content h2 { margin: 0 0 12px; font-size: 23px; line-height: 1.2; letter-spacing: 0; }
+		.answer {
+			position: relative;
+			padding-left: 14px;
+			border-left: 1px solid #e1e4e3;
+			transition: filter 140ms ease, opacity 140ms ease;
+		}
+		.answer p { margin: 0 0 10px; }
+		.answer ol { margin: 0; padding-left: 22px; }
+		.answer li + li { margin-top: 6px; }
+		.study-active .answer:not(.revealed) {
+			filter: blur(5px);
+			opacity: 0.56;
+			user-select: none;
+			pointer-events: none;
+		}
+		.study-active .answer.revealed {
+			box-shadow: -3px 0 0 var(--study-soft);
+		}
+		.statusbar {
+			display: flex;
+			align-items: center;
+			justify-content: flex-end;
+			gap: 13px;
+			padding: 0 10px;
+			border-top: 1px solid var(--line);
+			background: var(--chrome);
+			color: var(--muted);
+			font-size: 11px;
+		}
+		.status-study { display: none; align-items: center; gap: 5px; color: var(--study-strong); font-weight: 650; }
+		.study-active .status-study { display: flex; }
+		.tooltip { position: relative; }
+		.tooltip::after {
+			content: attr(data-tooltip);
+			position: absolute;
+			z-index: 20;
+			left: 50%;
+			bottom: calc(100% + 7px);
+			transform: translateX(-50%);
+			width: max-content;
+			max-width: 190px;
+			padding: 5px 7px;
+			border-radius: 4px;
+			background: #252928;
+			color: #fff;
+			font-size: 11px;
+			font-weight: 520;
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 100ms ease;
+		}
+		.tooltip:hover::after, .tooltip:focus-visible::after { opacity: 1; }
+		.sr-only {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			padding: 0;
+			margin: -1px;
+			overflow: hidden;
+			clip: rect(0, 0, 0, 0);
+			white-space: nowrap;
+			border: 0;
+		}
+		@media (max-width: 920px) {
+			.workspace { grid-template-columns: 46px minmax(0, 1fr); }
+			.sidebar { display: none; }
+		}
+		@media (max-width: 700px) {
+			.study-row { grid-template-columns: 1fr; gap: 14px; margin-bottom: 40px; }
+			.note-title, .note-brief { margin-left: 0; }
+			.study-bar { width: calc(100% - 24px); }
+			.note { width: calc(100% - 30px); padding-top: 34px; }
+			.study-progress .progress-track { display: none; }
+			.bar-button span { display: none; }
+			.study-button span { display: none; }
+		}
+		@media (prefers-reduced-motion: reduce) {
+			*, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+		}
+	</style>
+</head>
+<body>
+	<svg class="sr-only" aria-hidden="true">
+		<defs>
+			<symbol id="i-study" viewBox="0 0 24 24"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.58 3.9a2 2 0 0 0 1.66 0z"/><path d="M22 10v6"/><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"/></symbol>
+			<symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></symbol>
+			<symbol id="i-eye-off" viewBox="0 0 24 24"><path d="m2 2 20 20"/><path d="M6.71 6.71C4.9 7.91 3.55 9.6 2.55 11.5a1.1 1.1 0 0 0 0 1c2.1 4 5.25 6 9.45 6 1.45 0 2.75-.24 3.91-.71"/><path d="M10.73 5.57A10.5 10.5 0 0 1 12 5.5c4.2 0 7.35 2 9.45 6a1.1 1.1 0 0 1 0 1 13.4 13.4 0 0 1-1.17 1.83"/><path d="M14.12 14.12A3 3 0 0 1 9.88 9.88"/></symbol>
+			<symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+			<symbol id="i-book" viewBox="0 0 24 24"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V5a2 2 0 0 1 2-2h5a3 3 0 0 1 3 3v15a3 3 0 0 0-3-3z"/><path d="M21 18a1 1 0 0 0 1-1V5a2 2 0 0 0-2-2h-5a3 3 0 0 0-3 3v15a3 3 0 0 1 3-3z"/></symbol>
+			<symbol id="i-folder" viewBox="0 0 24 24"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/></symbol>
+			<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+			<symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+			<symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+			<symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+			<symbol id="i-file" viewBox="0 0 24 24"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5z"/><polyline points="14 2 14 8 20 8"/></symbol>
+		</defs>
+	</svg>
+
+	<div class="app" id="app">
+		<header class="titlebar">
+			<div class="traffic" aria-hidden="true"><span></span><span></span><span></span></div>
+			<div class="window-title">Coding Interview Overview - Obsidian</div>
+			<div></div>
+		</header>
+
+		<div class="workspace">
+			<nav class="ribbon" aria-label="App ribbon">
+				<button class="icon-button tooltip" type="button" data-tooltip="Files" aria-label="Files"><svg class="icon"><use href="#i-folder"/></svg></button>
+				<button class="icon-button tooltip" type="button" data-tooltip="Search" aria-label="Search"><svg class="icon"><use href="#i-search"/></svg></button>
+				<button class="icon-button study-launcher tooltip" id="ribbon-study" type="button" data-tooltip="Study this note" aria-label="Study this note"><svg class="icon"><use href="#i-study"/></svg></button>
+				<div class="ribbon-spacer"></div>
+			</nav>
+
+			<aside class="sidebar">
+				<div class="sidebar-toolbar"><span>Files</span><svg class="icon small"><use href="#i-more"/></svg></div>
+				<div class="file-list">
+					<div class="file"><svg class="icon small"><use href="#i-file"/></svg><span>Claude for Execs</span></div>
+					<div class="file active"><svg class="icon small"><use href="#i-file"/></svg><span>Coding Interview Overview</span></div>
+					<div class="file"><svg class="icon small"><use href="#i-file"/></svg><span>System Design Interview Guide</span></div>
+					<div class="file"><svg class="icon small"><use href="#i-file"/></svg><span>Learning Notes</span></div>
+				</div>
+			</aside>
+
+			<section class="main-pane">
+				<div class="tabs"><div class="tab"><span>Coding Interview Overview</span><span class="close">&times;</span></div></div>
+				<header class="note-header">
+					<div class="note-nav">
+						<button class="icon-button" type="button" aria-label="Back"><svg class="icon small"><use href="#i-left"/></svg></button>
+						<button class="icon-button" type="button" aria-label="Forward"><svg class="icon small"><use href="#i-right"/></svg></button>
+					</div>
+					<div class="note-name">Coding Interview Overview</div>
+					<div class="note-actions">
+						<button class="icon-button tooltip" type="button" data-tooltip="Reading view" aria-label="Reading view"><svg class="icon small"><use href="#i-book"/></svg></button>
+						<button class="study-button" id="header-study" type="button"><svg class="icon small"><use href="#i-study"/></svg><span>Study</span></button>
+						<button class="icon-button" type="button" aria-label="More options"><svg class="icon small"><use href="#i-more"/></svg></button>
+					</div>
+				</header>
+
+				<div class="scroller" id="scroller">
+					<div class="study-bar" role="region" aria-label="Study mode controls">
+						<div class="study-bar-title"><svg class="icon"><use href="#i-study"/></svg><span>Study mode</span></div>
+						<div class="study-progress"><span id="progress-label">0 of 3 revealed</span><span class="progress-track"><span class="progress-fill" id="progress-fill"></span></span></div>
+						<div class="study-bar-spacer"></div>
+						<button class="bar-button" id="hide-all" type="button"><svg class="icon small"><use href="#i-eye-off"/></svg><span>Hide all</span></button>
+						<button class="bar-button exit" id="exit-study" type="button"><svg class="icon small"><use href="#i-x"/></svg><span>Exit</span></button>
+					</div>
+
+					<main class="note">
+						<h1 class="note-title">Coding Interview Overview</h1>
+						<section class="note-brief">
+							<div class="note-brief-label"><svg class="icon small"><use href="#i-study"/></svg> Note brief</div>
+							<p>A pattern map for coding interviews: identify the data shape, then choose the stored state that turns repeated work into a lookup, a single scan, or a smaller search space.</p>
+						</section>
+
+						<section class="study-row" data-section="prefix-sum">
+							<button class="cue-card" type="button" data-revealed="false" aria-pressed="false">
+								<span class="reveal-icon" aria-hidden="true"><svg class="icon small"><use href="#i-eye"/></svg></span>
+								<span class="cue-label">Question</span>
+								<span class="cue-question">How does a prefix-sum array turn repeated range queries into constant-time lookups?</span>
+								<span class="cue-divider"></span>
+								<span class="terms"><span class="term">cumulative totals</span><span class="term">range sum</span><span class="term">O(1) query</span></span>
+							</button>
+							<div class="section-content">
+								<h2>Prefix Sum</h2>
+								<div class="answer" contenteditable="true">
+									<ol><li>Build an array of cumulative totals from left to right.</li><li>Subtract two stored totals to answer a range query.</li><li>The preprocessing costs O(n), but each query costs O(1).</li></ol>
+								</div>
+							</div>
+						</section>
+
+						<section class="study-row" data-section="two-pointers">
+							<button class="cue-card" type="button" data-revealed="false" aria-pressed="false">
+								<span class="reveal-icon" aria-hidden="true"><svg class="icon small"><use href="#i-eye"/></svg></span>
+								<span class="cue-label">Question</span>
+								<span class="cue-question">When do two coordinated pointers remove the need to search every possible pair?</span>
+								<span class="cue-divider"></span>
+								<span class="terms"><span class="term">sorted input</span><span class="term">opposite ends</span><span class="term">monotonic move</span></span>
+							</button>
+							<div class="section-content">
+								<h2>Two Pointers</h2>
+								<div class="answer" contenteditable="true">
+									<p>Use two indices when each comparison tells you which side can be discarded. On sorted input, move the left pointer to increase a value or the right pointer to decrease it.</p>
+								</div>
+							</div>
+						</section>
+
+						<section class="study-row" data-section="monotonic-stack">
+							<button class="cue-card" type="button" data-revealed="false" aria-pressed="false">
+								<span class="reveal-icon" aria-hidden="true"><svg class="icon small"><use href="#i-eye"/></svg></span>
+								<span class="cue-label">Question</span>
+								<span class="cue-question">What information does a monotonic stack preserve while eliminating resolved candidates?</span>
+								<span class="cue-divider"></span>
+								<span class="terms"><span class="term">next greater</span><span class="term">unresolved indices</span><span class="term">single pass</span></span>
+							</button>
+							<div class="section-content">
+								<h2>Monotonic Stack</h2>
+								<div class="answer" contenteditable="true">
+									<p>The stack holds only candidates whose answer has not appeared yet. A new value resolves smaller candidates once, so every index is pushed and popped at most once.</p>
+								</div>
+							</div>
+						</section>
+					</main>
+				</div>
+			</section>
+		</div>
+
+		<footer class="statusbar">
+			<span>0 backlinks</span><span>286 words</span><span class="status-study"><svg class="icon small"><use href="#i-study"/></svg> Study mode</span><span>CueCraft: up to date</span>
+		</footer>
+	</div>
+
+	<div class="sr-only" aria-live="polite" id="announcement"></div>
+	<script>
+		const app = document.getElementById("app");
+		const studyButtons = [
+			document.getElementById("header-study"),
+			document.getElementById("ribbon-study")
+		];
+		const cards = Array.from(document.querySelectorAll(".cue-card"));
+		const progressLabel = document.getElementById("progress-label");
+		const progressFill = document.getElementById("progress-fill");
+		const announcement = document.getElementById("announcement");
+
+		function isStudying() {
+			return app.classList.contains("study-active");
+		}
+
+		function setRevealed(card, revealed) {
+			const row = card.closest(".study-row");
+			const answer = row.querySelector(".answer");
+			card.dataset.revealed = String(revealed);
+			card.setAttribute("aria-pressed", String(revealed));
+			card.setAttribute("aria-label", revealed ? "Hide answer" : "Reveal answer");
+			answer.classList.toggle("revealed", revealed);
+			answer.setAttribute("contenteditable", String(!isStudying() || revealed));
+		}
+
+		function updateProgress() {
+			const revealed = cards.filter((card) => card.dataset.revealed === "true").length;
+			progressLabel.textContent = `${revealed} of ${cards.length} revealed`;
+			progressFill.style.width = `${(revealed / cards.length) * 100}%`;
+		}
+
+		function hideAll(announce = true) {
+			cards.forEach((card) => setRevealed(card, false));
+			updateProgress();
+			if (announce) announcement.textContent = "All answers hidden.";
+		}
+
+		function enterStudy() {
+			app.classList.add("study-active");
+			hideAll(false);
+			studyButtons.forEach((button) => button.setAttribute("aria-pressed", "true"));
+			document.getElementById("ribbon-study").dataset.tooltip = "Exit Study Mode";
+			announcement.textContent = "Study Mode started. All answers are hidden.";
+		}
+
+		function exitStudy() {
+			app.classList.remove("study-active");
+			cards.forEach((card) => setRevealed(card, false));
+			updateProgress();
+			studyButtons.forEach((button) => button.setAttribute("aria-pressed", "false"));
+			document.getElementById("ribbon-study").dataset.tooltip = "Study this note";
+			announcement.textContent = "Study Mode ended.";
+		}
+
+		function toggleStudy() {
+			if (isStudying()) exitStudy();
+			else enterStudy();
+		}
+
+		studyButtons.forEach((button) => button.addEventListener("click", toggleStudy));
+		document.getElementById("exit-study").addEventListener("click", exitStudy);
+		document.getElementById("hide-all").addEventListener("click", () => hideAll(true));
+
+		cards.forEach((card) => {
+			card.addEventListener("click", () => {
+				if (!isStudying()) return;
+				const revealed = card.dataset.revealed !== "true";
+				setRevealed(card, revealed);
+				updateProgress();
+				announcement.textContent = revealed ? "Answer revealed." : "Answer hidden.";
+			});
+		});
+	</script>
+</body>
+</html>

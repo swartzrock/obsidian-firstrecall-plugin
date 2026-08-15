@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Ideation: Cornell View Removal</title>
+	<style>
+		:root {
+			color-scheme: light dark;
+			--page: #f4f6f5;
+			--surface: #ffffff;
+			--surface-soft: #eef6f4;
+			--ink: #1d2523;
+			--muted: #596663;
+			--line: #d5ddda;
+			--accent: #087f76;
+			--accent-soft: #dff2ee;
+			--accent-text: #075f59;
+			--gold-soft: #fff3cf;
+			--gold-text: #725500;
+			--rose-soft: #fbe9e8;
+			--rose-text: #823a36;
+			--shadow: 0 8px 24px rgba(31, 49, 45, 0.08);
+		}
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--page: #151a19;
+				--surface: #1e2523;
+				--surface-soft: #20312e;
+				--ink: #edf3f1;
+				--muted: #b7c3c0;
+				--line: #394541;
+				--accent: #62c6bb;
+				--accent-soft: #173d38;
+				--accent-text: #a4e3dc;
+				--gold-soft: #40391f;
+				--gold-text: #f7da7b;
+				--rose-soft: #412928;
+				--rose-text: #f2b6b1;
+				--shadow: none;
+			}
+		}
+		* { box-sizing: border-box; }
+		html { scroll-behavior: smooth; }
+		body {
+			margin: 0;
+			background: var(--page);
+			color: var(--ink);
+			font: 15px/1.58 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			letter-spacing: 0;
+		}
+		a { color: var(--accent); }
+		code {
+			padding: 0.12rem 0.3rem;
+			border-radius: 4px;
+			background: var(--surface-soft);
+			font: 0.88em ui-monospace, SFMono-Regular, Menlo, monospace;
+		}
+		.page {
+			width: min(94vw, 960px);
+			margin: 0 auto;
+			padding: 56px 0 72px;
+		}
+		header {
+			padding-bottom: 32px;
+			border-bottom: 1px solid var(--line);
+		}
+		.eyebrow {
+			margin: 0 0 10px;
+			color: var(--accent);
+			font-size: 0.76rem;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.08em;
+		}
+		h1, h2, h3 { line-height: 1.18; letter-spacing: 0; }
+		h1 { max-width: 18ch; margin: 0; font-size: clamp(2.1rem, 6vw, 3.35rem); }
+		h2 { margin: 0 0 18px; font-size: 1.55rem; }
+		h3 { margin: 0; font-size: 1.2rem; }
+		.lede {
+			max-width: 68ch;
+			margin: 18px 0 0;
+			color: var(--muted);
+			font-size: 1.05rem;
+		}
+		.meta {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 8px;
+			margin-top: 24px;
+		}
+		.chip {
+			display: inline-flex;
+			align-items: center;
+			min-height: 28px;
+			padding: 4px 10px;
+			border: 1px solid var(--line);
+			border-radius: 999px;
+			background: var(--surface);
+			color: var(--muted);
+			font-size: 0.78rem;
+		}
+		.chip.accent {
+			border-color: transparent;
+			background: var(--accent-soft);
+			color: var(--accent-text);
+			font-weight: 650;
+		}
+		section { padding-top: 44px; }
+		.prose { max-width: 72ch; }
+		.prose p { margin: 0 0 14px; }
+		.callout {
+			margin-top: 22px;
+			padding: 18px 20px;
+			border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line));
+			border-radius: 8px;
+			background: var(--accent-soft);
+			color: var(--accent-text);
+		}
+		.callout strong { color: inherit; }
+		.flow {
+			margin-top: 28px;
+			padding: 20px;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: var(--surface);
+			box-shadow: var(--shadow);
+		}
+		.flow svg { display: block; width: 100%; height: auto; }
+		.audit-wrap, .rejections-wrap { overflow-x: auto; }
+		table {
+			width: 100%;
+			border-collapse: collapse;
+			background: var(--surface);
+			font-size: 0.9rem;
+		}
+		th, td {
+			padding: 12px 14px;
+			border: 1px solid var(--line);
+			text-align: left;
+			vertical-align: top;
+		}
+		th { background: var(--surface-soft); font-size: 0.78rem; text-transform: uppercase; }
+		.decision-preserve { color: var(--accent-text); font-weight: 700; }
+		.decision-retire { color: var(--rose-text); font-weight: 700; }
+		.decision-decide { color: var(--gold-text); font-weight: 700; }
+		.axes {
+			display: grid;
+			grid-template-columns: repeat(5, minmax(0, 1fr));
+			gap: 8px;
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+		.axes li {
+			padding: 12px;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			background: var(--surface);
+			font-size: 0.84rem;
+			font-weight: 650;
+		}
+		.jump-list {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 8px;
+			margin: 0 0 22px;
+			padding: 0;
+			list-style: none;
+		}
+		.jump-list a {
+			display: block;
+			padding: 10px 12px;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			background: var(--surface);
+			color: var(--ink);
+			text-decoration: none;
+		}
+		.idea {
+			margin-bottom: 16px;
+			padding: 22px;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: var(--surface);
+			box-shadow: var(--shadow);
+		}
+		.idea-top {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 18px;
+		}
+		.rank {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 30px;
+			height: 30px;
+			margin-right: 10px;
+			border-radius: 6px;
+			background: var(--accent);
+			color: #fff;
+			font-weight: 800;
+		}
+		.idea-heading { display: flex; align-items: center; }
+		.metrics { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+		.metric {
+			padding: 4px 8px;
+			border-radius: 999px;
+			background: var(--surface-soft);
+			color: var(--muted);
+			font-size: 0.74rem;
+			white-space: nowrap;
+		}
+		.metric.confidence { background: var(--accent-soft); color: var(--accent-text); }
+		.metric.complexity { background: var(--gold-soft); color: var(--gold-text); }
+		.axis-label { margin: 14px 0 0; color: var(--accent); font-size: 0.76rem; font-weight: 750; text-transform: uppercase; }
+		.idea p { max-width: 72ch; margin: 10px 0 0; }
+		.fields {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 10px;
+			margin-top: 16px;
+		}
+		.field {
+			padding: 13px 14px;
+			border-radius: 6px;
+			background: var(--surface-soft);
+			color: var(--muted);
+			font-size: 0.88rem;
+		}
+		.field strong { display: block; margin-bottom: 4px; color: var(--ink); }
+		.sources {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 10px;
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+		.sources li {
+			padding: 12px 14px;
+			border: 1px solid var(--line);
+			border-radius: 6px;
+			background: var(--surface);
+		}
+		footer {
+			margin-top: 48px;
+			padding-top: 20px;
+			border-top: 1px solid var(--line);
+			color: var(--muted);
+			font-size: 0.78rem;
+		}
+		@media (max-width: 760px) {
+			.page { padding-top: 32px; }
+			.axes { grid-template-columns: 1fr 1fr; }
+			.jump-list, .fields, .sources { grid-template-columns: 1fr; }
+			.idea-top { display: block; }
+			.metrics { justify-content: flex-start; margin-top: 12px; }
+		}
+	</style>
+</head>
+<body>
+	<main class="page">
+		<header>
+			<p class="eyebrow">CueCraft product ideation</p>
+			<h1>Remove the view, keep the study loop</h1>
+			<p class="lede">Cornell View now adds navigation without adding enough value as a destination. The removal should preserve its answer-safe recall and cue-repair capabilities inside the note, while deliberately retiring pane-only presentation choices.</p>
+			<div class="meta" aria-label="Document metadata">
+				<span class="chip accent">Ideation</span>
+				<span class="chip">Date: <time datetime="2026-07-30">2026-07-30</time></span>
+				<span class="chip">Topic: cornell-view-removal</span>
+				<span class="chip">Mode: repo-grounded</span>
+				<span class="chip">Focus: remove Cornell View and audit unique capabilities</span>
+			</div>
+			<div class="flow" aria-label="Conceptual before and after">
+				<svg viewBox="0 0 880 190" role="img" aria-labelledby="flow-title flow-desc">
+					<title id="flow-title">Review changes from a destination to a note state</title>
+					<desc id="flow-desc">Today review leaves the note for Cornell View. The proposed direction keeps review, answer reveal, and cue repair in the current note.</desc>
+					<defs>
+						<marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+							<path d="M0 0L8 4L0 8Z" fill="#087f76"/>
+						</marker>
+					</defs>
+					<text x="20" y="28" font-size="13" font-weight="700" fill="currentColor">TODAY</text>
+					<rect x="20" y="45" width="170" height="58" rx="6" fill="none" stroke="#83918d"/>
+					<text x="105" y="79" text-anchor="middle" font-size="15" fill="currentColor">Current note</text>
+					<path d="M205 74H315" stroke="#823a36" stroke-width="2" marker-end="url(#arrow)"/>
+					<text x="260" y="62" text-anchor="middle" font-size="11" fill="#823a36">switch leaf</text>
+					<rect x="330" y="45" width="170" height="58" rx="6" fill="#fbe9e8" stroke="#b26b66"/>
+					<text x="415" y="79" text-anchor="middle" font-size="15" fill="#823a36">Cornell View</text>
+					<text x="20" y="136" font-size="13" font-weight="700" fill="#087f76">DIRECTION</text>
+					<rect x="120" y="119" width="260" height="56" rx="6" fill="#dff2ee" stroke="#087f76"/>
+					<text x="250" y="143" text-anchor="middle" font-size="15" font-weight="700" fill="#075f59">Current note + Review state</text>
+					<text x="250" y="162" text-anchor="middle" font-size="11" fill="#075f59">hide · reveal · reset</text>
+					<path d="M395 147H535" stroke="#087f76" stroke-width="2" marker-end="url(#arrow)"/>
+					<rect x="550" y="119" width="210" height="56" rx="6" fill="none" stroke="#087f76"/>
+					<text x="655" y="143" text-anchor="middle" font-size="14" fill="currentColor">Cue repair in place</text>
+					<text x="655" y="162" text-anchor="middle" font-size="11" fill="currentColor">retry · regenerate · refresh</text>
+				</svg>
+			</div>
+		</header>
+
+		<section id="grounding-context">
+			<p class="eyebrow">Grounding context</p>
+			<h2>What the code says today</h2>
+			<div class="prose">
+				<p>Editing View and Reading mode already render cues, Note Brief, and Section Lens from the same cached cue data and parsed Markdown sections. Cornell View is not a separate data model; it is a custom workspace destination that owns a few interactions and a large amount of presentation.</p>
+				<p>The decisive gap is Study Mode. <code>reviewThisNote()</code> navigates to Cornell because Cornell is currently the only surface with section-level reveal. Editing Study Mode blurs answers globally but has no reveal action, while Reading mode routes its review affordance back into Cornell.</p>
+				<p>There is no institutional learning corpus under <code>docs/solutions/</code>. The closest prior internal work is the July 2 settings split, which already separated editor-only, Cornell-only, and cross-surface settings and anticipated this retirement.</p>
+			</div>
+			<div class="callout"><strong>Core finding:</strong> Cornell View can go, but deleting it first would silently remove active recall and cue maintenance. The safe product move is capability migration followed by destination removal.</div>
+		</section>
+
+		<section id="capability-audit">
+			<p class="eyebrow">Capability audit</p>
+			<h2>What is unavailable without Cornell View</h2>
+			<div class="audit-wrap">
+				<table>
+					<thead>
+						<tr><th>Capability</th><th>Outside Cornell today</th><th>Disposition</th><th>Why</th></tr>
+					</thead>
+					<tbody>
+						<tr><td>Section-by-section answer reveal</td><td>Editing has global blur only; Reading has no reveal controls.</td><td class="decision-preserve">Preserve before removal</td><td>This is the active-recall loop, not pane decoration.</td></tr>
+						<tr><td>Reset / hide all answers</td><td>Promised in product docs; not exposed as a complete in-note interaction.</td><td class="decision-preserve">Preserve before removal</td><td>A fresh, repeatable pass needs a reset contract.</td></tr>
+						<tr><td>Per-cue retry and tone regeneration</td><td>Editing and Reading show failure/confidence state but no actions.</td><td class="decision-preserve">Preserve before removal</td><td>Visible failures must not become dead ends.</td></tr>
+						<tr><td>Refresh stale / retry failed batches</td><td>No equivalent contextual note UI was found.</td><td class="decision-preserve">Preserve behavior</td><td>The presentation can change, but recovery cannot disappear silently.</td></tr>
+						<tr><td>Hook focus and scroll</td><td>Editor has a hook rail layout, but not Cornell's focus/scroll behavior.</td><td class="decision-decide">Decide deliberately</td><td>Potentially useful, but evidence is not strong enough to block removal.</td></tr>
+						<tr><td>Two-column Cornell layout and style presets</td><td>Editor offers its own cue displays; Reading has inline cues.</td><td class="decision-retire">Retire</td><td>This is the redundant destination being removed.</td></tr>
+						<tr><td>Cue width and font size</td><td>Already used by Editing View.</td><td class="decision-preserve">Keep as Editing settings</td><td>These are shared despite Cornell naming.</td></tr>
+						<tr><td>Accent, border, compact chips, mobile fold, paper styles</td><td>Mostly Cornell-only refresh and rendering paths.</td><td class="decision-retire">Retire unless proven</td><td>Persisted keys can be harmlessly ignored without preserving dead UI.</td></tr>
+						<tr><td>Note Brief and Section Lens</td><td>Already available in Editing and Reading.</td><td class="decision-preserve">Keep shared</td><td>No migration is needed; guard against accidental deletion.</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section id="topic-axes">
+			<p class="eyebrow">Topic axes</p>
+			<h2>Removal surface</h2>
+			<ul class="axes">
+				<li>Study interaction and answer reveal</li>
+				<li>Cue maintenance and recovery</li>
+				<li>Presentation and settings</li>
+				<li>Entry points and compatibility</li>
+				<li>Runtime, tests, CSS, and docs</li>
+			</ul>
+		</section>
+
+		<section id="ranked-ideas">
+			<p class="eyebrow">Ranked ideas</p>
+			<h2>Strongest directions</h2>
+			<ul class="jump-list" aria-label="Ranked idea navigation">
+				<li><a href="#idea-1">1. Capabilities First, View Last</a></li>
+				<li><a href="#idea-2">2. Review Is a Note State</a></li>
+				<li><a href="#idea-3">3. Cue Repair at the Point of Doubt</a></li>
+				<li><a href="#idea-4">4. Delete Pane Cosmetics</a></li>
+				<li><a href="#idea-5">5. Preserve the Study Kernel</a></li>
+				<li><a href="#idea-6">6. Capability Matrix Gate</a></li>
+			</ul>
+
+			<article class="idea" id="idea-1">
+				<div class="idea-top">
+					<div class="idea-heading"><span class="rank">1</span><h3>Capabilities First, View Last</h3></div>
+					<div class="metrics"><span class="metric confidence">Confidence 94%</span><span class="metric complexity">Complexity High</span></div>
+				</div>
+				<p class="axis-label">Entry points, compatibility, and persisted state</p>
+				<p><strong>Description:</strong> Treat removal as a strangler sequence: make answer-safe in-note review and cue repair complete first, then remove Cornell-specific entry points and the functional custom view. The old pane does not survive as a compatibility shell; the replacement behavior must be real before the destination disappears.</p>
+				<div class="fields">
+					<div class="field"><strong>Basis</strong><span><code>direct:</code> Review currently opens Cornell because it is the only surface where Study Mode is visible, and cue repair actions are also Cornell-only. Removing the view first creates a verified capability gap.</span></div>
+					<div class="field"><strong>Rationale</strong><span>This is the highest-leverage direction because it makes every later deletion safe and keeps the product promise intact throughout the transition.</span></div>
+					<div class="field"><strong>Downsides</strong><span>There will be a short period of duplicated behavior and transition code. It requires disciplined scope so “temporary” Cornell paths do not linger.</span></div>
+					<div class="field"><strong>Meeting test</strong><span>Can Cornell View be disabled after the replacement capabilities ship without removing any study or repair action users can perform today?</span></div>
+				</div>
+			</article>
+
+			<article class="idea" id="idea-2">
+				<div class="idea-top">
+					<div class="idea-heading"><span class="rank">2</span><h3>Review Is a Note State, Not a Place</h3></div>
+					<div class="metrics"><span class="metric confidence">Confidence 92%</span><span class="metric complexity">Complexity High</span></div>
+				</div>
+				<p class="axis-label">Study interaction and answer reveal</p>
+				<p><strong>Description:</strong> Make <code>Review This Note</code> activate a transient study state in the note already on screen. Stable section IDs drive hide, reveal, and reset behavior; Editing and Reading can implement surface-specific adapters without changing Markdown or cue storage.</p>
+				<div class="fields">
+					<div class="field"><strong>Basis</strong><span><code>direct:</code> Cornell already stores revealed section IDs and computes hidden answer state. Product docs call for one-section reveal and hide-all reset. <code>external:</code> Anki, RemNote, and Cornell Notes Pro place recall in prompt/reveal state rather than destination switching.</span></div>
+					<div class="field"><strong>Rationale</strong><span>The learning interaction is the valuable part of Cornell View. Moving that state into the note removes the extra step and restores the intended recall loop.</span></div>
+					<div class="field"><strong>Downsides</strong><span>Editing and Reading have different DOM lifecycles, and editor decorations must remain viewport-conscious. Reading source masking is not yet proven locally.</span></div>
+					<div class="field"><strong>Meeting test</strong><span>Can a user begin a fresh pass, reveal one linked section, reset all answers, and finish review without changing leaves?</span></div>
+				</div>
+			</article>
+
+			<article class="idea" id="idea-3">
+				<div class="idea-top">
+					<div class="idea-heading"><span class="rank">3</span><h3>Cue Repair at the Point of Doubt</h3></div>
+					<div class="metrics"><span class="metric confidence">Confidence 90%</span><span class="metric complexity">Complexity Medium</span></div>
+				</div>
+				<p class="axis-label">Cue maintenance and recovery actions</p>
+				<p><strong>Description:</strong> Make failed and low-confidence cues actionable wherever they are rendered. Retry, tone regeneration, and stale-note recovery belong beside the questionable cue or current-note status, not in a separate workspace toolbar.</p>
+				<div class="fields">
+					<div class="field"><strong>Basis</strong><span><code>direct:</code> Cornell already implements low-confidence regeneration, tone selection, and retry. Editing and Reading render the same failure/confidence information but currently provide display-only messages.</span></div>
+					<div class="field"><strong>Rationale</strong><span>This preserves Cornell's most operational capability while making CueCraft more coherent: the place that identifies a problem also fixes it.</span></div>
+					<div class="field"><strong>Downsides</strong><span>Controls can clutter compact cue cards. Async regeneration currently refreshes surfaces broadly, so pending and focus behavior need care.</span></div>
+					<div class="field"><strong>Meeting test</strong><span>Can a user repair a failed or weak cue in place and see the replacement without opening another view?</span></div>
+				</div>
+			</article>
+
+			<article class="idea" id="idea-4">
+				<div class="idea-top">
+					<div class="idea-heading"><span class="rank">4</span><h3>Delete Pane Cosmetics to Clarify the Product</h3></div>
+					<div class="metrics"><span class="metric confidence">Confidence 88%</span><span class="metric complexity">Complexity Low</span></div>
+				</div>
+				<p class="axis-label">Presentation and settings migration</p>
+				<p><strong>Description:</strong> Preserve cue width and font size because Editing View already consumes them. Retire Cornell display mode, accent, border, compact-support, mobile-folding, and paper-style controls unless a native note surface demonstrates a concrete learning use.</p>
+				<div class="fields">
+					<div class="field"><strong>Basis</strong><span><code>direct:</code> Width and font are applied to editor cue elements. The remaining controls save through Cornell-specific refresh paths or style the dedicated pane.</span></div>
+					<div class="field"><strong>Rationale</strong><span>Removal should reduce configuration debt rather than relocate an obsolete view's design system into Editing settings.</span></div>
+					<div class="field"><strong>Downsides</strong><span>Users who customized Cornell's look will lose visible options. Release notes should distinguish removed presentation from preserved study behavior.</span></div>
+					<div class="field"><strong>Meeting test</strong><span>Can every retained appearance setting be demonstrated on an active Editing or Reading cue?</span></div>
+				</div>
+			</article>
+
+			<article class="idea" id="idea-5">
+				<div class="idea-top">
+					<div class="idea-heading"><span class="rank">5</span><h3>Delete the Adapter, Preserve the Study Kernel</h3></div>
+					<div class="metrics"><span class="metric confidence">Confidence 91%</span><span class="metric complexity">Complexity Medium</span></div>
+				</div>
+				<p class="axis-label">Runtime, test, CSS, and documentation cleanup</p>
+				<p><strong>Description:</strong> Remove the custom <code>ItemView</code>, leaf targeting, dedicated toolbar, Cornell refresh path, pane-only CSS, and destination documentation. Retain and gradually rename shared section identity, cue presentation, support formatting, regeneration, Note Brief, and Hook primitives used by native note surfaces.</p>
+				<div class="fields">
+					<div class="field"><strong>Basis</strong><span><code>direct:</code> Editing rendering imports Cornell-named support and style helpers, while dedicated view registration and pane CSS have separable ownership boundaries.</span></div>
+					<div class="field"><strong>Rationale</strong><span>The name “Cornell” currently mixes a removable transport adapter with shared product primitives. Separating them produces real simplification without collateral regressions.</span></div>
+					<div class="field"><strong>Downsides</strong><span>Renaming shared vocabulary can cause unnecessary churn if done all at once. The deletion boundary must be proven by imports and tests, not filenames.</span></div>
+					<div class="field"><strong>Meeting test</strong><span>Does the final runtime have no Cornell destination while every shared cue and review primitive still has an explicit owner?</span></div>
+				</div>
+			</article>
+
+			<article class="idea" id="idea-6">
+				<div class="idea-top">
+					<div class="idea-heading"><span class="rank">6</span><h3>Capability Matrix as the Removal Gate</h3></div>
+					<div class="metrics"><span class="metric confidence">Confidence 87%</span><span class="metric complexity">Complexity Medium</span></div>
+				</div>
+				<p class="axis-label">Runtime, test, CSS, and documentation cleanup</p>
+				<p><strong>Description:</strong> Define removal readiness by capability parity across Editing and Reading: reveal/reset, focus navigation if retained, low-confidence repair, failed retry, stale refresh, Note Brief, and Section Lens. Replace destination-shaped tests and docs only after capability-shaped coverage exists.</p>
+				<div class="fields">
+					<div class="field"><strong>Basis</strong><span><code>direct:</code> Current tests and docs are largely organized around Cornell surface behavior, while shared helpers and CSS serve multiple surfaces.</span></div>
+					<div class="field"><strong>Rationale</strong><span>A capability matrix prevents both failure modes: deleting shared behavior because it has a Cornell name, and preserving dead code because its tests still pass.</span></div>
+					<div class="field"><strong>Downsides</strong><span>It front-loads verification work before the visible deletion. A matrix can still miss layout and lifecycle regressions without manual Obsidian testing.</span></div>
+					<div class="field"><strong>Meeting test</strong><span>Can every retained capability point to a native surface test and every deleted module point to a retired product behavior?</span></div>
+				</div>
+			</article>
+		</section>
+
+		<section id="rejection-summary">
+			<p class="eyebrow">Rejection summary</p>
+			<h2>Ideas considered and cut</h2>
+			<div class="rejections-wrap">
+				<table>
+					<thead><tr><th>#</th><th>Idea</th><th>Reason rejected</th></tr></thead>
+					<tbody>
+						<tr><td>1</td><td>The Study Cursor</td><td>Focus/scroll exists, but next/previous navigation and automatic re-hide are ungrounded brainstorm variants.</td></tr>
+						<tr><td>2</td><td>Reading Mode Becomes the Exam Sheet</td><td>Duplicate of the broader in-note review direction; Reading source masking is not demonstrated locally.</td></tr>
+						<tr><td>3</td><td>A Per-Note Recovery Strip</td><td>Useful UI detail, but below the meeting-test floor and subordinate to local cue repair.</td></tr>
+						<tr><td>4</td><td>Repair While Review Continues</td><td>Current regeneration refreshes surfaces broadly and has no pending-state contract.</td></tr>
+						<tr><td>5</td><td>Hook Rail Becomes the Focus Lane</td><td>Current editor rail shifts layout but does not implement Cornell focus/scroll.</td></tr>
+						<tr><td>6</td><td>Functional Review Profiles</td><td>Preserves settings complexity without evidence that profiles improve study outcomes.</td></tr>
+						<tr><td>7</td><td>Every Entry Means Start Review Here</td><td><code>open-cornell-view</code> currently means non-study presentation; collapsing all intents loses semantics.</td></tr>
+						<tr><td>8</td><td>Commands as Redirectable Deep Links</td><td>Basis refuted: redirecting <code>open-cornell-view</code> to Study Mode is not intent-stable compatibility.</td></tr>
+						<tr><td>9</td><td>Self-Healing Workspace Tombstone</td><td>Basis refuted: restored Cornell leaves do not persist an associated note, so reliable restoration is unsupported.</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section id="references">
+			<p class="eyebrow">References</p>
+			<h2>Grounding sources</h2>
+			<ul class="sources">
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/cornell-view.ts">Cornell View runtime</a><br><span>Study Mode, cue actions, Hook focus, and custom-view lifecycle.</span></li>
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/main.ts">Plugin entry and review flows</a><br><span>Commands, ribbon, Reading integration, refresh, and regeneration.</span></li>
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/cue-extension.ts">Editing cue renderer</a><br><span>Shared cue presentation and current display-only failure states.</span></li>
+				<li><a href="https://github.com/swartzrock/obsidian-cuecraft-plugin/blob/main/src/settings.ts">Settings surface</a><br><span>Shared width/font and Cornell-only presentation controls.</span></li>
+				<li><a href="https://community.obsidian.md/plugins/cornell-notes-pro">Cornell Notes Pro</a><br><span>In-note blur, linked reveal, and reset precedent.</span></li>
+				<li><a href="https://docs.obsidian.md/Plugins/Editor/Decorations">Obsidian editor decorations</a><br><span>Official primitives and performance constraints for in-context rendering.</span></li>
+				<li><a href="https://docs.ankiweb.net/studying.html">Anki studying model</a><br><span>Prompt, deliberate reveal, and reset/review-state precedent.</span></li>
+				<li><a href="https://help.remnote.com/en/articles/6025481-creating-flashcards">RemNote flashcards in notes</a><br><span>Inline study and answer-context tradeoffs.</span></li>
+			</ul>
+		</section>
+
+		<footer class="composition-signal">Composed 2026-07-30T22:18:00-07:00 by ce-ideate from the user request to remove Cornell View and identify capabilities unavailable without it.</footer>
+	</main>
+</body>
+</html>
