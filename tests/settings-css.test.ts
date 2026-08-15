@@ -474,6 +474,16 @@ describe("settings CSS", () => {
 	});
 
 	it("styles non-collapsing Editing Study answers and sticky controls", () => {
+		expect(styles).not.toContain("body.cuecraft-study-active");
+		expect(ruleFor(".cuecraft-study-header-action")).toContain(
+			"display: inline-flex"
+		);
+		expect(ruleFor(".cuecraft-study-header-label")).toContain("display: inline");
+		expect(styles).toContain(
+			'.cuecraft-study-header-action[aria-disabled="true"]'
+		);
+		expect(styles).toContain(".cuecraft-study-ribbon.is-active");
+
 		const answerRule = ruleFor(
 			".markdown-source-view.mod-cm6 .cuecraft-editor-study-answer.is-hidden"
 		);

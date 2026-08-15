@@ -388,6 +388,8 @@ describe("Reading postprocessor Study plumbing", () => {
 			file: { path },
 			getMode: () => "preview",
 			containerEl: container,
+			editor: { getValue: () => NOTE },
+			addAction: () => dom.window.document.createElement("button"),
 		};
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			settings: {
@@ -400,6 +402,7 @@ describe("Reading postprocessor Study plumbing", () => {
 				workspace: {
 					getActiveFile: () => ({ path }),
 					getActiveViewOfType: () => view,
+					iterateAllLeaves: () => undefined,
 				},
 			},
 			cacheStore: { get: () => cache },

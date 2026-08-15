@@ -1317,17 +1317,6 @@
 	}
 }
 
-/* Study Mode: section bodies are softened so questions can be answered from memory.
- * The cue layer (questions/keywords) is exempt via .cuecraft-cue. */
-body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed) {
-	filter: blur(5px);
-	transition: filter 120ms ease-in-out;
-}
-
-body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover {
-	filter: blur(3px);
-}
-
 .cuecraft-cue,
 .cuecraft-note-brief,
 .cuecraft-brief,
@@ -2787,6 +2776,33 @@ html.cuecraft-editor-cue-width-resizing * {
 }
 
 /* Editing Study keeps source geometry intact so concealed text remains editable. */
+.cuecraft-study-header-action {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	width: auto;
+	padding-inline: 7px;
+}
+
+.cuecraft-study-header-label {
+	display: inline;
+	font-size: var(--font-ui-smaller);
+}
+
+.cuecraft-study-header-action[aria-disabled="true"],
+.cuecraft-study-ribbon[aria-disabled="true"] {
+	opacity: 0.55;
+}
+
+.cuecraft-study-header-action.is-active,
+.cuecraft-study-ribbon.is-active {
+	color: var(--interactive-accent);
+}
+
+.cuecraft-study-ribbon:not([aria-disabled="true"]) {
+	box-shadow: inset 2px 0 0 var(--interactive-accent);
+}
+
 .markdown-source-view.mod-cm6 .cuecraft-editor-study-answer.is-hidden {
 	filter: blur(4px);
 	opacity: 0.58;
