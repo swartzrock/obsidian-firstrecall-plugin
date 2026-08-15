@@ -470,6 +470,12 @@ export default class CueCraftPlugin extends Plugin {
 	private renderCues(file: TFile, forceLayout = false): void {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view || view.file?.path !== file.path) return;
+		this.renderCuesInView(view, forceLayout);
+	}
+
+	private renderCuesInView(view: MarkdownView, forceLayout = false): void {
+		const file = view.file;
+		if (!file) return;
 		const cm = (view.editor as unknown as { cm?: EditorView }).cm;
 		if (!cm) return;
 
@@ -591,10 +597,17 @@ export default class CueCraftPlugin extends Plugin {
 		return leftDockIsOpen(this.app.workspace.leftSplit);
 	}
 
-	/** Rerender CueCraft's CodeMirror cue surface for the active note. */
+	/** Rerender CueCraft's CodeMirror cue surface in every open Markdown editor. */
 	refreshEditorCues(forceLayout = false): void {
-		const active = this.app.workspace.getActiveFile();
-		if (active) this.renderCues(active, forceLayout);
+		const seen = new Set<EditorView>();
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view.getViewType() !== "markdown") return;
+			const view = leaf.view as MarkdownView;
+			const cm = (view.editor as unknown as { cm?: EditorView }).cm;
+			if (!cm || seen.has(cm)) return;
+			seen.add(cm);
+			this.renderCuesInView(view, forceLayout);
+		});
 	}
 
 	/** Force the active Reading view to rerender its post-processed cue surface. */

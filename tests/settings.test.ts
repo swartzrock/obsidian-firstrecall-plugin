@@ -977,17 +977,17 @@ describe("settings defaults", () => {
 
 	it("refreshes editor cues for Editing View display thumbnails", async () => {
 		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.editorCueDisplay = "cornell";
+		plugin.settings.editorCueDisplay = "inline-cues";
 
 		tab.display();
 		openSettingsCard(tab, "Editing View");
 		await clickThumbnail(
 			tab.containerEl,
 			"Editor cue display",
-			"inline-cues"
+			"cornell"
 		);
 
-		expect(plugin.settings.editorCueDisplay).toBe("inline-cues");
+		expect(plugin.settings.editorCueDisplay).toBe("cornell");
 		expect(settingText(tab.containerEl)).not.toContain("Rail card background");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
