@@ -92,10 +92,6 @@ import {
 	isEditorCueDisplay,
 } from "./editor-cue-display";
 import {
-	DEFAULT_EDITOR_HOOK_CARD_STYLE,
-	isEditorHookCardStyle,
-} from "./editor-hook-card-style";
-import {
 	selectExportableCues,
 	cuesToMarkdown,
 	cuesToAnki,
@@ -344,6 +340,8 @@ export default class CueCraftPlugin extends Plugin {
 			);
 		delete (settings as unknown as Record<string, unknown>)
 			.editorCueWidthPreset;
+		delete (settings as unknown as Record<string, unknown>)
+			.editorHookCardStyle;
 		settings.editorCueCustomWidthPx = normalizeEditorCueCustomWidthPx(
 			(rawSettings as { editorCueCustomWidthPx?: unknown })
 				.editorCueCustomWidthPx
@@ -351,6 +349,7 @@ export default class CueCraftPlugin extends Plugin {
 		for (const key of [
 			"showSectionLens",
 			"showNoteBrief",
+			"showRailSummary",
 			"showRailQuestions",
 			"showRailSupportTerms",
 		] as const) {
@@ -361,6 +360,13 @@ export default class CueCraftPlugin extends Plugin {
 				settings[key] = DEFAULT_SETTINGS[key];
 			}
 		}
+		if (
+			!settings.showRailSummary &&
+			!settings.showRailQuestions &&
+			!settings.showRailSupportTerms
+		) {
+			settings.showRailSummary = true;
+		}
 		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
 		}
@@ -370,13 +376,6 @@ export default class CueCraftPlugin extends Plugin {
 			)
 		) {
 			settings.editorCueDisplay = DEFAULT_EDITOR_CUE_DISPLAY;
-		}
-		if (
-			!isEditorHookCardStyle(
-				(settings as { editorHookCardStyle?: unknown }).editorHookCardStyle
-			)
-		) {
-			settings.editorHookCardStyle = DEFAULT_EDITOR_HOOK_CARD_STYLE;
 		}
 		if (
 			!isCornellDisplayMode(
@@ -471,6 +470,12 @@ export default class CueCraftPlugin extends Plugin {
 	private renderCues(file: TFile, forceLayout = false): void {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view || view.file?.path !== file.path) return;
+		this.renderCuesInView(view, forceLayout);
+	}
+
+	private renderCuesInView(view: MarkdownView, forceLayout = false): void {
+		const file = view.file;
+		if (!file) return;
 		const cm = (view.editor as unknown as { cm?: EditorView }).cm;
 		if (!cm) return;
 
@@ -479,7 +484,6 @@ export default class CueCraftPlugin extends Plugin {
 			cache && !this.visibility.isHidden(file.path)
 				? buildCueLineData(cache, parseSections(view.editor.getValue()), {
 						showKeywords: this.settings.generateKeywords,
-						showSectionLens: this.settings.showSectionLens,
 					})
 				: [];
 		cm.dom.dataset.cuecraftEditorDisplay = this.settings.editorCueDisplay;
@@ -500,9 +504,9 @@ export default class CueCraftPlugin extends Plugin {
 				display: this.settings.editorCueDisplay,
 				notePath: file.path,
 				collapseController: this.cueSectionCollapse,
+				showRailSummary: this.settings.showRailSummary,
 				showRailQuestions: this.settings.showRailQuestions,
 				showRailSupportTerms: this.settings.showRailSupportTerms,
-				editorHookCardStyle: this.settings.editorHookCardStyle,
 				cueColumnWidth: DEFAULT_EDITOR_CUE_WIDTH_PRESET,
 				cueFontSize: this.settings.cueFontSize,
 				editorCueWidthController: this.editorCueWidthController,
@@ -593,10 +597,17 @@ export default class CueCraftPlugin extends Plugin {
 		return leftDockIsOpen(this.app.workspace.leftSplit);
 	}
 
-	/** Rerender CueCraft's CodeMirror cue surface for the active note. */
+	/** Rerender CueCraft's CodeMirror cue surface in every open Markdown editor. */
 	refreshEditorCues(forceLayout = false): void {
-		const active = this.app.workspace.getActiveFile();
-		if (active) this.renderCues(active, forceLayout);
+		const seen = new Set<EditorView>();
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view.getViewType() !== "markdown") return;
+			const view = leaf.view as MarkdownView;
+			const cm = (view.editor as unknown as { cm?: EditorView }).cm;
+			if (!cm || seen.has(cm)) return;
+			seen.add(cm);
+			this.renderCuesInView(view, forceLayout);
+		});
 	}
 
 	/** Force the active Reading view to rerender its post-processed cue surface. */

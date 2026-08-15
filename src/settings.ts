@@ -43,7 +43,6 @@ import {
 	cueColumnWidthThumbnailOptions,
 	cueFontSizeThumbnailOptions,
 	editorCueDisplayThumbnailOptions,
-	editorHookCardStyleThumbnailOptions,
 	renderAppearanceThumbnailGroup,
 	type AppearanceThumbnailGroup,
 	type AppearanceThumbnailOption,
@@ -58,11 +57,6 @@ import {
 	editorCueDisplayOption,
 	type EditorCueDisplay,
 } from "./editor-cue-display";
-import {
-	DEFAULT_EDITOR_HOOK_CARD_STYLE,
-	editorHookCardStyleOption,
-	type EditorHookCardStyle,
-} from "./editor-hook-card-style";
 import {
 	cornellViewSettingsSummary,
 	editingViewSettingsSummary,
@@ -205,9 +199,9 @@ export interface CueCraftSettings {
 	summaryInstructionsOverride: string;
 	showSectionLens: boolean;
 	showNoteBrief: boolean;
+	showRailSummary: boolean;
 	showRailQuestions: boolean;
 	showRailSupportTerms: boolean;
-	editorHookCardStyle: EditorHookCardStyle;
 	renderInReadingMode: boolean;
 	readingModeDisplay: ReadingModeDisplay;
 	foldCueColumnOnMobile: boolean;
@@ -280,9 +274,9 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	summaryInstructionsOverride: "",
 	showSectionLens: DEFAULT_SHOW_SECTION_LENS,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
+	showRailSummary: true,
 	showRailQuestions: true,
 	showRailSupportTerms: true,
-	editorHookCardStyle: DEFAULT_EDITOR_HOOK_CARD_STYLE,
 	renderInReadingMode: true,
 	readingModeDisplay: DEFAULT_READING_MODE_DISPLAY,
 	foldCueColumnOnMobile: true,
@@ -1308,15 +1302,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		readingDisplaySetting.setDesc(readingDisplayDesc());
 
 		new Setting(containerEl)
-			.setName("Show Section Lens")
-			.setDesc("Show the generated key phrase and takeaway for each section.")
+			.setName("Show summaries in Reading mode")
+			.setDesc("Show each section's generated summary in Reading mode.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.showSectionLens)
 					.onChange(async (value) => {
 						this.plugin.settings.showSectionLens = value;
 						await this.plugin.saveSettings();
-						this.refreshReviewSurfaces();
+						this.plugin.refreshReadingModeSurface();
 					})
 			);
 
@@ -1365,22 +1359,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			className: "cuecraft-thumbnail-group-editor-display",
 		});
 
-		if (this.plugin.settings.editorCueDisplay === "anchored-card-rail") {
-			const railCardStyleDesc = (): string =>
-				editorHookCardStyleOption(this.plugin.settings.editorHookCardStyle)
-					.description;
-			this.renderEditingViewThumbnailSetting<EditorHookCardStyle>(containerEl, {
-				name: "Rail card background",
-				description: railCardStyleDesc,
-				options: editorHookCardStyleThumbnailOptions(),
-				value: () => this.plugin.settings.editorHookCardStyle,
-				setValue: (value) => {
-					this.plugin.settings.editorHookCardStyle = value;
-				},
-				className: "cuecraft-thumbnail-group-editor-card-style",
-			});
-		}
-
 		const editorFontDesc = (): string =>
 			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
 				?.description ?? "Font size of editor cue text.";
@@ -1395,31 +1373,61 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			className: "cuecraft-thumbnail-group-cue-font",
 		});
 
-		new Setting(containerEl)
-			.setName("Show cue questions")
-			.setDesc("Show cue questions inside Editing View cue displays.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.showRailQuestions)
-					.onChange(async (value) => {
-						this.plugin.settings.showRailQuestions = value;
-						await this.plugin.saveSettings();
-						this.plugin.refreshEditorCues();
-					})
-			);
+		this.renderEditingCueSectionsSetting(containerEl);
+	}
 
-		new Setting(containerEl)
-			.setName("Show support terms")
-			.setDesc("Show generated support terms inside Editing View cue displays.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.showRailSupportTerms)
-					.onChange(async (value) => {
-						this.plugin.settings.showRailSupportTerms = value;
-						await this.plugin.saveSettings();
-						this.plugin.refreshEditorCues();
-					})
+	private renderEditingCueSectionsSetting(containerEl: HTMLElement): void {
+		const setting = new Setting(containerEl)
+			.setName("Cue sections")
+			.setDesc(
+				"Choose what appears in Editing View cues. At least one is required."
 			);
+		setting.settingEl.addClass("cuecraft-cue-sections-setting");
+		setting.controlEl.setAttribute("role", "group");
+		setting.controlEl.setAttribute("aria-label", "Cue sections");
+
+		const options = [
+			{ id: "summary", label: "Summary", key: "showRailSummary" },
+			{ id: "question", label: "Question", key: "showRailQuestions" },
+			{ id: "terms", label: "Terms", key: "showRailSupportTerms" },
+		] as const;
+		const inputs = new Map<(typeof options)[number]["id"], HTMLInputElement>();
+
+		const syncRequiredState = (): void => {
+			const selected = options.filter(
+				(option) => inputs.get(option.id)?.checked
+			);
+			const requiredId = selected.length === 1 ? selected[0]?.id : undefined;
+			for (const option of options) {
+				const input = inputs.get(option.id);
+				if (!input) continue;
+				const isRequired = option.id === requiredId;
+				input.disabled = isRequired;
+				input.title = isRequired
+					? "At least one cue section is required."
+					: "";
+				input.parentElement?.classList.toggle("is-required", isRequired);
+			}
+		};
+
+		for (const option of options) {
+			const label = setting.controlEl.createEl("label", {
+				cls: "cuecraft-cue-section-option",
+			});
+			const input = label.createEl("input", {
+				attr: { type: "checkbox" },
+			}) as HTMLInputElement;
+			input.dataset.cueSection = option.id;
+			input.checked = this.plugin.settings[option.key];
+			label.createSpan({ text: option.label });
+			inputs.set(option.id, input);
+			this.plugin.registerDomEvent(input, "change", async () => {
+				this.plugin.settings[option.key] = input.checked;
+				syncRequiredState();
+				await this.saveEditingViewChange();
+			});
+		}
+		syncRequiredState();
 	}
 
 	private async saveEditingViewChange(afterSave?: () => void): Promise<void> {

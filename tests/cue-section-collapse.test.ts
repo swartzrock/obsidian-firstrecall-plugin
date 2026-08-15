@@ -131,7 +131,7 @@ describe("buildCueLineData collapse identity", () => {
 		expect(cue.sectionId).toBe(cache.sections[0].id);
 	});
 
-	it("rebuilds an anchored marker from the controller's live state", async () => {
+	it("rebuilds a Cornell marker from the controller's live state", async () => {
 		const markdown = "# Retrieval\nPractice recalling the answer.";
 		const sections = parseSections(markdown);
 		const cache = cacheFor(markdown);
@@ -140,7 +140,7 @@ describe("buildCueLineData collapse identity", () => {
 		const state = EditorState.create({ doc: markdown });
 		const payload = {
 			cues: [cue],
-			display: "anchored-card-rail" as const,
+			display: "cornell" as const,
 			notePath: "notes/retrieval.md",
 			collapseController: controller,
 		};

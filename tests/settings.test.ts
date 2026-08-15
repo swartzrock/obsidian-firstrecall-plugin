@@ -19,12 +19,6 @@ import {
 	isEditorCueDisplay,
 } from "../src/editor-cue-display";
 import {
-	DEFAULT_EDITOR_HOOK_CARD_STYLE,
-	EDITOR_HOOK_CARD_STYLE_OPTIONS,
-	editorHookCardStyleOption,
-	isEditorHookCardStyle,
-} from "../src/editor-hook-card-style";
-import {
 	DEFAULT_SHOW_NOTE_BRIEF,
 	DEFAULT_SHOW_SECTION_LENS,
 } from "../src/review-surfaces";
@@ -407,6 +401,21 @@ async function changeToggle(
 	await toggle.__onChange(value);
 }
 
+async function changeCueSection(
+	containerEl: HTMLElement,
+	section: "summary" | "question" | "terms",
+	value: boolean
+): Promise<void> {
+	const input = containerEl.querySelector<HTMLInputElement>(
+		`[data-cue-section="${section}"]`
+	);
+	if (!input) throw new Error(`Missing cue section checkbox: ${section}`);
+	input.checked = value;
+	input.dispatchEvent(new window.Event("change", { bubbles: true }));
+	await Promise.resolve();
+	await Promise.resolve();
+}
+
 async function changeTextArea(
 	containerEl: HTMLElement,
 	name: string,
@@ -560,6 +569,14 @@ describe("settings defaults", () => {
 		);
 	});
 
+	it("shows every Editing View cue section by default", async () => {
+		const { DEFAULT_SETTINGS } = await loadSettingsModule();
+
+		expect(DEFAULT_SETTINGS.showRailSummary).toBe(true);
+		expect(DEFAULT_SETTINGS.showRailQuestions).toBe(true);
+		expect(DEFAULT_SETTINGS.showRailSupportTerms).toBe(true);
+	});
+
 	it("defaults editor cue display to inline cues", () => {
 		expect(DEFAULT_EDITOR_CUE_DISPLAY).toBe("inline-cues");
 		expect(editorCueDisplayOption(DEFAULT_EDITOR_CUE_DISPLAY).label).toBe(
@@ -570,13 +587,6 @@ describe("settings defaults", () => {
 	it("defaults generated review surfaces to visible", () => {
 		expect(DEFAULT_SHOW_SECTION_LENS).toBe(true);
 		expect(DEFAULT_SHOW_NOTE_BRIEF).toBe(true);
-	});
-
-	it("defaults rail cards to the classic style", () => {
-		expect(DEFAULT_EDITOR_HOOK_CARD_STYLE).toBe("classic");
-		expect(editorHookCardStyleOption(DEFAULT_EDITOR_HOOK_CARD_STYLE).label).toBe(
-			"Classic warm/cool"
-		);
 	});
 
 	it("validates persisted Cornell display mode values", () => {
@@ -590,40 +600,32 @@ describe("settings defaults", () => {
 	it("validates persisted editor cue display values", () => {
 		expect(EDITOR_CUE_DISPLAY_OPTIONS.map((option) => option.id)).toEqual([
 			"cornell",
-			"cornell-exam-prep",
-			"cornell-minimal",
 			"inline-cues",
-			"anchored-card-rail",
 			"collapsed-tabs",
-			"threaded-margin-notes",
 			"active-section-composer",
 			"hook-minimap",
 		]);
 		expect(isEditorCueDisplay("cornell")).toBe(true);
-		expect(isEditorCueDisplay("cornell-exam-prep")).toBe(true);
-		expect(isEditorCueDisplay("cornell-minimal")).toBe(true);
 		expect(isEditorCueDisplay("inline-cues")).toBe(true);
-		expect(isEditorCueDisplay("anchored-card-rail")).toBe(true);
 		expect(isEditorCueDisplay("collapsed-tabs")).toBe(true);
-		expect(isEditorCueDisplay("threaded-margin-notes")).toBe(true);
 		expect(isEditorCueDisplay("active-section-composer")).toBe(true);
 		expect(isEditorCueDisplay("hook-minimap")).toBe(true);
-		for (const bad of ["", "hook", "classic", null, undefined, 1, {}]) {
+		for (const bad of [
+			"",
+			"hook",
+			"classic",
+			"cornell-exam-prep",
+			"cornell-minimal",
+			"anchored-card-rail",
+			"threaded-margin-notes",
+			null,
+			undefined,
+			1,
+			{},
+		]) {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}
 	});
-	it("validates persisted editor hook card style values", () => {
-		expect(EDITOR_HOOK_CARD_STYLE_OPTIONS.map((option) => option.id)).toEqual([
-			"classic",
-			"gradient",
-		]);
-		expect(isEditorHookCardStyle("classic")).toBe(true);
-		expect(isEditorHookCardStyle("gradient")).toBe(true);
-		for (const bad of ["", "orange", "soft", null, undefined, 1, {}]) {
-			expect(isEditorHookCardStyle(bad)).toBe(false);
-		}
-	});
-
 	it("summarizes Cornell View settings without editor-only state", () => {
 		const settings = {
 			cornellDisplayMode: "hook",
@@ -631,7 +633,7 @@ describe("settings defaults", () => {
 			cueColumnWidth: "wide",
 			cueFontSize: "large",
 			editorCueDisplay: "hook-minimap",
-			editorHookCardStyle: "gradient",
+			showRailSummary: false,
 			showRailQuestions: false,
 			showRailSupportTerms: false,
 		} as const;
@@ -640,7 +642,6 @@ describe("settings defaults", () => {
 			"Hook rail · Legal Pad · wide width · large text"
 		);
 		expect(cornellViewSettingsSummary(settings)).not.toContain("Hook minimap");
-		expect(cornellViewSettingsSummary(settings)).not.toContain("Soft gradients");
 		expect(cornellViewSettingsSummary(settings)).not.toContain("questions");
 	});
 
@@ -651,13 +652,13 @@ describe("settings defaults", () => {
 			cueColumnWidth: "narrow",
 			cueFontSize: "large",
 			editorCueDisplay: "hook-minimap",
-			editorHookCardStyle: "gradient",
+			showRailSummary: false,
 			showRailQuestions: false,
 			showRailSupportTerms: true,
 		} as const;
 
 		expect(editingViewSettingsSummary(settings)).toBe(
-			"Hook minimap · Soft gradients · large text · questions hidden · supports shown"
+			"Hook minimap · large text · Terms"
 		);
 		expect(editingViewSettingsSummary(settings)).not.toContain("Legal Pad");
 		expect(editingViewSettingsSummary(settings)).not.toContain("width");
@@ -904,21 +905,16 @@ describe("settings defaults", () => {
 		expect(text).not.toContain("Rail card background");
 		expect(text).not.toContain("Cue column width");
 		expect(text).toContain("Cue font size");
-		expect(text).toContain("Show cue questions");
-		expect(text).toContain("Show support terms");
+		expect(text).toContain("Cue sections");
+		expect(text).toContain("Summary");
+		expect(text).toContain("Question");
+		expect(text).toContain("Terms");
+		expect(text).toContain("At least one is required");
+		expect(text).not.toContain("Show cue questions");
+		expect(text).not.toContain("Show support terms");
 		expect(text).not.toContain("Cornell display mode");
 		expect(text).not.toContain("Cornell view style");
 		expect(text).not.toContain("Cue accent color");
-	});
-
-	it("shows Rail card background only for Anchored card rail", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.editorCueDisplay = "anchored-card-rail";
-
-		tab.display();
-		openSettingsCard(tab, "Editing View");
-
-		expect(settingText(tab.containerEl)).toContain("Rail card background");
 	});
 
 	it("keeps cross-view review controls in Note format", async () => {
@@ -930,7 +926,7 @@ describe("settings defaults", () => {
 		expect(text).toContain("Note format");
 		expect(text).toContain("Show CueCraft in Reading mode");
 		expect(text).toContain("Reading mode display");
-		expect(text).toContain("Show Section Lens");
+		expect(text).toContain("Show summaries in Reading mode");
 		expect(text).toContain("Show Note Brief");
 		expect(text).not.toContain("Show cue questions");
 		expect(text).not.toContain("Show support terms");
@@ -951,47 +947,48 @@ describe("settings defaults", () => {
 		expect(plugin.refreshCornellViews).toHaveBeenCalledTimes(1);
 	});
 
-	it("refreshes editor cues for Editing View controls", async () => {
+	it("keeps at least one compact Editing View cue section selected", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 
 		tab.display();
 		openSettingsCard(tab, "Editing View");
-		await changeToggle(tab.containerEl, "Show cue questions", false);
+		const group = tab.containerEl.querySelector<HTMLElement>(
+			'[data-setting-name="Cue sections"] .setting-item-control'
+		);
+		expect(group?.getAttribute("role")).toBe("group");
+		expect(group?.getAttribute("aria-label")).toBe("Cue sections");
 
+		await changeCueSection(tab.containerEl, "summary", false);
+		await changeCueSection(tab.containerEl, "question", false);
+
+		expect(plugin.settings.showRailSummary).toBe(false);
 		expect(plugin.settings.showRailQuestions).toBe(false);
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
+		expect(plugin.settings.showRailSupportTerms).toBe(true);
+		const terms = tab.containerEl.querySelector<HTMLInputElement>(
+			'[data-cue-section="terms"]'
+		);
+		expect(terms?.checked).toBe(true);
+		expect(terms?.disabled).toBe(true);
+		expect(terms?.title).toBe("At least one cue section is required.");
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
+		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
 	});
 
-	it("refreshes editor cues for Editing View display and card-style thumbnails", async () => {
+	it("refreshes editor cues for Editing View display thumbnails", async () => {
 		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.editorCueDisplay = "anchored-card-rail";
+		plugin.settings.editorCueDisplay = "inline-cues";
 
 		tab.display();
 		openSettingsCard(tab, "Editing View");
 		await clickThumbnail(
 			tab.containerEl,
 			"Editor cue display",
-			"threaded-margin-notes"
+			"cornell"
 		);
 
-		expect(plugin.settings.editorCueDisplay).toBe("threaded-margin-notes");
+		expect(plugin.settings.editorCueDisplay).toBe("cornell");
 		expect(settingText(tab.containerEl)).not.toContain("Rail card background");
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
-	});
-
-	it("refreshes editor cues for Anchored card rail background thumbnails", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.editorCueDisplay = "anchored-card-rail";
-
-		tab.display();
-		openSettingsCard(tab, "Editing View");
-		await clickThumbnail(tab.containerEl, "Rail card background", "gradient");
-
-		expect(plugin.settings.editorHookCardStyle).toBe("gradient");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();

@@ -4,10 +4,6 @@ import {
 } from "./short-form-hook";
 import type { CueLineData, Confidence } from "./cue-extension";
 import type { EditorCueDisplay } from "./editor-cue-display";
-import {
-	DEFAULT_EDITOR_HOOK_CARD_STYLE,
-	type EditorHookCardStyle,
-} from "./editor-hook-card-style";
 import type { SectionLens } from "./schemas";
 
 export type EditorHookCardKind = "hook" | "failed";
@@ -15,10 +11,9 @@ export type EditorHookCardState = "current" | "upcoming";
 export type EditorHookTone = "warm" | "cool";
 
 export interface EditorHookCardOptions {
+	showSummary?: boolean;
 	showQuestion?: boolean;
 	showSupportTerms?: boolean;
-	compactForSpace?: boolean;
-	cardStyle?: EditorHookCardStyle;
 }
 
 export interface EditorHookCard {
@@ -36,16 +31,9 @@ export interface EditorHookCard {
 	state: EditorHookCardState;
 	tone: EditorHookTone;
 	gradientIndex: number;
+	showSummary: boolean;
 	showQuestion: boolean;
 	showSupportTerms: boolean;
-	compactForSpace: boolean;
-	cardStyle: EditorHookCardStyle;
-}
-
-export function editorHookTitleDensity(
-	cue: CueLineData
-): EditorHookCard["titleDensity"] {
-	return shortFormHookTitleDensity(editorHookTitle(cue));
 }
 
 export function buildEditorHookCard(
@@ -57,6 +45,7 @@ export function buildEditorHookCard(
 ): EditorHookCard {
 	const failed = Boolean(cue.error);
 	const hookTitle = editorHookTitle(cue);
+	const showSummary = options.showSummary ?? true;
 	const showQuestion = options.showQuestion ?? true;
 	const showSupportTerms = options.showSupportTerms ?? true;
 	return {
@@ -74,10 +63,9 @@ export function buildEditorHookCard(
 		state,
 		tone: index % 2 === 0 ? "warm" : "cool",
 		gradientIndex: index % 3,
+		showSummary,
 		showQuestion,
 		showSupportTerms,
-		compactForSpace: options.compactForSpace ?? false,
-		cardStyle: options.cardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
 	};
 }
 

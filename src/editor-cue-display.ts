@@ -1,11 +1,7 @@
 export type EditorCueDisplay =
 	| "cornell"
-	| "cornell-exam-prep"
-	| "cornell-minimal"
 	| "inline-cues"
-	| "anchored-card-rail"
 	| "collapsed-tabs"
-	| "threaded-margin-notes"
 	| "active-section-composer"
 	| "hook-minimap";
 
@@ -24,34 +20,14 @@ export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
 		description: "Show Cornell-style cue cards beside their editor sections.",
 	},
 	{
-		id: "cornell-exam-prep",
-		label: "Cornell Exam Prep",
-		description: "Show boxed Cornell cue cards tuned for review.",
-	},
-	{
-		id: "cornell-minimal",
-		label: "Cornell Minimal",
-		description: "Show quiet Cornell cues that stay out of the way.",
-	},
-	{
 		id: "inline-cues",
 		label: "Inline cues",
 		description: "Show cached cues beneath their headings in the editor.",
 	},
 	{
-		id: "anchored-card-rail",
-		label: "Anchored card rail",
-		description: "Show colorful hook cards beside their editor sections.",
-	},
-	{
 		id: "collapsed-tabs",
 		label: "Collapsed color tabs",
 		description: "Show compact cue tabs with one expanded hook peek.",
-	},
-	{
-		id: "threaded-margin-notes",
-		label: "Threaded margin notes",
-		description: "Show calmer hook notes connected by a margin thread.",
 	},
 	{
 		id: "active-section-composer",
