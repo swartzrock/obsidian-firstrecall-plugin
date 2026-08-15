@@ -1715,6 +1715,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	display: none;
 }
 
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-toggle[data-section="terms"][aria-expanded="false"] {
+	padding-bottom: 0.65em;
+}
+
 .cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-body {
 	display: grid;
 	grid-template-rows: 1fr;

@@ -257,6 +257,10 @@ describe("settings CSS", () => {
 			`${root} .cuecraft-editor-hook-section-preview[hidden]`
 		);
 		expect(hiddenPreviewRule).toContain("display: none");
+		const collapsedTermsRule = ruleFor(
+			`${root} .cuecraft-editor-hook-section-toggle[data-section="terms"][aria-expanded="false"]`
+		);
+		expect(collapsedTermsRule).toContain("padding-bottom: 0.65em");
 
 		const focusRule = ruleFor(
 			`${root} .cuecraft-editor-hook-section-toggle:focus-visible`
