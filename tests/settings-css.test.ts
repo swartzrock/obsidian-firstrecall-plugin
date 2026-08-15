@@ -472,4 +472,28 @@ describe("settings CSS", () => {
 			"transform: translateX(calc(-100% + 1rem))"
 		);
 	});
+
+	it("styles non-collapsing Editing Study answers and sticky controls", () => {
+		const answerRule = ruleFor(
+			".markdown-source-view.mod-cm6 .cuecraft-editor-study-answer.is-hidden"
+		);
+		expect(answerRule).toContain("filter: blur(4px)");
+		expect(answerRule).toContain("cursor: text");
+		expect(answerRule).not.toContain("display: none");
+		expect(answerRule).not.toContain("visibility: hidden");
+		expect(answerRule).not.toContain("max-height");
+
+		const controlsRule = ruleFor(".cuecraft-editor-study-controls");
+		expect(controlsRule).toContain("position: sticky");
+		expect(controlsRule).toContain("top: 8px");
+		expect(controlsRule).toContain("z-index: 10");
+		expect(controlsRule).toContain("background: var(--background-primary)");
+		expect(controlsRule).toContain(
+			"border: 1px solid var(--background-modifier-border)"
+		);
+
+		const cueRule = ruleFor(".cuecraft-editor-study-cue");
+		expect(cueRule).toContain("cursor: pointer");
+		expect(styles).toContain(".cuecraft-editor-study-cue:focus-visible");
+	});
 });

@@ -2769,6 +2769,59 @@ html.cuecraft-editor-cue-width-resizing * {
 	}
 }
 
+/* Editing Study keeps source geometry intact so concealed text remains editable. */
+.markdown-source-view.mod-cm6 .cuecraft-editor-study-answer.is-hidden {
+	filter: blur(4px);
+	opacity: 0.58;
+	cursor: text;
+	user-select: none;
+	transition:
+		filter 120ms ease,
+		opacity 120ms ease;
+}
+
+.cuecraft-editor-study-cue {
+	cursor: pointer;
+}
+
+.cuecraft-editor-study-cue[data-study-state="revealed"] {
+	border-color: var(--interactive-accent);
+}
+
+.cuecraft-editor-study-cue:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+}
+
+.cuecraft-editor-study-controls {
+	position: sticky;
+	top: 8px;
+	z-index: 10;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	width: max-content;
+	max-width: calc(100% - 16px);
+	margin: 8px 8px 8px auto;
+	padding: 5px 6px 5px 10px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	box-shadow: var(--shadow-s);
+}
+
+.cuecraft-editor-study-progress {
+	white-space: nowrap;
+}
+
+.cuecraft-editor-study-controls button {
+	min-height: 26px;
+	padding: 2px 8px;
+	font-size: var(--font-ui-smaller);
+}
+
 /* Study Mode: note-side answers blur until the cue is revealed. */
 .cuecraft-cornell-body.is-hidden {
 	filter: blur(5px);
