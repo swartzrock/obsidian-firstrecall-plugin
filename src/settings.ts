@@ -48,11 +48,6 @@ import {
 	type AppearanceThumbnailOption,
 } from "./appearance-thumbnail-controls";
 import {
-	DEFAULT_READING_MODE_DISPLAY,
-	READING_MODE_DISPLAY_OPTIONS,
-	type ReadingModeDisplay,
-} from "./reading-cues";
-import {
 	DEFAULT_EDITOR_CUE_DISPLAY,
 	editorCueDisplayOption,
 	type EditorCueDisplay,
@@ -203,7 +198,6 @@ export interface CueCraftSettings {
 	showRailQuestions: boolean;
 	showRailSupportTerms: boolean;
 	renderInReadingMode: boolean;
-	readingModeDisplay: ReadingModeDisplay;
 	foldCueColumnOnMobile: boolean;
 	cueAccent: CueAccent;
 	showCueBorder: boolean;
@@ -278,7 +272,6 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	showRailQuestions: true,
 	showRailSupportTerms: true,
 	renderInReadingMode: true,
-	readingModeDisplay: DEFAULT_READING_MODE_DISPLAY,
 	foldCueColumnOnMobile: true,
 	cueAccent: DEFAULT_CUE_ACCENT,
 	showCueBorder: true,
@@ -1278,28 +1271,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						this.plugin.refreshReadingModeSurface();
 					})
 			);
-
-		const readingDisplaySetting = new Setting(containerEl)
-			.setName("Reading mode display")
-			.addDropdown((dd) => {
-				for (const option of READING_MODE_DISPLAY_OPTIONS) {
-					dd.addOption(option.id, option.label);
-				}
-				dd.setValue(this.plugin.settings.readingModeDisplay).onChange(
-					async (value) => {
-						this.plugin.settings.readingModeDisplay =
-							value as ReadingModeDisplay;
-						await this.plugin.saveSettings();
-						readingDisplaySetting.setDesc(readingDisplayDesc());
-						this.plugin.refreshReadingModeSurface();
-					}
-				);
-			});
-		const readingDisplayDesc = (): string =>
-			READING_MODE_DISPLAY_OPTIONS.find(
-				(option) => option.id === this.plugin.settings.readingModeDisplay
-			)?.description ?? "Choose how CueCraft appears in Reading mode.";
-		readingDisplaySetting.setDesc(readingDisplayDesc());
 
 		new Setting(containerEl)
 			.setName("Show summaries in Reading mode")

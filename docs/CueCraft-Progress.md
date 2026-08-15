@@ -90,19 +90,18 @@ Each item links to the PR that delivered it.
   (shipped with #27).
 
 ### V1.5 — Reading & Review (shipped)
-- **Reading-mode cues** — a Markdown post-processor inserts cached cues beneath their headings in
-  reading (preview) view, reusing the same `buildCueLineData` resolution as the editor. Pure
-  `reading-cues.ts` map (`buildReadingCueMap`) with unit tests; respects per-note hide (#32).
-- **Reading-mode Cornell entry.** Reading view now shows one compact `Review in Cornell` launcher
-  near the top of notes with usable cached cues. It stays hidden when cues are missing, hidden, or
-  unusable, and routes through the existing `reviewThisNote` flow so Cornell Study Mode behavior
-  remains centralized instead of splitting review logic across two entry points.
-- **Reading-mode display options.** The Note format settings now expose `Reading mode display`
-  choices for `Inline cues` and `Review button`, with the compact review button as the default.
-  The full Cornell layout is surfaced as a first-class destination through a dedicated ribbon button
-  and the `Open Active Note in Cornell View` command, so edit mode can jump straight to the polished
-  Cornell view without entering Study Mode. Study Mode, reveal state, regenerate controls, and the
-  display toolbar remain anchored in the dedicated Cornell view.
+- **Reading-mode cues** — Reading view has one fixed presentation: cached cues appear inline beneath
+  their matching headings when the global Reading toggle, per-note visibility, and cache gates allow.
+  The obsolete display preference and compact `Review in Cornell` launcher are removed.
+- **In-note Reading Study projection** — an active same-note Study session temporarily shows its
+  required inline cues even when saved Reading visibility gates suppress them, without changing those
+  settings. Only fresh, exact section matches can reveal answers or count toward progress; failed and
+  fallback cues stay visible and noninteractive. Confidently owned answer DOM is concealed with
+  accessible state, while ambiguous rendered nodes fail open. One sticky progress / Hide all / Exit
+  host belongs to the active Reading container and is cleaned up with the projection.
+- **Explicit Cornell access remains separate.** The dedicated Cornell ribbon and `Open Active Note in
+  Cornell View` command remain available; in-note Study entry and lifecycle convergence are tracked in
+  the following implementation unit.
 - **Softer Cornell Classic styling.** Cornell Classic now uses quieter theme-border rules for the
   page title, cue-column divider, and summary boundary, plus more intentional cue-rail spacing and
   softer cue cards. This was implemented as a direct refinement of the existing Classic preset, so
@@ -130,7 +129,7 @@ Each item links to the PR that delivered it.
   `setHeading()` sections — **AI model / Cue generation / Note format / Appearance / Study Mode** —
   mirroring the v0 prototype in PR #33. New persisted controls: Auto-generate on save, Cue density
   (slider, Minimal/Balanced/Thorough), Question style (Recall/Socratic/Exam-style), Generate cue
-  supports, Auto-write section summary, Show CueCraft in Reading mode, Reading mode display, Fold cue
+  supports, Auto-write section summary, Show CueCraft in Reading mode, Fold cue
   column on mobile, Cue accent color (swatches), Show cue column border, Compact supports. Provider API-key fields gained a show/hide
   eye + a presence badge. New single-source-of-truth modules `cue-generation.ts` (question style +
   density) and `cornell-accent.ts` (accent → CSS class), with unit tests. The existing multi-provider
@@ -145,7 +144,8 @@ Each item links to the PR that delivered it.
 - **Settings controls wired into generation/rendering.** Cue density and question style now feed
   shared prompt guidance for Ollama and all AI SDK providers; "Auto-write section summary" skips
   summary generation when off. "Generate cue supports" hides support terms consistently in editor,
-  Cornell, and Reading mode; "Show CueCraft in Reading mode" gates the post-processor; "Show cue column
+  Cornell, and Reading mode; "Show CueCraft in Reading mode" gates inline cues outside an active
+  same-note Study session; "Show cue column
   border", "Compact supports", and "Fold cue column on mobile" now apply CSS classes in Cornell view.
   "Auto-generate on save" now debounces Markdown file modifications and refreshes cues when enabled.
 - **Anthropic picker refinement.** The Anthropic model setting now supports account-fetched Claude
@@ -340,16 +340,16 @@ For the OpenRouter and searchable model-picker final QA slice:
 7. Type a custom model ID, close and reopen settings, and confirm the custom ID persists.
 8. Generate cues for a short note and spot-check one existing direct provider to confirm the picker and connection flow still work.
 
-For the Reading-mode display and Cornell entry slice:
+For inline Reading cues and the in-note Study projection:
 
 1. Reload CueCraft in Obsidian so the latest code is active.
-2. Open CueCraft settings, go to Note format, and confirm `Reading mode display` defaults to `Review button`.
-3. Open Reading mode on a note with usable cached cues and confirm only the compact `Review in Cornell` button appears.
-4. Change the display to `Inline cues`, reload Reading mode, and confirm cue cards appear beneath headings without the review button.
-5. From editing mode, click the new Cornell ribbon button and confirm the active note opens in the dedicated Cornell view without entering Study Mode.
-6. Run the `Open Active Note in Cornell View` command from the command palette and confirm it uses the active note.
-7. Click `Review in Cornell` from Reading mode and confirm it still opens the dedicated Cornell view with Study Mode/reveal behavior.
-8. Hide cues for the note or use a note with no cache and confirm no Reading-mode surface appears.
+2. Open CueCraft settings, go to Note format, and confirm there is no Reading display dropdown.
+3. Open Reading mode on a visible note with cached cues and confirm cue cards appear inline beneath matching headings with no compact Cornell launcher.
+4. Disable Reading cues or hide cues for the note and confirm the inline cues disappear outside Study.
+5. Start a same-note Study session after the entry/lifecycle unit lands; confirm required inline cues return without changing either saved visibility control.
+6. Reveal sections independently by click, Enter, and Space; confirm failed or fallback cues do not reveal content or affect progress.
+7. Confirm progress, Hide all, and Exit stay available in one sticky control row and Exit restores concealed content and accessibility semantics.
+8. Spot-check lists, code blocks, tables, callouts, and embeds; any ambiguous body mapping must remain visible.
 
 For the Anthropic connection-copy slice:
 

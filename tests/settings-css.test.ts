@@ -496,4 +496,22 @@ describe("settings CSS", () => {
 		expect(cueRule).toContain("cursor: pointer");
 		expect(styles).toContain(".cuecraft-editor-study-cue:focus-visible");
 	});
+
+	it("styles inline-only Reading Study without the Cornell review launcher", () => {
+		const answerRule = ruleFor(
+			".cuecraft-reading-study-answer.is-hidden"
+		);
+		expect(answerRule).toContain("visibility: hidden");
+		expect(answerRule).not.toContain("display: none");
+
+		const controlsRule = ruleFor(".cuecraft-reading-study-controls");
+		expect(controlsRule).toContain("position: sticky");
+		expect(controlsRule).toContain("top: 8px");
+		expect(controlsRule).toContain("z-index: 10");
+
+		const cueRule = ruleFor(".cuecraft-reading-study-cue");
+		expect(cueRule).toContain("cursor: pointer");
+		expect(styles).toContain(".cuecraft-reading-study-cue:focus-visible");
+		expect(styles).not.toContain(".cuecraft-reading-review");
+	});
 });

@@ -7,7 +7,6 @@ import {
 	Plugin,
 	TFile,
 	requestUrl,
-	setIcon,
 	type MarkdownFileInfo,
 	type MarkdownPostProcessorContext,
 } from "obsidian";
@@ -79,10 +78,18 @@ import {
 } from "./cue-extension";
 import {
 	buildReadingCueMap,
-	isReadingModeDisplay,
-	readingModeDisplayState,
+	projectReadingStudyBlock,
+	readingCueDisplayState,
 	readingNoteBriefDisplayState,
+	removeReadingStudyControls,
+	restoreReadingStudyBlock,
+	syncReadingStudyControls,
+	type ReadingStudyProjection,
 } from "./reading-cues";
+import {
+	resolveStudySections,
+	StudySessionController,
+} from "./study-session";
 import {
 	DEFAULT_CORNELL_DISPLAY_MODE,
 	isCornellDisplayMode,
@@ -155,6 +162,7 @@ export default class CueCraftPlugin extends Plugin {
 	private ribbonEl: HTMLElement | null = null;
 	private cornellRibbonEl: HTMLElement | null = null;
 	private studyMode = false;
+	private readonly studySession = new StudySessionController();
 	private currentRun: AbortController | null = null;
 	private autoGenerateTimers = new Map<string, number>();
 	private studyAreaMaintenanceTimers = new Map<string, number>();
@@ -342,6 +350,8 @@ export default class CueCraftPlugin extends Plugin {
 			.editorCueWidthPreset;
 		delete (settings as unknown as Record<string, unknown>)
 			.editorHookCardStyle;
+		delete (settings as unknown as Record<string, unknown>)
+			.readingModeDisplay;
 		settings.editorCueCustomWidthPx = normalizeEditorCueCustomWidthPx(
 			(rawSettings as { editorCueCustomWidthPx?: unknown })
 				.editorCueCustomWidthPx
@@ -366,9 +376,6 @@ export default class CueCraftPlugin extends Plugin {
 			!settings.showRailSupportTerms
 		) {
 			settings.showRailSummary = true;
-		}
-		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
-			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
 		}
 		if (
 			!isEditorCueDisplay(
@@ -967,34 +974,44 @@ export default class CueCraftPlugin extends Plugin {
 	): void {
 		const path = ctx.sourcePath;
 		if (!path) return;
+		restoreReadingStudyBlock(el);
 		const cache = this.cacheStore.get(path);
 		const isHidden = this.visibility.isHidden(path);
-		if (!this.settings.renderInReadingMode || !cache || isHidden) return;
-		const displayState = readingModeDisplayState({
-			display: this.settings.readingModeDisplay,
+		const headings = Array.from(
+			el.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")
+		);
+		const firstInfo = headings
+			.map((heading) => ctx.getSectionInfo(heading))
+			.find((info) => info !== null);
+		const study = cache
+			? this.readingStudyProjection(path, firstInfo?.text, cache)
+			: null;
+		const displayState = readingCueDisplayState({
 			renderInReadingMode: this.settings.renderInReadingMode,
-			hasCache: true,
-			hasUsableCues: hasUsableCues(cache),
+			hasCache: Boolean(cache),
 			isHidden,
+			studyActive: Boolean(study?.snapshot.active),
 		});
 		const noteBriefState = readingNoteBriefDisplayState({
 			renderInReadingMode: this.settings.renderInReadingMode,
 			showNoteBrief: this.settings.showNoteBrief,
-			hasCache: true,
-			hasNoteBrief: Boolean(cache.noteBrief),
+			hasCache: Boolean(cache),
+			hasNoteBrief: Boolean(cache?.noteBrief),
 			isHidden,
 		});
-		if (
-			!displayState.showInlineCues &&
-			!displayState.showReviewButton &&
-			!noteBriefState.showNoteBrief
-		) {
+		if (!displayState.showInlineCues) {
+			for (const cue of el.querySelectorAll(".cuecraft-cue-reading")) {
+				cue.remove();
+			}
+		}
+		const readingContainer = this.activeReadingContainer(path, el);
+		if (readingContainer) {
+			syncReadingStudyControls(readingContainer, study);
+		}
+		if (!cache || (!displayState.showInlineCues && !noteBriefState.showNoteBrief)) {
 			return;
 		}
 
-		const headings = Array.from(
-			el.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6")
-		);
 		for (const heading of headings) {
 			const info = ctx.getSectionInfo(heading);
 			if (!info) continue;
@@ -1002,22 +1019,94 @@ export default class CueCraftPlugin extends Plugin {
 			if (noteBriefState.showNoteBrief) {
 				this.maybeInsertReadingNoteBriefEl(cache, map, info, heading);
 			}
-			if (displayState.showReviewButton) {
-				this.maybeInsertReadingReviewEl(path, map, info, heading);
-			}
 			if (!displayState.showInlineCues) {
 				continue;
 			}
 			const cue = map.get(info.lineStart + 1);
 			if (!cue) continue;
-			// Guard against the post-processor running twice over the same node.
 			const next = heading.nextElementSibling;
-			if (next && next.hasClass("cuecraft-cue")) continue;
-			heading.insertAdjacentElement(
-				"afterend",
-				this.buildReadingCueEl(cue)
+			if (
+				next?.hasClass("cuecraft-cue-reading") &&
+				(next as HTMLElement).dataset.cuecraftSectionId === cue.sectionId
+			) {
+				continue;
+			}
+			heading.insertAdjacentElement("afterend", this.buildReadingCueEl(cue));
+		}
+
+		projectReadingStudyBlock(
+			el,
+			(element) => {
+				const info = ctx.getSectionInfo(element);
+				return info
+					? { lineStart: info.lineStart, lineEnd: info.lineEnd }
+					: null;
+			},
+			study
+		);
+	}
+
+	private readingStudyProjection(
+		path: string,
+		markdown: string | undefined,
+		cache: NoteCache
+	): ReadingStudyProjection | null {
+		let snapshot = this.studySession.snapshot();
+		if (!snapshot.active || snapshot.path !== path) return null;
+		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const source =
+			activeView?.file?.path === path && activeView.editor
+				? activeView.editor.getValue()
+				: markdown;
+		if (source !== undefined) {
+			snapshot = this.studySession.reconcile(
+				path,
+				resolveStudySections(source, cache.sections, parseSections(source))
 			);
 		}
+		if (!snapshot.active) return null;
+		return {
+			snapshot,
+			toggleSection: (sectionId) => {
+				this.studySession.toggleReveal(path, sectionId);
+				this.refreshStudyProjections();
+			},
+			hideAll: () => {
+				this.studySession.hideAll(path);
+				this.refreshStudyProjections();
+			},
+			exit: () => this.exitStudySessionProjection(),
+		};
+	}
+
+	private activeReadingContainer(
+		path: string,
+		block: HTMLElement
+	): HTMLElement | null {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (!view || view.file?.path !== path || view.getMode() !== "preview") {
+			return null;
+		}
+		return (
+			block.closest<HTMLElement>(".markdown-preview-view") ??
+			view.containerEl.querySelector<HTMLElement>(".markdown-preview-view") ??
+			view.containerEl
+		);
+	}
+
+	private refreshStudyProjections(): void {
+		this.refreshEditorCues();
+		this.refreshReadingModeSurface();
+	}
+
+	private exitStudySessionProjection(): void {
+		this.studySession.exit();
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		if (view?.getMode() === "preview") {
+			restoreReadingStudyBlock(view.containerEl);
+			removeReadingStudyControls(view.containerEl);
+		}
+		this.refreshStudyProjections();
 	}
 
 	private readingMapFor(
@@ -1048,22 +1137,6 @@ export default class CueCraftPlugin extends Plugin {
 		return map;
 	}
 
-	private maybeInsertReadingReviewEl(
-		path: string,
-		map: Map<number, CueLineData>,
-		info: ReturnType<MarkdownPostProcessorContext["getSectionInfo"]>,
-		heading: HTMLElement
-	): boolean {
-		if (!info) return false;
-		const firstCueLine = [...map.keys()].sort((a, b) => a - b)[0];
-		if (firstCueLine !== info.lineStart + 1) return false;
-		const previous = heading.previousElementSibling;
-		if (previous && previous.hasClass("cuecraft-reading-review")) return false;
-		const reviewEl = this.buildReadingReviewEl(path);
-		heading.insertAdjacentElement("beforebegin", reviewEl);
-		return true;
-	}
-
 	private maybeInsertReadingNoteBriefEl(
 		cache: NoteCache,
 		map: Map<number, CueLineData>,
@@ -1087,6 +1160,8 @@ export default class CueCraftPlugin extends Plugin {
 	/** Build the reading-view cue element (mirrors the editor cue widget DOM). */
 	private buildReadingCueEl(cue: CueLineData): HTMLElement {
 		const root = createDiv({ cls: "cuecraft-cue cuecraft-cue-reading" });
+		root.dataset.cuecraftSectionId = cue.sectionId;
+		root.setAttr("role", "note");
 		if (cue.error) {
 			root.addClass("cuecraft-cue-error");
 			root.setAttr("title", cue.error);
@@ -1105,29 +1180,6 @@ export default class CueCraftPlugin extends Plugin {
 				text: cue.keywords.join(" \u00b7 "),
 			});
 		}
-		return root;
-	}
-
-	private buildReadingReviewEl(path: string): HTMLElement {
-		const root = createDiv({ cls: "cuecraft-reading-review" });
-		const button = root.createEl("button", {
-			cls: "cuecraft-reading-review-btn",
-			attr: { type: "button" },
-		});
-		const iconEl = button.createSpan({ cls: "cuecraft-reading-review-icon" });
-		setIcon(iconEl, "graduation-cap");
-		button.createSpan({
-			cls: "cuecraft-reading-review-label",
-			text: "Review in Cornell",
-		});
-		const file = this.app.vault.getAbstractFileByPath(path);
-		this.registerDomEvent(button, "click", () => {
-			if (file instanceof TFile) {
-				void this.reviewThisNote(file);
-			} else {
-				new Notice("CueCraft: open a note to review.");
-			}
-		});
 		return root;
 	}
 
