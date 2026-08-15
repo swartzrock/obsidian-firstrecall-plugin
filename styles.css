@@ -1352,7 +1352,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-radius: var(--cc-radius);
 	box-shadow: var(--cc-shadow);
 	padding: 14px 16px;
-	margin: 0.3em 0 0.6em;
+	margin: 0.3em 0 1em;
 }
 
 .cuecraft-label-icon {

@@ -67,6 +67,7 @@ describe("settings CSS", () => {
 		expect(cueRule).toContain("border: 1px solid var(--cc-border)");
 		expect(cueRule).toContain("border-inline-start: 3px solid");
 		expect(cueRule).toContain("box-shadow: var(--cc-shadow)");
+		expect(cueRule).toContain("margin: 0.3em 0 1em");
 
 		const briefRule = ruleFor(".cuecraft-note-brief");
 		expect(briefRule).toContain("background: var(--cc-card)");
