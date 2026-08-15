@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="color-scheme" content="light dark">
+	<title>CueCraft Cornell View: Feature Guide and User Benefits</title>
+	<style>
+		:root {
+			color-scheme: light dark;
+			--page: #f4f6f5;
+			--surface: #ffffff;
+			--surface-soft: #eef4f2;
+			--surface-strong: #e5eeeb;
+			--ink: #1c2422;
+			--muted: #5b6965;
+			--line: #d4ddda;
+			--accent: #087f76;
+			--accent-dark: #08665f;
+			--accent-soft: #ddf1ed;
+			--accent-ink: #075c56;
+			--amber: #8a6100;
+			--amber-soft: #fff1c7;
+			--rose: #934a45;
+			--rose-soft: #fae9e7;
+			--blue: #276a91;
+			--blue-soft: #e5f1f8;
+			--shadow: 0 8px 24px rgba(34, 52, 47, 0.08);
+		}
+
+		@media (prefers-color-scheme: dark) {
+			:root {
+				--page: #141917;
+				--surface: #1d2422;
+				--surface-soft: #24302d;
+				--surface-strong: #2b3935;
+				--ink: #edf3f1;
+				--muted: #b8c4c0;
+				--line: #394642;
+				--accent: #68c9be;
+				--accent-dark: #8edbd2;
+				--accent-soft: #173d38;
+				--accent-ink: #a7e5de;
+				--amber: #f0cf73;
+				--amber-soft: #3c341c;
+				--rose: #efaaa4;
+				--rose-soft: #402725;
+				--blue: #9acbea;
+				--blue-soft: #1b3443;
+				--shadow: none;
+			}
+		}
+
+		* { box-sizing: border-box; }
+		html { scroll-behavior: smooth; }
+		body {
+			margin: 0;
+			background: var(--page);
+			color: var(--ink);
+			font: 15px/1.58 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+			letter-spacing: 0;
+		}
+		a { color: var(--accent-dark); }
+		button, a { -webkit-tap-highlight-color: transparent; }
+		code {
+			padding: 0.12rem 0.32rem;
+			border-radius: 4px;
+			background: var(--surface-soft);
+			font: 0.88em ui-monospace, SFMono-Regular, Menlo, monospace;
+		}
+		.page {
+			width: min(94vw, 1040px);
+			margin: 0 auto;
+			padding: 48px 0 72px;
+		}
+		header {
+			display: grid;
+			grid-template-columns: minmax(0, 1.5fr) minmax(240px, 0.7fr);
+			gap: 40px;
+			align-items: end;
+			padding-bottom: 34px;
+			border-bottom: 1px solid var(--line);
+		}
+		.eyebrow {
+			margin: 0 0 10px;
+			color: var(--accent-dark);
+			font-size: 0.76rem;
+			font-weight: 760;
+			text-transform: uppercase;
+			letter-spacing: 0;
+		}
+		h1, h2, h3 { line-height: 1.18; letter-spacing: 0; }
+		h1 { max-width: 19ch; margin: 0; font-size: 3.1rem; }
+		h2 { margin: 0 0 18px; font-size: 1.55rem; }
+		h3 { margin: 0; font-size: 1.13rem; }
+		.lede {
+			max-width: 66ch;
+			margin: 18px 0 0;
+			color: var(--muted);
+			font-size: 1.05rem;
+		}
+		.snapshot {
+			padding: 18px;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: var(--surface);
+			box-shadow: var(--shadow);
+		}
+		.snapshot strong { display: block; font-size: 1.7rem; line-height: 1; }
+		.snapshot span { display: block; margin-top: 7px; color: var(--muted); }
+		.snapshot small { display: block; margin-top: 12px; color: var(--muted); }
+		section { padding-top: 46px; }
+		.prose { max-width: 72ch; }
+		.prose p { margin: 0 0 14px; }
+		.callout {
+			max-width: 76ch;
+			margin-top: 20px;
+			padding: 17px 19px;
+			border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+			border-radius: 8px;
+			background: var(--accent-soft);
+			color: var(--accent-ink);
+		}
+		.callout.warning {
+			border-color: color-mix(in srgb, var(--amber) 38%, var(--line));
+			background: var(--amber-soft);
+			color: var(--amber);
+		}
+		.quick-start {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 12px;
+			margin: 22px 0 0;
+			padding: 0;
+			list-style: none;
+			counter-reset: steps;
+		}
+		.quick-start li {
+			position: relative;
+			min-height: 132px;
+			padding: 18px;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: var(--surface);
+			box-shadow: var(--shadow);
+			counter-increment: steps;
+		}
+		.quick-start li::before {
+			content: counter(steps);
+			display: grid;
+			place-items: center;
+			width: 28px;
+			height: 28px;
+			margin-bottom: 12px;
+			border-radius: 6px;
+			background: var(--accent);
+			color: #fff;
+			font-weight: 780;
+		}
+		.quick-start strong { display: block; margin-bottom: 4px; }
+		.quick-start span { color: var(--muted); }
+		.anatomy {
+			margin-top: 22px;
+			padding: 14px;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: var(--surface);
+			box-shadow: var(--shadow);
+		}
+		.anatomy-toolbar {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+			padding: 9px 10px;
+			border-bottom: 1px solid var(--line);
+			color: var(--muted);
+			font-size: 0.78rem;
+			font-weight: 700;
+		}
+		.toggle-demo {
+			display: inline-block;
+			width: 28px;
+			height: 16px;
+			border-radius: 10px;
+			background: var(--accent);
+			box-shadow: inset 12px 0 0 2px var(--surface);
+		}
+		.toolbar-spacer { flex: 1; }
+		.anatomy-title { padding: 20px 18px 12px; font-size: 1.3rem; font-weight: 760; }
+		.anatomy-grid {
+			display: grid;
+			grid-template-columns: minmax(180px, 0.38fr) minmax(0, 1fr);
+			border-top: 1px solid var(--line);
+		}
+		.demo-cue, .demo-note { min-height: 170px; padding: 18px; }
+		.demo-cue { border-right: 1px solid var(--accent); background: var(--surface-soft); }
+		.demo-label {
+			color: var(--accent-dark);
+			font-size: 0.7rem;
+			font-weight: 780;
+			text-transform: uppercase;
+			letter-spacing: 0;
+		}
+		.demo-question { margin-top: 8px; font-weight: 720; line-height: 1.35; }
+		.demo-terms { margin-top: 16px; color: var(--muted); font-size: 0.82rem; }
+		.demo-note h3 { margin-bottom: 10px; }
+		.hidden-answer {
+			padding: 12px;
+			border-left: 2px solid var(--line);
+			background: var(--surface-soft);
+			color: transparent;
+			text-shadow: 0 0 8px var(--muted);
+			user-select: none;
+		}
+		.anatomy-note {
+			padding: 11px 18px 5px;
+			color: var(--muted);
+			font-size: 0.8rem;
+		}
+		.feature-list { display: grid; gap: 14px; }
+		.feature {
+			display: grid;
+			grid-template-columns: 58px minmax(0, 1fr);
+			gap: 18px;
+			padding: 22px;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			background: var(--surface);
+			box-shadow: var(--shadow);
+		}
+		.feature-number {
+			display: grid;
+			place-items: center;
+			width: 44px;
+			height: 44px;
+			border-radius: 8px;
+			background: var(--surface-strong);
+			color: var(--accent-dark);
+			font-size: 1.05rem;
+			font-weight: 800;
+		}
+		.feature-head {
+			display: flex;
+			align-items: flex-start;
+			justify-content: space-between;
+			gap: 14px;
+		}
+		.badge {
+			display: inline-flex;
+			align-items: center;
+			min-height: 25px;
+			padding: 3px 9px;
+			border: 1px solid transparent;
+			border-radius: 999px;
+			background: var(--accent-soft);
+			color: var(--accent-ink);
+			font-size: 0.72rem;
+			font-weight: 720;
+			white-space: nowrap;
+		}
+		.badge.secondary { background: var(--blue-soft); color: var(--blue); }
+		.badge.gap { background: var(--amber-soft); color: var(--amber); }
+		.feature-summary { max-width: 72ch; margin: 8px 0 0; color: var(--muted); }
+		.feature-details {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 18px;
+			margin-top: 18px;
+			padding-top: 17px;
+			border-top: 1px solid var(--line);
+		}
+		.feature-details h4 {
+			margin: 0 0 7px;
+			color: var(--muted);
+			font-size: 0.73rem;
+			text-transform: uppercase;
+			letter-spacing: 0;
+		}
+		.feature-details p, .feature-details ol, .feature-details ul { margin: 0; }
+		.feature-details ol, .feature-details ul { padding-left: 1.25rem; }
+		.feature-details li + li { margin-top: 5px; }
+		.matrix-wrap { overflow-x: auto; }
+		table { width: 100%; border-collapse: collapse; background: var(--surface); }
+		th, td {
+			padding: 12px 14px;
+			border: 1px solid var(--line);
+			text-align: left;
+			vertical-align: top;
+		}
+		th { background: var(--surface-soft); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0; }
+		td:not(:first-child) { text-align: center; }
+		.yes { color: var(--accent-dark); font-weight: 780; }
+		.partial { color: var(--amber); font-weight: 780; }
+		.no { color: var(--muted); }
+		.workflow-grid {
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 12px;
+		}
+		.workflow {
+			padding: 19px;
+			border-top: 3px solid var(--accent);
+			border-radius: 6px;
+			background: var(--surface);
+			box-shadow: var(--shadow);
+		}
+		.workflow h3 { margin-bottom: 8px; }
+		.workflow p { margin: 0 0 12px; color: var(--muted); }
+		.workflow ol { margin: 0; padding-left: 1.2rem; }
+		.workflow li + li { margin-top: 5px; }
+		.not-exclusive {
+			display: grid;
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+			gap: 10px;
+			margin: 18px 0 0;
+			padding: 0;
+			list-style: none;
+		}
+		.not-exclusive li {
+			padding: 15px 16px;
+			border-left: 3px solid var(--line);
+			background: var(--surface);
+		}
+		.not-exclusive strong { display: block; }
+		.not-exclusive span { color: var(--muted); }
+		.sources {
+			padding-top: 26px;
+			border-top: 1px solid var(--line);
+			color: var(--muted);
+			font-size: 0.84rem;
+		}
+		.sources ul { margin-bottom: 0; }
+		footer { padding-top: 44px; color: var(--muted); font-size: 0.82rem; }
+
+		@media (max-width: 780px) {
+			header { grid-template-columns: 1fr; gap: 22px; }
+			.snapshot { max-width: 360px; }
+			.quick-start, .workflow-grid { grid-template-columns: 1fr; }
+			.quick-start li { min-height: auto; }
+			.feature-details, .not-exclusive { grid-template-columns: 1fr; }
+		}
+
+		@media (max-width: 560px) {
+			.page { width: min(92vw, 1040px); padding-top: 30px; }
+			h1 { font-size: 2.15rem; }
+			.anatomy-grid { grid-template-columns: 1fr; }
+			.demo-cue { border-right: 0; border-bottom: 1px solid var(--accent); }
+			.feature { grid-template-columns: 1fr; gap: 12px; padding: 18px; }
+			.feature-head { display: block; }
+			.feature-head .badge { margin-top: 9px; }
+		}
+	</style>
+</head>
+<body>
+	<main class="page">
+		<header>
+			<div>
+				<p class="eyebrow">CueCraft capability report</p>
+				<h1>Cornell View feature guide</h1>
+				<p class="lede">A practical inventory of the experiences that depend on CueCraft's dedicated Cornell pane, how to use them correctly, and the value each one provides.</p>
+			</div>
+			<div class="snapshot" aria-label="Report scope">
+				<strong>6</strong>
+				<span>user-facing capability groups specific to the Cornell pane</span>
+				<small>Verified against the current implementation on August 9, 2026.</small>
+			</div>
+		</header>
+
+		<section aria-labelledby="quick-start-title">
+			<h2 id="quick-start-title">Start a Cornell review</h2>
+			<div class="prose">
+				<p>The fastest route is <strong>Review This Note (Study Mode)</strong>. It verifies that the active note has usable cues, opens the dedicated pane, and starts with source sections hidden.</p>
+			</div>
+			<ol class="quick-start">
+				<li><strong>Prepare the note</strong><span>Open a Markdown note and run <code>CueCraft: Generate Cues for This Note</code> if it does not already have cues.</span></li>
+				<li><strong>Open the review</strong><span>Use the Command Palette and choose <code>CueCraft: Review This Note (Study Mode)</code>. A note's context menu offers the same action when usable cues exist.</span></li>
+				<li><strong>Recall, then reveal</strong><span>Read the question, answer from memory, then click its cue card to reveal only the matching source section. Click again to hide it.</span></li>
+			</ol>
+			<div class="callout"><strong>Browse without hiding answers:</strong> use the two-column ribbon icon or <code>CueCraft: Open Active Note in Cornell View</code>. Then turn on <strong>Study mode</strong> from the pane toolbar when ready.</div>
+		</section>
+
+		<section aria-labelledby="anatomy-title">
+			<h2 id="anatomy-title">What makes the pane different</h2>
+			<div class="anatomy" role="img" aria-label="Diagram of the Cornell pane with a question rail beside a hidden note section">
+				<div class="anatomy-toolbar"><span class="toggle-demo" aria-hidden="true"></span> Study mode <span class="toolbar-spacer"></span> Refresh stale &nbsp; Display</div>
+				<div class="anatomy-title">Active note title</div>
+				<div class="anatomy-grid">
+					<div class="demo-cue">
+						<div class="demo-label">Question</div>
+						<div class="demo-question">What is the section's central idea, and why does it matter?</div>
+						<div class="demo-terms">key term &middot; supporting idea</div>
+					</div>
+					<div class="demo-note">
+						<h3>Matching section heading</h3>
+						<div class="hidden-answer">The source section remains in place but is hidden until the user reveals it.</div>
+					</div>
+				</div>
+				<p class="anatomy-note">The left rail and right source column are rendered from cached cues plus the current Markdown note. The source file itself is not rewritten.</p>
+			</div>
+		</section>
+
+		<section aria-labelledby="features-title">
+			<h2 id="features-title">Cornell-specific capabilities</h2>
+			<div class="feature-list">
+				<article class="feature" id="paired-layout">
+					<div class="feature-number">01</div>
+					<div>
+						<div class="feature-head"><h3>Paired cue-and-source layout</h3><span class="badge">Cornell-only surface</span></div>
+						<p class="feature-summary">Every generated question sits in a stable left rail beside the section of the original note that answers it. The note title and final Note Brief or takeaway complete the review sheet.</p>
+						<div class="feature-details">
+							<div><h4>Use it properly</h4><ol><li>Open the active note in Cornell View.</li><li>Scan down the cue rail while using the right column for context.</li><li>Use <strong>Display</strong> to choose a width that keeps questions readable without squeezing the source.</li></ol></div>
+							<div><h4>User benefit</h4><p>Reduces the back-and-forth between a detached flashcard and its source. Users can verify an answer in context while the Markdown remains untouched.</p></div>
+						</div>
+					</div>
+				</article>
+
+				<article class="feature" id="study-mode">
+					<div class="feature-number">02</div>
+					<div>
+						<div class="feature-head"><h3>Per-section Study Mode reveal</h3><span class="badge">Core review loop</span></div>
+						<p class="feature-summary">The Cornell pane can hide every source section while leaving its question visible, then reveal answers independently as the learner progresses.</p>
+						<div class="feature-details">
+							<div><h4>Use it properly</h4><ol><li>Open <strong>Review This Note (Study Mode)</strong>, or enable the toolbar toggle.</li><li>Answer the visible question before interacting with the card.</li><li>Click the cue to reveal its matching section; click again to hide it.</li><li>Turn Study mode off to restore every section.</li></ol></div>
+							<div><h4>User benefit</h4><p>Creates a real retrieval-practice sequence: prompt, effortful recall, then immediate verification. Independent reveals limit accidental exposure to later answers.</p></div>
+						</div>
+						<div class="callout warning"><strong>Current gaps:</strong> the data model supports a reveal-all/reset state and product stories describe <em>Hide all answers</em>, but the current Cornell toolbar has no separate visible button for it. Toggling Study mode off and on is the available reset. The settings UI also offers Blur and Collapse hide styles, but Cornell View currently always uses blur.</div>
+					</div>
+				</article>
+
+				<article class="feature" id="hook-rail">
+					<div class="feature-number">03</div>
+					<div>
+						<div class="feature-head"><h3>Hook rail focus navigation</h3><span class="badge secondary">Alternate mode</span></div>
+						<p class="feature-summary">Hook rail replaces full cue cards with compact, memorable titles. Selecting one marks it current, scrolls the matching source section to the center, and moves keyboard focus there.</p>
+						<div class="feature-details">
+							<div><h4>Use it properly</h4><ol><li>Exit Study mode.</li><li>Open <strong>Display</strong> and set <strong>Mode</strong> to <strong>Hook rail</strong>.</li><li>Click a hook to jump to its section.</li><li>Switch Mode back to <strong>Cornell</strong> for full questions or Study mode.</li></ol></div>
+							<div><h4>User benefit</h4><p>Provides fast orientation in long notes. Short labels act as landmarks, while scroll-and-focus removes manual searching for the related section.</p></div>
+						</div>
+						<div class="callout"><strong>Mode rule:</strong> Hook rail and Study mode are mutually exclusive. Choosing Hook rail turns Study mode off; Study mode always uses the full Cornell cue presentation.</div>
+					</div>
+				</article>
+
+				<article class="feature" id="cue-repair">
+					<div class="feature-number">04</div>
+					<div>
+						<div class="feature-head"><h3>Targeted cue repair with tone choices</h3><span class="badge">Actionable in place</span></div>
+						<p class="feature-summary">A low-confidence cue gets a warning, and any cue can be regenerated for only its section with a different tone: More conceptual, Exam prep, Simpler, or Vocabulary.</p>
+						<div class="feature-details">
+							<div><h4>Use it properly</h4><ol><li>Keep Study mode off.</li><li>Hover a cue, or find the persistent regenerate icon on a low-confidence cue.</li><li>Choose a tone that addresses the problem.</li><li>Review the replacement beside the unchanged source section.</li></ol></div>
+							<div><h4>User benefit</h4><p>Repairs one weak prompt without paying the cost or accepting the churn of regenerating the whole note. Tone choices make the correction purposeful rather than random.</p></div>
+						</div>
+					</div>
+				</article>
+
+				<article class="feature" id="recovery">
+					<div class="feature-number">05</div>
+					<div>
+						<div class="feature-head"><h3>Stale and failed-section recovery</h3><span class="badge">Batch and local actions</span></div>
+						<p class="feature-summary">The pane exposes <strong>Refresh stale</strong> for changed sections, a failure banner with <strong>Retry failed</strong>, and an in-card regenerate action when a single cue is unavailable.</p>
+						<div class="feature-details">
+							<div><h4>Use it properly</h4><ul><li>After editing the note, exit Study mode and choose <strong>Refresh stale</strong>.</li><li>In Cornell mode, use the failure banner to retry all failed sections.</li><li>Use a failed card's <strong>Regenerate</strong> or <strong>Retry</strong> action when only one section needs attention.</li></ul></div>
+							<div><h4>User benefit</h4><p>Keeps the review set synchronized with the note and makes partial generation failures recoverable without discarding successful cues.</p></div>
+						</div>
+					</div>
+				</article>
+
+				<article class="feature" id="display-controls">
+					<div class="feature-number">06</div>
+					<div>
+						<div class="feature-head"><h3>Pane-specific display controls</h3><span class="badge secondary">Presentation</span></div>
+						<p class="feature-summary">Cornell View has live controls for mode, paper style, cue-column width, and cue font size, plus settings for accent, divider, support density, and narrow-screen stacking.</p>
+						<div class="feature-details">
+							<div><h4>Use it properly</h4><ul><li>Use <strong>Display</strong> for quick changes: Cornell or Hook rail, Cornell Classic / Exam Prep / Legal Pad / Minimal / Handwritten, Narrow / Medium / Wide, and Small / Medium / Large.</li><li>Use <strong>Settings &rarr; CueCraft &rarr; Cornell View</strong> for cue accent, border, compact supports, and mobile folding.</li><li>Enable mobile folding when a narrow pane should stack each cue above its source instead of maintaining two squeezed columns.</li></ul></div>
+							<div><h4>User benefit</h4><p>Lets users tune information density and legibility for different screens and note shapes. These are comfort and scanning controls; they do not alter generated cue content.</p></div>
+						</div>
+					</div>
+				</article>
+			</div>
+		</section>
+
+		<section aria-labelledby="matrix-title">
+			<h2 id="matrix-title">Availability outside Cornell View</h2>
+			<div class="matrix-wrap">
+				<table>
+					<thead><tr><th>Capability</th><th>Editing View</th><th>Reading View</th><th>Cornell View</th></tr></thead>
+					<tbody>
+						<tr><td>Questions beside source sections</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+						<tr><td>Note Brief and generated supports</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+						<tr><td>Hide source and reveal one section</td><td class="partial">Partial global hiding</td><td class="no">No</td><td class="yes">Yes</td></tr>
+						<tr><td>Hook card focuses matching section</td><td class="partial">Visual rail only</td><td class="no">No</td><td class="yes">Yes</td></tr>
+						<tr><td>Per-cue tone regeneration</td><td class="no">No direct card action</td><td class="no">No</td><td class="yes">Yes</td></tr>
+						<tr><td>Failed/stale recovery in the view</td><td class="no">No</td><td class="no">No</td><td class="yes">Yes</td></tr>
+						<tr><td>Paper presets and pane layout controls</td><td class="no">Separate editor styles</td><td class="no">No</td><td class="yes">Yes</td></tr>
+					</tbody>
+				</table>
+			</div>
+		</section>
+
+		<section aria-labelledby="workflows-title">
+			<h2 id="workflows-title">Recommended workflows</h2>
+			<div class="workflow-grid">
+				<article class="workflow"><h3>Active-recall pass</h3><p>Best for checking retention after reading.</p><ol><li>Choose Review This Note.</li><li>Answer one question aloud or in your head.</li><li>Reveal and compare.</li><li>Hide it and continue.</li></ol></article>
+				<article class="workflow"><h3>Repair pass</h3><p>Best after generation or substantial edits.</p><ol><li>Refresh stale sections.</li><li>Retry failures.</li><li>Inspect low-confidence cues.</li><li>Regenerate weak cues with a deliberate tone.</li></ol></article>
+				<article class="workflow"><h3>Orientation pass</h3><p>Best for long notes you have not visited recently.</p><ol><li>Switch to Hook rail.</li><li>Scan compact section hooks.</li><li>Select unfamiliar hooks to jump into context.</li><li>Return to Cornell mode for full review.</li></ol></article>
+			</div>
+	</section>
+
+		<section aria-labelledby="shared-title">
+			<h2 id="shared-title">Features that should not block removal</h2>
+			<p class="prose">These appear in Cornell View, but their underlying user value is already available in Editing or Reading mode. They are shared CueCraft capabilities, not reasons by themselves to keep a dedicated pane.</p>
+			<ul class="not-exclusive">
+				<li><strong>Generated questions and terms</strong><span>Cached cues can already render alongside the original note in Editing and Reading modes.</span></li>
+				<li><strong>Note Brief</strong><span>The overview card is rendered across note surfaces, not only in Cornell View.</span></li>
+				<li><strong>Section Lens</strong><span>The extra framing text belongs to cue content and is available outside the dedicated pane.</span></li>
+				<li><strong>Non-destructive storage</strong><span>Generated data lives in plugin storage regardless of which view displays it; the Markdown remains unchanged.</span></li>
+			</ul>
+			<div class="callout"><strong>Removal implication:</strong> preserving Cornell View's value means migrating the interaction capabilities, especially per-section reveal, targeted regeneration, focus navigation, and in-context recovery. The shared generated content already has other homes.</div>
+		</section>
+
+		<section class="sources" aria-labelledby="sources-title">
+			<h2 id="sources-title">Implementation references</h2>
+			<ul>
+				<li><a href="../../src/cornell-view.ts">Cornell pane rendering and controls</a>: toolbar, display modes, reveal behavior, Hook focus, cue repair, and failure recovery.</li>
+				<li><a href="../../src/cornell.ts">Cornell presentation model</a>: paired rows, answer visibility state, supports, and takeaway presentation.</li>
+				<li><a href="../../src/main.ts">Plugin commands and entry points</a>: Open Active Note, Review This Note, view activation, and regeneration.</li>
+				<li><a href="../../src/settings.ts">CueCraft settings</a>: Cornell appearance controls and Study Mode hide style.</li>
+				<li><a href="../../src/cornell-display.ts">Display mode definitions</a> and <a href="../../src/cornell-style.ts">Cornell style presets</a>.</li>
+			</ul>
+		</section>
+
+		<footer>Prepared from the current CueCraft repository. This report describes implemented behavior; it does not assume that every behavior documented in older product stories is currently exposed in the UI.</footer>
+	</main>
+</body>
+</html>
