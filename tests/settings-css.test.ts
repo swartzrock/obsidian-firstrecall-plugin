@@ -181,6 +181,30 @@ describe("settings CSS", () => {
 		expect(briefIconRule).toBe("");
 	});
 
+	it("uses the Cornell cue text scale for inline cues", () => {
+		const fontSizeFor = (selector: string): string | undefined =>
+			ruleFor(selector).match(/font-size:\s*([^;]+);/)?.[1];
+
+		const cases = [
+			["small", "var(--font-smallest)"],
+			["medium", "var(--font-ui-small)"],
+			["large", "var(--font-ui-medium)"],
+		] as const;
+
+		for (const [size, expected] of cases) {
+			const inline = fontSizeFor(
+				`.cuecraft-cue.cuecraft-cuefont-${size}`
+			);
+			const cornell = fontSizeFor(
+				`.cuecraft-editor-hook.cuecraft-cuefont-${size}`
+			);
+
+			expect(inline).toBe(expected);
+			expect(cornell).toBe(expected);
+			expect(inline).toBe(cornell);
+		}
+	});
+
 	it("animates accessible editor card section disclosures", () => {
 		const root = ".cuecraft-editor-hook-sectioned";
 		const toggleRule = ruleFor(`${root} .cuecraft-editor-hook-section-toggle`);

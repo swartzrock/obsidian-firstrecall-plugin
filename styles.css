@@ -1523,23 +1523,16 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	max-width: min(46rem, 100%);
 }
 
-.cuecraft-cue.cuecraft-cuefont-small .cuecraft-cue-question,
-.cuecraft-cue.cuecraft-cuefont-small .cuecraft-cue-keywords,
-.cuecraft-cue.cuecraft-cuefont-small .cuecraft-section-lens {
+.cuecraft-cue.cuecraft-cuefont-small {
 	font-size: var(--font-smallest);
 }
 
-.cuecraft-cue.cuecraft-cuefont-medium .cuecraft-cue-question {
+.cuecraft-cue.cuecraft-cuefont-medium {
 	font-size: var(--font-ui-small);
 }
 
-.cuecraft-cue.cuecraft-cuefont-large .cuecraft-cue-question {
+.cuecraft-cue.cuecraft-cuefont-large {
 	font-size: var(--font-ui-medium);
-}
-
-.cuecraft-cue.cuecraft-cuefont-large .cuecraft-cue-keywords,
-.cuecraft-cue.cuecraft-cuefont-large .cuecraft-section-lens {
-	font-size: var(--font-ui-smaller, var(--font-smallest));
 }
 
 .cuecraft-editor-hook.cuecraft-cuefont-small {
