@@ -121,6 +121,31 @@
 	max-width: 100%;
 }
 
+.cuecraft-cue-sections-setting .setting-item-control {
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	gap: 14px;
+}
+
+.cuecraft-cue-section-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	color: var(--text-normal);
+	font-size: var(--font-ui-small);
+	line-height: 1.2;
+	cursor: pointer;
+	white-space: nowrap;
+}
+
+.cuecraft-cue-section-option input {
+	margin: 0;
+}
+
+.cuecraft-cue-section-option.is-required {
+	cursor: not-allowed;
+}
+
 .cuecraft-instructions-setting {
 	flex-direction: column;
 	align-items: stretch;

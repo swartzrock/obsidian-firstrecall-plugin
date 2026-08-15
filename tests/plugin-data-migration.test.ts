@@ -244,10 +244,34 @@ describe("plugin data cache migration", () => {
 			}
 		).data;
 		expect(data.settings.showRailQuestions).toBe(false);
+		expect(data.settings.showRailSummary).toBe(true);
 		expect(data.caches).toEqual({});
 		expect(data.hidden).toEqual(loaded.hidden);
 		expect(data.cueSectionCollapse).toEqual({});
 		expect(saveData).not.toHaveBeenCalled();
+	});
+
+	it("repairs Editing View cue sections when persisted data hides all three", async () => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: {
+					showRailSummary: false,
+					showRailQuestions: false,
+					showRailSupportTerms: false,
+				},
+			})),
+			saveData: vi.fn(async () => {}),
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.showRailSummary).toBe(true);
+		expect(plugin.settings.showRailQuestions).toBe(false);
+		expect(plugin.settings.showRailSupportTerms).toBe(false);
 	});
 
 	it("persists a category-free v6 cache without discarding an invalid cache entry", async () => {

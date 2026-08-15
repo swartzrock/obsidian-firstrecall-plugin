@@ -33,6 +33,7 @@ describe("buildEditorHookCard", () => {
 			state: "upcoming",
 			tone: "warm",
 			gradientIndex: 0,
+			showSummary: true,
 			showQuestion: true,
 			showSupportTerms: true,
 		});
@@ -49,9 +50,11 @@ describe("buildEditorHookCard", () => {
 
 	it("accepts display-only hook card options", () => {
 		const card = buildEditorHookCard(cue(), "collapsed-tabs", 4, "upcoming", {
+			showSummary: false,
 			showQuestion: false,
 			showSupportTerms: false,
 		});
+		expect(card.showSummary).toBe(false);
 		expect(card.showQuestion).toBe(false);
 		expect(card.showSupportTerms).toBe(false);
 		expect(card.gradientIndex).toBe(1);

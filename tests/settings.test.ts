@@ -401,6 +401,21 @@ async function changeToggle(
 	await toggle.__onChange(value);
 }
 
+async function changeCueSection(
+	containerEl: HTMLElement,
+	section: "summary" | "question" | "terms",
+	value: boolean
+): Promise<void> {
+	const input = containerEl.querySelector<HTMLInputElement>(
+		`[data-cue-section="${section}"]`
+	);
+	if (!input) throw new Error(`Missing cue section checkbox: ${section}`);
+	input.checked = value;
+	input.dispatchEvent(new window.Event("change", { bubbles: true }));
+	await Promise.resolve();
+	await Promise.resolve();
+}
+
 async function changeTextArea(
 	containerEl: HTMLElement,
 	name: string,
@@ -554,6 +569,14 @@ describe("settings defaults", () => {
 		);
 	});
 
+	it("shows every Editing View cue section by default", async () => {
+		const { DEFAULT_SETTINGS } = await loadSettingsModule();
+
+		expect(DEFAULT_SETTINGS.showRailSummary).toBe(true);
+		expect(DEFAULT_SETTINGS.showRailQuestions).toBe(true);
+		expect(DEFAULT_SETTINGS.showRailSupportTerms).toBe(true);
+	});
+
 	it("defaults editor cue display to inline cues", () => {
 		expect(DEFAULT_EDITOR_CUE_DISPLAY).toBe("inline-cues");
 		expect(editorCueDisplayOption(DEFAULT_EDITOR_CUE_DISPLAY).label).toBe(
@@ -610,6 +633,7 @@ describe("settings defaults", () => {
 			cueColumnWidth: "wide",
 			cueFontSize: "large",
 			editorCueDisplay: "hook-minimap",
+			showRailSummary: false,
 			showRailQuestions: false,
 			showRailSupportTerms: false,
 		} as const;
@@ -628,12 +652,13 @@ describe("settings defaults", () => {
 			cueColumnWidth: "narrow",
 			cueFontSize: "large",
 			editorCueDisplay: "hook-minimap",
+			showRailSummary: false,
 			showRailQuestions: false,
 			showRailSupportTerms: true,
 		} as const;
 
 		expect(editingViewSettingsSummary(settings)).toBe(
-			"Hook minimap · large text · questions hidden · supports shown"
+			"Hook minimap · large text · Terms"
 		);
 		expect(editingViewSettingsSummary(settings)).not.toContain("Legal Pad");
 		expect(editingViewSettingsSummary(settings)).not.toContain("width");
@@ -880,8 +905,13 @@ describe("settings defaults", () => {
 		expect(text).not.toContain("Rail card background");
 		expect(text).not.toContain("Cue column width");
 		expect(text).toContain("Cue font size");
-		expect(text).toContain("Show cue questions");
-		expect(text).toContain("Show support terms");
+		expect(text).toContain("Cue sections");
+		expect(text).toContain("Summary");
+		expect(text).toContain("Question");
+		expect(text).toContain("Terms");
+		expect(text).toContain("At least one is required");
+		expect(text).not.toContain("Show cue questions");
+		expect(text).not.toContain("Show support terms");
 		expect(text).not.toContain("Cornell display mode");
 		expect(text).not.toContain("Cornell view style");
 		expect(text).not.toContain("Cue accent color");
@@ -896,7 +926,7 @@ describe("settings defaults", () => {
 		expect(text).toContain("Note format");
 		expect(text).toContain("Show CueCraft in Reading mode");
 		expect(text).toContain("Reading mode display");
-		expect(text).toContain("Show Section Lens");
+		expect(text).toContain("Show summaries in Reading mode");
 		expect(text).toContain("Show Note Brief");
 		expect(text).not.toContain("Show cue questions");
 		expect(text).not.toContain("Show support terms");
@@ -917,16 +947,31 @@ describe("settings defaults", () => {
 		expect(plugin.refreshCornellViews).toHaveBeenCalledTimes(1);
 	});
 
-	it("refreshes editor cues for Editing View controls", async () => {
+	it("keeps at least one compact Editing View cue section selected", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 
 		tab.display();
 		openSettingsCard(tab, "Editing View");
-		await changeToggle(tab.containerEl, "Show cue questions", false);
+		const group = tab.containerEl.querySelector<HTMLElement>(
+			'[data-setting-name="Cue sections"] .setting-item-control'
+		);
+		expect(group?.getAttribute("role")).toBe("group");
+		expect(group?.getAttribute("aria-label")).toBe("Cue sections");
 
+		await changeCueSection(tab.containerEl, "summary", false);
+		await changeCueSection(tab.containerEl, "question", false);
+
+		expect(plugin.settings.showRailSummary).toBe(false);
 		expect(plugin.settings.showRailQuestions).toBe(false);
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
+		expect(plugin.settings.showRailSupportTerms).toBe(true);
+		const terms = tab.containerEl.querySelector<HTMLInputElement>(
+			'[data-cue-section="terms"]'
+		);
+		expect(terms?.checked).toBe(true);
+		expect(terms?.disabled).toBe(true);
+		expect(terms?.title).toBe("At least one cue section is required.");
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
+		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
 	});
 

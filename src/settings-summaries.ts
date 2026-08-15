@@ -22,6 +22,7 @@ export interface CornellViewSettingsSummaryInput {
 export interface EditingViewSettingsSummaryInput {
 	editorCueDisplay: EditorCueDisplay;
 	cueFontSize: CueFontSize;
+	showRailSummary: boolean;
 	showRailQuestions: boolean;
 	showRailSupportTerms: boolean;
 }
@@ -40,11 +41,10 @@ export function editingViewSettingsSummary(
 	settings: EditingViewSettingsSummaryInput
 ): string {
 	const editorDisplay = editorCueDisplayOption(settings.editorCueDisplay).label;
-	const questionState = settings.showRailQuestions
-		? "questions shown"
-		: "questions hidden";
-	const supportState = settings.showRailSupportTerms
-		? "supports shown"
-		: "supports hidden";
-	return `${editorDisplay} · ${settings.cueFontSize} text · ${questionState} · ${supportState}`;
+	const visibleSections = [
+		settings.showRailSummary ? "Summary" : null,
+		settings.showRailQuestions ? "Question" : null,
+		settings.showRailSupportTerms ? "Terms" : null,
+	].filter((section): section is string => section !== null);
+	return `${editorDisplay} · ${settings.cueFontSize} text · ${visibleSections.join(", ")}`;
 }

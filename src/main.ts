@@ -349,6 +349,7 @@ export default class CueCraftPlugin extends Plugin {
 		for (const key of [
 			"showSectionLens",
 			"showNoteBrief",
+			"showRailSummary",
 			"showRailQuestions",
 			"showRailSupportTerms",
 		] as const) {
@@ -358,6 +359,13 @@ export default class CueCraftPlugin extends Plugin {
 			) {
 				settings[key] = DEFAULT_SETTINGS[key];
 			}
+		}
+		if (
+			!settings.showRailSummary &&
+			!settings.showRailQuestions &&
+			!settings.showRailSupportTerms
+		) {
+			settings.showRailSummary = true;
 		}
 		if (!isReadingModeDisplay((settings as { readingModeDisplay?: unknown }).readingModeDisplay)) {
 			settings.readingModeDisplay = DEFAULT_SETTINGS.readingModeDisplay;
@@ -470,7 +478,6 @@ export default class CueCraftPlugin extends Plugin {
 			cache && !this.visibility.isHidden(file.path)
 				? buildCueLineData(cache, parseSections(view.editor.getValue()), {
 						showKeywords: this.settings.generateKeywords,
-						showSectionLens: this.settings.showSectionLens,
 					})
 				: [];
 		cm.dom.dataset.cuecraftEditorDisplay = this.settings.editorCueDisplay;
@@ -491,6 +498,7 @@ export default class CueCraftPlugin extends Plugin {
 				display: this.settings.editorCueDisplay,
 				notePath: file.path,
 				collapseController: this.cueSectionCollapse,
+				showRailSummary: this.settings.showRailSummary,
 				showRailQuestions: this.settings.showRailQuestions,
 				showRailSupportTerms: this.settings.showRailSupportTerms,
 				cueColumnWidth: DEFAULT_EDITOR_CUE_WIDTH_PRESET,

@@ -129,7 +129,7 @@ function renderCornellMarker(
 	cueData: CueLineData = cue(),
 	options: Pick<
 		CueEditorRenderState,
-		"showRailQuestions" | "showRailSupportTerms"
+		"showRailSummary" | "showRailQuestions" | "showRailSupportTerms"
 	> = {}
 ): HTMLElement {
 	const state = EditorState.create({ doc: "# Terms\nbody" });
@@ -1273,6 +1273,68 @@ describe("renderCueElement", () => {
 				cornell.querySelector(".cuecraft-section-lens-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
 			expect(cornell.querySelector(".cuecraft-cue-section-label")).toBeNull();
+		});
+	});
+
+	it("hides summaries independently in Inline and Cornell cues", () => {
+		withDocument(() => {
+			const options = {
+				showSummary: false,
+				showQuestion: true,
+				showSupportTerms: true,
+			};
+			for (const display of ["inline-cues", "cornell"] as const) {
+				const element = renderCueElement(
+					cue(),
+					display,
+					0,
+					"upcoming",
+					options
+				);
+				expect(element.dataset.summaryVisible).toBe("false");
+				expect(
+					disclosureButtons(element).map((button) => button.dataset.section)
+				).toEqual(["question", "terms"]);
+				expect(element.querySelector(".cuecraft-section-lens")).toBeNull();
+			}
+		});
+	});
+
+	it("falls back to the question when the selected cue section has no data", () => {
+		withDocument(() => {
+			const scenarios = [
+				{
+					cue: cue({ keywords: [] }),
+					options: {
+						showSummary: false,
+						showQuestion: false,
+						showSupportTerms: true,
+					},
+				},
+				{
+					cue: cue({ sectionLens: null }),
+					options: {
+						showSummary: true,
+						showQuestion: false,
+						showSupportTerms: false,
+					},
+				},
+			];
+			for (const scenario of scenarios) {
+				for (const display of ["inline-cues", "cornell"] as const) {
+					const element = renderCueElement(
+						scenario.cue,
+						display,
+						0,
+						"upcoming",
+						scenario.options
+					);
+					expect(element.dataset.questionVisible).toBe("true");
+					expect(
+						disclosureButtons(element).map((button) => button.dataset.section)
+					).toEqual(["question"]);
+				}
+			}
 		});
 	});
 

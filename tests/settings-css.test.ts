@@ -11,6 +11,19 @@ function ruleFor(selector: string): string {
 }
 
 describe("settings CSS", () => {
+	it("lays out cue section checkboxes as a compact wrapping row", () => {
+		const controlRule = ruleFor(
+			".cuecraft-cue-sections-setting .setting-item-control"
+		);
+		expect(controlRule).toContain("flex-wrap: wrap");
+		expect(controlRule).toContain("justify-content: flex-start");
+		expect(controlRule).toContain("gap:");
+
+		const optionRule = ruleFor(".cuecraft-cue-section-option");
+		expect(optionRule).toContain("display: inline-flex");
+		expect(optionRule).toContain("align-items: center");
+	});
+
 	it("uses shared instruction-control hooks for both policies", () => {
 		const settingRule = ruleFor(".cuecraft-instructions-setting");
 		expect(settingRule).toContain("flex-direction: column");
