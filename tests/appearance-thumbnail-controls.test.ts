@@ -287,7 +287,7 @@ describe("Editing View thumbnail option recipes", () => {
 		);
 	});
 
-	it("renders editor-truth display previews with stable placement classes", () => {
+	it("renders the current Cornell rail and Inline cue card layouts", () => {
 		const root = setupDom();
 		renderAppearanceThumbnailGroup({
 			parentEl: root,
@@ -310,17 +310,39 @@ describe("Editing View thumbnail option recipes", () => {
 				root.querySelector(`.cuecraft-preview-editor-display-${optionId}`)
 			).toBeNull();
 		}
-		const cornellStyleOptionCount = displayedEditorCueDisplayOptions.filter(
-			(option) => option.id.startsWith("cornell")
-		).length;
 		expect(root.querySelectorAll(".cuecraft-preview-editor-scene")).toHaveLength(
-			displayedEditorCueDisplayOptions.length - cornellStyleOptionCount
+			displayedEditorCueDisplayOptions.length
+		);
+		const cornell = root.querySelector<HTMLElement>(
+			"[data-option-id='cornell']"
+		);
+		const inline = root.querySelector<HTMLElement>(
+			"[data-option-id='inline-cues']"
 		);
 		expect(
-			root
-				.querySelector("[data-option-id='cornell']")
-				?.querySelector(".cuecraft-preview-display-classic")
+			cornell?.querySelector(".cuecraft-preview-editor-cue-card-cornell")
 		).not.toBeNull();
+		expect(
+			inline?.querySelector(".cuecraft-preview-editor-cue-card-inline-cues")
+		).not.toBeNull();
+		expect(
+			cornell?.querySelector(".cuecraft-preview-editor-cue-grip")
+		).not.toBeNull();
+		expect(
+			inline?.querySelector(".cuecraft-preview-editor-cue-grip")
+		).toBeNull();
+		expect(
+			cornell?.querySelectorAll(".cuecraft-preview-editor-cue-section")
+		).toHaveLength(3);
+		expect(
+			inline?.querySelectorAll(".cuecraft-preview-editor-cue-section")
+		).toHaveLength(3);
+		expect(cornell?.textContent).toContain("SUMMARY");
+		expect(cornell?.textContent).toContain("QUESTION");
+		expect(cornell?.textContent).toContain("TERMS");
+		expect(inline?.textContent).toContain("SUMMARY");
+		expect(inline?.textContent).toContain("QUESTION");
+		expect(inline?.textContent).toContain("TERMS");
 		expect(root.textContent).toContain("Cornell");
 		expect(root.textContent).toContain("Inline cues");
 		expect(root.textContent).not.toContain("Cornell Exam Prep");

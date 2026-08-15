@@ -314,26 +314,17 @@ function renderEditorCueDisplayPreview(
 	previewEl: HTMLElement,
 	display: EditorCueDisplay
 ): void {
-	if (display === "cornell") {
-		renderCuePreview(
-			previewEl,
-			[
-				"cuecraft-preview-display",
-				"cuecraft-preview-display-classic",
-				"cuecraft-preview-style",
-				"cuecraft-preview-style-classic",
-				"cuecraft-preview-editor-display",
-				`cuecraft-preview-editor-display-${display}`,
-			],
-			{
-				question: DISPLAY_SAMPLE_QUESTION,
-				supports: DISPLAY_SAMPLE_SUPPORTS,
-			}
-		);
+	const doc = previewEl.ownerDocument;
+	if (display === "cornell" || display === "inline-cues") {
+		const surface = editorPreviewSurface(doc, [
+			"cuecraft-preview-editor-display",
+			`cuecraft-preview-editor-display-${display}`,
+		]);
+		surface.appendChild(editorCueCardScene(doc, display));
+		previewEl.appendChild(surface);
 		return;
 	}
 
-	const doc = previewEl.ownerDocument;
 	const surface = editorPreviewSurface(doc, [
 		"cuecraft-preview-editor-display",
 		`cuecraft-preview-editor-display-${display}`,
@@ -342,9 +333,6 @@ function renderEditorCueDisplayPreview(
 	surface.appendChild(scene);
 
 	switch (display) {
-		case "inline-cues":
-			scene.appendChild(editorInlineCue(doc));
-			break;
 		case "collapsed-tabs":
 			scene.appendChild(editorTab(doc, "warm", "first"));
 			scene.appendChild(editorTab(doc, "cool", "second"));
@@ -364,6 +352,91 @@ function renderEditorCueDisplayPreview(
 	previewEl.appendChild(surface);
 }
 
+function editorCueCardScene(
+	doc: Document,
+	display: "cornell" | "inline-cues"
+): HTMLElement {
+	const scene = editorScene(doc);
+	scene.classList.add(`cuecraft-preview-editor-scene-${display}`);
+	scene.appendChild(editorCueCard(doc, display));
+	return scene;
+}
+
+function editorCueCard(
+	doc: Document,
+	display: "cornell" | "inline-cues"
+): HTMLElement {
+	const card = doc.createElement("div");
+	card.className = [
+		"cuecraft-preview-editor-cue-card",
+		`cuecraft-preview-editor-cue-card-${display}`,
+	].join(" ");
+
+	if (display === "cornell") {
+		const grip = doc.createElement("span");
+		grip.className = "cuecraft-preview-editor-cue-grip";
+		card.appendChild(grip);
+	}
+
+	card.append(
+		editorCueSection(
+			doc,
+			"summary",
+			"SUMMARY",
+			"AI and expertise shape trusted products."
+		),
+		editorCueSection(doc, "question", "QUESTION", SAMPLE_QUESTION),
+		editorCueSection(doc, "terms", "TERMS", null)
+	);
+	return card;
+}
+
+function editorCueSection(
+	doc: Document,
+	kind: "summary" | "question" | "terms",
+	labelText: string,
+	bodyText: string | null
+): HTMLElement {
+	const section = doc.createElement("div");
+	section.className = "cuecraft-preview-editor-cue-section";
+
+	const label = doc.createElement("span");
+	label.className = "cuecraft-preview-editor-cue-section-label";
+	const icon = doc.createElement("span");
+	icon.className = "cuecraft-preview-editor-cue-icon";
+	icon.dataset.section = kind;
+	const text = doc.createElement("span");
+	text.textContent = labelText;
+	const chevron = doc.createElement("span");
+	chevron.className = "cuecraft-preview-editor-cue-chevron";
+	label.append(icon, text, chevron);
+	section.appendChild(label);
+
+	if (kind === "terms") {
+		const terms = doc.createElement("span");
+		terms.className = "cuecraft-preview-editor-cue-terms";
+		for (const termText of ["frontier AI", "data"]) {
+			const term = doc.createElement("span");
+			term.className = "cuecraft-preview-editor-cue-term";
+			term.textContent = termText;
+			terms.appendChild(term);
+		}
+		section.appendChild(terms);
+	} else if (bodyText) {
+		const body = doc.createElement("span");
+		body.className = [
+			"cuecraft-preview-editor-cue-body",
+			kind === "question" ? "cuecraft-preview-editor-cue-question" : "",
+		]
+			.filter(Boolean)
+			.join(" ");
+		body.textContent = bodyText;
+		section.appendChild(body);
+	}
+
+	return section;
+}
+
 function editorPreviewSurface(doc: Document, classes: string[]): HTMLElement {
 	const surface = doc.createElement("div");
 	surface.className = ["cuecraft-preview-editor-surface", ...classes].join(" ");
@@ -379,13 +452,6 @@ function editorScene(doc: Document): HTMLElement {
 		scene.appendChild(line);
 	}
 	return scene;
-}
-
-function editorInlineCue(doc: Document): HTMLElement {
-	const cue = doc.createElement("span");
-	cue.className = "cuecraft-preview-editor-inline-cue";
-	appendEditorCueText(doc, cue);
-	return cue;
 }
 
 function editorTab(
@@ -424,14 +490,6 @@ function editorMinimapPopout(doc: Document): HTMLElement {
 	const popout = doc.createElement("span");
 	popout.className = "cuecraft-preview-editor-minimap-popout";
 	return popout;
-}
-
-function appendEditorCueText(doc: Document, parent: HTMLElement): void {
-	parent.classList.add("cuecraft-preview-editor-cue-text-card");
-	const question = doc.createElement("span");
-	question.className = "cuecraft-preview-editor-cue-question";
-	question.textContent = SAMPLE_QUESTION;
-	parent.appendChild(question);
 }
 
 function assertNever(_value: never): never {

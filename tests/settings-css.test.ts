@@ -211,6 +211,20 @@ describe("settings CSS", () => {
 		}
 	});
 
+	it("distinguishes Cornell rail and Inline cue thumbnails by geometry", () => {
+		const cornellCardRule = ruleFor(
+			".cuecraft-preview-editor-cue-card-cornell"
+		);
+		expect(cornellCardRule).toContain("inset-inline-start: 8%");
+		expect(cornellCardRule).toContain("width: 43%");
+
+		const inlineCardRule = ruleFor(
+			".cuecraft-preview-editor-cue-card-inline-cues"
+		);
+		expect(inlineCardRule).toContain("inset-block: 35% 6%");
+		expect(inlineCardRule).toContain("inset-inline: 7%");
+	});
+
 	it("animates accessible editor card section disclosures", () => {
 		const root = ".cuecraft-editor-hook-sectioned";
 		const toggleRule = ruleFor(`${root} .cuecraft-editor-hook-section-toggle`);
