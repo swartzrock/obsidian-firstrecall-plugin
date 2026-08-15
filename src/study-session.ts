@@ -11,9 +11,6 @@ export interface StudyTextRange {
 /** A fresh cached cue resolved to one exact live section body. */
 export interface StudySectionDescriptor {
 	sectionId: string;
-	heading: string;
-	question: string;
-	contentHash: string;
 	/** 1-based source line containing the heading. */
 	headingLine: number;
 	/** 1-based first source line after the heading. */
@@ -32,9 +29,16 @@ export interface StudySessionSnapshot {
 	active: boolean;
 	path: string | null;
 	sections: StudySessionSection[];
-	revealedSectionIds: string[];
 	revealedCount: number;
 	total: number;
+}
+
+export interface StudyProjection {
+	snapshot: StudySessionSnapshot;
+	toggleSection(sectionId: string): void;
+	hideAll(): void;
+	exit(): void;
+	documentChanged?(markdown: string): void;
 }
 
 interface SourceLines {
@@ -126,9 +130,6 @@ export function resolveStudySections(
 
 		descriptors.push({
 			sectionId: live.id,
-			heading: live.heading,
-			question: cached.question,
-			contentHash: live.contentHash,
 			headingLine: live.lineNumber,
 			bodyStartLine: live.lineNumber + 1,
 			bodyEndLine: next ? next.lineNumber - 1 : lines.starts.length,
@@ -145,7 +146,6 @@ function inactiveSnapshot(): StudySessionSnapshot {
 		active: false,
 		path: null,
 		sections: [],
-		revealedSectionIds: [],
 		revealedCount: 0,
 		total: 0,
 	};
@@ -226,15 +226,11 @@ export class StudySessionController {
 			bodyRange: { ...descriptor.bodyRange },
 			revealed: this.revealed.has(descriptor.sectionId),
 		}));
-		const revealedSectionIds = sections
-			.filter((section) => section.revealed)
-			.map((section) => section.sectionId);
 		return {
 			active: true,
 			path: this.path,
 			sections,
-			revealedSectionIds,
-			revealedCount: revealedSectionIds.length,
+			revealedCount: this.revealed.size,
 			total: sections.length,
 		};
 	}

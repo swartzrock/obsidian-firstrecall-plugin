@@ -34,7 +34,7 @@ import { buildCornellSupportPresentation } from "./cornell";
 import { cornellStyleClass, type CornellStyle } from "./cornell-style";
 import { isCueEligibleSection, type Section } from "./parser";
 import type { NoteBriefOutput, SectionLens } from "./schemas";
-import type { StudySessionSnapshot } from "./study-session";
+import type { StudyProjection, StudySessionSnapshot } from "./study-session";
 import {
 	CUE_SECTION_KINDS,
 	type CueSectionCollapseController,
@@ -92,7 +92,7 @@ export interface CueLineDataOptions {
 export interface CueEditorRenderState {
 	cues: CueLineData[];
 	display: EditorCueDisplay;
-	study?: CueEditorStudyProjection;
+	study?: StudyProjection;
 	notePath?: string;
 	collapseController?: CueSectionCollapseController;
 	noteBrief?: NoteBriefOutput | null;
@@ -102,13 +102,6 @@ export interface CueEditorRenderState {
 	cueColumnWidth?: CueColumnWidth;
 	cueFontSize?: CueFontSize;
 	editorCueWidthController?: EditorCueWidthController;
-}
-
-export interface CueEditorStudyProjection {
-	snapshot: StudySessionSnapshot;
-	toggleSection(sectionId: string): void;
-	hideAll(): void;
-	exit(): void;
 }
 
 export interface EditorCueWidthController {
@@ -1840,7 +1833,7 @@ function mapStudySnapshotThroughChanges(
 
 export interface CueStudyFieldState {
 	decorations: DecorationSet;
-	projection: CueEditorStudyProjection | null;
+	projection: StudyProjection | null;
 }
 
 export const cueStudyField = StateField.define<CueStudyFieldState>({
@@ -2068,6 +2061,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 	class {
 		private controlHost: HTMLElement | null = null;
 		private controlCleanup: (() => void) | null = null;
+		private destroyed = false;
 
 		private readonly onAnswerClick = (event: MouseEvent) => {
 			const target = event.target as Element | null;
@@ -2105,6 +2099,23 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 		}
 
 		update(update: ViewUpdate): void {
+			if (update.docChanged) {
+				const projection = this.view.state.field(cueStudyField).projection;
+				const documentChanged = projection?.documentChanged;
+				const markdown = update.state.doc.toString();
+				if (documentChanged) {
+					queueMicrotask(() => {
+						if (this.destroyed) return;
+						const current = this.view.state.field(cueStudyField).projection;
+						if (
+							current?.documentChanged === documentChanged &&
+							this.view.state.doc.toString() === markdown
+						) {
+							documentChanged(markdown);
+						}
+					});
+				}
+			}
 			if (
 				update.transactions.some((tr) =>
 					tr.effects.some((effect) => effect.is(setCuesEffect))
@@ -2164,6 +2175,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 		}
 
 		destroy(): void {
+			this.destroyed = true;
 			this.view.dom.removeEventListener("click", this.onAnswerClick);
 			this.removeControls();
 			this.view.dom.classList.remove("cuecraft-editor-study-active");

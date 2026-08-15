@@ -4,8 +4,8 @@
  * resolve the cached cues to current document lines (reusing the same
  * {@link buildCueLineData} logic as the editor) and key them by heading line.
  * The post-processor then looks up a heading element's source line and inserts
- * the matching cue beneath it. This module holds the pure mapping so it can be
- * unit-tested without a DOM.
+ * the matching cue beneath it. This module owns both the pure cue mapping and
+ * the Reading Study DOM projection and control lifecycle.
  */
 
 import {
@@ -15,7 +15,10 @@ import {
 } from "./cue-extension";
 import { parseSections } from "./parser";
 import type { NoteCache } from "./cache";
-import type { StudySessionSnapshot } from "./study-session";
+import type {
+	StudyProjection,
+	StudySessionSnapshot,
+} from "./study-session";
 
 export interface ReadingCueDisplayState {
 	showInlineCues: boolean;
@@ -23,13 +26,6 @@ export interface ReadingCueDisplayState {
 
 export interface ReadingNoteBriefDisplayState {
 	showNoteBrief: boolean;
-}
-
-export interface ReadingStudyProjection {
-	snapshot: StudySessionSnapshot;
-	toggleSection(sectionId: string): void;
-	hideAll(): void;
-	exit(): void;
 }
 
 export interface ReadingSectionInfo {
@@ -40,7 +36,7 @@ export interface ReadingSectionInfo {
 const readingStudyCueCleanup = new WeakMap<HTMLElement, () => void>();
 const readingStudyControlState = new WeakMap<
 	HTMLElement,
-	{ projection: ReadingStudyProjection; cleanup: () => void }
+	{ projection: StudyProjection; cleanup: () => void }
 >();
 
 /**
@@ -154,7 +150,7 @@ function studyBodyNodes(
 export function projectReadingStudyBlock(
 	root: HTMLElement,
 	getSectionInfo: (element: HTMLElement) => ReadingSectionInfo | null,
-	projection: ReadingStudyProjection | null
+	projection: StudyProjection | null
 ): void {
 	restoreReadingStudyBlock(root);
 	if (!projection?.snapshot.active) return;
@@ -239,7 +235,7 @@ export function removeReadingStudyControls(container: HTMLElement): void {
 /** Keep one sticky Study control host in the active Reading view container. */
 export function syncReadingStudyControls(
 	container: HTMLElement,
-	projection: ReadingStudyProjection | null
+	projection: StudyProjection | null
 ): void {
 	const hosts = Array.from(
 		container.querySelectorAll<HTMLElement>(

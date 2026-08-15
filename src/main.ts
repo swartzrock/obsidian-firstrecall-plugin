@@ -73,7 +73,6 @@ import {
 	railLayoutAppliesToDisplay,
 	renderNoteBriefElement,
 	setCuesEffect,
-	type CueEditorStudyProjection,
 	type EditorCueWidthController,
 	type CueLineData,
 } from "./cue-extension";
@@ -85,11 +84,11 @@ import {
 	removeReadingStudyControls,
 	restoreReadingStudyBlock,
 	syncReadingStudyControls,
-	type ReadingStudyProjection,
 } from "./reading-cues";
 import {
 	resolveStudySections,
 	StudySessionController,
+	type StudyProjection,
 	type StudySectionDescriptor,
 	type StudySessionSnapshot,
 } from "./study-session";
@@ -326,7 +325,7 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	onunload(): void {
-		this.endStudySession(false, false);
+		this.endStudySession({ refresh: false, updateIdleStatus: false });
 		for (const action of this.studyHeaderActionElements) action.remove();
 		this.studyHeaderActionElements.clear();
 		this.flushEditorCueWidthPreview(null);
@@ -488,14 +487,20 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		const markdown = await this.app.vault.cachedRead(file);
+		if (
+			this.studySession.snapshot().active ||
+			this.app.workspace.getActiveFile()?.path !== file.path
+		) {
+			return;
+		}
 		this.setStatus(isStale(cache, parseSections(markdown)) ? "stale" : "ready");
 	}
 
 	/** Refresh both the status pill and the rendered cues for a note. */
 	private onActiveFile(file: TFile | null): void {
 		const session = this.studySession.snapshot();
-		if (file && session.active && session.path !== file.path) {
-			this.endStudySession(false, false);
+		if (session.active && session.path !== file?.path) {
+			this.endStudySession({ refresh: false, updateIdleStatus: false });
 		}
 		void this.updateStatusForFile(file);
 		this.refreshStudyEntryStates();
@@ -537,7 +542,7 @@ export default class CueCraftPlugin extends Plugin {
 			activeView === view &&
 			this.studySession.snapshot().path === file.path
 		) {
-			this.endStudySession(false);
+			this.endStudySession({ refresh: false });
 		}
 		const study =
 			allowStudyProjection && cache
@@ -595,7 +600,7 @@ export default class CueCraftPlugin extends Plugin {
 	private editorStudyProjection(
 		view: MarkdownView,
 		cache: NoteCache
-	): CueEditorStudyProjection | null {
+	): StudyProjection | null {
 		const file = view.file;
 		if (
 			!file ||
@@ -615,7 +620,7 @@ export default class CueCraftPlugin extends Plugin {
 	private studyProjection(
 		snapshot: StudySessionSnapshot,
 		path: string
-	): CueEditorStudyProjection {
+	): StudyProjection {
 		return {
 			snapshot,
 			toggleSection: (sectionId) => {
@@ -623,10 +628,25 @@ export default class CueCraftPlugin extends Plugin {
 				this.refreshStudyProjections();
 			},
 			hideAll: () => {
+				if (this.studySession.snapshot().revealedCount === 0) return;
 				this.studySession.hideAll(path);
 				this.refreshStudyProjections();
 			},
 			exit: () => this.endStudySession(),
+			documentChanged: (markdown) => {
+				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+				if (activeView?.file?.path !== path || activeView.getMode() === "preview") {
+					return;
+				}
+				const cache = this.cacheStore.get(path);
+				if (!cache) {
+					this.endStudySession({ refresh: false });
+					return;
+				}
+				if (this.reconcileStudyForSource(path, markdown, cache)) {
+					this.refreshStudyProjections();
+				}
+			},
 		};
 	}
 
@@ -643,7 +663,7 @@ export default class CueCraftPlugin extends Plugin {
 			parseSections(markdown)
 		);
 		if (descriptors.length === 0) {
-			this.endStudySession(false);
+			this.endStudySession({ refresh: false });
 			return null;
 		}
 		const snapshot = this.studySession.reconcile(path, descriptors);
@@ -674,7 +694,12 @@ export default class CueCraftPlugin extends Plugin {
 		this.renderCuesInView(projected.view, false, false);
 	}
 
-	private endStudySession(refresh = true, updateIdleStatus = true): void {
+	private endStudySession(
+		{
+			refresh = true,
+			updateIdleStatus = true,
+		}: { refresh?: boolean; updateIdleStatus?: boolean } = {}
+	): void {
 		if (!this.studySession.snapshot().active) return;
 		this.restoreProjectedStudySurface();
 		this.studySession.exit();
@@ -804,7 +829,9 @@ export default class CueCraftPlugin extends Plugin {
 			this.endStudySession();
 			return;
 		}
-		if (current.active) this.endStudySession(false, false);
+		if (current.active) {
+			this.endStudySession({ refresh: false, updateIdleStatus: false });
+		}
 		this.studySession.start(file.path, descriptors);
 		this.setStatus("study");
 		this.refreshStudyEntryStates();
@@ -1181,7 +1208,7 @@ export default class CueCraftPlugin extends Plugin {
 		let view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (view?.file?.path !== file.path) {
 			if (this.studySession.snapshot().active) {
-				this.endStudySession(false, false);
+				this.endStudySession({ refresh: false, updateIdleStatus: false });
 			}
 			await this.app.workspace.getLeaf(false).openFile(file);
 			view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -1201,7 +1228,9 @@ export default class CueCraftPlugin extends Plugin {
 			this.refreshStudyProjections();
 			return;
 		}
-		if (current.active) this.endStudySession(false, false);
+		if (current.active) {
+			this.endStudySession({ refresh: false, updateIdleStatus: false });
+		}
 		this.studySession.start(file.path, descriptors);
 		this.setStatus("study");
 		this.refreshStudyEntryStates();
@@ -1278,7 +1307,7 @@ export default class CueCraftPlugin extends Plugin {
 			activeView.getMode() === "preview" &&
 			this.studySession.snapshot().path === path
 		) {
-			this.endStudySession(false);
+			this.endStudySession({ refresh: false });
 		}
 		const isHidden = this.visibility.isHidden(path);
 		const headings = Array.from(
@@ -1354,7 +1383,7 @@ export default class CueCraftPlugin extends Plugin {
 		path: string,
 		markdown: string | undefined,
 		cache: NoteCache
-	): ReadingStudyProjection | null {
+	): StudyProjection | null {
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (
 			!activeView ||

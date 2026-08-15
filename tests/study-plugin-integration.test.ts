@@ -183,6 +183,7 @@ function createHarness() {
 	const openedFiles: string[] = [];
 	const viewStates: string[] = [];
 	let layoutReady: (() => void) | null = null;
+	let cachedRead = async (target: TFile) => markdownByPath.get(target.path) ?? "";
 	const workspace = {
 		leftSplit: null,
 		getActiveFile: () => activeFile,
@@ -225,7 +226,7 @@ function createHarness() {
 				vaultEvents.set(name, callback);
 				return {};
 			},
-			cachedRead: async (target: TFile) => markdownByPath.get(target.path) ?? "",
+			cachedRead: (target: TFile) => cachedRead(target),
 			getAbstractFileByPath: () => null,
 		},
 	};
@@ -281,6 +282,9 @@ function createHarness() {
 		markdownByPath,
 		setMode: (next: "source" | "preview") => {
 			mode = next;
+		},
+		setCachedRead: (next: (target: TFile) => Promise<string>) => {
+			cachedRead = next;
 		},
 		setActiveView: (view: HarnessView | null, selectedFile = activeFile) => {
 			activeView = view;
@@ -363,6 +367,47 @@ describe("Study plugin orchestration", () => {
 
 		await harness.commands.get("open-cornell-view")?.callback();
 		expect(harness.viewStates).toContain("cuecraft-cornell");
+	});
+
+	it("exits Study immediately when an editor change makes the cue stale", async () => {
+		const harness = createHarness();
+		await harness.plugin.onload();
+		harness.layoutReady();
+		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		const start = harness.dispatches.length;
+		const study = harness.dispatches.at(-1)?.payload.study as {
+			documentChanged(markdown: string): void;
+		};
+
+		harness.markdownByPath.set(harness.noteFile.path, "# Agents\nChanged answer.");
+		study.documentChanged("# Agents\nChanged answer.");
+
+		expect(harness.controller().snapshot().active).toBe(false);
+		expect(
+			harness.dispatches
+				.slice(start)
+				.some(({ payload, active }) => active && !("study" in payload))
+		).toBe(true);
+	});
+
+	it("does not let an older status read overwrite a newly started Study session", async () => {
+		const harness = createHarness();
+		let resolveRead: (markdown: string) => void = () => undefined;
+		harness.setCachedRead(
+			() => new Promise<string>((resolve) => {
+				resolveRead = resolve;
+			})
+		);
+		await harness.plugin.onload();
+		harness.layoutReady();
+		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+
+		resolveRead(NOTE);
+		await Promise.resolve();
+		await Promise.resolve();
+
+		expect(harness.statusBar.dataset.status).toBe("study");
+		expect(harness.statusBar.textContent).toBe("CueCraft: study");
 	});
 
 	it("opens a requested Markdown target for fresh review without opening Cornell", async () => {
@@ -482,5 +527,30 @@ describe("Study plugin orchestration", () => {
 		expect(
 			document.querySelector(".cuecraft-study-header-action")
 		).toBeNull();
+	});
+
+	it("ends Study when the active note closes and reopens with fresh progress", async () => {
+		const harness = createHarness();
+		await harness.plugin.onload();
+		harness.layoutReady();
+		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		const study = harness.dispatches.at(-1)?.payload.study as {
+			snapshot: { sections: Array<{ sectionId: string }> };
+			toggleSection(sectionId: string): void;
+		};
+		study.toggleSection(study.snapshot.sections[0].sectionId);
+		expect(harness.controller().snapshot().revealedCount).toBe(1);
+
+		harness.setActiveView(null, null);
+		harness.workspaceEvents.get("file-open")?.(null as never);
+		expect(harness.controller().snapshot().active).toBe(false);
+
+		harness.setActiveView(harness.firstView, harness.noteFile);
+		harness.workspaceEvents.get("file-open")?.(harness.noteFile as never);
+		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		expect(harness.controller().snapshot()).toMatchObject({
+			active: true,
+			revealedCount: 0,
+		});
 	});
 });

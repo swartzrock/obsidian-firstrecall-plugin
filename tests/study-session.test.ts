@@ -50,9 +50,6 @@ describe("resolveStudySections", () => {
 		expect(descriptors).toEqual([
 			{
 				sectionId: "alpha",
-				heading: "Alpha",
-				question: "How does Alpha work?",
-				contentHash: sections[0].contentHash,
 				headingLine: 1,
 				bodyStartLine: 2,
 				bodyEndLine: 3,
@@ -61,9 +58,6 @@ describe("resolveStudySections", () => {
 			},
 			{
 				sectionId: "beta",
-				heading: "Beta",
-				question: "How does Beta work?",
-				contentHash: sections[1].contentHash,
 				headingLine: 4,
 				bodyStartLine: 5,
 				bodyEndLine: 5,
@@ -139,21 +133,23 @@ describe("StudySessionController", () => {
 
 		controller.toggleReveal("notes/a.md", "alpha");
 		controller.toggleReveal("notes/a.md", "beta");
-		expect(controller.snapshot().revealedSectionIds).toEqual(["alpha", "beta"]);
+		expect(controller.snapshot().sections.map(({ sectionId, revealed }) => ({ sectionId, revealed }))).toEqual([
+			{ sectionId: "alpha", revealed: true },
+			{ sectionId: "beta", revealed: true },
+		]);
 
 		controller.toggleReveal("notes/a.md", "alpha");
-		expect(controller.snapshot().revealedSectionIds).toEqual(["beta"]);
+		expect(controller.snapshot().sections.find(({ sectionId }) => sectionId === "beta")?.revealed).toBe(true);
 
 		controller.hideAll("notes/a.md");
 		expect(controller.snapshot()).toMatchObject({
 			active: true,
-			revealedSectionIds: [],
 			revealedCount: 0,
 			total: 2,
 		});
 
 		controller.toggleReveal("notes/a.md", "alpha");
-		expect(controller.start("notes/a.md", sections).revealedSectionIds).toEqual([]);
+		expect(controller.start("notes/a.md", sections).revealedCount).toBe(0);
 	});
 
 	it("ignores unknown or wrong-path reveal operations", () => {
@@ -166,7 +162,7 @@ describe("StudySessionController", () => {
 		controller.toggleReveal("notes/b.md", "alpha");
 		controller.hideAll("notes/b.md");
 
-		expect(controller.snapshot().revealedSectionIds).toEqual(["alpha"]);
+		expect(controller.snapshot().revealedCount).toBe(1);
 	});
 
 	it("reconciles only the same path, preserving surviving reveals", () => {
@@ -188,23 +184,18 @@ describe("StudySessionController", () => {
 			{ sectionId: "alpha", revealed: true },
 			{ sectionId: "gamma", revealed: false },
 		]);
-		expect(snapshot.revealedSectionIds).toEqual(["alpha"]);
 		expect(snapshot).toMatchObject({ revealedCount: 1, total: 2 });
 		expect(snapshot.sections[0].bodyRange).toEqual({ from: 16, to: 31 });
-		expect(snapshot.sections[0].contentHash).not.toBe(
-			initial[0].contentHash
-		);
 	});
 
 	it("ends when reconciliation has no studyable sections", () => {
 		const controller = new StudySessionController();
 		controller.start("notes/a.md", resolveAll("# Alpha\nA body."));
 
-		expect(controller.reconcile("notes/a.md", [])).toEqual({
+			expect(controller.reconcile("notes/a.md", [])).toEqual({
 			active: false,
 			path: null,
 			sections: [],
-			revealedSectionIds: [],
 			revealedCount: 0,
 			total: 0,
 		});
@@ -217,7 +208,7 @@ describe("StudySessionController", () => {
 		controller.toggleReveal("notes/a.md", "alpha");
 
 		expect(controller.reconcile("notes/renamed.md", sections).active).toBe(false);
-		expect(controller.snapshot().revealedSectionIds).toEqual([]);
+		expect(controller.snapshot().revealedCount).toBe(0);
 
 		controller.start("notes/a.md", sections);
 		controller.toggleReveal("notes/a.md", "alpha");

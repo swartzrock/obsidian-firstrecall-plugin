@@ -177,9 +177,6 @@ function studySnapshot(
 		sections: [
 			{
 				sectionId: "section-terms",
-				heading: "Terms",
-				question: "How do agents differ from chatbots?",
-				contentHash: "hash",
 				headingLine: 1,
 				bodyStartLine: 2,
 				bodyEndLine: 2,
@@ -188,7 +185,6 @@ function studySnapshot(
 				revealed: false,
 			},
 		],
-		revealedSectionIds: [],
 		revealedCount: 0,
 		total: 1,
 		...overrides,
@@ -262,7 +258,6 @@ describe("Editing View Study projection", () => {
 				bodyRange: { from: 14, to: 20 },
 				revealed: true,
 			})),
-			revealedSectionIds: ["section-terms"],
 			revealedCount: 1,
 		});
 		state = state.update({
@@ -273,6 +268,38 @@ describe("Editing View Study projection", () => {
 			}),
 		}).state;
 		expect(state.field(cueStudyField).decorations.size).toBe(0);
+	});
+
+	it("notifies the active Study projection after a document change", () => {
+		const queuedMicrotasks: Array<() => void> = [];
+		const originalQueueMicrotask = globalThis.queueMicrotask;
+		globalThis.queueMicrotask = (callback) => queuedMicrotasks.push(callback);
+		try {
+			withEditorView("# Terms\nbody", cueEditorExtension, (view) => {
+				const documentChanged = vi.fn();
+				view.dispatch({
+					effects: setCuesEffect.of({
+						cues: [cue()],
+						display: "inline-cues",
+						study: {
+							snapshot: studySnapshot(),
+							toggleSection: vi.fn(),
+							hideAll: vi.fn(),
+							exit: vi.fn(),
+							documentChanged,
+						},
+					}),
+				});
+				queuedMicrotasks.length = 0;
+				view.dispatch({ changes: { from: view.state.doc.length, insert: "!" } });
+				for (const callback of queuedMicrotasks.splice(0)) callback();
+
+				expect(documentChanged).toHaveBeenCalledOnce();
+				expect(documentChanged).toHaveBeenCalledWith("# Terms\nbody!");
+			});
+		} finally {
+			globalThis.queueMicrotask = originalQueueMicrotask;
+		}
 	});
 
 	it("makes only admitted successful cues accessible reveal controls", () => {
@@ -353,7 +380,6 @@ describe("Editing View Study projection", () => {
 				...section,
 				revealed: true,
 			})),
-			revealedSectionIds: ["section-terms"],
 			revealedCount: 1,
 		});
 		const payload = (snapshot: StudySessionSnapshot): CueEditorRenderState => ({

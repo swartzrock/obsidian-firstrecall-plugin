@@ -76,7 +76,6 @@ function studySnapshot(): StudySessionSnapshot {
 				revealed: false,
 			},
 		],
-		revealedSectionIds: [],
 		revealedCount: 0,
 		total: 1,
 	};
@@ -280,7 +279,6 @@ describe("projectReadingStudyBlock", () => {
 		const revealed = {
 			...hidden,
 			sections: hidden.sections.map((section) => ({ ...section, revealed: true })),
-			revealedSectionIds: ["strict"],
 			revealedCount: 1,
 		};
 		projectReadingStudyBlock(block, getSectionInfo, {
