@@ -1352,20 +1352,15 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	border-radius: var(--cc-radius);
 	box-shadow: var(--cc-shadow);
 	padding: 14px 16px;
-	margin: 0.3em 0 0.6em;
+	margin: 0.3em 0 1em;
 }
 
-.cuecraft-cue-section-label {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.48em;
-	margin: 0 0 0.32em;
-	color: var(--cc-muted);
-	font-size: var(--font-smallest);
-	font-weight: var(--font-bold);
-	letter-spacing: 0.06em;
-	line-height: 1.1;
-	text-transform: uppercase;
+.cuecraft-inline-cue-widget {
+	padding-bottom: 1em;
+}
+
+.cuecraft-inline-cue-widget>.cuecraft-cue {
+	margin-bottom: 0;
 }
 
 .cuecraft-label-icon {
@@ -1382,12 +1377,6 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	width: 1.25em;
 	height: 1.25em;
 	stroke-width: 2;
-}
-
-.cuecraft-cue-section-label:not(:first-child) {
-	border-top: 1px solid var(--cc-border);
-	margin-top: 0.75em;
-	padding-top: 0.7em;
 }
 
 .cuecraft-cue-question {
@@ -1542,23 +1531,16 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	max-width: min(46rem, 100%);
 }
 
-.cuecraft-cue.cuecraft-cuefont-small .cuecraft-cue-question,
-.cuecraft-cue.cuecraft-cuefont-small .cuecraft-cue-keywords,
-.cuecraft-cue.cuecraft-cuefont-small .cuecraft-section-lens {
+.cuecraft-cue.cuecraft-cuefont-small {
 	font-size: var(--font-smallest);
 }
 
-.cuecraft-cue.cuecraft-cuefont-medium .cuecraft-cue-question {
+.cuecraft-cue.cuecraft-cuefont-medium {
 	font-size: var(--font-ui-small);
 }
 
-.cuecraft-cue.cuecraft-cuefont-large .cuecraft-cue-question {
+.cuecraft-cue.cuecraft-cuefont-large {
 	font-size: var(--font-ui-medium);
-}
-
-.cuecraft-cue.cuecraft-cuefont-large .cuecraft-cue-keywords,
-.cuecraft-cue.cuecraft-cuefont-large .cuecraft-section-lens {
-	font-size: var(--font-ui-smaller, var(--font-smallest));
 }
 
 .cuecraft-editor-hook.cuecraft-cuefont-small {
@@ -1587,80 +1569,6 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	content: none;
 }
 
-.cuecraft-editor-rail-card {
-	--cuecraft-rail-collapsed-max-height: 176px;
-	--cuecraft-rail-fade-background: var(--background-secondary);
-	position: relative;
-}
-
-.cuecraft-editor-rail-card-content {
-	position: relative;
-}
-
-.cuecraft-editor-rail-card[data-overflowing="true"][data-expanded="false"]
-	.cuecraft-editor-rail-card-content {
-	max-height: var(--cuecraft-rail-collapsed-max-height);
-	overflow: hidden;
-	padding-bottom: 2.2rem;
-}
-
-.cuecraft-editor-rail-card[data-overflowing="true"][data-expanded="false"]
-	.cuecraft-editor-rail-card-content::after {
-	content: "";
-	position: absolute;
-	right: 0;
-	bottom: 0;
-	left: 0;
-	height: 2.35rem;
-	pointer-events: none;
-	background: linear-gradient(
-		to bottom,
-		transparent,
-		var(--cuecraft-rail-fade-background)
-	);
-}
-
-.cuecraft-editor-rail-card[data-expanded="true"]
-	.cuecraft-editor-rail-card-content {
-	max-height: none;
-	overflow: visible;
-}
-
-.cuecraft-editor-rail-card-toggle {
-	position: relative;
-	z-index: 3;
-	display: none;
-	margin: 0.55em 0 0;
-	padding: 0.24em 0.68em;
-	border: 1px solid
-		color-mix(in srgb, var(--interactive-accent) 28%, transparent);
-	border-radius: var(--radius-s);
-	background: color-mix(
-		in srgb,
-		var(--background-primary) 90%,
-		var(--interactive-accent)
-	);
-	color: var(--interactive-accent);
-	cursor: pointer;
-	font-size: var(--font-smallest);
-	font-weight: var(--font-semibold);
-	line-height: 1.2;
-	box-shadow: 0 1px 5px rgba(0, 0, 0, 0.1);
-}
-
-.cuecraft-editor-rail-card[data-overflowing="true"]
-	> .cuecraft-editor-rail-card-toggle:not([hidden]) {
-	display: inline-flex;
-}
-
-.cuecraft-editor-rail-card[data-overflowing="true"][data-expanded="false"]
-	> .cuecraft-editor-rail-card-toggle:not([hidden]) {
-	position: absolute;
-	inset-block-end: 0.45em;
-	inset-inline-start: 0.65em;
-	margin: 0;
-}
-
 .cuecraft-editor-rail-spacer {
 	display: block;
 	width: 1px;
@@ -1684,7 +1592,6 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-editor-hook-anchored-card-rail {
-	--cuecraft-rail-fade-background: var(--cc-card);
 	position: relative;
 	max-width: min(16.75rem, 100%);
 	margin: 0.45em 0 0.75em;
@@ -1702,12 +1609,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-editor-hook-anchored-card-rail[data-tone="cool"] {
-	--cuecraft-rail-fade-background: var(--cc-card);
 	background: var(--cc-card);
 }
 
 .cuecraft-editor-hook-anchored-card-rail[data-card-style="gradient"] {
-	--cuecraft-rail-fade-background: var(--cc-card);
 	border-color: var(--cc-border);
 	background: var(--cc-card);
 	box-shadow: var(--cc-shadow);
@@ -1731,13 +1636,40 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-title {
-	font-size: 15.5px;
-	font-weight: var(--font-semibold);
-	line-height: 1.34;
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-title {
+	color: var(--text-normal);
+	font-size: inherit;
+	font-weight: var(--font-normal, 400);
+	line-height: 1.45;
 }
 
-.cuecraft-editor-hook-section-label {
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-toggle {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	border-radius: var(--radius-s);
+	background: transparent;
+	color: var(--text-normal);
+	cursor: pointer;
+	font: inherit;
+	text-align: start;
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-toggle:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 3px;
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-body+.cuecraft-editor-hook-section-toggle {
+	margin-top: 0.95em;
+	padding-top: 0.85em;
+	border-top: 1px solid var(--cc-border);
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-label {
 	display: flex;
 	align-items: center;
 	gap: 0.48em;
@@ -1752,25 +1684,83 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	text-transform: uppercase;
 }
 
-.cuecraft-editor-hook-section-label:not(:first-child) {
-	border-top: 1px solid var(--cc-border);
-	margin-top: 0.95em;
-	padding-top: 0.85em;
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-chevron {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 1.25em;
+	height: 1.25em;
+	margin-inline-start: auto;
+	color: var(--cc-muted);
+	flex: 0 0 auto;
+	transform-origin: center;
+	transition: transform 200ms ease;
 }
 
-.cuecraft-editor-hook-section-label+.cuecraft-section-lens {
-	border-top: 0;
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-chevron svg {
+	width: 1.25em;
+	height: 1.25em;
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-toggle[aria-expanded="false"] .cuecraft-editor-hook-section-chevron {
+	transform: rotate(-90deg);
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-preview {
+	display: block;
+	width: 100%;
+	overflow: hidden;
+	color: var(--cc-muted);
+	font-size: 0.84em;
+	font-style: italic;
+	font-weight: var(--font-normal, 400);
+	line-height: 1.4;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-preview[hidden] {
+	display: none;
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-toggle[data-section="terms"][aria-expanded="false"] {
+	height: auto;
+	padding-bottom: 0.65em;
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-body {
+	display: grid;
+	grid-template-rows: 1fr;
+	opacity: 1;
+	transition:
+		grid-template-rows 200ms ease,
+		opacity 200ms ease;
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-body[data-collapsed="true"] {
+	grid-template-rows: 0fr;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-content {
+	min-height: 0;
+	overflow: hidden;
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-content>.cuecraft-section-lens {
 	margin-top: 0;
 	padding-top: 0;
+	border-top: 0;
 }
 
 .cuecraft-editor-hook[data-title-density="long"] .cuecraft-editor-hook-title {
 	font-size: var(--font-ui-smaller);
 }
 
-.cuecraft-editor-hook-anchored-card-rail[data-title-density="long"] .cuecraft-editor-hook-title {
-	font-size: 14px;
-	line-height: 1.28;
+.cuecraft-editor-hook-sectioned[data-title-density="long"] .cuecraft-editor-hook-title {
+	font-size: inherit;
+	line-height: 1.45;
 }
 
 .cuecraft-editor-hook[data-title-density="dense"] .cuecraft-editor-hook-title {
@@ -1778,9 +1768,9 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	line-height: 1.18;
 }
 
-.cuecraft-editor-hook-anchored-card-rail[data-title-density="dense"] .cuecraft-editor-hook-title {
-	font-size: 12.5px;
-	line-height: 1.2;
+.cuecraft-editor-hook-sectioned[data-title-density="dense"] .cuecraft-editor-hook-title {
+	font-size: inherit;
+	line-height: 1.45;
 }
 
 .cuecraft-editor-hook-keywords,
@@ -1800,17 +1790,20 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	gap: 0.35em;
 }
 
-.cuecraft-editor-hook-anchored-card-rail .cuecraft-editor-hook-keywords {
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-keywords,
+.cuecraft-editor-hook-sectioned .cuecraft-cornell-kw {
 	gap: 0.32em;
 	margin-top: 0.42em;
+	font-size: inherit;
 }
 
-.cuecraft-editor-hook-anchored-card-rail .cuecraft-cue-term {
-	min-height: 18px;
+.cuecraft-editor-hook-sectioned .cuecraft-cue-term,
+.cuecraft-editor-hook-sectioned .cuecraft-cornell-support-term {
+	min-height: 1.65em;
 	padding: 0 0.42rem;
 	color: color-mix(in srgb, var(--cc-muted) 82%, transparent);
-	font-size: 10.75px;
-	line-height: 18px;
+	font-size: 0.84em;
+	line-height: 1.65;
 }
 
 .cuecraft-editor-hook .cuecraft-section-lens {
@@ -1818,6 +1811,13 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	z-index: 1;
 	color: var(--cc-muted);
 	font-weight: var(--font-medium);
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-section-lens {
+	color: var(--text-normal);
+	font-size: inherit;
+	font-weight: var(--font-normal, 400);
+	line-height: 1.45;
 }
 
 .cuecraft-editor-hook[data-question-visible="false"] .cuecraft-section-lens {
@@ -1897,11 +1897,6 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-editor-hook-threaded-margin-notes {
 	--cuecraft-thread-color: var(--interactive-accent);
-	--cuecraft-rail-fade-background: color-mix(
-		in srgb,
-		var(--background-secondary) 88%,
-		transparent
-	);
 	position: relative;
 	max-width: min(20rem, 100%);
 	margin: 0.25em 0 0.85em;
@@ -2223,6 +2218,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		transform: translateX(calc(-100% - 0.5rem));
 	}
 
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-medium {
+		font-size: var(--font-ui-small);
+	}
+
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-large {
+		font-size: var(--font-ui-medium);
+	}
+
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-anchored-card-rail,
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-active-section-composer {
 		width: clamp(7.25rem, 13vw, 10rem);
@@ -2249,6 +2252,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-title {
 		font-size: var(--font-smallest);
 		line-height: 1.12;
+	}
+
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-sectioned .cuecraft-editor-hook-title {
+		font-size: inherit;
+		line-height: 1.45;
 	}
 
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-heading,
@@ -2281,6 +2289,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 		transform: translateX(calc(-100% - 0.375rem));
 	}
 
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-medium {
+		font-size: var(--font-ui-small);
+	}
+
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-large {
+		font-size: var(--font-ui-medium);
+	}
+
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-anchored-card-rail,
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-active-section-composer {
 		width: clamp(6rem, 15vw, 7.5rem);
@@ -2307,6 +2323,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-title {
 		font-size: var(--font-smallest);
 		line-height: 1.1;
+	}
+
+	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-sectioned .cuecraft-editor-hook-title {
+		font-size: inherit;
+		line-height: 1.45;
 	}
 }
 
@@ -2394,6 +2415,126 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	width: clamp(11.5rem, 20vw, 16rem);
 }
 
+.markdown-source-view.mod-cm6 .cuecraft-editor-cue-width-custom {
+	--cuecraft-editor-cue-width-resolved: clamp(6rem, var(--cuecraft-editor-cue-width, 13rem), 32rem);
+}
+
+.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-rail-card.cuecraft-editor-cue-width-custom {
+	box-sizing: border-box;
+	width: var(--cuecraft-editor-cue-width-resolved);
+	max-width: none;
+}
+
+.cuecraft-editor-rail-card {
+	position: relative;
+	box-sizing: border-box;
+}
+
+.cuecraft-editor-hook-anchored-card-rail.cuecraft-editor-rail-card {
+	padding-left: 28px;
+	overflow: visible;
+}
+
+.cuecraft-editor-hook-threaded-margin-notes.cuecraft-editor-rail-card {
+	padding-left: 28px;
+}
+
+.cuecraft-editor-cornell-card.cuecraft-editor-rail-card {
+	padding-left: 0;
+}
+
+.cuecraft-editor-cornell-card.cuecraft-editor-rail-card .cuecraft-cornell-cue {
+	padding-left: 28px;
+}
+
+.cuecraft-editor-cue-width-grip {
+	position: absolute;
+	z-index: 5;
+	inset-block: 0;
+	left: -12px;
+	width: 24px;
+	min-width: 24px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	cursor: ew-resize;
+	touch-action: none;
+}
+
+.cuecraft-editor-cue-width-grip-label {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.cuecraft-editor-cue-width-grip::before {
+	content: "";
+	position: absolute;
+	top: var(--cuecraft-editor-cue-width-grip-top, 50%);
+	left: 50%;
+	width: 9px;
+	height: 52px;
+	border: 1px solid color-mix(in srgb, var(--text-muted) 48%, var(--background-modifier-border));
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	box-shadow: var(--shadow-s);
+	transform: translate(-50%, -50%);
+	transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.cuecraft-editor-cue-width-grip::after {
+	content: "";
+	position: absolute;
+	top: var(--cuecraft-editor-cue-width-grip-top, 50%);
+	left: 50%;
+	width: 2px;
+	height: 17px;
+	background: radial-gradient(circle, var(--text-muted) 1px, transparent 1.2px) center top / 2px 5px repeat-y;
+	transform: translate(-50%, -50%);
+}
+
+.cuecraft-editor-cue-width-grip:hover::before,
+.cuecraft-editor-cue-width-grip:focus-visible::before,
+.cuecraft-editor-cue-width-grip.cuecraft-editor-cue-width-resizing::before {
+	border-color: var(--interactive-accent);
+	background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary));
+	box-shadow: 0 0 0 3px color-mix(in srgb, var(--interactive-accent) 16%, transparent), var(--shadow-s);
+}
+
+.cuecraft-editor-cue-width-grip:hover::after,
+.cuecraft-editor-cue-width-grip:focus-visible::after,
+.cuecraft-editor-cue-width-grip.cuecraft-editor-cue-width-resizing::after {
+	background: radial-gradient(circle, var(--interactive-accent) 1px, transparent 1.2px) center top / 2px 5px repeat-y;
+}
+
+.cuecraft-editor-cue-width-grip:focus-visible {
+	outline: none;
+}
+
+html.cuecraft-editor-cue-width-resizing,
+html.cuecraft-editor-cue-width-resizing * {
+	cursor: ew-resize !important;
+	user-select: none !important;
+}
+
+@media (min-width: 1180px) {
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift.cuecraft-editor-cue-width-custom[data-cuecraft-editor-display="anchored-card-rail"] {
+		--cuecraft-editor-masthead-offset: calc(var(--cuecraft-editor-cue-width-resolved) + 2.25rem);
+	}
+}
+
+@media (min-width: 980px) and (max-width: 1179.98px) {
+	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift.cuecraft-editor-cue-width-custom[data-cuecraft-editor-display="anchored-card-rail"] {
+		--cuecraft-editor-masthead-offset: calc(var(--cuecraft-editor-cue-width-resolved) + 1.5rem);
+	}
+}
+
 .markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-narrow .cuecraft-editor-hook-title,
 .markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-narrow .cuecraft-section-lens {
 	width: min(14rem, calc(100vw - 9rem));
@@ -2411,6 +2552,11 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 @media (prefers-reduced-motion: reduce) {
 	.cuecraft-editor-hook {
+		transition: none;
+	}
+
+	.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-body,
+	.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-chevron {
 		transition: none;
 	}
 
@@ -2669,6 +2815,12 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 
 .cuecraft-cuefont-large .cuecraft-cornell-support-text {
 	font-size: var(--font-ui-smaller, var(--font-smallest));
+}
+
+.cuecraft-editor-hook-sectioned .cuecraft-cornell-q {
+	font-size: inherit;
+	font-weight: var(--font-normal, 400);
+	line-height: 1.45;
 }
 
 /* Reading-mode (preview) cues, inserted beneath their headings. */
@@ -3166,6 +3318,10 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	margin-bottom: 6px;
 }
 
+.cuecraft-editor-hook-sectioned.cuecraft-style-exam-prep .cuecraft-cornell-cue::before {
+	content: none;
+}
+
 .cuecraft-style-exam-prep .cuecraft-cornell-kw {
 	border-top: 1px dashed var(--background-modifier-border);
 	padding-top: 6px;
@@ -3201,16 +3357,15 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	font-style: italic;
 }
 
-/* ---- Minimal: quiet, borderless cues ---- */
+/* ---- Minimal: quiet, outlined cues ---- */
 .cuecraft-style-minimal .cuecraft-cornell-cuecell {
 	border-right-color: var(--background-modifier-border);
 }
 
 .cuecraft-style-minimal .cuecraft-cornell-cue {
 	background: transparent;
-	border-top-color: transparent;
-	border-bottom-color: transparent;
-	border-left: 2px solid var(--background-modifier-border);
+	border: 1px solid var(--cc-border);
+	border-inline-start: 3px solid var(--cc-border);
 	padding-left: 10px;
 }
 
@@ -3221,6 +3376,14 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 .cuecraft-style-minimal .cuecraft-cornell-q {
 	font-weight: var(--font-normal);
 	color: var(--text-muted);
+}
+
+.cuecraft-style-minimal.cuecraft-editor-hook-sectioned .cuecraft-cornell-q {
+	color: var(--text-normal);
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: var(--font-normal, 400);
+	line-height: 1.45;
 }
 
 .cuecraft-style-minimal .cuecraft-cornell-support-text {

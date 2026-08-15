@@ -191,6 +191,7 @@ export interface CueCraftSettings {
 	editorCueDisplay: EditorCueDisplay;
 	cornellStyle: CornellStyle;
 	cueColumnWidth: CueColumnWidth;
+	editorCueCustomWidthPx: number | null;
 	cueFontSize: CueFontSize;
 	autoGenerateOnSave: boolean;
 	autoGenerationSettleDelaySeconds: AutoGenerationSettleDelaySeconds;
@@ -264,6 +265,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	editorCueDisplay: DEFAULT_EDITOR_CUE_DISPLAY,
 	cornellStyle: DEFAULT_CORNELL_STYLE,
 	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
+	editorCueCustomWidthPx: null,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
 	autoGenerateOnSave: false,
 	autoGenerationSettleDelaySeconds:
@@ -1378,21 +1380,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				className: "cuecraft-thumbnail-group-editor-card-style",
 			});
 		}
-
-		const editorWidthDesc = (): string =>
-			CUE_COLUMN_WIDTHS.find(
-				(w) => w.id === this.plugin.settings.cueColumnWidth
-			)?.description ?? "Width of editor cue cards and inline cue blocks.";
-		this.renderEditingViewThumbnailSetting<CueColumnWidth>(containerEl, {
-			name: "Cue column width",
-			description: editorWidthDesc,
-			options: cueColumnWidthThumbnailOptions(),
-			value: () => this.plugin.settings.cueColumnWidth,
-			setValue: (value) => {
-				this.plugin.settings.cueColumnWidth = value;
-			},
-			className: "cuecraft-thumbnail-group-cue-width",
-		});
 
 		const editorFontDesc = (): string =>
 			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)

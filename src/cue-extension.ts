@@ -39,6 +39,19 @@ import {
 } from "./editor-hook-card-style";
 import { isCueEligibleSection, type Section } from "./parser";
 import type { NoteBriefOutput, SectionLens } from "./schemas";
+import {
+	CUE_SECTION_KINDS,
+	type CueSectionCollapseController,
+	type CueSectionKind,
+} from "./cue-section-collapse";
+import {
+	clampEditorCueWidthPx,
+	editorCueDynamicMaxWidthPx,
+	editorCueWidthFromKeyboard,
+	editorCueWidthFromLeftEdgeDrag,
+	EDITOR_CUE_WIDTH_MAX_PX,
+	EDITOR_CUE_WIDTH_MIN_PX,
+} from "./editor-cue-width";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -47,11 +60,25 @@ const QUESTION_ICON_CANDIDATES = [
 	"circle-help",
 	"help-circle",
 ] as const;
+const SUMMARY_ICON_CANDIDATES = ["notebook-text", "file-text"] as const;
+const TERMS_ICON_CANDIDATES = ["tags", "tag"] as const;
+const CUE_SECTION_ICON_CANDIDATES: Record<
+	CueSectionKind,
+	readonly string[]
+> = {
+	summary: SUMMARY_ICON_CANDIDATES,
+	question: QUESTION_ICON_CANDIDATES,
+	terms: TERMS_ICON_CANDIDATES,
+};
+let nextEditorHookSectionBodyId = 0;
+let nextEditorCueRailCardId = 0;
 
 /** One renderable cue, resolved to a current document line. */
 export interface CueLineData {
 	/** 1-based line of the heading the cue belongs to. */
 	line: number;
+	/** Stable cached section identity, independent of the current heading line. */
+	sectionId: string;
 	heading: string;
 	question: string;
 	keywords: string[];
@@ -69,26 +96,49 @@ export interface CueLineDataOptions {
 export interface CueEditorRenderState {
 	cues: CueLineData[];
 	display: EditorCueDisplay;
+	notePath?: string;
+	collapseController?: CueSectionCollapseController;
 	noteBrief?: NoteBriefOutput | null;
 	showRailQuestions?: boolean;
 	showRailSupportTerms?: boolean;
 	editorHookCardStyle?: EditorHookCardStyle;
 	cueColumnWidth?: CueColumnWidth;
 	cueFontSize?: CueFontSize;
+	editorCueWidthController?: EditorCueWidthController;
+}
+
+export interface EditorCueWidthController {
+	getCommittedWidthPx(): number | null;
+	previewWidthPx(widthPx: number | null): void;
+	flushWidthPreview(widthPx: number | null): void;
+	commitWidthPx(widthPx: number): void;
 }
 
 interface CueRenderOptions extends EditorHookCardOptions {
 	cueColumnWidth?: CueColumnWidth;
 	cueFontSize?: CueFontSize;
+	editorCueWidthController?: EditorCueWidthController;
+	collapse?: CueSectionCollapseRenderState;
 }
 
-export const RAIL_CARD_COLLAPSED_MIN_HEIGHT = 112;
-export const RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT = 176;
-export const RAIL_CARD_COLLAPSED_MAX_HEIGHT = 288;
+interface CueSectionCollapseRenderState {
+	notePath: string;
+	sectionId: string;
+	controller: CueSectionCollapseController;
+	collapsed: Record<CueSectionKind, boolean>;
+}
+
 const RAIL_CARD_SECTION_GAP = 12;
-const RAIL_CARD_OVERFLOW_TOLERANCE = 1;
 const RAIL_CARD_SPACER_TOLERANCE = 1;
-export const RAIL_CARD_TOGGLE_EVENT = "cuecraft-rail-card-toggle";
+export const RAIL_CARD_LAYOUT_EVENT = "cuecraft-rail-card-layout";
+const EDITOR_CUE_WIDTH_PROPERTY = "--cuecraft-editor-cue-width";
+const EDITOR_CUE_WIDTH_CUSTOM_CLASS = "cuecraft-editor-cue-width-custom";
+const EDITOR_CUE_WIDTH_RESIZING_CLASS = "cuecraft-editor-cue-width-resizing";
+const editorCueWidthInteractionCleanup = new WeakMap<HTMLElement, () => void>();
+const editorCueWidthLayoutFrames = new WeakMap<
+	HTMLElement,
+	{ id: number; kind: "animation-frame" | "timeout" }
+>();
 
 /**
  * Resolve a cache's cues to current document lines. Cues are matched to the
@@ -117,6 +167,7 @@ export function buildCueLineData(
 		const failed = Boolean(sec.error) || !sec.question;
 		out.push({
 			line,
+			sectionId: sec.id,
 			heading: sec.heading,
 			question: failed ? "" : (sec.question ?? ""),
 			keywords: failed || !showKeywords ? [] : sec.keywords ?? [],
@@ -146,6 +197,9 @@ class CueWidget extends WidgetType {
 			other.index === this.index &&
 			editorHookCardOptionsKey(other.options) ===
 				editorHookCardOptionsKey(this.options) &&
+			other.options.collapse?.controller ===
+				this.options.collapse?.controller &&
+			other.cue.sectionId === this.cue.sectionId &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
@@ -155,21 +209,44 @@ class CueWidget extends WidgetType {
 	}
 
 	toDOM(): HTMLElement {
+		const collapse = this.options.collapse;
+		const options = collapse
+			? {
+					...this.options,
+					collapse: {
+						...collapse,
+						collapsed: cueSectionCollapsedState(
+							collapse.controller,
+							collapse.notePath,
+							collapse.sectionId
+						),
+					},
+				}
+			: this.options;
 		const element = renderCueElement(
 			this.cue,
 			this.display,
 			this.index,
 			"upcoming",
-			this.options
+			options
 		);
 		if (!isInlineEditorDisplay(this.display)) {
 			element.classList.add("cuecraft-editor-hook-inline-fallback");
+			return element;
 		}
-		return element;
+		const wrapper = element.ownerDocument.createElement("div");
+		wrapper.className = "cuecraft-inline-cue-widget";
+		wrapper.appendChild(element);
+		return wrapper;
 	}
 
-	ignoreEvent(): boolean {
-		return false;
+	ignoreEvent(event: Event): boolean {
+		const target = event.target as
+			| { closest?: (selector: string) => Element | null }
+			| null;
+		return Boolean(
+			target?.closest?.(".cuecraft-editor-hook-section-toggle")
+		);
 	}
 }
 
@@ -228,6 +305,9 @@ class CueGutterMarker extends GutterMarker {
 			other.state === this.state &&
 			editorHookCardOptionsKey(other.options) ===
 				editorHookCardOptionsKey(this.options) &&
+			other.options.collapse?.controller ===
+				this.options.collapse?.controller &&
+			other.cue.sectionId === this.cue.sectionId &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			other.cue.confidence === this.cue.confidence &&
@@ -237,13 +317,33 @@ class CueGutterMarker extends GutterMarker {
 	}
 
 	toDOM(): HTMLElement {
+		const collapse = this.options.collapse;
+		const options = collapse
+			? {
+					...this.options,
+					collapse: {
+						...collapse,
+						collapsed: cueSectionCollapsedState(
+							collapse.controller,
+							collapse.notePath,
+							collapse.sectionId
+						),
+					},
+				}
+			: this.options;
 		return renderCueElement(
 			this.cue,
 			this.display,
 			this.index,
 			this.state,
-			this.options
+			options
 		);
+	}
+
+	destroy(dom: Node): void {
+		if (dom.nodeType === dom.ELEMENT_NODE) {
+			editorCueWidthInteractionCleanup.get(dom as HTMLElement)?.();
+		}
 	}
 }
 
@@ -303,34 +403,58 @@ function renderCornellCueElement(
 		q.className = "cuecraft-cornell-q";
 		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
 		card.appendChild(q);
-		return finalizeRailOverflowCard(root);
+		return finalizeRailCard(root, display, options);
 	}
 
 	if (cue.confidence) {
 		card.dataset.confidence = cue.confidence;
 	}
+	root.classList.add("cuecraft-editor-hook-sectioned");
+	if (cue.sectionLens) {
+		const summary = doc.createElement("div");
+		summary.className = "cuecraft-section-lens";
+		const takeaway = doc.createElement("span");
+		takeaway.className = "cuecraft-section-lens-takeaway";
+		takeaway.textContent = cue.sectionLens.takeaway;
+		summary.appendChild(takeaway);
+		appendEditorHookDisclosure(
+			card,
+			"summary",
+			cue.sectionLens.takeaway,
+			summary,
+			options.collapse
+		);
+	}
 	if (options.showQuestion ?? true) {
-		appendCueSectionLabel(card, "QUESTION");
 		const q = doc.createElement("div");
 		q.className = "cuecraft-cornell-q";
 		q.textContent = cue.question;
-		card.appendChild(q);
+		appendEditorHookDisclosure(
+			card,
+			"question",
+			cue.question,
+			q,
+			options.collapse
+		);
 	}
-
-	appendSectionLens(card, cue.sectionLens);
 
 	const supports = buildCornellSupportPresentation({
 		keywords: cue.keywords,
 	});
 	if ((options.showSupportTerms ?? true) && supports.terms.length) {
-		appendCueSectionLabel(card, "TERMS");
 		const kw = doc.createElement("div");
 		kw.className = "cuecraft-cornell-kw";
 		appendCueTerms(kw, supports.terms, "cuecraft-cornell-support-term");
-		card.appendChild(kw);
+		appendEditorHookDisclosure(
+			card,
+			"terms",
+			supports.terms.join(", "),
+			kw,
+			options.collapse
+		);
 	}
 
-	return finalizeRailOverflowCard(root);
+	return finalizeRailCard(root, display, options);
 }
 
 function renderInlineCueElement(
@@ -338,7 +462,8 @@ function renderInlineCueElement(
 	options: CueRenderOptions = {}
 ): HTMLElement {
 	const root = cueDocument().createElement("div");
-	root.className = "cuecraft-cue";
+	root.className = "cuecraft-cue cuecraft-editor-hook-sectioned";
+	root.setAttribute("role", "note");
 	root.dataset.questionVisible = String(options.showQuestion ?? true);
 	root.dataset.supportTermsVisible = String(options.showSupportTerms ?? true);
 	applyCueLayoutClasses(root, options);
@@ -356,22 +481,45 @@ function renderInlineCueElement(
 	if (cue.confidence) {
 		root.dataset.confidence = cue.confidence;
 	}
+	if (cue.sectionLens) {
+		const summary = cueDocument().createElement("div");
+		summary.className = "cuecraft-section-lens";
+		const takeaway = cueDocument().createElement("span");
+		takeaway.className = "cuecraft-section-lens-takeaway";
+		takeaway.textContent = cue.sectionLens.takeaway;
+		summary.appendChild(takeaway);
+		appendEditorHookDisclosure(
+			root,
+			"summary",
+			cue.sectionLens.takeaway,
+			summary,
+			options.collapse
+		);
+	}
 	if (options.showQuestion ?? true) {
-		appendCueSectionLabel(root, "QUESTION");
 		const q = cueDocument().createElement("div");
-		q.className = "cuecraft-cue-question";
+		q.className = "cuecraft-cue-question cuecraft-editor-hook-title";
 		q.textContent = cue.question;
-		root.appendChild(q);
+		appendEditorHookDisclosure(
+			root,
+			"question",
+			cue.question,
+			q,
+			options.collapse
+		);
 	}
 
-	appendSectionLens(root, cue.sectionLens);
-
 	if ((options.showSupportTerms ?? true) && cue.keywords.length) {
-		appendCueSectionLabel(root, "TERMS");
 		const kw = cueDocument().createElement("div");
-		kw.className = "cuecraft-cue-keywords";
+		kw.className = "cuecraft-cue-keywords cuecraft-editor-hook-keywords";
 		appendCueTerms(kw, cue.keywords);
-		root.appendChild(kw);
+		appendEditorHookDisclosure(
+			root,
+			"terms",
+			cue.keywords.join(", "),
+			kw,
+			options.collapse
+		);
 	}
 	return root;
 }
@@ -383,7 +531,9 @@ function renderEditorHookElement(
 	const root = cueDocument().createElement("div");
 	root.className = `cuecraft-editor-hook cuecraft-editor-hook-${card.display}`;
 	applyCueLayoutClasses(root, options);
-	const showSectionLabels = card.display === "anchored-card-rail" && !card.error;
+	const showSectionLabels =
+		sectionDisclosuresApplyToDisplay(card.display) && !card.error;
+	if (showSectionLabels) root.classList.add("cuecraft-editor-hook-sectioned");
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");
 	root.dataset.display = card.display;
@@ -400,8 +550,23 @@ function renderEditorHookElement(
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
 	let hasContent = false;
+	if (card.sectionLens && showSectionLabels) {
+		const summary = cueDocument().createElement("div");
+		summary.className = "cuecraft-section-lens";
+		const takeaway = cueDocument().createElement("span");
+		takeaway.className = "cuecraft-section-lens-takeaway";
+		takeaway.textContent = card.sectionLens.takeaway;
+		summary.appendChild(takeaway);
+		appendEditorHookDisclosure(
+			root,
+			"summary",
+			card.sectionLens.takeaway,
+			summary,
+			options.collapse
+		);
+		hasContent = true;
+	}
 	if (card.showQuestion || card.kind === "failed") {
-		if (showSectionLabels) appendEditorHookSectionLabel(root, "Question");
 		const title = cueDocument().createElement("div");
 		title.className = "cuecraft-editor-hook-title";
 		title.textContent =
@@ -410,7 +575,17 @@ function renderEditorHookElement(
 			card.display === "hook-minimap"
 				? card.originalQuestion
 				: card.hookTitle;
-		root.appendChild(title);
+		if (showSectionLabels) {
+			appendEditorHookDisclosure(
+				root,
+				"question",
+				title.textContent,
+				title,
+				options.collapse
+			);
+		} else {
+			root.appendChild(title);
+		}
 		hasContent = true;
 	}
 
@@ -420,46 +595,41 @@ function renderEditorHookElement(
 		error.className = "cuecraft-editor-hook-status";
 		error.textContent = "Generation failed - regenerate";
 		root.appendChild(error);
-		return railOverflowAppliesToDisplay(card.display)
-			? finalizeRailOverflowCard(root)
+		return railLayoutAppliesToDisplay(card.display)
+			? finalizeRailCard(root, card.display, options)
 			: root;
 	}
 
-	const showSectionLens = card.display !== "anchored-card-rail";
-	if (card.sectionLens && showSectionLabels && showSectionLens) {
-		appendEditorHookSectionLabel(root, "Lens");
-	}
-	if (showSectionLens && card.sectionLens) {
+	if (card.sectionLens && !showSectionLabels) {
 		appendSectionLens(root, card.sectionLens);
 		hasContent = true;
 	}
 
 	if (card.showSupportTerms && card.keywords.length) {
-		if (showSectionLabels) appendEditorHookSectionLabel(root, "Terms");
 		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
-		if (card.display === "anchored-card-rail") {
-			appendCueTerms(keywords, card.keywords.slice(0, 4));
+		const renderedKeywords =
+			card.display === "anchored-card-rail"
+				? card.keywords.slice(0, 4)
+				: card.keywords;
+		appendCueTerms(keywords, renderedKeywords);
+		if (showSectionLabels) {
+			appendEditorHookDisclosure(
+				root,
+				"terms",
+				renderedKeywords.join(", "),
+				keywords,
+				options.collapse
+			);
 		} else {
-			appendCueTerms(keywords, card.keywords);
+			root.appendChild(keywords);
 		}
-		root.appendChild(keywords);
 		hasContent = true;
 	}
 	if (!hasContent) root.classList.add("cuecraft-editor-hook-empty");
-	return railOverflowAppliesToDisplay(card.display)
-		? finalizeRailOverflowCard(root)
+	return railLayoutAppliesToDisplay(card.display)
+		? finalizeRailCard(root, card.display, options)
 		: root;
-}
-
-function appendCueSectionLabel(parent: HTMLElement, label: string): void {
-	const sectionLabel = parent.ownerDocument.createElement("div");
-	sectionLabel.className = "cuecraft-cue-section-label";
-	if (label === "QUESTION") {
-		appendLabelIcon(sectionLabel, QUESTION_ICON_CANDIDATES);
-	}
-	appendLabelText(sectionLabel, label);
-	parent.appendChild(sectionLabel);
 }
 
 function appendLabelIcon(
@@ -498,7 +668,7 @@ function appendCueTerms(
 	}
 }
 
-function railOverflowAppliesToDisplay(display: EditorCueDisplay): boolean {
+export function railLayoutAppliesToDisplay(display: EditorCueDisplay): boolean {
 	return (
 		display === "anchored-card-rail" ||
 		display === "threaded-margin-notes" ||
@@ -506,102 +676,433 @@ function railOverflowAppliesToDisplay(display: EditorCueDisplay): boolean {
 	);
 }
 
-function finalizeRailOverflowCard(root: HTMLElement): HTMLElement {
+function sectionDisclosuresApplyToDisplay(display: EditorCueDisplay): boolean {
+	return (
+		display === "inline-cues" ||
+		display === "anchored-card-rail" ||
+		cornellEditorDisplayStyle(display) !== null
+	);
+}
+
+function finalizeRailCard(
+	root: HTMLElement,
+	display: EditorCueDisplay,
+	options: CueRenderOptions
+): HTMLElement {
 	root.classList.add("cuecraft-editor-rail-card");
-	root.dataset.overflowing = "false";
-	root.dataset.expanded = "false";
-
-	const doc = root.ownerDocument;
-	const content = doc.createElement("div");
-	content.className = "cuecraft-editor-rail-card-content";
-	while (root.firstChild) {
-		content.appendChild(root.firstChild);
+	const controller = options.editorCueWidthController;
+	if (!controller) return root;
+	if (!root.id) {
+		nextEditorCueRailCardId += 1;
+		root.id = `cuecraft-editor-rail-card-${nextEditorCueRailCardId}`;
 	}
-	root.appendChild(content);
-
-	const toggle = doc.createElement("button");
-	toggle.type = "button";
-	toggle.className = "cuecraft-editor-rail-card-toggle";
-	toggle.textContent = "Show more";
-	toggle.setAttribute("aria-expanded", "false");
-	toggle.hidden = true;
-	toggle.addEventListener("click", (event) => {
-		event.preventDefault();
-		event.stopPropagation();
-		setRailCardExpanded(root, toggle, root.dataset.expanded !== "true");
-		dispatchRailCardToggleEvent(root);
-	});
-	root.appendChild(toggle);
-
+	const grip = root.ownerDocument.createElement("div");
+	grip.className = "cuecraft-editor-cue-width-grip";
+	grip.tabIndex = 0;
+	grip.setAttribute("role", "separator");
+	grip.setAttribute("aria-orientation", "vertical");
+	const gripLabel = root.ownerDocument.createElement("span");
+	gripLabel.id = `${root.id}-width-grip-label`;
+	gripLabel.className = "cuecraft-editor-cue-width-grip-label";
+	gripLabel.textContent = `${editorCueDisplayLabel(display)} cue rail width`;
+	grip.appendChild(gripLabel);
+	grip.setAttribute("aria-labelledby", gripLabel.id);
+	grip.setAttribute("aria-valuemin", String(EDITOR_CUE_WIDTH_MIN_PX));
+	grip.setAttribute("aria-valuemax", String(EDITOR_CUE_WIDTH_MAX_PX));
+	grip.setAttribute(
+		"aria-valuenow",
+		String(controller.getCommittedWidthPx() ?? EDITOR_CUE_WIDTH_MIN_PX)
+	);
+	grip.setAttribute("aria-controls", root.id);
+	const gripHost = root.querySelector<HTMLElement>(
+		":scope > .cuecraft-cornell-cue"
+	);
+	(gripHost ?? root).prepend(grip);
+	applyEditorCueWidthPreview(
+		root,
+		controller.getCommittedWidthPx()
+	);
+	installEditorCueWidthInteraction(root, grip, controller);
 	return root;
 }
 
-function setRailCardExpanded(
-	card: HTMLElement,
-	toggle: HTMLButtonElement,
-	expanded: boolean
-): void {
-	card.dataset.expanded = String(expanded);
-	toggle.textContent = expanded ? "Show less" : "Show more";
-	toggle.setAttribute("aria-expanded", String(expanded));
+function editorCueDisplayLabel(display: EditorCueDisplay): string {
+	return display
+		.split("-")
+		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+		.join(" ");
 }
 
-function dispatchRailCardToggleEvent(card: HTMLElement): void {
+export function applyEditorCueWidthPreview(
+	root: ParentNode,
+	widthPx: number | null
+): void {
+	const rootElement = root as HTMLElement;
+	const editorRoots = rootElement.matches?.(".cm-editor")
+		? [rootElement]
+		: Array.from(root.querySelectorAll<HTMLElement>(".cm-editor"));
+	if (editorRoots.length > 0) {
+		for (const editorRoot of editorRoots) {
+			applyEditorCueWidthToScope(editorRoot, widthPx);
+		}
+		return;
+	}
+	applyEditorCueWidthToScope(root, widthPx);
+}
+
+function applyEditorCueWidthToScope(
+	root: ParentNode,
+	widthPx: number | null
+): void {
+	const normalizedWidth =
+		widthPx === null
+			? null
+			: effectiveEditorCueWidthPx(root, widthPx);
+	if ((root as Node).nodeType === (root as Node).ELEMENT_NODE) {
+		applyEditorCueWidthToElement(root as HTMLElement, normalizedWidth);
+	}
+	const layoutTargets = new Set<HTMLElement>();
+	for (const grip of root.querySelectorAll<HTMLElement>(
+		".cuecraft-editor-cue-width-grip"
+	)) {
+		const card = grip.closest<HTMLElement>(".cuecraft-editor-rail-card");
+		if (card && applyEditorCueWidthToElement(card, normalizedWidth)) {
+			layoutTargets.add(
+				card.closest<HTMLElement>(".cm-editor") ?? card
+			);
+		}
+		if (normalizedWidth !== null) {
+			const valueNow = String(normalizedWidth);
+			if (grip.getAttribute("aria-valuenow") !== valueNow) {
+				grip.setAttribute("aria-valuenow", valueNow);
+			}
+		}
+	}
+	for (const target of layoutTargets) scheduleEditorCueWidthLayout(target);
+}
+
+function effectiveEditorCueWidthPx(
+	root: ParentNode,
+	requestedWidthPx: number
+): number {
+	const absoluteWidth = clampEditorCueWidthPx(
+		requestedWidthPx,
+		EDITOR_CUE_WIDTH_MAX_PX
+	);
+	const rootElement = root as HTMLElement;
+	const card = rootElement.matches?.(".cuecraft-editor-rail-card")
+		? rootElement
+		: root.querySelector<HTMLElement>(".cuecraft-editor-rail-card");
+	if (!card?.isConnected) return absoluteWidth;
+	const boundary = editorCueWorkspaceBoundary(card);
+	if (!boundary) return absoluteWidth;
+	const cardRight = card.getBoundingClientRect().right;
+	const boundaryLeft = boundary.getBoundingClientRect().left;
+	if (
+		!Number.isFinite(cardRight) ||
+		!Number.isFinite(boundaryLeft) ||
+		cardRight <= boundaryLeft
+	) {
+		return absoluteWidth;
+	}
+	return clampEditorCueWidthPx(
+		requestedWidthPx,
+		editorCueDynamicMaxWidthPx(cardRight, boundaryLeft)
+	);
+}
+
+function applyEditorCueWidthToElement(
+	element: HTMLElement,
+	widthPx: number | null
+): boolean {
+	const previousCustom = element.classList.contains(
+		EDITOR_CUE_WIDTH_CUSTOM_CLASS
+	);
+	const previousWidth = element.style.getPropertyValue(
+		EDITOR_CUE_WIDTH_PROPERTY
+	);
+	const nextCustom = widthPx !== null;
+	const nextWidth = widthPx === null ? "" : `${widthPx}px`;
+	if (previousCustom === nextCustom && previousWidth === nextWidth) {
+		return false;
+	}
+	element.classList.toggle(EDITOR_CUE_WIDTH_CUSTOM_CLASS, nextCustom);
+	if (widthPx === null) {
+		element.style.removeProperty(EDITOR_CUE_WIDTH_PROPERTY);
+	} else {
+		element.style.setProperty(EDITOR_CUE_WIDTH_PROPERTY, nextWidth);
+	}
+	return true;
+}
+
+function scheduleEditorCueWidthLayout(target: HTMLElement): void {
+	if (editorCueWidthLayoutFrames.has(target)) return;
+	const win = target.ownerDocument.defaultView;
+	if (!win) return;
+	const dispatch = (): void => {
+		editorCueWidthLayoutFrames.delete(target);
+		dispatchRailCardLayoutEvent(target);
+	};
+	if (typeof win.requestAnimationFrame === "function") {
+		editorCueWidthLayoutFrames.set(target, {
+			id: win.requestAnimationFrame(dispatch),
+			kind: "animation-frame",
+		});
+		return;
+	}
+	editorCueWidthLayoutFrames.set(target, {
+		id: win.setTimeout(dispatch, 0),
+		kind: "timeout",
+	});
+}
+
+function cancelEditorCueWidthLayout(target: HTMLElement): void {
+	const pending = editorCueWidthLayoutFrames.get(target);
+	if (!pending) return;
+	const win = target.ownerDocument.defaultView;
+	if (pending.kind === "animation-frame") {
+		win?.cancelAnimationFrame(pending.id);
+	} else {
+		win?.clearTimeout(pending.id);
+	}
+	editorCueWidthLayoutFrames.delete(target);
+}
+
+interface EditorCuePointerSession {
+	pointerId: number;
+	startPointerX: number;
+	startWidthPx: number;
+	dynamicMaxWidthPx: number;
+}
+
+interface EditorCueKeyboardSession {
+	currentWidthPx: number;
+	dynamicMaxWidthPx: number;
+	heldKeys: Set<string>;
+}
+
+function installEditorCueWidthInteraction(
+	card: HTMLElement,
+	grip: HTMLElement,
+	controller: EditorCueWidthController
+): void {
+	let pointerSession: EditorCuePointerSession | null = null;
+	let keyboardSession: EditorCueKeyboardSession | null = null;
+	let lastPreviewWidthPx: number | null = controller.getCommittedWidthPx();
+	let destroyed = false;
+
+	const unlockGripTop = (): void => {
+		grip.style.removeProperty("--cuecraft-editor-cue-width-grip-top");
+	};
+	const lockGripTop = (): void => {
+		const gripHost = grip.parentElement ?? card;
+		const hostHeight = gripHost.getBoundingClientRect().height;
+		if (Number.isFinite(hostHeight) && hostHeight > 0) {
+			grip.style.setProperty(
+				"--cuecraft-editor-cue-width-grip-top",
+				`${hostHeight / 2}px`
+			);
+		}
+	};
+	const setResizing = (resizing: boolean): void => {
+		card.classList.toggle(EDITOR_CUE_WIDTH_RESIZING_CLASS, resizing);
+		grip.classList.toggle(EDITOR_CUE_WIDTH_RESIZING_CLASS, resizing);
+		card.ownerDocument.documentElement.classList.toggle(
+			EDITOR_CUE_WIDTH_RESIZING_CLASS,
+			resizing
+		);
+	};
+	const restoreCommittedWidth = (): void => {
+		const committedWidthPx = controller.getCommittedWidthPx();
+		if (lastPreviewWidthPx !== committedWidthPx) {
+			controller.flushWidthPreview(committedWidthPx);
+		}
+		lastPreviewWidthPx = committedWidthPx;
+	};
+	const cancel = (): void => {
+		if (!pointerSession && !keyboardSession) return;
+		pointerSession = null;
+		keyboardSession = null;
+		unlockGripTop();
+		setResizing(false);
+		restoreCommittedWidth();
+	};
+	const preview = (widthPx: number, dynamicMaxWidthPx: number): void => {
+		const width = clampEditorCueWidthPx(widthPx, dynamicMaxWidthPx);
+		grip.setAttribute("aria-valuemax", String(dynamicMaxWidthPx));
+		grip.setAttribute("aria-valuenow", String(width));
+		if (lastPreviewWidthPx === width) return;
+		lastPreviewWidthPx = width;
+		controller.previewWidthPx(width);
+	};
+	const finish = (widthPx: number): void => {
+		pointerSession = null;
+		keyboardSession = null;
+		unlockGripTop();
+		setResizing(false);
+		controller.commitWidthPx(widthPx);
+	};
+	const interactionGeometry = (): {
+		widthPx: number;
+		dynamicMaxWidthPx: number;
+	} => {
+		const cardRect = card.getBoundingClientRect();
+		const boundary = editorCueWorkspaceBoundary(card);
+		const boundaryLeft = boundary?.getBoundingClientRect().left ?? 0;
+		const dynamicMaxWidthPx = editorCueDynamicMaxWidthPx(
+			cardRect.right,
+			boundaryLeft
+		);
+		const measuredWidth =
+			cardRect.width > 0
+				? cardRect.width
+				: controller.getCommittedWidthPx() ?? EDITOR_CUE_WIDTH_MIN_PX;
+		return {
+			widthPx: clampEditorCueWidthPx(measuredWidth, dynamicMaxWidthPx),
+			dynamicMaxWidthPx,
+		};
+	};
+
+	const onPointerDown = (event: PointerEvent): void => {
+		if (destroyed || pointerSession || keyboardSession) return;
+		if (event.button !== 0 || event.isPrimary === false) return;
+		const geometry = interactionGeometry();
+		pointerSession = {
+			pointerId: event.pointerId,
+			startPointerX: event.clientX,
+			startWidthPx: geometry.widthPx,
+			dynamicMaxWidthPx: geometry.dynamicMaxWidthPx,
+		};
+		lockGripTop();
+		setResizing(true);
+		grip.setPointerCapture(event.pointerId);
+		event.preventDefault();
+		event.stopPropagation();
+	};
+	const onPointerMove = (event: PointerEvent): void => {
+		const session = pointerSession;
+		if (!session || event.pointerId !== session.pointerId) return;
+		const width = editorCueWidthFromLeftEdgeDrag(
+			session.startWidthPx,
+			session.startPointerX,
+			event.clientX,
+			session.dynamicMaxWidthPx
+		);
+		preview(width, session.dynamicMaxWidthPx);
+		event.preventDefault();
+		event.stopPropagation();
+	};
+	const onPointerUp = (event: PointerEvent): void => {
+		const session = pointerSession;
+		if (!session || event.pointerId !== session.pointerId) return;
+		const width = editorCueWidthFromLeftEdgeDrag(
+			session.startWidthPx,
+			session.startPointerX,
+			event.clientX,
+			session.dynamicMaxWidthPx
+		);
+		pointerSession = null;
+		if (grip.hasPointerCapture(event.pointerId)) {
+			grip.releasePointerCapture(event.pointerId);
+		}
+		finish(width);
+		event.preventDefault();
+		event.stopPropagation();
+	};
+	const onPointerCancel = (event: PointerEvent): void => {
+		if (!pointerSession || event.pointerId !== pointerSession.pointerId) return;
+		cancel();
+		event.preventDefault();
+		event.stopPropagation();
+	};
+	const onLostPointerCapture = (event: PointerEvent): void => {
+		if (!pointerSession || event.pointerId !== pointerSession.pointerId) return;
+		cancel();
+	};
+	const onKeyDown = (event: KeyboardEvent): void => {
+		if (destroyed || pointerSession) return;
+		const existing = keyboardSession;
+		const startingGeometry = existing ? null : interactionGeometry();
+		const geometry = existing ?? {
+			currentWidthPx: startingGeometry?.widthPx ?? EDITOR_CUE_WIDTH_MIN_PX,
+			dynamicMaxWidthPx:
+				startingGeometry?.dynamicMaxWidthPx ?? EDITOR_CUE_WIDTH_MAX_PX,
+			heldKeys: new Set<string>(),
+		};
+		const width = editorCueWidthFromKeyboard(
+			event.key,
+			geometry.currentWidthPx,
+			geometry.dynamicMaxWidthPx
+		);
+		if (width === null) return;
+		if (!existing) {
+			keyboardSession = geometry;
+			setResizing(true);
+		}
+		geometry.heldKeys.add(event.key);
+		geometry.currentWidthPx = width;
+		preview(width, geometry.dynamicMaxWidthPx);
+		event.preventDefault();
+		event.stopPropagation();
+	};
+	const onKeyUp = (event: KeyboardEvent): void => {
+		const session = keyboardSession;
+		if (!session || !session.heldKeys.has(event.key)) return;
+		session.heldKeys.delete(event.key);
+		if (session.heldKeys.size === 0) {
+			finish(session.currentWidthPx);
+		}
+		event.preventDefault();
+		event.stopPropagation();
+	};
+	const onFocus = (): void => {
+		const geometry = interactionGeometry();
+		grip.setAttribute("aria-valuemax", String(geometry.dynamicMaxWidthPx));
+		grip.setAttribute("aria-valuenow", String(geometry.widthPx));
+	};
+	const onBlur = (): void => cancel();
+
+	grip.addEventListener("pointerdown", onPointerDown);
+	grip.addEventListener("pointermove", onPointerMove);
+	grip.addEventListener("pointerup", onPointerUp);
+	grip.addEventListener("pointercancel", onPointerCancel);
+	grip.addEventListener("lostpointercapture", onLostPointerCapture);
+	grip.addEventListener("keydown", onKeyDown);
+	grip.addEventListener("keyup", onKeyUp);
+	grip.addEventListener("focus", onFocus);
+	grip.addEventListener("blur", onBlur);
+
+	editorCueWidthInteractionCleanup.set(card, () => {
+		if (destroyed) return;
+		cancel();
+		destroyed = true;
+		grip.removeEventListener("pointerdown", onPointerDown);
+		grip.removeEventListener("pointermove", onPointerMove);
+		grip.removeEventListener("pointerup", onPointerUp);
+		grip.removeEventListener("pointercancel", onPointerCancel);
+		grip.removeEventListener("lostpointercapture", onLostPointerCapture);
+		grip.removeEventListener("keydown", onKeyDown);
+		grip.removeEventListener("keyup", onKeyUp);
+		grip.removeEventListener("focus", onFocus);
+		grip.removeEventListener("blur", onBlur);
+		editorCueWidthInteractionCleanup.delete(card);
+	});
+}
+
+function editorCueWorkspaceBoundary(card: HTMLElement): HTMLElement | null {
+	return (
+		card.closest<HTMLElement>(".workspace-leaf-content") ??
+		card.closest<HTMLElement>(".markdown-source-view") ??
+		card.closest<HTMLElement>(".cm-editor")
+	);
+}
+
+function dispatchRailCardLayoutEvent(card: HTMLElement): void {
 	const CustomEventCtor = card.ownerDocument.defaultView?.CustomEvent;
 	if (!CustomEventCtor) return;
 	card.dispatchEvent(
-		new CustomEventCtor(RAIL_CARD_TOGGLE_EVENT, { bubbles: true })
+		new CustomEventCtor(RAIL_CARD_LAYOUT_EVENT, { bubbles: true })
 	);
-}
-
-export function railCardCollapsedHeightForAvailable(
-	availableHeight: number | null | undefined
-): number {
-	if (typeof availableHeight !== "number" || !Number.isFinite(availableHeight)) {
-		return RAIL_CARD_COLLAPSED_DEFAULT_HEIGHT;
-	}
-	const usableHeight = Math.floor(availableHeight - RAIL_CARD_SECTION_GAP);
-	return Math.max(
-		RAIL_CARD_COLLAPSED_MIN_HEIGHT,
-		Math.min(RAIL_CARD_COLLAPSED_MAX_HEIGHT, usableHeight)
-	);
-}
-
-export function railCardContentOverflows(
-	contentHeight: number,
-	collapsedHeight: number
-): boolean {
-	return contentHeight > collapsedHeight + RAIL_CARD_OVERFLOW_TOLERANCE;
-}
-
-export interface RailOverflowMeasurement {
-	card: HTMLElement;
-	collapsedHeight: number;
-	overflowing: boolean;
-}
-
-export function measureRailOverflowCards(
-	root: ParentNode
-): RailOverflowMeasurement[] {
-	const cards = railCardsIn(root);
-	return cards.map((card, index) => {
-		const nextCard = cards[index + 1];
-		const cardTop = card.getBoundingClientRect().top;
-		const nextCardTop = nextCard?.getBoundingClientRect().top;
-		const availableHeight =
-			typeof nextCardTop === "number" ? nextCardTop - cardTop : null;
-		const collapsedHeight =
-			railCardCollapsedHeightForAvailable(availableHeight);
-		const content = card.querySelector<HTMLElement>(
-			":scope > .cuecraft-editor-rail-card-content"
-		);
-		const contentHeight = content?.scrollHeight ?? card.scrollHeight;
-		return {
-			card,
-			collapsedHeight,
-			overflowing: railCardContentOverflows(contentHeight, collapsedHeight),
-		};
-	});
 }
 
 function railCardsIn(root: ParentNode): HTMLElement[] {
@@ -643,7 +1144,7 @@ export function measureRailSpacerHeights(
 	currentSpacers: ReadonlyMap<number, number> = emptyRailSpacerMap
 ): Map<number, number> {
 	const cards = railCardsIn(root);
-	const spacers = new Map<number, number>();
+	const spacers = new Map(currentSpacers);
 	for (const [index, card] of cards.entries()) {
 		const nextCard = cards[index + 1];
 		if (!nextCard) continue;
@@ -651,13 +1152,25 @@ export function measureRailSpacerHeights(
 		if (nextLine === null) continue;
 		const cardRect = card.getBoundingClientRect();
 		const nextRect = nextCard.getBoundingClientRect();
+		const cardHeight = Math.max(cardRect.height, card.scrollHeight);
+		const distanceToNextCard = nextRect.top - cardRect.top;
+		if (
+			!Number.isFinite(cardHeight) ||
+			!Number.isFinite(distanceToNextCard) ||
+			cardHeight <= 0 ||
+			distanceToNextCard <= 0
+		) {
+			continue;
+		}
 		const spacerHeight = railSpacerHeightForOverlap(
-			cardRect.height,
-			nextRect.top - cardRect.top,
+			cardHeight,
+			distanceToNextCard,
 			currentSpacers.get(nextLine) ?? 0
 		);
 		if (spacerHeight > 0) {
 			spacers.set(nextLine, spacerHeight);
+		} else {
+			spacers.delete(nextLine);
 		}
 	}
 	return spacers;
@@ -668,39 +1181,97 @@ function railCardLine(card: HTMLElement): number | null {
 	return Number.isInteger(line) && line > 0 ? line : null;
 }
 
-export function applyRailOverflowMeasurements(
-	measurements: readonly RailOverflowMeasurement[]
+function appendEditorHookDisclosure(
+	parent: HTMLElement,
+	kind: CueSectionKind,
+	previewText: string,
+	content: HTMLElement,
+	collapse: CueSectionCollapseRenderState | undefined
 ): void {
-	for (const measurement of measurements) {
-		const { card, collapsedHeight, overflowing } = measurement;
-		card.style.setProperty(
-			"--cuecraft-rail-collapsed-max-height",
-			`${collapsedHeight}px`
-		);
-		card.dataset.overflowing = String(overflowing);
-		const toggle = card.querySelector<HTMLButtonElement>(
-			":scope > .cuecraft-editor-rail-card-toggle"
-		);
-		if (!toggle) continue;
-		toggle.hidden = !overflowing;
-		if (!overflowing) {
-			setRailCardExpanded(card, toggle, false);
+	const doc = parent.ownerDocument;
+	const button = doc.createElement("button");
+	button.type = "button";
+	button.className = "cuecraft-editor-hook-section-toggle";
+	button.dataset.section = kind;
+
+	const sectionLabel = doc.createElement("span");
+	sectionLabel.className = "cuecraft-editor-hook-section-label";
+	sectionLabel.dataset.section = kind;
+	appendLabelIcon(sectionLabel, CUE_SECTION_ICON_CANDIDATES[kind]);
+	appendLabelText(sectionLabel, kind.toUpperCase());
+
+	const chevron = doc.createElement("span");
+	chevron.className = "cuecraft-editor-hook-section-chevron";
+	chevron.setAttribute("aria-hidden", "true");
+	setIcon(chevron, "chevron-down");
+	sectionLabel.appendChild(chevron);
+	button.appendChild(sectionLabel);
+
+	const preview = doc.createElement("span");
+	preview.className = "cuecraft-editor-hook-section-preview";
+	preview.textContent = previewText;
+	button.appendChild(preview);
+
+	const body = doc.createElement("div");
+	body.className = "cuecraft-editor-hook-section-body";
+	body.dataset.section = kind;
+	body.id = editorHookSectionBodyId();
+	const bodyContent = doc.createElement("div");
+	bodyContent.className = "cuecraft-editor-hook-section-content";
+	bodyContent.appendChild(content);
+	body.appendChild(bodyContent);
+	button.setAttribute("aria-controls", body.id);
+
+	let collapsed = collapse?.collapsed[kind] ?? false;
+	const updateDom = (): void => {
+		button.setAttribute("aria-expanded", String(!collapsed));
+		body.setAttribute("aria-hidden", String(collapsed));
+		body.dataset.collapsed = String(collapsed);
+		preview.hidden = !collapsed;
+	};
+	let transitionMeasurePending = false;
+	body.addEventListener("transitionend", (event) => {
+		if (
+			event.target !== body ||
+			event.propertyName !== "grid-template-rows" ||
+			!transitionMeasurePending
+		) {
+			return;
 		}
-	}
+		transitionMeasurePending = false;
+		dispatchRailCardLayoutEvent(parent);
+	});
+	updateDom();
+	button.addEventListener("click", (event) => {
+		event.preventDefault();
+		event.stopPropagation();
+		collapsed = !collapsed;
+		if (collapse) {
+			void collapse.controller
+				.setCollapsed(
+					collapse.notePath,
+					collapse.sectionId,
+					kind,
+					collapsed
+				)
+				.catch((error: unknown) => {
+					console.error(
+						"CueCraft cue section collapse persistence failed",
+						error
+					);
+				});
+		}
+		transitionMeasurePending = true;
+		updateDom();
+		dispatchRailCardLayoutEvent(parent);
+	});
+
+	parent.append(button, body);
 }
 
-function appendEditorHookSectionLabel(
-	parent: HTMLElement,
-	label: "Question" | "Lens" | "Terms"
-): void {
-	const sectionLabel = cueDocument().createElement("div");
-	sectionLabel.className = "cuecraft-editor-hook-section-label";
-	sectionLabel.dataset.section = label.toLowerCase();
-	if (label === "Question") {
-		appendLabelIcon(sectionLabel, QUESTION_ICON_CANDIDATES);
-	}
-	appendLabelText(sectionLabel, label.toUpperCase());
-	parent.appendChild(sectionLabel);
+function editorHookSectionBodyId(): string {
+	nextEditorHookSectionBodyId += 1;
+	return `cuecraft-editor-hook-section-body-${nextEditorHookSectionBodyId}`;
 }
 
 const noteBriefCardOrder = [
@@ -882,10 +1453,14 @@ export function buildCueWidgetDecorations(
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const headingLine = doc.line(cue.line);
+		const cueOptions = {
+			...options,
+			...cueCollapseRenderOptions(payload, cue),
+		};
 		// Block widget rendered on its own line just after the heading.
 		ranges.push(
 			Decoration.widget({
-				widget: new CueWidget(cue, payload.display, index, options),
+				widget: new CueWidget(cue, payload.display, index, cueOptions),
 				block: true,
 				side: 1,
 			}).range(headingLine.to)
@@ -916,9 +1491,11 @@ export function buildCueGutterMarkers(
 			markerLine.number,
 			cue
 		);
-		const markerOptions = compactForSpace
-			? { ...options, showSupportTerms: false, compactForSpace: true }
-			: options;
+		const markerOptions = {
+			...options,
+			...cueCollapseRenderOptions(payload, cue),
+			...(compactForSpace ? { compactForSpace: true } : {}),
+		};
 		builder.add(
 			markerLine.from,
 			markerLine.from,
@@ -966,7 +1543,7 @@ export function buildRailSpacerDecorations(
 	payload: CueEditorRenderState | null,
 	spacers: ReadonlyMap<number, number>
 ): DecorationSet {
-	if (!payload || !railOverflowAppliesToDisplay(payload.display)) {
+	if (!payload || !railLayoutAppliesToDisplay(payload.display)) {
 		return Decoration.none;
 	}
 	const ranges: Range<Decoration>[] = [];
@@ -993,6 +1570,7 @@ function editorCueRenderOptionsFromPayload(
 		cardStyle: payload.editorHookCardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
 		cueColumnWidth: payload.cueColumnWidth,
 		cueFontSize: payload.cueFontSize,
+		editorCueWidthController: payload.editorCueWidthController,
 	};
 }
 
@@ -1004,7 +1582,51 @@ function editorHookCardOptionsKey(options: CueRenderOptions): string {
 		options.cardStyle ?? DEFAULT_EDITOR_HOOK_CARD_STYLE,
 		options.cueColumnWidth ?? "",
 		options.cueFontSize ?? "",
+		options.collapse?.notePath ?? "",
+		options.collapse?.sectionId ?? "",
+		...CUE_SECTION_KINDS.map((kind) =>
+			String(options.collapse?.collapsed[kind] ?? false)
+		),
 	].join("\u0001");
+}
+
+function cueCollapseRenderOptions(
+	payload: CueEditorRenderState,
+	cue: CueLineData
+): Pick<CueRenderOptions, "collapse"> {
+	if (
+		!sectionDisclosuresApplyToDisplay(payload.display) ||
+		!payload.notePath ||
+		!payload.collapseController
+	) {
+		return {};
+	}
+	const notePath = payload.notePath;
+	const controller = payload.collapseController;
+	return {
+		collapse: {
+			notePath,
+			sectionId: cue.sectionId,
+			controller,
+			collapsed: cueSectionCollapsedState(
+				controller,
+				notePath,
+				cue.sectionId
+			),
+		},
+	};
+}
+
+function cueSectionCollapsedState(
+	controller: CueSectionCollapseController,
+	notePath: string,
+	sectionId: string
+): Record<CueSectionKind, boolean> {
+	return {
+		summary: controller.isCollapsed(notePath, sectionId, "summary"),
+		question: controller.isCollapsed(notePath, sectionId, "question"),
+		terms: controller.isCollapsed(notePath, sectionId, "terms"),
+	};
 }
 
 function applyCueLayoutClasses(
@@ -1173,7 +1795,7 @@ export const cueRailSpacerField = StateField.define<CueRailSpacerState>({
 			rebuild = true;
 		}
 
-		if (!railOverflowAppliesToDisplay(payload.display)) {
+		if (!railLayoutAppliesToDisplay(payload.display)) {
 			return {
 				decorations: Decoration.none,
 				payload,
@@ -1231,77 +1853,89 @@ const cueGutter = gutter({
 	markers: (view) => view.state.field(cueGutterField).markers,
 });
 
-function scheduleRailOverflowMeasure(view: EditorView): void {
-	if (!viewHasRailOverflowCards(view)) return;
-	const currentSpacers =
-		view.state.field(cueRailSpacerField, false)?.spacers ??
-		emptyRailSpacerMap;
+export function scheduleRailLayoutMeasure(view: EditorView): void {
+	if (!viewHasRailCards(view)) return;
 	view.requestMeasure({
-		read: () => ({
-			overflow: measureRailOverflowCards(view.dom),
-			spacers: measureRailSpacerHeights(view.dom, currentSpacers),
-		}),
-		write: (measurements) => {
-			applyRailOverflowMeasurements(measurements.overflow);
-			const latestSpacers =
-				view.state.field(cueRailSpacerField, false)?.spacers ??
+		read: () => {
+			const state = view.state;
+			const currentSpacers =
+				state.field(cueRailSpacerField, false)?.spacers ??
 				emptyRailSpacerMap;
-			if (!railSpacerMapsEqual(latestSpacers, measurements.spacers)) {
-				view.dispatch({
-					effects: setRailSpacersEffect.of(measurements.spacers),
-				});
-			}
+			return {
+				state,
+				spacers: measureRailSpacerHeights(view.dom, currentSpacers),
+			};
+		},
+		write: (measurement) => {
+			queueMicrotask(() => {
+				if (view.state !== measurement.state) {
+					return;
+				}
+				const latestSpacers =
+					view.state.field(cueRailSpacerField, false)?.spacers ??
+					emptyRailSpacerMap;
+				if (!railSpacerMapsEqual(latestSpacers, measurement.spacers)) {
+					view.dispatch({
+						effects: setRailSpacersEffect.of(measurement.spacers),
+					});
+				}
+			});
 		},
 	});
 }
 
-function viewHasRailOverflowCards(view: EditorView): boolean {
+function viewHasRailCards(view: EditorView): boolean {
 	const cueGutterState = view.state.field(cueGutterField, false);
 	return cueGutterState?.payload
-		? railOverflowAppliesToDisplay(cueGutterState.payload.display)
+		? railLayoutAppliesToDisplay(cueGutterState.payload.display)
 		: false;
 }
 
-const cueRailOverflowPlugin = ViewPlugin.fromClass(
+const cueRailLayoutPlugin = ViewPlugin.fromClass(
 	class {
-		private readonly onRailCardToggle = () => {
-			scheduleRailOverflowMeasure(this.view);
+		private readonly onRailCardLayout = () => {
+			scheduleRailLayoutMeasure(this.view);
 		};
 
 		constructor(private readonly view: EditorView) {
-			view.dom.ownerDocument.addEventListener(
-				RAIL_CARD_TOGGLE_EVENT,
-				this.onRailCardToggle
+			view.dom.addEventListener(
+				RAIL_CARD_LAYOUT_EVENT,
+				this.onRailCardLayout
 			);
-			scheduleRailOverflowMeasure(view);
+			scheduleRailLayoutMeasure(view);
 		}
 
 		update(update: ViewUpdate): void {
-			if (railOverflowUpdateNeedsMeasure(update)) {
-				scheduleRailOverflowMeasure(this.view);
+			if (railLayoutUpdateNeedsMeasure(update)) {
+				scheduleRailLayoutMeasure(this.view);
 			}
 		}
 
 		destroy(): void {
-			this.view.dom.ownerDocument.removeEventListener(
-				RAIL_CARD_TOGGLE_EVENT,
-				this.onRailCardToggle
+			cancelEditorCueWidthLayout(this.view.dom);
+			this.view.dom.removeEventListener(
+				RAIL_CARD_LAYOUT_EVENT,
+				this.onRailCardLayout
 			);
 		}
 	}
 );
 
-export function railOverflowUpdateNeedsMeasure(update: ViewUpdate): boolean {
+export function railLayoutUpdateNeedsMeasure(update: ViewUpdate): boolean {
+	const cuesChanged = update.transactions.some((tr) =>
+		tr.effects.some((effect) => effect.is(setCuesEffect))
+	);
+	const spacersChanged = update.transactions.some((tr) =>
+		tr.effects.some((effect) => effect.is(setRailSpacersEffect))
+	);
+	if (spacersChanged && !cuesChanged && !update.docChanged) {
+		return false;
+	}
 	return (
 		update.docChanged ||
 		update.viewportChanged ||
 		update.selectionSet ||
-		update.transactions.some((tr) =>
-			tr.effects.some(
-				(effect) =>
-					effect.is(setCuesEffect) || effect.is(setRailSpacersEffect)
-			)
-		)
+		cuesChanged
 	);
 }
 
@@ -1311,5 +1945,5 @@ export const cueEditorExtension = [
 	cueRailSpacerField,
 	cueGutterField,
 	cueGutter,
-	cueRailOverflowPlugin,
+	cueRailLayoutPlugin,
 ];
