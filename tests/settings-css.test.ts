@@ -260,6 +260,7 @@ describe("settings CSS", () => {
 		const collapsedTermsRule = ruleFor(
 			`${root} .cuecraft-editor-hook-section-toggle[data-section="terms"][aria-expanded="false"]`
 		);
+		expect(collapsedTermsRule).toContain("height: auto");
 		expect(collapsedTermsRule).toContain("padding-bottom: 0.65em");
 
 		const focusRule = ruleFor(

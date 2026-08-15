@@ -1716,6 +1716,7 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 }
 
 .cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-toggle[data-section="terms"][aria-expanded="false"] {
+	height: auto;
 	padding-bottom: 0.65em;
 }
 
