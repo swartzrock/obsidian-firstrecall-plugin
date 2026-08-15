@@ -758,15 +758,19 @@ describe("renderCueElement", () => {
 			expect(el.classList.contains("cuecraft-cuefont-medium")).toBe(true);
 			expect(el.dataset.confidence).toBe("high");
 			expectNoLegacyCategoryPresentation(el);
+			const buttons = disclosureButtons(el);
+			expect(buttons.map((button) => button.dataset.section)).toEqual([
+				"summary",
+				"question",
+				"terms",
+			]);
 			expect(
-				Array.from(el.querySelectorAll(".cuecraft-cue-section-label")).map(
-					(label) => label.textContent
+				buttons.map((button) =>
+					button
+						.querySelector(".cuecraft-label-icon")
+						?.getAttribute("data-icon")
 				)
-			).toEqual(["QUESTION", "TERMS"]);
-			expect(
-				el.querySelector(".cuecraft-cue-section-label .cuecraft-label-icon")
-					?.getAttribute("data-icon")
-			).toBe("circle-question-mark");
+			).toEqual(["notebook-text", "circle-question-mark", "tags"]);
 			expect(el.querySelector(".cuecraft-cue-question")?.textContent).toBe(
 				"What is an agent?"
 			);
@@ -776,8 +780,9 @@ describe("renderCueElement", () => {
 				)
 			).toEqual(["agent", "tool"]);
 			expect(
-				el.querySelector(".cuecraft-section-lens-phrase")?.textContent
-			).toBe("agent autonomy");
+				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+			).toBe("Agents use tools to complete multi-step work.");
+			expect(el.querySelector(".cuecraft-section-lens-phrase")).toBeNull();
 		});
 	});
 
@@ -997,6 +1002,152 @@ describe("renderCueElement", () => {
 		});
 	});
 
+	it("renders inline cues with the shared section order, icons, and saved toggles", () => {
+		withDocument(() => {
+			const { controller, calls } = collapseController(["question"]);
+			const state = EditorState.create({ doc: "# Terms\nbody" });
+			const decorations = buildCueWidgetDecorations(state, {
+				cues: [anchoredCue()],
+				display: "inline-cues",
+				notePath: "notes/agents.md",
+				collapseController: controller,
+			});
+			let widget: { toDOM(): HTMLElement } | undefined;
+			let element: HTMLElement | undefined;
+			decorations.between(0, state.doc.length, (_from, _to, decoration) => {
+				widget = decoration.spec.widget as
+					| { toDOM(): HTMLElement }
+					| undefined;
+				element = widget?.toDOM();
+			});
+			if (!element) throw new Error("Expected inline cue widget");
+
+			const buttons = disclosureButtons(element);
+			expect(buttons.map((button) => button.dataset.section)).toEqual([
+				"summary",
+				"question",
+				"terms",
+			]);
+			expect(
+				buttons.map((button) =>
+					button
+						.querySelector(".cuecraft-label-icon")
+						?.getAttribute("data-icon")
+				)
+			).toEqual(["notebook-text", "circle-question-mark", "tags"]);
+			expect(buttons.map((button) => button.getAttribute("aria-expanded"))).toEqual([
+				"true",
+				"false",
+				"true",
+			]);
+			expect(element.querySelector(".cuecraft-editor-cue-width-grip")).toBeNull();
+
+			buttons[2]?.click();
+			expect(calls).toEqual([
+				["notes/agents.md", "section-terms", "terms", true],
+			]);
+			expect(buttons[2]?.getAttribute("aria-expanded")).toBe("false");
+
+			const remountedTerms = widget
+				?.toDOM()
+				.querySelector<HTMLButtonElement>(
+					'.cuecraft-editor-hook-section-toggle[data-section="terms"]'
+				);
+			expect(remountedTerms?.getAttribute("aria-expanded")).toBe("false");
+		});
+	});
+
+	it("keeps inline disclosure interactions out of CodeMirror", () => {
+		const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
+			pretendToBeVisual: true,
+		});
+		const previousGlobals = new Map<PropertyKey, PropertyDescriptor | undefined>();
+		const testGlobals: Record<PropertyKey, unknown> = {
+			window: dom.window,
+			document: dom.window.document,
+			navigator: dom.window.navigator,
+			MutationObserver: dom.window.MutationObserver,
+			HTMLElement: dom.window.HTMLElement,
+			Node: dom.window.Node,
+			DOMRect: dom.window.DOMRect,
+			getComputedStyle: dom.window.getComputedStyle.bind(dom.window),
+		};
+		for (const [key, value] of Object.entries(testGlobals)) {
+			previousGlobals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
+			Object.defineProperty(globalThis, key, {
+				configurable: true,
+				value,
+			});
+		}
+
+		const parent = dom.window.document.querySelector("main");
+		if (!(parent instanceof dom.window.HTMLElement)) {
+			throw new Error("Missing editor parent");
+		}
+		let view: EditorView | null = null;
+		try {
+			const { controller, calls } = collapseController();
+			const placementState = EditorState.create({ doc: "# Terms\nbody" });
+			const decorations = buildCueWidgetDecorations(placementState, {
+				cues: [anchoredCue()],
+				display: "inline-cues",
+				notePath: "notes/agents.md",
+				collapseController: controller,
+			});
+			let editorKeydowns = 0;
+			view = new EditorView({
+				state: EditorState.create({
+					doc: placementState.doc,
+					extensions: [
+						EditorView.decorations.of(decorations),
+						EditorView.domEventHandlers({
+							keydown: () => {
+								editorKeydowns += 1;
+								return true;
+							},
+						}),
+					],
+				}),
+				parent,
+			});
+			const button = parent.querySelector<HTMLButtonElement>(
+				'.cuecraft-editor-hook-section-toggle[data-section="question"]'
+			);
+			if (!button) throw new Error("Expected inline question toggle");
+
+			button.dispatchEvent(
+				new dom.window.KeyboardEvent("keydown", {
+					bubbles: true,
+					cancelable: true,
+					key: "Enter",
+				})
+			);
+			button.dispatchEvent(
+				new dom.window.KeyboardEvent("keydown", {
+					bubbles: true,
+					cancelable: true,
+					key: " ",
+				})
+			);
+			expect(editorKeydowns).toBe(0);
+
+			button.click();
+			expect(calls).toEqual([
+				["notes/agents.md", "section-terms", "question", true],
+			]);
+		} finally {
+			view?.destroy();
+			dom.window.close();
+			for (const [key, descriptor] of previousGlobals) {
+				if (descriptor) {
+					Object.defineProperty(globalThis, key, descriptor);
+				} else {
+					delete (globalThis as Record<PropertyKey, unknown>)[key];
+				}
+			}
+		}
+	});
+
 	it("toggles one disclosure synchronously and requests rail layout", () => {
 		withDocument(() => {
 			const { controller, collapsed, calls } = collapseController();
@@ -1145,8 +1296,10 @@ describe("renderCueElement", () => {
 			);
 			expect(disclosureButtons(failed)).toEqual([]);
 			expect(
-				disclosureButtons(renderCueElement(anchoredCue(), "inline-cues"))
-			).toEqual([]);
+				disclosureButtons(
+					renderCueElement(anchoredCue(), "inline-cues")
+				).map((button) => button.dataset.section)
+			).toEqual(["summary", "question", "terms"]);
 			expect(
 				disclosureButtons(renderCueElement(anchoredCue(), "cornell")).map(
 					(button) => button.dataset.section
@@ -1240,7 +1393,9 @@ describe("renderCueElement", () => {
 			expect(
 				inline.querySelector(".cuecraft-section-lens-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
-			expect(inline.querySelector(".cuecraft-cue-section-label")).toBeNull();
+			expect(
+				disclosureButtons(inline).map((button) => button.dataset.section)
+			).toEqual(["summary"]);
 
 			const cornell = renderCueElement(
 				cue,

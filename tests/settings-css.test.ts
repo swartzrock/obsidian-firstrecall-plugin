@@ -163,11 +163,6 @@ describe("settings CSS", () => {
 	});
 
 	it("keeps CueCraft label icons small and inline", () => {
-		const cueLabelRule = ruleFor(".cuecraft-cue-section-label");
-		expect(cueLabelRule).toContain("display: inline-flex");
-		expect(cueLabelRule).toContain("align-items: center");
-		expect(cueLabelRule).toContain("gap: 0.48em");
-
 		const editorLabelRule = ruleFor(
 			".cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-label"
 		);

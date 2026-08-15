@@ -209,12 +209,26 @@ class CueWidget extends WidgetType {
 	}
 
 	toDOM(): HTMLElement {
+		const collapse = this.options.collapse;
+		const options = collapse
+			? {
+					...this.options,
+					collapse: {
+						...collapse,
+						collapsed: cueSectionCollapsedState(
+							collapse.controller,
+							collapse.notePath,
+							collapse.sectionId
+						),
+					},
+				}
+			: this.options;
 		const element = renderCueElement(
 			this.cue,
 			this.display,
 			this.index,
 			"upcoming",
-			this.options
+			options
 		);
 		if (!isInlineEditorDisplay(this.display)) {
 			element.classList.add("cuecraft-editor-hook-inline-fallback");
@@ -222,8 +236,13 @@ class CueWidget extends WidgetType {
 		return element;
 	}
 
-	ignoreEvent(): boolean {
-		return false;
+	ignoreEvent(event: Event): boolean {
+		const target = event.target as
+			| { closest?: (selector: string) => Element | null }
+			| null;
+		return Boolean(
+			target?.closest?.(".cuecraft-editor-hook-section-toggle")
+		);
 	}
 }
 
@@ -439,7 +458,8 @@ function renderInlineCueElement(
 	options: CueRenderOptions = {}
 ): HTMLElement {
 	const root = cueDocument().createElement("div");
-	root.className = "cuecraft-cue";
+	root.className = "cuecraft-cue cuecraft-editor-hook-sectioned";
+	root.setAttribute("role", "note");
 	root.dataset.questionVisible = String(options.showQuestion ?? true);
 	root.dataset.supportTermsVisible = String(options.showSupportTerms ?? true);
 	applyCueLayoutClasses(root, options);
@@ -457,22 +477,45 @@ function renderInlineCueElement(
 	if (cue.confidence) {
 		root.dataset.confidence = cue.confidence;
 	}
+	if (cue.sectionLens) {
+		const summary = cueDocument().createElement("div");
+		summary.className = "cuecraft-section-lens";
+		const takeaway = cueDocument().createElement("span");
+		takeaway.className = "cuecraft-section-lens-takeaway";
+		takeaway.textContent = cue.sectionLens.takeaway;
+		summary.appendChild(takeaway);
+		appendEditorHookDisclosure(
+			root,
+			"summary",
+			cue.sectionLens.takeaway,
+			summary,
+			options.collapse
+		);
+	}
 	if (options.showQuestion ?? true) {
-		appendCueSectionLabel(root, "QUESTION");
 		const q = cueDocument().createElement("div");
-		q.className = "cuecraft-cue-question";
+		q.className = "cuecraft-cue-question cuecraft-editor-hook-title";
 		q.textContent = cue.question;
-		root.appendChild(q);
+		appendEditorHookDisclosure(
+			root,
+			"question",
+			cue.question,
+			q,
+			options.collapse
+		);
 	}
 
-	appendSectionLens(root, cue.sectionLens);
-
 	if ((options.showSupportTerms ?? true) && cue.keywords.length) {
-		appendCueSectionLabel(root, "TERMS");
 		const kw = cueDocument().createElement("div");
-		kw.className = "cuecraft-cue-keywords";
+		kw.className = "cuecraft-cue-keywords cuecraft-editor-hook-keywords";
 		appendCueTerms(kw, cue.keywords);
-		root.appendChild(kw);
+		appendEditorHookDisclosure(
+			root,
+			"terms",
+			cue.keywords.join(", "),
+			kw,
+			options.collapse
+		);
 	}
 	return root;
 }
@@ -585,16 +628,6 @@ function renderEditorHookElement(
 		: root;
 }
 
-function appendCueSectionLabel(parent: HTMLElement, label: string): void {
-	const sectionLabel = parent.ownerDocument.createElement("div");
-	sectionLabel.className = "cuecraft-cue-section-label";
-	if (label === "QUESTION") {
-		appendLabelIcon(sectionLabel, QUESTION_ICON_CANDIDATES);
-	}
-	appendLabelText(sectionLabel, label);
-	parent.appendChild(sectionLabel);
-}
-
 function appendLabelIcon(
 	parent: HTMLElement,
 	icon: string | readonly string[]
@@ -641,6 +674,7 @@ export function railLayoutAppliesToDisplay(display: EditorCueDisplay): boolean {
 
 function sectionDisclosuresApplyToDisplay(display: EditorCueDisplay): boolean {
 	return (
+		display === "inline-cues" ||
 		display === "anchored-card-rail" ||
 		cornellEditorDisplayStyle(display) !== null
 	);
@@ -1415,10 +1449,14 @@ export function buildCueWidgetDecorations(
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const headingLine = doc.line(cue.line);
+		const cueOptions = {
+			...options,
+			...cueCollapseRenderOptions(payload, cue),
+		};
 		// Block widget rendered on its own line just after the heading.
 		ranges.push(
 			Decoration.widget({
-				widget: new CueWidget(cue, payload.display, index, options),
+				widget: new CueWidget(cue, payload.display, index, cueOptions),
 				block: true,
 				side: 1,
 			}).range(headingLine.to)

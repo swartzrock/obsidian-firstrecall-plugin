@@ -1355,19 +1355,6 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	margin: 0.3em 0 0.6em;
 }
 
-.cuecraft-cue-section-label {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.48em;
-	margin: 0 0 0.32em;
-	color: var(--cc-muted);
-	font-size: var(--font-smallest);
-	font-weight: var(--font-bold);
-	letter-spacing: 0.06em;
-	line-height: 1.1;
-	text-transform: uppercase;
-}
-
 .cuecraft-label-icon {
 	display: inline-flex;
 	align-items: center;
@@ -1382,12 +1369,6 @@ body.cuecraft-study-active .cuecraft-section-body:not(.cuecraft-revealed):hover 
 	width: 1.25em;
 	height: 1.25em;
 	stroke-width: 2;
-}
-
-.cuecraft-cue-section-label:not(:first-child) {
-	border-top: 1px solid var(--cc-border);
-	margin-top: 0.75em;
-	padding-top: 0.7em;
 }
 
 .cuecraft-cue-question {
