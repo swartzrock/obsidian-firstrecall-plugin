@@ -596,7 +596,7 @@ function renderCornellMarker(
 	cueData: CueLineData = cue(),
 	options: Pick<
 		CueEditorRenderState,
-		"showRailSummary" | "showRailQuestions" | "showRailSupportTerms"
+		"showSummary" | "showQuestion" | "showTerms"
 	> = {}
 ): HTMLElement {
 	const state = EditorState.create({ doc: "# Terms\nbody" });
@@ -700,7 +700,7 @@ describe("buildCueLineData", () => {
 	it("can hide keyword data while keeping questions visible", () => {
 		const cache = cacheFrom();
 		const cues = buildCueLineData(cache, parseSections(NOTE), {
-			showKeywords: false,
+			showTerms: false,
 		});
 		expect(cues).toHaveLength(3);
 		expect(cues[0].question).toBe("Q:A");
@@ -710,11 +710,20 @@ describe("buildCueLineData", () => {
 	it("can hide Section Lens data while keeping questions visible", () => {
 		const cache = cacheFrom();
 		const cues = buildCueLineData(cache, parseSections(NOTE), {
-			showSectionLens: false,
+			showSummary: false,
 		});
 		expect(cues).toHaveLength(3);
 		expect(cues[0].question).toBe("Q:A");
 		expect(cues.every((c) => c.sectionLens === null)).toBe(true);
+	});
+
+	it("returns no ordinary cue data when every component is hidden", () => {
+		const cues = buildCueLineData(cacheFrom(), parseSections(NOTE), {
+			showSummary: false,
+			showQuestion: false,
+			showTerms: false,
+		});
+		expect(cues).toEqual([]);
 	});
 
 	it("emits a warning marker for errored sections instead of skipping them", () => {
@@ -1438,6 +1447,51 @@ describe("renderCueElement", () => {
 		});
 	});
 
+	it("omits ordinary Section cue DOM when every component is hidden", () => {
+		const state = EditorState.create({ doc: "# Terms\nbody" });
+		const payload: CueEditorRenderState = {
+			cues: [cue()],
+			display: "inline-cues",
+			showSummary: false,
+			showQuestion: false,
+			showTerms: false,
+		};
+		expect(buildCueWidgetDecorations(state, payload).size).toBe(0);
+
+		const railPayload = { ...payload, display: "cornell" as const };
+		expect(buildCueGutterMarkers(state, railPayload).size).toBe(0);
+	});
+
+	it("temporarily renders Question during Study without changing saved visibility", () => {
+		withDocument(() => {
+			const state = EditorState.create({ doc: "# Terms\nbody" });
+			const payload: CueEditorRenderState = {
+				cues: [cue()],
+				display: "inline-cues",
+				showSummary: false,
+				showQuestion: false,
+				showTerms: false,
+				study: {
+					snapshot: studySnapshot(),
+					toggleSection: vi.fn(),
+					showAll: vi.fn(),
+					hideAll: vi.fn(),
+					exit: vi.fn(),
+				},
+			};
+			let element: HTMLElement | undefined;
+			buildCueWidgetDecorations(state, payload).between(
+				0,
+				state.doc.length,
+				(_from, _to, decoration) => {
+					element = (decoration.spec.widget as { toDOM(): HTMLElement }).toDOM();
+				}
+			);
+			expect(element?.querySelector(".cuecraft-cue-question")).not.toBeNull();
+			expect(payload.showQuestion).toBe(false);
+		});
+	});
+
 	it("keeps inline disclosure interactions out of CodeMirror", () => {
 		const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
 			pretendToBeVisual: true,
@@ -1649,8 +1703,8 @@ describe("renderCueElement", () => {
 				"terms",
 			]);
 			const hidden = renderCornellMarker(controller, cue(), {
-				showRailQuestions: false,
-				showRailSupportTerms: false,
+				showQuestion: false,
+				showTerms: false,
 			});
 			expect(disclosureButtons(hidden).map((button) => button.dataset.section)).toEqual([
 				"summary",
@@ -1757,7 +1811,7 @@ describe("renderCueElement", () => {
 		});
 	});
 
-	it("falls back to the question when the selected cue section has no data", () => {
+	it("does not force a fallback Question when selected components have no data", () => {
 		withDocument(() => {
 			const scenarios = [
 				{
@@ -1786,10 +1840,10 @@ describe("renderCueElement", () => {
 						"upcoming",
 						scenario.options
 					);
-					expect(element.dataset.questionVisible).toBe("true");
+					expect(element.dataset.questionVisible).toBe("false");
 					expect(
 						disclosureButtons(element).map((button) => button.dataset.section)
-					).toEqual(["question"]);
+					).toEqual([]);
 				}
 			}
 		});

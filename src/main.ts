@@ -81,6 +81,7 @@ import {
 	removeReadingStudyControls,
 	restoreReadingStudyBlock,
 	syncReadingStudyControls,
+	type ReadingCueVisibility,
 } from "./reading-cues";
 import {
 	resolveStudySections,
@@ -594,7 +595,9 @@ export default class CueCraftPlugin extends Plugin {
 		const cues =
 			cache && (!this.visibility.isHidden(file.path) || Boolean(study))
 				? buildCueLineData(cache, parseSections(view.editor.getValue()), {
-						showKeywords: this.settings.generateKeywords,
+						showSummary: this.settings.showSummary,
+						showQuestion: this.settings.showQuestion || Boolean(study),
+						showTerms: this.settings.showTerms,
 					})
 				: [];
 		cm.dom.dataset.cuecraftEditorDisplay = this.settings.editorCueDisplay;
@@ -617,9 +620,9 @@ export default class CueCraftPlugin extends Plugin {
 				...(study ? { study } : {}),
 				notePath: file.path,
 				collapseController: this.cueSectionCollapse,
-				showRailSummary: this.settings.showRailSummary,
-				showRailQuestions: this.settings.showRailQuestions,
-				showRailSupportTerms: this.settings.showRailSupportTerms,
+				showSummary: this.settings.showSummary,
+				showQuestion: this.settings.showQuestion,
+				showTerms: this.settings.showTerms,
 				cueFontSize: this.settings.cueFontSize,
 				editorCueWidthController: this.editorCueWidthController,
 				noteBrief:
@@ -995,11 +998,17 @@ export default class CueCraftPlugin extends Plugin {
 		});
 	}
 
-	/** Force the active Reading view to rerender its post-processed cue surface. */
+	/** Force every open Reading view to rerender its post-processed cue surface. */
 	refreshReadingModeSurface(): void {
 		this.readingCueMemo = null;
-		const active = this.app.workspace.getActiveFile();
-		if (active) this.refreshActiveReadingView(active);
+		const seen = new Set<MarkdownView>();
+		this.app.workspace.iterateAllLeaves((leaf) => {
+			if (leaf.view.getViewType() !== "markdown") return;
+			const view = leaf.view as MarkdownView;
+			if (seen.has(view) || view.getMode() !== "preview") return;
+			seen.add(view);
+			view.previewMode.rerender(true);
+		});
 	}
 
 	private refreshActiveReadingView(file: TFile): void {
@@ -1307,8 +1316,9 @@ export default class CueCraftPlugin extends Plugin {
 	private readingCueMemo: {
 		path: string;
 		text: string;
-		showKeywords: boolean;
-		showSectionLens: boolean;
+		showSummary: boolean;
+		showQuestion: boolean;
+		showTerms: boolean;
 		map: Map<number, CueLineData>;
 	} | null = null;
 
@@ -1342,14 +1352,19 @@ export default class CueCraftPlugin extends Plugin {
 		const study = cache
 			? this.readingStudyProjection(path, firstInfo?.text, cache)
 			: null;
+		const cueVisibility = {
+			showSummary: this.settings.showSummary,
+			showQuestion: this.settings.showQuestion || Boolean(study?.snapshot.active),
+			showTerms: this.settings.showTerms,
+		};
 		const displayState = readingCueDisplayState({
-			renderInReadingMode: this.settings.renderInReadingMode,
 			hasCache: Boolean(cache),
 			isHidden,
 			studyActive: Boolean(study?.snapshot.active),
+			hasErrors: Boolean(cache?.sections.some((section) => section.error)),
+			visibility: cueVisibility,
 		});
 		const noteBriefState = readingNoteBriefDisplayState({
-			renderInReadingMode: this.settings.renderInReadingMode,
 			showNoteBrief: this.settings.showNoteBrief,
 			hasCache: Boolean(cache),
 			hasNoteBrief: Boolean(cache?.noteBrief),
@@ -1358,6 +1373,11 @@ export default class CueCraftPlugin extends Plugin {
 		if (!displayState.showInlineCues) {
 			for (const cue of el.querySelectorAll(".cuecraft-cue-reading")) {
 				cue.remove();
+			}
+		}
+		if (!noteBriefState.showNoteBrief) {
+			for (const noteBrief of el.querySelectorAll(".cuecraft-note-brief")) {
+				noteBrief.remove();
 			}
 		}
 		const readingContainer = this.activeReadingContainer(path, el);
@@ -1373,27 +1393,44 @@ export default class CueCraftPlugin extends Plugin {
 		if (!cache || (!displayState.showInlineCues && !noteBriefState.showNoteBrief)) {
 			return;
 		}
+		const noteBriefAnchorLine = noteBriefState.showNoteBrief
+			? [...buildReadingCueMap(cache, firstInfo?.text ?? "").keys()].sort(
+					(a, b) => a - b
+				)[0]
+			: undefined;
 
 		for (const heading of headings) {
 			const info = ctx.getSectionInfo(heading);
 			if (!info) continue;
-			const map = this.readingMapFor(path, info.text, cache);
+			const map = this.readingMapFor(path, info.text, cache, cueVisibility);
 			if (noteBriefState.showNoteBrief) {
-				this.maybeInsertReadingNoteBriefEl(cache, map, info, heading);
+				this.maybeInsertReadingNoteBriefEl(
+					cache,
+					noteBriefAnchorLine,
+					info,
+					heading
+				);
 			}
 			if (!displayState.showInlineCues) {
 				continue;
 			}
 			const cue = map.get(info.lineStart + 1);
-			if (!cue) continue;
 			const next = heading.nextElementSibling;
+			if (!cue) {
+				if (next?.hasClass("cuecraft-cue-reading")) next.remove();
+				continue;
+			}
 			if (
 				next?.hasClass("cuecraft-cue-reading") &&
 				(next as HTMLElement).dataset.cuecraftSectionId === cue.sectionId
 			) {
+				next.replaceWith(this.buildReadingCueEl(cue, cueVisibility));
 				continue;
 			}
-			heading.insertAdjacentElement("afterend", this.buildReadingCueEl(cue));
+			heading.insertAdjacentElement(
+				"afterend",
+				this.buildReadingCueEl(cue, cueVisibility)
+			);
 		}
 
 		projectReadingStudyBlock(
@@ -1455,26 +1492,26 @@ export default class CueCraftPlugin extends Plugin {
 	private readingMapFor(
 		path: string,
 		text: string,
-		cache: NoteCache
+		cache: NoteCache,
+		visibility: ReadingCueVisibility
 	): Map<number, CueLineData> {
 		if (
 			this.readingCueMemo &&
 			this.readingCueMemo.path === path &&
 			this.readingCueMemo.text === text &&
-			this.readingCueMemo.showKeywords === this.settings.generateKeywords &&
-			this.readingCueMemo.showSectionLens === this.settings.showSectionLens
+			this.readingCueMemo.showSummary === visibility.showSummary &&
+			this.readingCueMemo.showQuestion === visibility.showQuestion &&
+			this.readingCueMemo.showTerms === visibility.showTerms
 		) {
 			return this.readingCueMemo.map;
 		}
 		const map = buildReadingCueMap(cache, text, {
-			showKeywords: this.settings.generateKeywords,
-			showSectionLens: this.settings.showSectionLens,
+			...visibility,
 		});
 		this.readingCueMemo = {
 			path,
 			text,
-			showKeywords: this.settings.generateKeywords,
-			showSectionLens: this.settings.showSectionLens,
+			...visibility,
 			map,
 		};
 		return map;
@@ -1482,12 +1519,11 @@ export default class CueCraftPlugin extends Plugin {
 
 	private maybeInsertReadingNoteBriefEl(
 		cache: NoteCache,
-		map: Map<number, CueLineData>,
+		firstCueLine: number | undefined,
 		info: ReturnType<MarkdownPostProcessorContext["getSectionInfo"]>,
 		heading: HTMLElement
 	): boolean {
 		if (!info || !this.settings.showNoteBrief || !cache.noteBrief) return false;
-		const firstCueLine = [...map.keys()].sort((a, b) => a - b)[0];
 		if (firstCueLine !== info.lineStart + 1) return false;
 		const previous = heading.previousElementSibling;
 		if (previous && previous.hasClass("cuecraft-note-brief")) return false;
@@ -1501,7 +1537,10 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/** Build the reading-view cue element (mirrors the editor cue widget DOM). */
-	private buildReadingCueEl(cue: CueLineData): HTMLElement {
+	private buildReadingCueEl(
+		cue: CueLineData,
+		visibility: ReadingCueVisibility
+	): HTMLElement {
 		const root = createDiv({ cls: "cuecraft-cue cuecraft-cue-reading" });
 		root.dataset.cuecraftSectionId = cue.sectionId;
 		root.setAttr("role", "note");
@@ -1514,9 +1553,11 @@ export default class CueCraftPlugin extends Plugin {
 			});
 			return root;
 		}
-		root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
-		appendSectionLens(root, cue.sectionLens);
-		if (cue.keywords.length) {
+		if (visibility.showSummary) appendSectionLens(root, cue.sectionLens);
+		if (visibility.showQuestion) {
+			root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
+		}
+		if (visibility.showTerms && cue.keywords.length) {
 			root.createDiv({
 				cls: "cuecraft-cue-keywords",
 				text: cue.keywords.join(" \u00b7 "),

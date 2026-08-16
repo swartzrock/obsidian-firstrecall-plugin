@@ -90,7 +90,7 @@ describe("buildReadingCueMap", () => {
 
 	it("can omit keyword hints from mapped reading cues", () => {
 		const map = buildReadingCueMap(cacheFrom(), NOTE, {
-			showKeywords: false,
+			showTerms: false,
 		});
 		expect(map.get(1)?.question).toBe("Q:A");
 		expect(map.get(1)?.keywords).toEqual([]);
@@ -98,7 +98,7 @@ describe("buildReadingCueMap", () => {
 
 	it("can omit Section Lens from mapped reading cues", () => {
 		const map = buildReadingCueMap(cacheFrom(), NOTE, {
-			showSectionLens: false,
+			showSummary: false,
 		});
 		expect(map.get(1)?.question).toBe("Q:A");
 		expect(map.get(1)?.sectionLens).toBeNull();
@@ -124,6 +124,19 @@ describe("buildReadingCueMap", () => {
 		expect(map.get(3)).toMatchObject({ error: "boom", question: "" });
 	});
 
+	it("omits ordinary cues when all components are hidden but preserves errors", () => {
+		const cache = cacheFrom((_s, i) =>
+			i === 1 ? { error: "boom", question: null } : {}
+		);
+		const map = buildReadingCueMap(cache, NOTE, {
+			showSummary: false,
+			showQuestion: false,
+			showTerms: false,
+		});
+		expect([...map.keys()]).toEqual([3]);
+		expect(map.get(3)?.error).toBe("boom");
+	});
+
 	it("omits sections that were never generated", () => {
 		const cache = cacheFrom((_s, i) =>
 			i === 1
@@ -137,25 +150,45 @@ describe("buildReadingCueMap", () => {
 });
 
 describe("readingCueDisplayState", () => {
-	it("uses fixed inline cues and lets active Study override saved visibility gates", () => {
+	it("uses global component visibility and lets active Study override it", () => {
 		expect(
 			readingCueDisplayState({
-				renderInReadingMode: true,
 				hasCache: true,
 				isHidden: false,
 				studyActive: false,
+				hasErrors: false,
+				visibility: {
+					showSummary: true,
+					showQuestion: true,
+					showTerms: true,
+				},
 			})
 		).toEqual({ showInlineCues: true });
 
 		for (const savedGate of [
-			{ renderInReadingMode: false, isHidden: false },
-			{ renderInReadingMode: true, isHidden: true },
+			{
+				isHidden: false,
+				visibility: {
+					showSummary: false,
+					showQuestion: false,
+					showTerms: false,
+				},
+			},
+			{
+				isHidden: true,
+				visibility: {
+					showSummary: true,
+					showQuestion: true,
+					showTerms: true,
+				},
+			},
 		]) {
 			expect(
 				readingCueDisplayState({
 					...savedGate,
 					hasCache: true,
 					studyActive: false,
+					hasErrors: false,
 				})
 			).toEqual({ showInlineCues: false });
 			expect(
@@ -163,16 +196,22 @@ describe("readingCueDisplayState", () => {
 					...savedGate,
 					hasCache: true,
 					studyActive: true,
+					hasErrors: false,
 				})
 			).toEqual({ showInlineCues: true });
 		}
 
 		expect(
 			readingCueDisplayState({
-				renderInReadingMode: true,
 				hasCache: false,
 				isHidden: false,
 				studyActive: true,
+				hasErrors: false,
+				visibility: {
+					showSummary: false,
+					showQuestion: false,
+					showTerms: false,
+				},
 			})
 		).toEqual({ showInlineCues: false });
 	});
@@ -446,6 +485,12 @@ describe("Reading postprocessor Study plumbing", () => {
 
 		const path = "notes/example.md";
 		const cache = cacheFrom();
+		cache.noteBrief = {
+			overview: "Agents use tools to complete work.",
+			whatMatters: { title: "Core", detail: "Agents can plan." },
+			reviewFirst: { title: "Tools", detail: "Review tool use first." },
+			sayItBack: { title: "Recall", detail: "Explain why tools matter." },
+		};
 		const plugin = new CueCraftPlugin({} as never, {} as never);
 		const container = dom.window.document.querySelector<HTMLElement>("#container")!;
 		const block = dom.window.document.querySelector<HTMLElement>("#block")!;
@@ -459,9 +504,9 @@ describe("Reading postprocessor Study plumbing", () => {
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			settings: {
 				...DEFAULT_SETTINGS,
-				renderInReadingMode: false,
-				generateKeywords: false,
-				showSectionLens: false,
+				showSummary: false,
+				showQuestion: false,
+				showTerms: false,
 			},
 			app: {
 				workspace: {
@@ -510,7 +555,7 @@ describe("Reading postprocessor Study plumbing", () => {
 		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
 			"true"
 		);
-		expect(plugin.settings.renderInReadingMode).toBe(false);
+		expect(plugin.settings.showQuestion).toBe(false);
 		expect(
 			(plugin as unknown as { visibility: { isHidden(path: string): boolean } })
 				.visibility.isHidden(path)
@@ -557,6 +602,33 @@ describe("Reading postprocessor Study plumbing", () => {
 		);
 		expect(container.querySelector(".cuecraft-reading-study-controls")).toBeNull();
 		expect(controller.snapshot().active).toBe(false);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			visibility: { isHidden: () => false },
+		});
+		render();
+		expect(block.querySelectorAll(".cuecraft-cue-reading")).toHaveLength(0);
+		expect(block.querySelector(".cuecraft-note-brief")).not.toBeNull();
+		expect(plugin.settings).toMatchObject({
+			showSummary: false,
+			showQuestion: false,
+			showTerms: false,
+		});
+
+		plugin.settings.showSummary = true;
+		render();
+		expect(block.querySelectorAll(".cuecraft-cue-reading")).toHaveLength(3);
+		expect(block.querySelector(".cuecraft-section-lens")).not.toBeNull();
+		expect(block.querySelector(".cuecraft-cue-question")).toBeNull();
+		expect(block.querySelector(".cuecraft-cue-keywords")).toBeNull();
+
+		plugin.settings.showSummary = false;
+		plugin.settings.showTerms = true;
+		render();
+		expect(block.querySelector(".cuecraft-section-lens")).toBeNull();
+		expect(block.querySelector(".cuecraft-cue-question")).toBeNull();
+		expect(block.querySelector(".cuecraft-cue-keywords")?.textContent).toContain(
+			"k1"
+		);
 	});
 });
 
@@ -564,7 +636,6 @@ describe("readingNoteBriefDisplayState", () => {
 	it("shows Note Brief only when reading surfaces, cache, data, and toggle are available", () => {
 		expect(
 			readingNoteBriefDisplayState({
-				renderInReadingMode: true,
 				showNoteBrief: true,
 				hasCache: true,
 				hasNoteBrief: true,
@@ -577,16 +648,6 @@ describe("readingNoteBriefDisplayState", () => {
 		const hidden = { showNoteBrief: false };
 		expect(
 			readingNoteBriefDisplayState({
-				renderInReadingMode: false,
-				showNoteBrief: true,
-				hasCache: true,
-				hasNoteBrief: true,
-				isHidden: false,
-			})
-		).toEqual(hidden);
-		expect(
-			readingNoteBriefDisplayState({
-				renderInReadingMode: true,
 				showNoteBrief: false,
 				hasCache: true,
 				hasNoteBrief: true,
@@ -595,7 +656,6 @@ describe("readingNoteBriefDisplayState", () => {
 		).toEqual(hidden);
 		expect(
 			readingNoteBriefDisplayState({
-				renderInReadingMode: true,
 				showNoteBrief: true,
 				hasCache: false,
 				hasNoteBrief: true,
@@ -604,7 +664,6 @@ describe("readingNoteBriefDisplayState", () => {
 		).toEqual(hidden);
 		expect(
 			readingNoteBriefDisplayState({
-				renderInReadingMode: true,
 				showNoteBrief: true,
 				hasCache: true,
 				hasNoteBrief: false,
@@ -613,7 +672,6 @@ describe("readingNoteBriefDisplayState", () => {
 		).toEqual(hidden);
 		expect(
 			readingNoteBriefDisplayState({
-				renderInReadingMode: true,
 				showNoteBrief: true,
 				hasCache: true,
 				hasNoteBrief: true,
