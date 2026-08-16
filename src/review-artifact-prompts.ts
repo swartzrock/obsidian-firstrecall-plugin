@@ -1,4 +1,9 @@
+import { DEFAULT_NOTE_BRIEF_INSTRUCTIONS } from "./note-brief-instructions";
 import type { CueCraftNoteBriefInput } from "./cue-provider";
+
+export const NOTE_TITLE_PLACEHOLDER = "{{note_title}}";
+export const FULL_NOTE_SOURCE_PLACEHOLDER = "{{full_note_source}}";
+export const SECTION_CUE_SOURCE_PLACEHOLDER = "{{successful_section_cues}}";
 
 export const SECTION_LENS_PROMPT =
 	`Also include "sectionLens": an object with ` +
@@ -47,26 +52,51 @@ export const NOTE_BRIEF_PROMPT =
 	`Card titles must name specific note content; never use or begin with the category labels ` +
 	`"Core idea", "Review first", or "Self-test". Make the "sayItBack" title the recall question itself.`;
 
-export function buildNoteBriefPrompt(input: CueCraftNoteBriefInput): string {
-	const sections = input.sections
+function formatNoteBriefSectionSource(input: CueCraftNoteBriefInput): string {
+	return input.sections
 		.map((section, index) => {
-			const keywords = section.keywords.length
+			const terms = section.keywords.length
 				? section.keywords.join(", ")
 				: "none";
 			return (
 				`Section ${index + 1}: ${section.heading || "(untitled)"}\n` +
-				`Cue: ${section.question}\n` +
-				`Keywords: ${keywords}`
+				`Question: ${section.question}\n` +
+				`Terms: ${terms}`
 			);
 		})
 		.join("\n---\n");
+}
 
+function composeNoteBriefPrompt(source: {
+	noteTitle: string;
+	fullText: string;
+	sectionCues: string;
+}): string {
 	return (
-		`Create an AI-native Note Brief that helps a reader review and retain this note.\n` +
+		`${DEFAULT_NOTE_BRIEF_INSTRUCTIONS}\n\n` +
+		`Create a Note Brief that helps a reader review and retain this note.\n` +
 		`Prefer concrete claims, memorable language, and active recall over generic summary.\n` +
 		`${NOTE_BRIEF_PROMPT}\n` +
-		`\nNote title: ${input.noteTitle || "(untitled)"}\n` +
-		`\nGenerated section cues:\n${sections}\n` +
-		`\nNote text:\n${input.fullText}\n`
+		`\nNote title: ${source.noteTitle}\n` +
+		`\nSuccessful Section cues:\n${source.sectionCues}\n` +
+		`\nFull note source:\n${source.fullText}\n`
 	);
+}
+
+/** Build the exact CueCraft-owned initial Note Brief prompt. */
+export function buildNoteBriefPrompt(input: CueCraftNoteBriefInput): string {
+	return composeNoteBriefPrompt({
+		noteTitle: input.noteTitle || "(untitled)",
+		fullText: input.fullText,
+		sectionCues: formatNoteBriefSectionSource(input),
+	});
+}
+
+/** Build the read-only Advanced template without reading an active note. */
+export function buildNoteBriefInstructionsTemplate(): string {
+	return composeNoteBriefPrompt({
+		noteTitle: NOTE_TITLE_PLACEHOLDER,
+		fullText: FULL_NOTE_SOURCE_PLACEHOLDER,
+		sectionCues: SECTION_CUE_SOURCE_PLACEHOLDER,
+	});
 }

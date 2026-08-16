@@ -1,13 +1,8 @@
-import {
-	cueDensityGuidance,
-	keywordGuidance,
-	questionStyleGuidance,
-} from "./cue-generation";
+import { composeSectionCueBatchPrompt } from "./cue-instructions";
 import type { CueCraftCueBatchResult, CueCraftCueInput } from "./cue-provider";
 import { validateCueBatch } from "./schemas";
 import {
 	SECTION_LENS_JSON_SCHEMA,
-	SECTION_LENS_PROMPT,
 } from "./review-artifact-prompts";
 
 const CUE_BATCH_ITEM_SCHEMA = {
@@ -43,16 +38,9 @@ export function cueBatchJsonSchema(count: number): string {
 }
 
 export function buildCueBatchPrompt(
-	inputs: CueCraftCueInput[],
-	presetGuidance: Record<string, string>
+	inputs: CueCraftCueInput[]
 ): string {
 	const first = inputs[0];
-	const preset =
-		presetGuidance[first?.preset ?? ""] ?? presetGuidance.conceptual;
-	const options = first?.options;
-	const contextLine = first?.noteContext
-		? `\nWhole-note context (for relevance only):\n${first.noteContext}\n`
-		: "";
 	const sections = inputs
 		.map(
 			(input, index) =>
@@ -62,20 +50,12 @@ export function buildCueBatchPrompt(
 		)
 		.join("\n---\n");
 
-	return (
-		`You are a study assistant creating Cornell-style active-recall cues.\n` +
-		`${preset}\n` +
-		`${questionStyleGuidance(options?.questionStyle)}\n` +
-		`${cueDensityGuidance(options?.cueDensity)}\n` +
-		`${keywordGuidance(options?.generateKeywords ?? true)}\n` +
-		`Return ONLY a JSON object with key "cues". ` +
-		`"cues" must be an array with exactly ${inputs.length} objects, in the same order as the sections. ` +
-		`Each object must have keys: "question" (string), ` +
-		`"keywords" (array of 2 to 5 short strings), and "sectionLens" (object). ` +
-		`${SECTION_LENS_PROMPT}\n` +
-		contextLine +
-		`\nSections:\n${sections}\n`
-	);
+	return composeSectionCueBatchPrompt({
+		questionType: first?.options?.questionType ?? "conceptual",
+		sectionCount: inputs.length,
+		sectionList: sections,
+		noteContext: first?.noteContext ?? "",
+	});
 }
 
 export interface ParsedCueBatch {

@@ -27,7 +27,7 @@ import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
 	generateNote,
 	generateNoteBriefForSections,
-	generateSectionCue,
+	generateSectionCueBatch,
 	type SectionResult,
 } from "./generator";
 import {
@@ -1629,11 +1629,8 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private generationOptions(): CueGenerationOptions {
-		const s = this.settings;
 		return {
-			cueDensity: s.cueDensity,
-			questionStyle: s.questionStyle,
-			generateKeywords: s.generateKeywords,
+			questionType: this.settings.questionType,
 		};
 	}
 
@@ -1722,20 +1719,15 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		new SectionSuggestModal(this.app, sections, this.cacheStore.get(file.path), (s) => {
-			new ToneSuggestModal(this.app, (tone) =>
-				void this.regenerateSection(file, s.id, tone)
-			).open();
+			void this.regenerateSection(file, s.id);
 		}).open();
 	}
 
 	/**
 	 * Regenerate the cue for a single section (by id) and merge it back into the
 	 * cache. Public so callers can target an explicit note and section.
-	 * When `toneOverride` is supplied it replaces the global cue preset for this
-	 * single regeneration, so users can ask for a different question style without
-	 * changing their default setting.
 	 */
-	async regenerateSection(file: TFile, sectionId: string, toneOverride?: string): Promise<void> {
+	async regenerateSection(file: TFile, sectionId: string): Promise<void> {
 		if (this.currentRun) {
 			new Notice("CueCraft: generation already in progress.");
 			return;
@@ -1764,14 +1756,14 @@ export default class CueCraftPlugin extends Plugin {
 		this.setStatus("generating", { done: 0, total: 1 });
 
 		try {
-			const result = await generateSectionCue({
-				section,
+			const [result] = await generateSectionCueBatch({
+				sections: [section],
 				provider,
-				preset: toneOverride ?? this.settings.cuePreset,
 				options: this.generationOptions(),
 				noteContext: markdown,
 				signal: controller.signal,
 			});
+			if (!result) throw new Error("Provider returned no cue for this section.");
 
 			let updated = replaceSection(cache, toCachedSection(result));
 			if (!controller.signal.aborted) {
@@ -1868,24 +1860,18 @@ export default class CueCraftPlugin extends Plugin {
 					.map((id) => byId.get(id))
 					.filter((s): s is Section => Boolean(s));
 				this.setStatus("generating", { done, total: sectionIds.length });
-				const results = await Promise.all(
-					batch.map(async (section) => {
-						const result = await generateSectionCue({
-							section,
-							provider,
-							preset: this.settings.cuePreset,
-							options: this.generationOptions(),
-							noteContext: markdown,
-							signal: controller.signal,
-						});
-						done++;
-						this.setStatus("generating", { done, total: sectionIds.length });
-						return result;
-					})
-				);
+				const results = await generateSectionCueBatch({
+					sections: batch,
+					provider,
+					options: this.generationOptions(),
+					noteContext: markdown,
+					signal: controller.signal,
+				});
 				for (const result of results) {
 					generated.push(toCachedSection(result));
 					if (result.error) failed++;
+					done++;
+					this.setStatus("generating", { done, total: sectionIds.length });
 				}
 				const working = reconcileCacheSections(cache, sections, generated, {
 					noteModifiedAt: file.stat.mtime,
@@ -2163,7 +2149,6 @@ export default class CueCraftPlugin extends Plugin {
 				noteTitle: file.basename,
 				markdown,
 				provider,
-				preset: this.settings.cuePreset,
 				options: this.generationOptions(),
 				sectionConcurrency: this.settings.sectionConcurrency,
 				useWholeNoteContext: true,
@@ -2180,7 +2165,7 @@ export default class CueCraftPlugin extends Plugin {
 						result,
 						provider: provider.id,
 						model: this.selectedModelName(),
-						preset: this.settings.cuePreset,
+						preset: this.settings.questionType,
 						generationMode: "whole-note-context",
 						noteModifiedAt: file.stat.mtime,
 					})
@@ -2236,18 +2221,13 @@ export default class CueCraftPlugin extends Plugin {
 				.slice(start, start + concurrency)
 				.map((id) => byId.get(id))
 				.filter((section): section is Section => Boolean(section));
-			const results = await Promise.all(
-				batch.map((section) =>
-					generateSectionCue({
-						section,
-						provider,
-						preset: this.settings.cuePreset,
-						options: this.generationOptions(),
-						noteContext: markdown,
-						signal: controller.signal,
-					})
-				)
-			);
+			const results = await generateSectionCueBatch({
+				sections: batch,
+				provider,
+				options: this.generationOptions(),
+				noteContext: markdown,
+				signal: controller.signal,
+			});
 			for (const result of results) {
 				generated.push(toCachedSection(result));
 				if (result.error) failed++;
@@ -2352,7 +2332,6 @@ export default class CueCraftPlugin extends Plugin {
 				noteTitle: file.basename,
 				markdown,
 				provider,
-				preset: this.settings.cuePreset,
 				options: this.generationOptions(),
 				sectionConcurrency: this.settings.sectionConcurrency,
 				useWholeNoteContext: true,
@@ -2365,7 +2344,7 @@ export default class CueCraftPlugin extends Plugin {
 				result,
 				provider: provider.id,
 				model: this.selectedModelName(),
-				preset: this.settings.cuePreset,
+				preset: this.settings.questionType,
 				generationMode: "whole-note-context",
 				noteModifiedAt: file.stat.mtime,
 			});
@@ -2456,37 +2435,6 @@ function toCachedSection(result: SectionResult): CachedSection {
 		sectionLens: result.sectionLens,
 		error: result.error,
 	};
-}
-
-/** Tone variant options shown when regenerating a single section's cue. */
-export const TONE_OPTIONS: Array<{ id: string; label: string }> = [
-	{ id: "conceptual", label: "More conceptual" },
-	{ id: "exam-prep", label: "Exam prep" },
-	{ id: "simpler", label: "Simpler" },
-	{ id: "vocabulary", label: "Vocabulary" },
-];
-
-/** Fuzzy picker that presents the four tone variants for per-section regeneration. */
-class ToneSuggestModal extends FuzzySuggestModal<{ id: string; label: string }> {
-	constructor(
-		app: InstanceType<typeof Plugin>["app"],
-		private readonly onChoose: (toneId: string) => void
-	) {
-		super(app);
-		this.setPlaceholder("Choose a tone for this cue…");
-	}
-
-	getItems(): Array<{ id: string; label: string }> {
-		return TONE_OPTIONS;
-	}
-
-	getItemText(item: { id: string; label: string }): string {
-		return item.label;
-	}
-
-	onChooseItem(item: { id: string; label: string }): void {
-		this.onChoose(item.id);
-	}
 }
 
 class RegenerateSettingsModal extends Modal {

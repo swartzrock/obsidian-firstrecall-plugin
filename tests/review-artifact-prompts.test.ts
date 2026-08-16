@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+	buildNoteBriefInstructionsTemplate,
 	buildNoteBriefPrompt,
+	FULL_NOTE_SOURCE_PLACEHOLDER,
 	NOTE_BRIEF_PROMPT,
+	NOTE_TITLE_PLACEHOLDER,
+	SECTION_CUE_SOURCE_PLACEHOLDER,
 } from "../src/review-artifact-prompts";
 
 describe("note brief prompt", () => {
@@ -34,14 +38,41 @@ describe("note brief prompt", () => {
 		expect(prompt).toContain(
 			"NOTE_SOURCE_SENTINEL: Agents use tools."
 		);
-		expect(prompt.indexOf("Generated section cues:")).toBeLessThan(
+		expect(prompt.indexOf("Successful Section cues:")).toBeLessThan(
 			prompt.indexOf("CUE_SOURCE_SENTINEL")
 		);
 		expect(prompt.indexOf("CUE_SOURCE_SENTINEL")).toBeLessThan(
-			prompt.indexOf("Note text:")
+			prompt.indexOf("Full note source:")
 		);
-		expect(prompt.indexOf("Note text:")).toBeLessThan(
+		expect(prompt.indexOf("Full note source:")).toBeLessThan(
 			prompt.indexOf("NOTE_SOURCE_SENTINEL")
 		);
+	});
+
+	it("builds the inspector template with the production Note Brief composer", () => {
+		const template = buildNoteBriefInstructionsTemplate();
+		const runtime = buildNoteBriefPrompt({
+			noteTitle: "Agents",
+			fullText: "# Agents\nAgents use tools.",
+			sections: [
+				{
+					heading: "Planning",
+					question: "How do plans guide tool use?",
+					keywords: ["plans", "tools"],
+				},
+			],
+		});
+		const sectionSource =
+			"Section 1: Planning\nQuestion: How do plans guide tool use?\nTerms: plans, tools";
+
+		expect(template).toContain(NOTE_TITLE_PLACEHOLDER);
+		expect(template).toContain(FULL_NOTE_SOURCE_PLACEHOLDER);
+		expect(template).toContain(SECTION_CUE_SOURCE_PLACEHOLDER);
+		expect(
+			template
+				.replace(NOTE_TITLE_PLACEHOLDER, "Agents")
+				.replace(SECTION_CUE_SOURCE_PLACEHOLDER, sectionSource)
+				.replace(FULL_NOTE_SOURCE_PLACEHOLDER, "# Agents\nAgents use tools.")
+		).toBe(runtime);
 	});
 });
