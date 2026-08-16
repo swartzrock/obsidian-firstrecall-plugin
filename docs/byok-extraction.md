@@ -127,7 +127,8 @@ const provider = createByokNodeProvider(config, deps satisfies ByokProviderDeps)
 - Render Obsidian settings UI and notices.
 - Adapt Obsidian `requestUrl` into BYOK transport dependencies.
 - Parse notes and decide which sections need generation.
-- Build CueCraft study-cue prompts, JSON schemas, validation, repair prompts, and cue/summary runtime methods around BYOK text/object generation.
+- Build CueCraft section-question, keyword-support, Section Lens, and optional Note Brief prompts,
+  schemas, validation, repair paths, and runtime methods around BYOK text/object generation.
 - Map CueCraft settings into BYOK configs and map BYOK results back into settings through `src/byok-cuecraft-adapter.ts`.
 - Preserve Obsidian-specific user experience: settings copy, model refresh notices, setup status text, and note-cache metadata.
 
@@ -213,4 +214,4 @@ Stay in CueCraft:
 - BYOK does not own encryption or persistence of stored keys.
 - BYOK does not add new providers.
 - BYOK is not a storage, UI, prompt-template, or output-validation framework; host apps own those layers.
-- BYOK does not own Obsidian-specific settings UI, notices, note parsing, cache invalidation, or Cornell rendering.
+- BYOK does not own Obsidian-specific settings UI, notices, note parsing, cache invalidation, or cue rendering.

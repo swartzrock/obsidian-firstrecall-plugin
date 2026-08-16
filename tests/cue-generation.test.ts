@@ -43,7 +43,6 @@ describe("cue-generation: prompt guidance", () => {
 			cueDensity: 2,
 			questionStyle: "recall",
 			generateKeywords: true,
-			autoSummary: true,
 		});
 	});
 

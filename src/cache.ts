@@ -1,6 +1,5 @@
 import { z } from "zod/v3";
 import {
-	confidenceSchema,
 	noteBriefOutputSchema,
 	sectionLensSchema,
 	type ValidationResult,
@@ -12,7 +11,7 @@ import type { NoteGenerationResult } from "./generator";
  * Persisted per-note study data. Bumping CACHE_SCHEMA_VERSION requires adding a
  * migration step in `migrateCache` so existing caches upgrade rather than break.
  */
-export const CACHE_SCHEMA_VERSION = 6;
+export const CACHE_SCHEMA_VERSION = 7;
 
 const cachedSectionSchema = z.object({
 	id: z.string(),
@@ -22,8 +21,6 @@ const cachedSectionSchema = z.object({
 	contentHash: z.string(),
 	keywords: z.array(z.string()).nullable(),
 	question: z.string().nullable(),
-	confidence: confidenceSchema.nullable(),
-	rationale: z.string().nullable(),
 	sectionLens: sectionLensSchema.nullable(),
 	error: z.string().nullable(),
 });
@@ -37,11 +34,9 @@ export const noteCacheSchema = z.object({
 	generationMode: z.string(),
 	preset: z.string(),
 	outline: z.object({
-		learningObjective: z.string().nullable(),
 		keyThemes: z.array(z.string()).optional(),
 	}),
 	sections: z.array(cachedSectionSchema),
-	summary: z.string().nullable(),
 	noteBrief: noteBriefOutputSchema.nullable(),
 });
 
@@ -67,7 +62,7 @@ export function buildNoteCache(params: BuildCacheParams): NoteCache {
 		model: params.model,
 		generationMode: params.generationMode,
 		preset: params.preset,
-		outline: { learningObjective: params.result.learningObjective },
+		outline: {},
 		sections: params.result.sections.map((s) => ({
 			id: s.id,
 			heading: s.heading,
@@ -76,12 +71,9 @@ export function buildNoteCache(params: BuildCacheParams): NoteCache {
 			contentHash: s.contentHash,
 			keywords: s.keywords,
 			question: s.question,
-			confidence: s.confidence,
-			rationale: s.rationale ?? null,
 			sectionLens: s.sectionLens ?? null,
 			error: s.error,
 		})),
-		summary: params.result.summary,
 		noteBrief: params.result.noteBrief,
 	};
 }
@@ -108,18 +100,21 @@ export function validateCache(raw: unknown): ValidationResult<NoteCache> {
  * v3 -> v4: v3 lacked generated Section Lens and Note Brief artifacts.
  * v4 -> v5: v4 lacked per-cue semantic category tags.
  * v5 -> v6: v5 included per-cue category tags that are no longer used.
+ * v6 -> v7: remove confidence/rationale, Summary, and Learning Objective.
  */
 export function migrateCache(raw: unknown): NoteCache | null {
 	if (!raw || typeof raw !== "object") return null;
 	const obj = raw as Record<string, unknown>;
 	const version = typeof obj.schemaVersion === "number" ? obj.schemaVersion : 1;
+	if (!Number.isInteger(version) || version < 1 || version > CACHE_SCHEMA_VERSION) {
+		return null;
+	}
 
 	let candidate: Record<string, unknown> = obj;
 	if (version === 1) {
 		const sections = Array.isArray(obj.sections) ? obj.sections : [];
 		candidate = {
 			...obj,
-			schemaVersion: CACHE_SCHEMA_VERSION,
 			generationMode: obj.generationMode ?? "whole-note-context",
 			preset: obj.preset ?? "conceptual",
 			outline:
@@ -148,7 +143,6 @@ export function migrateCache(raw: unknown): NoteCache | null {
 		const sections = Array.isArray(obj.sections) ? obj.sections : [];
 		candidate = {
 			...obj,
-			schemaVersion: CACHE_SCHEMA_VERSION,
 			sections: sections.map((s) => {
 				const sec = (s ?? {}) as Record<string, unknown>;
 				return {
@@ -167,7 +161,6 @@ export function migrateCache(raw: unknown): NoteCache | null {
 		const sections = Array.isArray(obj.sections) ? obj.sections : [];
 		candidate = {
 			...obj,
-			schemaVersion: CACHE_SCHEMA_VERSION,
 			sections: sections.map((s) => {
 				const sec = (s ?? {}) as Record<string, unknown>;
 				return {
@@ -178,20 +171,14 @@ export function migrateCache(raw: unknown): NoteCache | null {
 			noteBrief: null,
 		};
 	}
-	if (version === 4) {
-		candidate = {
-			...obj,
-			schemaVersion: CACHE_SCHEMA_VERSION,
-		};
-	}
 	if (version === 5) {
 		const sections = Array.isArray(obj.sections) ? obj.sections : [];
 		candidate = {
 			...obj,
-			schemaVersion: CACHE_SCHEMA_VERSION,
 			sections,
 		};
 	}
+	candidate = { ...candidate, schemaVersion: CACHE_SCHEMA_VERSION };
 
 	const validated = validateCache(candidate);
 	return validated.ok ? validated.value : null;
@@ -328,7 +315,7 @@ export function reconcileCacheSections(
 
 /**
  * Return a new cache with the section matching `updated.id` replaced.
- * Other sections, summary, and outline stay untouched. Bumps `generatedAt`
+ * Other sections, Note Brief, and outline stay untouched. Bumps `generatedAt`
  * so the cache reflects its most recent change. Returns the cache unchanged
  * when the id is not found.
  */

@@ -38,7 +38,6 @@ import type {
 	CueCraftCueInput,
 	CueCraftNoteBriefInput,
 	CueCraftCueProviderRuntime,
-	CueCraftSummaryInput,
 } from "./cue-provider";
 import {
 	buildNoteBriefPrompt,
@@ -52,17 +51,13 @@ import {
 	formatZodError,
 	noteBriefGenerationSchema,
 	noteBriefOutputSchema,
-	summaryGenerationSchema,
-	summaryOutputSchema,
 	validateCue,
 	validateNoteBrief,
-	validateSummary,
 	type CueOutput,
 	type NoteBriefOutput,
-	type SummaryOutput,
 } from "./schemas";
 import type { CueCraftSettings } from "./settings";
-import { resolveSummaryInstructions } from "./summary-instructions";
+import { resolveNoteBriefInstructions } from "./note-brief-instructions";
 import {
 	isCueCraftCloudCredentialProvider,
 	type CueCraftCloudCredentialProvider,
@@ -95,8 +90,6 @@ export type {
 	CueCraftCueOutput,
 	CueCraftNoteBriefInput,
 	CueCraftNoteBriefOutput,
-	CueCraftSummaryInput,
-	CueCraftSummaryOutput,
 } from "./cue-provider";
 
 export type CueCraftFetchedModelProvider =
@@ -126,21 +119,9 @@ const CUE_JSON_SCHEMA = JSON.stringify({
 			minItems: 2,
 			maxItems: 5,
 		},
-		confidence: { enum: ["high", "medium", "low"] },
-		rationale: { type: "string" },
 		sectionLens: SECTION_LENS_JSON_SCHEMA,
 	},
-	required: ["question", "keywords", "confidence", "sectionLens"],
-	additionalProperties: false,
-});
-
-const SUMMARY_JSON_SCHEMA = JSON.stringify({
-	type: "object",
-	properties: {
-		summary: { type: "string" },
-		learningObjective: { type: "string" },
-	},
-	required: ["summary"],
+	required: ["question", "keywords", "sectionLens"],
 	additionalProperties: false,
 });
 
@@ -159,7 +140,7 @@ const PROTECTED_ARTIFACT_CONTRACT =
 const CUE_PROTECTED_INVARIANT =
 	EDITABLE_POLICY_AUTHORITY +
 	`CueCraft's protected Cue contract requires one section-level active-recall cue using the configured preset, cue density, and question style. ` +
-	`Return the required Cue fields (question, keywords, confidence, optional rationale, and sectionLens) ` +
+	`Return the required Cue fields (question, keywords, and sectionLens) ` +
 	`and the required Section Lens fields (takeaway, keyPhrase, and explanation). ` +
 	PROTECTED_ARTIFACT_CONTRACT;
 
@@ -169,23 +150,18 @@ function cueBatchProtectedInvariant(count: number): string {
 		`CueCraft's protected Cue Batch contract requires exactly one section-level active-recall cue for each of the ${count} supplied sections, in input order. ` +
 		`Use each section's configured preset, cue density, and question style. ` +
 		`Return a cues array with exactly ${count} objects. Each object must include the required Cue fields ` +
-		`(question, keywords, confidence, optional rationale, and sectionLens) and the required Section Lens fields ` +
+		`(question, keywords, and sectionLens) and the required Section Lens fields ` +
 		`(takeaway, keyPhrase, and explanation). ` +
 		PROTECTED_ARTIFACT_CONTRACT
 	);
 }
-
-const SUMMARY_PROTECTED_INVARIANT =
-	EDITABLE_POLICY_AUTHORITY +
-	`CueCraft's protected Summary contract requires one Summary and an optional learning objective. ` +
-	PROTECTED_ARTIFACT_CONTRACT;
 
 const NOTE_BRIEF_PROTECTED_INVARIANT =
 	EDITABLE_POLICY_AUTHORITY +
 	`CueCraft's protected Note Brief contract requires one overview plus exactly three review cards: whatMatters, reviewFirst, and sayItBack. ` +
 	PROTECTED_ARTIFACT_CONTRACT;
 
-type InstructionArtifact = "Cue" | "Cue Batch" | "Summary" | "Note Brief";
+type InstructionArtifact = "Cue" | "Cue Batch" | "Note Brief";
 
 function protectedInstructionEnvelope(
 	artifact: InstructionArtifact,
@@ -318,28 +294,11 @@ function buildCuePrompt(input: CueCraftCueInput): string {
 		`${cueDensityGuidance(input.options?.cueDensity)}\n` +
 		`${keywordGuidance(input.options?.generateKeywords ?? true)}\n` +
 		`Return ONLY a JSON object with keys: "question" (string), ` +
-		`"keywords" (array of 2 to 5 short strings), "confidence" ("high" | "medium" | "low"), ` +
-		`optional "rationale" (short reason, only when confidence is "low"), ` +
-		`and "sectionLens" (object).\n` +
+		`"keywords" (array of 2 to 5 short strings), and "sectionLens" (object).\n` +
 		`${SECTION_LENS_PROMPT}\n` +
 		contextLine +
 		`\nSection heading: ${input.heading || "(untitled)"}\n` +
 		`Section content:\n${input.content}\n`
-	);
-}
-
-function buildSummaryPrompt(input: CueCraftSummaryInput): string {
-	const questions = input.sectionQuestions.length
-		? `\nSection questions to reflect:\n- ${input.sectionQuestions.join("\n- ")}\n`
-		: "";
-	return (
-		`Summarize the following note for study review.\n` +
-		`Return ONLY a JSON object with keys: "summary" (one concise study takeaway sentence, not a paragraph) ` +
-		`and optional "learningObjective" (one short sentence).\n` +
-		`\nNote title: ${input.noteTitle}\n` +
-		questions +
-		`\nNote text:\n${input.fullText}\n` +
-		`\nReturn one note-grounded study takeaway sentence that reflects the successful section questions when provided; JSON only.\n`
 	);
 }
 
@@ -403,69 +362,6 @@ async function generateCueFromTextProvider(
 		result = validateCue(retry.text);
 		if (!result.ok) {
 			debugModelTextFailure("cue", "repair", retry.text, result.error);
-		}
-	}
-	if (!result.ok) {
-		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
-	}
-	return result.value;
-}
-
-async function generateSummaryFromObjectProvider(
-	runtime: ByokProviderRuntime,
-	input: CueCraftSummaryInput,
-	instructions: string,
-	signal?: AbortSignal
-): Promise<SummaryOutput> {
-	if (!runtime.generateObject) {
-		throw cueCraftProviderError("Provider does not support structured output.");
-	}
-	const raw = await runtime.generateObject({
-		schema: summaryGenerationSchema,
-		prompt: withProviderInstructions(instructions, buildSummaryPrompt(input)),
-	}, signal);
-	const parsed = summaryOutputSchema.safeParse(raw);
-	if (!parsed.success) {
-		throw cueCraftProviderError(
-			`Model output could not be validated: ${formatZodError(parsed.error)}`
-		);
-	}
-	return parsed.data;
-}
-
-async function generateSummaryFromTextProvider(
-	runtime: ByokProviderRuntime,
-	input: CueCraftSummaryInput,
-	instructions: string,
-	signal?: AbortSignal
-): Promise<SummaryOutput> {
-	const basePrompt = buildSummaryPrompt(input);
-	const raw = await runtime.generateText(
-		{
-			prompt: withProviderInstructions(instructions, basePrompt),
-			responseFormat: "json",
-			jsonSchema: SUMMARY_JSON_SCHEMA,
-		},
-		signal
-	);
-	let result = validateSummary(raw.text);
-	if (!result.ok) {
-		debugModelTextFailure("summary", "initial", raw.text, result.error);
-		const repairPrompt =
-			basePrompt +
-			`\nYour previous reply could not be validated (${result.error}).\n` +
-			`Reply again with ONLY the corrected JSON object.`;
-		const retry = await runtime.generateText(
-			{
-				prompt: withProviderInstructions(instructions, repairPrompt),
-				responseFormat: "json",
-				jsonSchema: SUMMARY_JSON_SCHEMA,
-			},
-			signal
-		);
-		result = validateSummary(retry.text);
-		if (!result.ok) {
-			debugModelTextFailure("summary", "repair", retry.text, result.error);
 		}
 	}
 	if (!result.ok) {
@@ -585,7 +481,7 @@ export function wrapCueCraftByokRuntime(
 	runtime: ByokProviderRuntime,
 	settings: Pick<
 		CueCraftSettings,
-		"cueInstructionsOverride" | "summaryInstructionsOverride"
+		"cueInstructionsOverride" | "noteBriefInstructionsOverride"
 	>
 ): CueCraftByokRuntime {
 	const generateFromObject = Boolean(runtime.generateObject);
@@ -595,17 +491,12 @@ export function wrapCueCraftByokRuntime(
 		cuePolicy,
 		CUE_PROTECTED_INVARIANT
 	);
-	const studyReviewPolicy = resolveSummaryInstructions(
-		settings.summaryInstructionsOverride
-	);
-	const summaryInstructions = protectedInstructionEnvelope(
-		"Summary",
-		studyReviewPolicy,
-		SUMMARY_PROTECTED_INVARIANT
+	const noteBriefPolicy = resolveNoteBriefInstructions(
+		settings.noteBriefInstructionsOverride
 	);
 	const noteBriefInstructions = protectedInstructionEnvelope(
 		"Note Brief",
-		studyReviewPolicy,
+		noteBriefPolicy,
 		NOTE_BRIEF_PROTECTED_INVARIANT
 	);
 	const cueRuntime: CueCraftByokRuntime = {
@@ -621,22 +512,6 @@ export function wrapCueCraftByokRuntime(
 			return generateFromObject
 				? generateCueFromObjectProvider(runtime, input, cueInstructions, signal)
 				: generateCueFromTextProvider(runtime, input, cueInstructions, signal);
-		},
-		generateSummary: (input, signal) => {
-			logSystemPrompt("Summary", summaryInstructions);
-			return generateFromObject
-				? generateSummaryFromObjectProvider(
-						runtime,
-						input,
-						summaryInstructions,
-						signal
-					)
-				: generateSummaryFromTextProvider(
-						runtime,
-						input,
-						summaryInstructions,
-						signal
-					);
 		},
 		generateNoteBrief: (input, signal) => {
 			logSystemPrompt("Note Brief", noteBriefInstructions);

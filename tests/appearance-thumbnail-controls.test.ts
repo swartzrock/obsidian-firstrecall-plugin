@@ -1,15 +1,8 @@
 import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
-import { CUE_ACCENTS } from "../src/cornell-accent";
-import { CORNELL_DISPLAY_MODES } from "../src/cornell-display";
-import { CUE_COLUMN_WIDTHS, CUE_FONT_SIZES } from "../src/cornell-layout";
-import { CORNELL_STYLES } from "../src/cornell-style";
+import { CUE_FONT_SIZES } from "../src/cornell-layout";
 import { EDITOR_CUE_DISPLAY_OPTIONS } from "../src/editor-cue-display";
 import {
-	cornellDisplayModeThumbnailOptions,
-	cornellStyleThumbnailOptions,
-	cueAccentThumbnailOptions,
-	cueColumnWidthThumbnailOptions,
 	cueFontSizeThumbnailOptions,
 	editorCueDisplayThumbnailOptions,
 	renderAppearanceThumbnailGroup,
@@ -58,7 +51,7 @@ describe("renderAppearanceThumbnailGroup", () => {
 			options: options(),
 			value: "classic",
 			onSelect: vi.fn(),
-			groupLabel: "Cornell view style",
+			groupLabel: "Editor cue style",
 		});
 
 		const buttons = root.querySelectorAll<HTMLButtonElement>(
@@ -72,7 +65,7 @@ describe("renderAppearanceThumbnailGroup", () => {
 		expect(root.querySelector(".cuecraft-thumbnail-selected")).toBeNull();
 		expect(
 			root.querySelector(".cuecraft-thumbnail-group")?.getAttribute("aria-label")
-		).toBe("Cornell view style");
+		).toBe("Editor cue style");
 	});
 
 	it("selects a non-current option and invokes onSelect", () => {
@@ -163,116 +156,6 @@ describe("renderAppearanceThumbnailGroup", () => {
 	});
 });
 
-describe("Cornell View thumbnail option recipes", () => {
-	it("covers every existing Cornell View option with a preview recipe", () => {
-		expect(cornellDisplayModeThumbnailOptions().map((option) => option.id)).toEqual(
-			CORNELL_DISPLAY_MODES.map((option) => option.id)
-		);
-		expect(cornellStyleThumbnailOptions().map((option) => option.id)).toEqual(
-			CORNELL_STYLES.map((option) => option.id)
-		);
-		expect(cueColumnWidthThumbnailOptions().map((option) => option.id)).toEqual(
-			CUE_COLUMN_WIDTHS.map((option) => option.id)
-		);
-		expect(cueFontSizeThumbnailOptions().map((option) => option.id)).toEqual(
-			CUE_FONT_SIZES.map((option) => option.id)
-		);
-		expect(cueAccentThumbnailOptions().map((option) => option.id)).toEqual(
-			CUE_ACCENTS.map((option) => option.id)
-		);
-	});
-
-	it("renders Cornell and Hook rail display previews with concise cue text", () => {
-		const root = setupDom();
-		renderAppearanceThumbnailGroup({
-			parentEl: root,
-			options: cornellDisplayModeThumbnailOptions(),
-			value: "classic",
-			onSelect: vi.fn(),
-		});
-
-		expect(root.textContent).toContain("How do agents differ");
-		expect(root.textContent).toContain("active recall");
-		expect(root.textContent).not.toContain("organizational knowledge");
-		expect(
-			root.querySelector(".cuecraft-preview-display-classic")
-		).not.toBeNull();
-		expect(root.querySelector(".cuecraft-preview-display-hook")).not.toBeNull();
-	});
-
-	it("renders Handwritten as a first-class distinct style preview", () => {
-		const root = setupDom();
-		renderAppearanceThumbnailGroup({
-			parentEl: root,
-			options: cornellStyleThumbnailOptions(),
-			value: "classic",
-			onSelect: vi.fn(),
-		});
-
-		const handwrittenButton = root.querySelector<HTMLElement>(
-			"[data-option-id='handwritten']"
-		);
-		expect(handwrittenButton?.textContent).toContain("Handwritten");
-		expect(
-			handwrittenButton?.querySelector(".cuecraft-preview-style-handwritten")
-		).not.toBeNull();
-		expect(root.textContent).toContain("How does org-trained AI");
-		expect(root.querySelector(".cuecraft-preview-style .cuecraft-preview-support"))
-			.toBeNull();
-	});
-
-	it("renders distinct width and font-size preview classes", () => {
-		const root = setupDom();
-		renderAppearanceThumbnailGroup({
-			parentEl: root,
-			options: cueColumnWidthThumbnailOptions(),
-			value: "medium",
-			onSelect: vi.fn(),
-		});
-		renderAppearanceThumbnailGroup({
-			parentEl: root,
-			options: cueFontSizeThumbnailOptions(),
-			value: "medium",
-			onSelect: vi.fn(),
-		});
-
-		expect(root.querySelector(".cuecraft-preview-width-narrow")).not.toBeNull();
-		expect(root.querySelector(".cuecraft-preview-width-medium")).not.toBeNull();
-		expect(root.querySelector(".cuecraft-preview-width-wide")).not.toBeNull();
-		expect(root.querySelector(".cuecraft-preview-font-small")).not.toBeNull();
-		expect(root.querySelector(".cuecraft-preview-font-medium")).not.toBeNull();
-		expect(root.querySelector(".cuecraft-preview-font-large")).not.toBeNull();
-		expect(root.textContent).toContain("How does org-trained AI");
-		expect(root.querySelector(".cuecraft-preview-support")).toBeNull();
-		expect(root.textContent).not.toContain("organizational knowledge");
-		expect(root.textContent).not.toContain("standards/workflows");
-	});
-
-	it("renders accent previews that tint the rail and support text", () => {
-		const root = setupDom();
-		renderAppearanceThumbnailGroup({
-			parentEl: root,
-			options: cueAccentThumbnailOptions(),
-			value: "violet",
-			onSelect: vi.fn(),
-		});
-
-		for (const accent of CUE_ACCENTS) {
-			const button = root.querySelector<HTMLElement>(
-				`[data-option-id='${accent.id}']`
-			);
-			expect(
-				button?.querySelector(`.cuecraft-preview-accent-${accent.id}`)
-			).not.toBeNull();
-			expect(button?.querySelector(".cuecraft-preview-question")).toBeNull();
-			expect(button?.querySelector(".cuecraft-preview-rail")).not.toBeNull();
-			expect(button?.querySelector(".cuecraft-preview-support")).not.toBeNull();
-			expect(button?.textContent).toContain("organizations");
-			expect(button?.textContent).toContain("workflows");
-		}
-	});
-});
-
 describe("Editing View thumbnail option recipes", () => {
 	const displayedEditorCueDisplayOptions = EDITOR_CUE_DISPLAY_OPTIONS.filter(
 		(option) =>
@@ -284,6 +167,12 @@ describe("Editing View thumbnail option recipes", () => {
 	it("covers every currently offered Editing View option with a preview recipe", () => {
 		expect(editorCueDisplayThumbnailOptions().map((option) => option.id)).toEqual(
 			displayedEditorCueDisplayOptions.map((option) => option.id)
+		);
+	});
+
+	it("covers every retained cue-font option with a preview recipe", () => {
+		expect(cueFontSizeThumbnailOptions().map((option) => option.id)).toEqual(
+			CUE_FONT_SIZES.map((option) => option.id)
 		);
 	});
 

@@ -1,15 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { buildEditorHookCard } from "../src/editor-hook-rail";
+import {
+	buildEditorHookCard,
+	buildEditorHookTitle,
+	editorHookTitleDensity,
+} from "../src/editor-hook-rail";
 import type { CueLineData } from "../src/cue-extension";
 
 function cue(overrides: Partial<CueLineData> = {}): CueLineData {
 	return {
 		line: 3,
+		sectionId: "terms",
 		heading: "Terms",
 		question:
 			"How do agents differ from chatbots, and how do tools make them useful?",
 		keywords: ["agents", "tools"],
-		confidence: "high",
 		sectionLens: null,
 		error: null,
 		...overrides,
@@ -27,7 +31,6 @@ describe("buildEditorHookCard", () => {
 			hookTitle:
 				"How do agents differ from chatbots, and how do tools make them useful",
 			keywords: ["agents", "tools"],
-			confidence: "high",
 			error: null,
 			titleDensity: "long",
 			state: "upcoming",
@@ -83,7 +86,7 @@ describe("buildEditorHookCard", () => {
 
 	it("preserves failed cue states", () => {
 		const card = buildEditorHookCard(
-			cue({ question: "", keywords: [], confidence: null, error: "boom" }),
+			cue({ question: "", keywords: [], error: "boom" }),
 			"collapsed-tabs"
 		);
 		expect(card).toMatchObject({
@@ -91,8 +94,30 @@ describe("buildEditorHookCard", () => {
 			hookTitle: "Cue unavailable",
 			error: "boom",
 			keywords: [],
-			confidence: null,
 		});
 		expect(card).not.toHaveProperty("category");
+	});
+});
+
+describe("editor hook title presentation", () => {
+	it("normalizes a question and removes its terminal question mark", () => {
+		expect(buildEditorHookTitle("  What   makes retrieval work ?  ")).toBe(
+			"What makes retrieval work"
+		);
+		expect(buildEditorHookTitle("   ")).toBeNull();
+	});
+
+	it("classifies standard, long, and dense titles", () => {
+		expect(editorHookTitleDensity("Short hook")).toBe("standard");
+		expect(
+			editorHookTitleDensity(
+				"Why does retrieval practice improve durable learning across several different contexts"
+			)
+		).toBe("long");
+		expect(
+			editorHookTitleDensity(
+				"How does tailoring artificial intelligence with organizational knowledge improve employee learning while creating reusable agents that preserve local workflows and standards"
+			)
+		).toBe("dense");
 	});
 });

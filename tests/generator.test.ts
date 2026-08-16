@@ -17,8 +17,6 @@ import type {
 	CueCraftCueProviderRuntime,
 	CueCraftNoteBriefInput,
 	CueCraftNoteBriefOutput,
-	CueCraftSummaryInput,
-	CueCraftSummaryOutput,
 } from "../src/cue-provider";
 
 interface MockOptions {
@@ -29,19 +27,16 @@ interface MockOptions {
 	onBatch?: () => void;
 	delayMs?: number;
 	sectionConcurrencyLimit?: number;
+	failNoteBrief?: boolean;
 }
 
 function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
-	summaryCalls: number;
-	lastSummaryInput?: CueCraftSummaryInput;
 	lastNoteBriefInput?: CueCraftNoteBriefInput;
 	cueInputs: CueCraftCueInput[];
 	batchInputs: CueCraftCueInput[][];
 	noteBriefCalls: number;
 } {
 	const provider: CueCraftCueProviderRuntime & {
-		summaryCalls: number;
-		lastSummaryInput?: CueCraftSummaryInput;
 		lastNoteBriefInput?: CueCraftNoteBriefInput;
 		cueInputs: CueCraftCueInput[];
 		batchInputs: CueCraftCueInput[][];
@@ -52,8 +47,6 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 		requiresNetwork: false,
 		requiresDownload: false,
 		sectionConcurrencyLimit: opts.sectionConcurrencyLimit,
-		summaryCalls: 0,
-		lastSummaryInput: undefined as CueCraftSummaryInput | undefined,
 		lastNoteBriefInput: undefined as CueCraftNoteBriefInput | undefined,
 		cueInputs: [] as CueCraftCueInput[],
 		batchInputs: [] as CueCraftCueInput[][],
@@ -76,8 +69,6 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 			return {
 				question: `Q:${input.heading}`,
 				keywords: ["k1", "k2"],
-				confidence: "high",
-				rationale: input.heading === "Terms" ? "clear section" : undefined,
 				sectionLens: {
 					takeaway: `${input.heading} carries the main review idea.`,
 					keyPhrase: input.heading || "section",
@@ -85,16 +76,12 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 				},
 			};
 		},
-		async generateSummary(input: CueCraftSummaryInput): Promise<CueCraftSummaryOutput> {
-			provider.summaryCalls++;
-			provider.lastSummaryInput = input;
-			return { summary: "the summary", learningObjective: null };
-		},
 		async generateNoteBrief(
 			input: CueCraftNoteBriefInput
 		): Promise<CueCraftNoteBriefOutput> {
 			provider.noteBriefCalls++;
 			provider.lastNoteBriefInput = input;
+			if (opts.failNoteBrief) throw new Error("note brief boom");
 			return {
 				overview: "the note brief",
 				whatMatters: { title: "Main idea", detail: "Review the main idea." },
@@ -120,8 +107,6 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 					cue: {
 						question: `Q:${input.heading}`,
 						keywords: ["k1", "k2"],
-						confidence: "high",
-						rationale: input.heading === "Terms" ? "clear section" : undefined,
 						sectionLens: {
 							takeaway: `${input.heading} carries the main review idea.`,
 							keyPhrase: input.heading || "section",
@@ -158,21 +143,13 @@ describe("generateNote", () => {
 			[3, 4],
 			[4, 4],
 		]);
-		expect(provider.summaryCalls).toBe(1);
 		expect(provider.noteBriefCalls).toBe(1);
-		expect(result.summary).toBe("the summary");
 		expect(result.noteBrief?.overview).toBe("the note brief");
 		expect(result.sections[0].sectionLens?.keyPhrase).toBe("A");
 		expect(provider.lastNoteBriefInput?.sections.map((s) => s.heading)).toEqual([
 			"A",
 			"B",
 			"C",
-		]);
-		// Summary receives the per-section questions.
-		expect(provider.lastSummaryInput?.sectionQuestions).toEqual([
-			"Q:A",
-			"Q:B",
-			"Q:C",
 		]);
 	});
 
@@ -320,10 +297,9 @@ describe("generateNote", () => {
 		expect(result.canceled).toBe(false);
 	});
 
-	it("cancels between batches and skips the summary", async () => {
+	it("cancels between batches and skips the Note Brief", async () => {
 		const controller = new AbortController();
 		const provider = mockProvider();
-		const summarySpy = vi.spyOn(provider, "generateSummary");
 		const noteBriefSpy = vi.spyOn(provider, "generateNoteBrief");
 
 		const result = await generateNote({
@@ -340,8 +316,6 @@ describe("generateNote", () => {
 
 		expect(result.canceled).toBe(true);
 		expect(result.sections).toHaveLength(2); // in-flight batch finished
-		expect(result.summary).toBeNull();
-		expect(summarySpy).not.toHaveBeenCalled();
 		expect(noteBriefSpy).not.toHaveBeenCalled();
 	});
 
@@ -354,7 +328,6 @@ describe("generateNote", () => {
 			preset: "conceptual",
 		});
 		expect(provider.cueInputs).toEqual([]);
-		expect(provider.summaryCalls).toBe(0);
 		expect(provider.noteBriefCalls).toBe(0);
 		expect(result.sections).toEqual([]);
 	});
@@ -372,7 +345,6 @@ describe("generateNote", () => {
 		expect(provider.cueInputs.map((input) => input.heading)).toEqual(["Prefix Sum"]);
 		expect(result.sections.map((section) => section.heading)).toEqual(["Prefix Sum"]);
 		expect(progress).toEqual([[0, 2], [1, 2], [2, 2]]);
-		expect(provider.lastSummaryInput?.sectionQuestions).toEqual(["Q:Prefix Sum"]);
 	});
 
 	it("does not call the provider for notes with no cue-worthy content", async () => {
@@ -384,10 +356,8 @@ describe("generateNote", () => {
 			preset: "conceptual",
 		});
 		expect(provider.cueInputs).toEqual([]);
-		expect(provider.summaryCalls).toBe(0);
 		expect(provider.noteBriefCalls).toBe(0);
 		expect(result.sections).toEqual([]);
-		expect(result.summary).toBeNull();
 	});
 
 	it("caps whole-note context injected into each prompt (avoids context-overflow errors)", async () => {
@@ -405,8 +375,7 @@ describe("generateNote", () => {
 			expect(input.noteContext!.length).toBeLessThanOrEqual(1100);
 			expect(input.noteContext).toMatch(/truncated for length/);
 		}
-		// Summary's full text is capped too.
-		expect(provider.lastSummaryInput!.fullText.length).toBeLessThanOrEqual(1100);
+		expect(provider.lastNoteBriefInput!.fullText.length).toBeLessThanOrEqual(1100);
 	});
 
 	it("does not inject whole-note context unless enabled", async () => {
@@ -438,20 +407,59 @@ describe("generateNote", () => {
 		expect(provider.cueInputs.every((i) => i.options?.generateKeywords === false)).toBe(true);
 	});
 
-	it("skips summary generation when autoSummary is disabled", async () => {
+	it("keeps section results valid when Note Brief is unsupported", async () => {
 		const provider = mockProvider();
+		provider.generateNoteBrief = undefined;
+		const progress: Array<[number, number]> = [];
 		const result = await generateNote({
 			noteTitle: "T",
 			markdown: NOTE,
 			provider,
 			preset: "conceptual",
-			options: { autoSummary: false },
+			onProgress: (done, total) => progress.push([done, total]),
 		});
-		expect(provider.summaryCalls).toBe(0);
+		expect(result.sections).toHaveLength(3);
+		expect(result.noteBrief).toBeNull();
+		expect(progress).toEqual([[0, 3], [1, 3], [2, 3], [3, 3]]);
+	});
+
+	it("keeps section results valid when Note Brief generation fails", async () => {
+		const provider = mockProvider({ failNoteBrief: true });
+		const progress: Array<[number, number]> = [];
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: NOTE,
+			provider,
+			preset: "conceptual",
+			onProgress: (done, total) => progress.push([done, total]),
+		});
+
+		expect(result.sections).toHaveLength(3);
+		expect(result.noteBrief).toBeNull();
 		expect(provider.noteBriefCalls).toBe(1);
-		expect(result.summary).toBeNull();
-		expect(result.learningObjective).toBeNull();
-		expect(result.noteBrief?.overview).toBe("the note brief");
+		expect(progress.at(-1)).toEqual([4, 4]);
+	});
+
+	it("does not request a Note Brief when no section has a usable question", async () => {
+		const provider = mockProvider({
+			batch: true,
+			batchErrorOnHeading: "B",
+		});
+		provider.generateCues = async (inputs) =>
+			inputs.map(() => ({ error: "no usable cue" }));
+		const progress: Array<[number, number]> = [];
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: NOTE,
+			provider,
+			preset: "conceptual",
+			onProgress: (done, total) => progress.push([done, total]),
+		});
+
+		expect(result.sections.every((section) => section.question === null)).toBe(true);
+		expect(result.noteBrief).toBeNull();
+		expect(provider.noteBriefCalls).toBe(0);
+		expect(progress.at(-1)).toEqual([4, 4]);
 	});
 });
 
@@ -475,8 +483,6 @@ describe("generateSectionCue", () => {
 		expect(result.id).toBe("terms");
 		expect(result.question).toBe("Q:Terms");
 		expect(result.keywords).toEqual(["k1", "k2"]);
-		expect(result.confidence).toBe("high");
-		expect(result.rationale).toBe("clear section");
 		expect(result.sectionLens?.keyPhrase).toBe("Terms");
 		expect(result.error).toBeNull();
 		expect(result.contentHash).toBe("abc123");
@@ -509,7 +515,6 @@ describe("generateSectionCue", () => {
 			cueDensity: 1,
 			questionStyle: "exam",
 			generateKeywords: false,
-			autoSummary: true,
 		});
 	});
 
@@ -556,7 +561,6 @@ describe("resolveGenerationOptions", () => {
 			cueDensity: 3,
 			questionStyle: "recall",
 			generateKeywords: true,
-			autoSummary: true,
 		});
 	});
 });

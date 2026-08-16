@@ -161,7 +161,6 @@ function cue(overrides: Partial<CueLineData> = {}): CueLineData {
 		heading: "Terms",
 		question: "How do agents differ from chatbots?",
 		keywords: ["agents", "tools"],
-		confidence: "medium",
 		sectionLens: SECTION_LENS,
 		error: null,
 		...overrides,
@@ -666,15 +665,12 @@ function cacheFrom(
 		contentHash: s.contentHash,
 		keywords: ["k1", "k2"],
 		question: `Q:${s.heading}`,
-		confidence: "high" as const,
 		sectionLens: SECTION_LENS,
 		error: null as string | null,
 		...overrides(s, i),
 	}));
 	const result: NoteGenerationResult = {
 		sections,
-		summary: "s",
-		learningObjective: null,
 		noteBrief: null,
 		canceled: false,
 	};
@@ -696,7 +692,6 @@ describe("buildCueLineData", () => {
 		expect(cues[0]).toMatchObject({
 			question: "Q:A",
 			keywords: ["k1", "k2"],
-			confidence: "high",
 			sectionLens: SECTION_LENS,
 		});
 		expect(cues[0]).not.toHaveProperty("category");
@@ -729,7 +724,7 @@ describe("buildCueLineData", () => {
 		const cues = buildCueLineData(cache, parseSections(NOTE));
 		expect(cues).toHaveLength(3);
 		const b = cues.find((c) => c.heading === "B");
-		expect(b).toMatchObject({ error: "boom", question: "", keywords: [], confidence: null });
+		expect(b).toMatchObject({ error: "boom", question: "", keywords: [] });
 		expect(b).not.toHaveProperty("category");
 		// Usable cues carry no error.
 		expect(cues.find((c) => c.heading === "A")?.error).toBeNull();
@@ -737,7 +732,7 @@ describe("buildCueLineData", () => {
 
 	it("skips sections that were never generated (no question, no error)", () => {
 		const cache = cacheFrom((_s, i) =>
-			i === 1 ? { error: null, question: null, keywords: null, confidence: null } : {}
+			i === 1 ? { error: null, question: null, keywords: null } : {}
 		);
 		const cues = buildCueLineData(cache, parseSections(NOTE));
 		expect(cues).toHaveLength(2);
@@ -756,13 +751,9 @@ describe("buildCueLineData", () => {
 				contentHash: s.contentHash,
 				keywords: ["k"],
 				question: `Q:${s.heading}`,
-				confidence: "high" as const,
 				sectionLens: SECTION_LENS,
-				rationale: null,
 				error: null,
 			})),
-			summary: null,
-			learningObjective: null,
 			noteBrief: null,
 			canceled: false,
 		};
@@ -1209,7 +1200,6 @@ describe("renderCueElement", () => {
 				heading: "Terms",
 				question: "What is an agent?",
 				keywords: ["agent", "tool"],
-				confidence: "high",
 				category: "stacks",
 				sectionLens: SECTION_LENS,
 				error: null,
@@ -1218,7 +1208,7 @@ describe("renderCueElement", () => {
 			expect(el.classList.contains("cuecraft-cue")).toBe(true);
 			expect(el.classList.contains("cuecraft-cuewidth-medium")).toBe(true);
 			expect(el.classList.contains("cuecraft-cuefont-medium")).toBe(true);
-			expect(el.dataset.confidence).toBe("high");
+			expect(el.hasAttribute("data-confidence")).toBe(false);
 			expectNoLegacyCategoryPresentation(el);
 			const buttons = disclosureButtons(el);
 			expect(buttons.map((button) => button.dataset.section)).toEqual([
@@ -1260,10 +1250,10 @@ describe("renderCueElement", () => {
 			withDocument(() => {
 				const legacyCue: CueLineData & { category: "sequences" } = {
 					line: 7,
+					sectionId: "retrieval-practice",
 					heading: "Retrieval Practice",
 					question: "Why does retrieval practice strengthen memory?",
 					keywords: ["retrieval", "testing effect"],
-					confidence: "high",
 					category: "sequences",
 					sectionLens: SECTION_LENS,
 					error: null,
@@ -1679,7 +1669,6 @@ describe("renderCueElement", () => {
 				cue({
 					question: "",
 					keywords: [],
-					confidence: null,
 					sectionLens: null,
 					error: "boom",
 				}),
@@ -1703,10 +1692,10 @@ describe("renderCueElement", () => {
 		withDocument(() => {
 			const cue = {
 				line: 3,
+				sectionId: "terms",
 				heading: "Terms",
 				question: "How do agents differ from chatbots?",
 				keywords: ["agents", "tools"],
-				confidence: "medium" as const,
 				sectionLens: SECTION_LENS,
 				error: null,
 			};
@@ -1811,10 +1800,10 @@ describe("renderCueElement", () => {
 			const el = renderCueElement(
 				{
 					line: 3,
+					sectionId: "who-it-is-for",
 					heading: "Who It Is For",
 					question: "Who is this workflow designed for?",
 					keywords: [],
-					confidence: "low",
 					sectionLens: SECTION_LENS,
 					error: null,
 				},
@@ -1827,7 +1816,7 @@ describe("renderCueElement", () => {
 			expect(el.querySelector(".cuecraft-editor-rail-card-toggle")).toBeNull();
 			expect(el.dataset.display).toBe("collapsed-tabs");
 			expect(el.dataset.state).toBe("upcoming");
-			expect(el.dataset.confidence).toBe("low");
+			expect(el.hasAttribute("data-confidence")).toBe(false);
 			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
 			expect(el.querySelector(".cuecraft-editor-hook-section-label")).toBeNull();
 			expect(
@@ -1842,10 +1831,10 @@ describe("renderCueElement", () => {
 			const el = renderCueElement(
 				{
 					line: 7,
+					sectionId: "who-it-is-for",
 					heading: "Who It Is For",
 					question: "Who should use this workflow?",
 					keywords: ["students", "researchers"],
-					confidence: "medium",
 					sectionLens: SECTION_LENS,
 					error: null,
 				},
@@ -1873,10 +1862,10 @@ describe("renderCueElement", () => {
 			const el = renderCueElement(
 				{
 					line: 7,
+					sectionId: "upskill-employees",
 					heading: "How To Upskill Employees",
 					question,
 					keywords: ["org knowledge"],
-					confidence: "medium",
 					sectionLens: SECTION_LENS,
 					error: null,
 				},
@@ -1898,10 +1887,10 @@ describe("renderCueElement", () => {
 			const el = renderCueElement(
 				{
 					line: 9,
+					sectionId: "study-takeaway",
 					heading: "Study Takeaway",
 					question,
 					keywords: ["takeaway"],
-					confidence: "high",
 					sectionLens: SECTION_LENS,
 					error: null,
 				},
@@ -1927,10 +1916,10 @@ describe("renderCueElement", () => {
 			const el = renderCueElement(
 				{
 					line: 3,
+					sectionId: "terms",
 					heading: "Terms",
 					question: "",
 					keywords: [],
-					confidence: null,
 					sectionLens: null,
 					error: "boom",
 				},
@@ -1996,19 +1985,19 @@ describe("cue editor placement", () => {
 	const cues = [
 		{
 			line: 1,
+			sectionId: "a",
 			heading: "A",
 			question: "What is A?",
 			keywords: ["alpha"],
-			confidence: "high" as const,
 			sectionLens: SECTION_LENS,
 			error: null,
 		},
 		{
 			line: 3,
+			sectionId: "b",
 			heading: "B",
 			question: "What is B?",
 			keywords: ["beta"],
-			confidence: "medium" as const,
 			sectionLens: SECTION_LENS,
 			error: null,
 		},
@@ -2316,7 +2305,7 @@ describe("cue editor placement", () => {
 		});
 	});
 
-	it("renders wide Cornell cards with section controls and saved state", () => {
+	it("renders classic Cornell cards with section controls and saved state", () => {
 		withDocument(() => {
 			const { controller } = collapseController(["question"]);
 			const state = EditorState.create({ doc: "# Terms\nbody" });
@@ -2325,13 +2314,12 @@ describe("cue editor placement", () => {
 				display: "cornell",
 				notePath: "notes/agents.md",
 				collapseController: controller,
-				cueColumnWidth: "wide",
 				cueFontSize: "large",
 			}).iter().value;
 			if (!marker?.toDOM) throw new Error("Expected Cornell gutter marker");
 
 			const element = marker.toDOM(null as never) as HTMLElement;
-			expect(element.classList.contains("cuecraft-cuewidth-wide")).toBe(true);
+			expect(element.classList.contains("cuecraft-cuewidth-medium")).toBe(true);
 			expect(element.classList.contains("cuecraft-cuefont-large")).toBe(true);
 			expect(
 				disclosureButtons(element).map((button) => button.dataset.section)
@@ -2348,14 +2336,13 @@ describe("cue editor placement", () => {
 		});
 	});
 
-	it("applies cue width and font settings to every editor cue display", () => {
+	it("applies the fixed width class and cue font settings to every editor cue display", () => {
 		withDocument(() => {
 			for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
 				const element = renderCueElement(cues[0], option.id, 0, "current", {
-					cueColumnWidth: "wide",
 					cueFontSize: "large",
 				});
-				expect(element.classList.contains("cuecraft-cuewidth-wide")).toBe(true);
+				expect(element.classList.contains("cuecraft-cuewidth-medium")).toBe(true);
 				expect(element.classList.contains("cuecraft-cuefont-large")).toBe(true);
 			}
 		});
@@ -2366,19 +2353,19 @@ describe("rail spacers", () => {
 	const cues = [
 		{
 			line: 1,
+			sectionId: "a",
 			heading: "A",
 			question: "What is A?",
 			keywords: ["alpha"],
-			confidence: "high" as const,
 			sectionLens: SECTION_LENS,
 			error: null,
 		},
 		{
 			line: 3,
+			sectionId: "b",
 			heading: "B",
 			question: "What is B?",
 			keywords: ["beta"],
-			confidence: "medium" as const,
 			sectionLens: SECTION_LENS,
 			error: null,
 		},
@@ -2509,7 +2496,6 @@ describe("rail spacers", () => {
 				effects: setCuesEffect.of({
 					cues,
 					display: "cornell",
-					cueColumnWidth: "wide",
 					cueFontSize: "large",
 				}),
 			});

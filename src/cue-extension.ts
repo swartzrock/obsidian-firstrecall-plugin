@@ -25,13 +25,10 @@ import {
 } from "./editor-hook-rail";
 import type { EditorCueDisplay } from "./editor-cue-display";
 import {
-	cueColumnWidthClass,
 	cueFontSizeClass,
-	type CueColumnWidth,
 	type CueFontSize,
 } from "./cornell-layout";
-import { buildCornellSupportPresentation } from "./cornell";
-import { cornellStyleClass, type CornellStyle } from "./cornell-style";
+import { EDITOR_CORNELL_STYLE_CLASS } from "./cornell-style";
 import { isCueEligibleSection, type Section } from "./parser";
 import type { NoteBriefOutput, SectionLens } from "./schemas";
 import type { StudyProjection, StudySessionSnapshot } from "./study-session";
@@ -48,8 +45,6 @@ import {
 	EDITOR_CUE_WIDTH_MAX_PX,
 	EDITOR_CUE_WIDTH_MIN_PX,
 } from "./editor-cue-width";
-
-export type Confidence = "high" | "medium" | "low";
 
 const QUESTION_ICON_CANDIDATES = [
 	"circle-question-mark",
@@ -78,7 +73,6 @@ export interface CueLineData {
 	heading: string;
 	question: string;
 	keywords: string[];
-	confidence: Confidence | null;
 	sectionLens: SectionLens | null;
 	/** Generation error message, when this section failed. */
 	error: string | null;
@@ -99,7 +93,6 @@ export interface CueEditorRenderState {
 	showRailSummary?: boolean;
 	showRailQuestions?: boolean;
 	showRailSupportTerms?: boolean;
-	cueColumnWidth?: CueColumnWidth;
 	cueFontSize?: CueFontSize;
 	editorCueWidthController?: EditorCueWidthController;
 }
@@ -112,7 +105,6 @@ export interface EditorCueWidthController {
 }
 
 interface CueRenderOptions extends EditorHookCardOptions {
-	cueColumnWidth?: CueColumnWidth;
 	cueFontSize?: CueFontSize;
 	editorCueWidthController?: EditorCueWidthController;
 	collapse?: CueSectionCollapseRenderState;
@@ -176,7 +168,6 @@ export function buildCueLineData(
 			heading: sec.heading,
 			question: failed ? "" : (sec.question ?? ""),
 			keywords: failed || !showKeywords ? [] : sec.keywords ?? [],
-			confidence: failed ? null : sec.confidence,
 			sectionLens: failed || !showSectionLens ? null : sec.sectionLens ?? null,
 			error: failed ? sec.error ?? "Generation failed" : null,
 		});
@@ -209,7 +200,6 @@ class CueWidget extends WidgetType {
 			other.cue.sectionId === this.cue.sectionId &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
-			other.cue.confidence === this.cue.confidence &&
 			sectionLensKey(other.cue.sectionLens) === sectionLensKey(this.cue.sectionLens) &&
 			other.cue.error === this.cue.error
 		);
@@ -324,7 +314,6 @@ class CueGutterMarker extends GutterMarker {
 			other.cue.sectionId === this.cue.sectionId &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
-			other.cue.confidence === this.cue.confidence &&
 			sectionLensKey(other.cue.sectionLens) === sectionLensKey(this.cue.sectionLens) &&
 			other.cue.error === this.cue.error
 		);
@@ -369,13 +358,11 @@ export function renderCueElement(
 	state: EditorHookCardState = "upcoming",
 	options: CueRenderOptions = {}
 ): HTMLElement {
-	const cornellStyle = cornellEditorDisplayStyle(display);
 	let element: HTMLElement;
-	if (cornellStyle) {
+	if (isCornellEditorDisplay(display)) {
 		element = renderCornellCueElement(
 			cue,
 			display,
-			cornellStyle,
 			state,
 			options
 		);
@@ -439,7 +426,6 @@ function cleanupEditorStudyCueInteractions(dom: Node): void {
 function renderCornellCueElement(
 	cue: CueLineData,
 	display: EditorCueDisplay,
-	style: CornellStyle,
 	state: EditorHookCardState,
 	options: CueRenderOptions = {}
 ): HTMLElement {
@@ -448,9 +434,9 @@ function renderCornellCueElement(
 	root.className = [
 		"cuecraft-editor-hook",
 		"cuecraft-editor-cornell-card",
-		`cuecraft-editor-cornell-card-${style}`,
+		"cuecraft-editor-cornell-card-classic",
 		"cuecraft-cornell",
-		cornellStyleClass(style),
+		EDITOR_CORNELL_STYLE_CLASS,
 	].join(" ");
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");
@@ -459,14 +445,12 @@ function renderCornellCueElement(
 	root.dataset.state = state;
 	const showSummary = options.showSummary ?? true;
 	const showSupportTerms = options.showSupportTerms ?? true;
-	const supports = buildCornellSupportPresentation({
-		keywords: cue.keywords,
-	});
+	const supports = buildCornellSupportTerms(cue.keywords);
 	const showQuestion =
 		(options.showQuestion ?? true) ||
 		(!cue.error &&
 			!(showSummary && cue.sectionLens) &&
-			!(showSupportTerms && supports.terms.length));
+			!(showSupportTerms && supports.length));
 	root.dataset.summaryVisible = String(showSummary);
 	root.dataset.questionVisible = String(showQuestion);
 	root.dataset.supportTermsVisible = String(showSupportTerms);
@@ -486,9 +470,6 @@ function renderCornellCueElement(
 		return finalizeRailCard(root, display, options);
 	}
 
-	if (cue.confidence) {
-		card.dataset.confidence = cue.confidence;
-	}
 	root.classList.add("cuecraft-editor-hook-sectioned");
 	if (showSummary && cue.sectionLens) {
 		const summary = doc.createElement("div");
@@ -518,14 +499,14 @@ function renderCornellCueElement(
 		);
 	}
 
-	if (showSupportTerms && supports.terms.length) {
+	if (showSupportTerms && supports.length) {
 		const kw = doc.createElement("div");
 		kw.className = "cuecraft-cornell-kw";
-		appendCueTerms(kw, supports.terms, "cuecraft-cornell-support-term");
+		appendCueTerms(kw, supports, "cuecraft-cornell-support-term");
 		appendEditorHookDisclosure(
 			card,
 			"terms",
-			supports.terms.join(", "),
+			supports.join(", "),
 			kw,
 			options.collapse
 		);
@@ -563,9 +544,6 @@ function renderInlineCueElement(
 		return root;
 	}
 
-	if (cue.confidence) {
-		root.dataset.confidence = cue.confidence;
-	}
 	if (showSummary && cue.sectionLens) {
 		const summary = cueDocument().createElement("div");
 		summary.className = "cuecraft-section-lens";
@@ -630,7 +608,6 @@ function renderEditorHookElement(
 	root.dataset.summaryVisible = String(card.showSummary);
 	root.dataset.questionVisible = String(card.showQuestion);
 	root.dataset.supportTermsVisible = String(card.showSupportTerms);
-	if (card.confidence) root.dataset.confidence = card.confidence;
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
 	let hasContent = false;
@@ -748,14 +725,31 @@ function appendCueTerms(
 	}
 }
 
+const MAX_CORNELL_SUPPORT_TERMS = 3;
+
+export function buildCornellSupportTerms(keywords: string[]): string[] {
+	const seen = new Set<string>();
+	const terms: string[] = [];
+	for (const keyword of keywords) {
+		const term = keyword.trim();
+		if (!term) continue;
+		const key = term.toLowerCase();
+		if (seen.has(key)) continue;
+		seen.add(key);
+		terms.push(term);
+		if (terms.length === MAX_CORNELL_SUPPORT_TERMS) break;
+	}
+	return terms;
+}
+
 export function railLayoutAppliesToDisplay(display: EditorCueDisplay): boolean {
-	return cornellEditorDisplayStyle(display) !== null;
+	return isCornellEditorDisplay(display);
 }
 
 function sectionDisclosuresApplyToDisplay(display: EditorCueDisplay): boolean {
 	return (
 		display === "inline-cues" ||
-		cornellEditorDisplayStyle(display) !== null
+		isCornellEditorDisplay(display)
 	);
 }
 
@@ -1374,7 +1368,7 @@ function noteBriefTitleWithoutRepeatedLabel(title: string, label: string): strin
 
 export function renderNoteBriefElement(
 	noteBrief: NoteBriefOutput,
-	variant: "editor" | "reading" | "cornell" = "editor"
+	variant: "editor" | "reading" = "editor"
 ): HTMLElement {
 	const doc = cueDocument();
 	const root = doc.createElement("section");
@@ -1619,7 +1613,6 @@ function editorCueRenderOptionsFromPayload(
 		showSummary: payload.showRailSummary ?? true,
 		showQuestion: payload.showRailQuestions ?? true,
 		showSupportTerms: payload.showRailSupportTerms ?? true,
-		cueColumnWidth: payload.cueColumnWidth,
 		cueFontSize: payload.cueFontSize,
 		editorCueWidthController: payload.editorCueWidthController,
 	};
@@ -1630,7 +1623,6 @@ function editorHookCardOptionsKey(options: CueRenderOptions): string {
 		options.showSummary ?? true,
 		options.showQuestion ?? true,
 		options.showSupportTerms ?? true,
-		options.cueColumnWidth ?? "",
 		options.cueFontSize ?? "",
 		options.collapse?.notePath ?? "",
 		options.collapse?.sectionId ?? "",
@@ -1706,7 +1698,7 @@ function applyCueLayoutClasses(
 	element: HTMLElement,
 	options: CueRenderOptions
 ): void {
-	element.classList.add(cueColumnWidthClass(options.cueColumnWidth));
+	element.classList.add("cuecraft-cuewidth-medium");
 	element.classList.add(cueFontSizeClass(options.cueFontSize));
 }
 
@@ -1731,15 +1723,8 @@ function isInlineEditorDisplay(display: EditorCueDisplay): boolean {
 	return display === "inline-cues";
 }
 
-function cornellEditorDisplayStyle(
-	display: EditorCueDisplay
-): CornellStyle | null {
-	switch (display) {
-		case "cornell":
-			return "classic";
-		default:
-			return null;
-	}
+function isCornellEditorDisplay(display: EditorCueDisplay): boolean {
+	return display === "cornell";
 }
 
 function mapCuePayloadThroughChanges(

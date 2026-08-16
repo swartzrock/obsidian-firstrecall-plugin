@@ -102,7 +102,7 @@ describe("makeCueCraftByokProvider", () => {
 		expect(typeof provider.listModels).toBe("function");
 		expect(typeof provider.generateCue).toBe("function");
 		expect(typeof provider.generateCues).toBe("function");
-		expect(typeof provider.generateSummary).toBe("function");
+		expect(typeof provider.generateNoteBrief).toBe("function");
 		expect(provider.sectionConcurrencyLimit).toBeUndefined();
 	});
 
@@ -115,7 +115,7 @@ describe("makeCueCraftByokProvider", () => {
 		expect(typeof provider.listModels).toBe("function");
 		expect(typeof provider.generateCue).toBe("function");
 		expect(typeof provider.generateCues).toBe("function");
-		expect(typeof provider.generateSummary).toBe("function");
+		expect(typeof provider.generateNoteBrief).toBe("function");
 		expect(provider.sectionConcurrencyLimit).toBeUndefined();
 	});
 });

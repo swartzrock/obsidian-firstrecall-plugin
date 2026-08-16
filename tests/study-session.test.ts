@@ -19,8 +19,6 @@ function cachedCue(
 		contentHash: section.contentHash,
 		keywords: [],
 		question: `How does ${section.heading} work?`,
-		confidence: "high",
-		rationale: null,
 		sectionLens: null,
 		error: null,
 		...overrides,

@@ -1,4 +1,3 @@
-import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
 import CueCraftPlugin from "../src/main";
 import { CACHE_SCHEMA_VERSION, migrateCache } from "../src/cache";
@@ -8,9 +7,9 @@ import {
 	type CueSectionCollapseMap,
 } from "../src/cue-section-collapse";
 
-function richV5Cache() {
+function richV6Cache() {
 	return {
-		schemaVersion: 5,
+		schemaVersion: 6,
 		generatedAt: "2026-08-01T12:00:00.000Z",
 		noteModifiedAt: 1234,
 		provider: "openai",
@@ -30,8 +29,7 @@ function richV5Cache() {
 				contentHash: "abc123",
 				keywords: ["retrieval", "testing effect"],
 				question: "Why does retrieval practice strengthen memory?",
-				confidence: "high",
-				category: "sequences",
+				confidence: "low",
 				rationale: "The section states the causal relationship directly.",
 				sectionLens: {
 					takeaway: "Practice recalling an idea instead of rereading it.",
@@ -39,6 +37,19 @@ function richV5Cache() {
 					explanation: "Active recall makes the memory easier to access later.",
 				},
 				error: null,
+			},
+			{
+				id: "summary-section",
+				heading: "Summary",
+				level: 2,
+				lineNumber: 20,
+				contentHash: "def456",
+				keywords: null,
+				question: null,
+				confidence: null,
+				rationale: "Provider validation failed.",
+				sectionLens: null,
+				error: "question is required",
 			},
 		],
 		summary: "Retrieval practice improves later access to learned material.",
@@ -75,13 +86,28 @@ function unavailableCredentialStore(): SecureCredentialStore {
 }
 
 describe("plugin data cache migration", () => {
-	it("drops the legacy Reading display preference from future saves", async () => {
+	it("strips obsolete settings, preserves editor settings, and saves once", async () => {
 		const saveData = vi.fn(async () => {});
 		const plugin = new CueCraftPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => ({
-				settings: { readingModeDisplay: "review-button" },
+				settings: {
+					autoSummary: false,
+					cornellDisplayMode: "hook",
+					cornellStyle: "legal-pad",
+					cueColumnWidth: "wide",
+					cueAccent: "blue",
+					showCueBorder: false,
+					compactChips: true,
+					foldCueColumnOnMobile: false,
+					readingModeDisplay: "review-button",
+					editorCueWidthPreset: "wide",
+					editorHookCardStyle: "gradient",
+					editorCueDisplay: "cornell",
+					cueFontSize: "large",
+					editorCueCustomWidthPx: 240,
+				},
 			})),
 			saveData,
 		});
@@ -89,154 +115,79 @@ describe("plugin data cache migration", () => {
 		await (
 			plugin as unknown as { loadPluginData(): Promise<void> }
 		).loadPluginData();
-		await (
-			plugin as unknown as { persistPluginData(): Promise<void> }
-		).persistPluginData();
-
-		expect("readingModeDisplay" in plugin.settings).toBe(false);
-		const persisted = saveData.mock.calls.at(-1)?.[0] as {
+		expect(saveData).toHaveBeenCalledTimes(1);
+		const persisted = saveData.mock.calls[0]?.[0] as {
 			settings: Record<string, unknown>;
 		};
-		expect(persisted.settings).not.toHaveProperty("readingModeDisplay");
+		for (const key of [
+			"autoSummary",
+			"cornellDisplayMode",
+			"cornellStyle",
+			"cueColumnWidth",
+			"cueAccent",
+			"showCueBorder",
+			"compactChips",
+			"foldCueColumnOnMobile",
+			"readingModeDisplay",
+			"editorCueWidthPreset",
+			"editorHookCardStyle",
+		]) {
+			expect(persisted.settings).not.toHaveProperty(key);
+		}
+		expect(persisted.settings).toMatchObject({
+			editorCueDisplay: "cornell",
+			cueFontSize: "large",
+			editorCueCustomWidthPx: 240,
+		});
 	});
 
 	it.each([
-		"cornell-exam-prep",
-		"cornell-minimal",
-		"anchored-card-rail",
-		"threaded-margin-notes",
-	])("replaces removed Editing View display %s with Inline cues", async (display) => {
+		{
+			name: "legacy key only",
+			stored: { summaryInstructionsOverride: "  Legacy policy.  " },
+			expected: "  Legacy policy.  ",
+			saves: 1,
+		},
+		{
+			name: "new key only",
+			stored: { noteBriefInstructionsOverride: "  Current policy.  " },
+			expected: "  Current policy.  ",
+			saves: 0,
+		},
+		{
+			name: "both keys",
+			stored: {
+				summaryInstructionsOverride: "Legacy policy.",
+				noteBriefInstructionsOverride: "Current policy.",
+			},
+			expected: "Current policy.",
+			saves: 1,
+		},
+	])("uses the expected Note Brief prompt for $name", async ({ stored, expected, saves }) => {
+		const saveData = vi.fn(async () => {});
 		const plugin = new CueCraftPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
-			loadData: vi.fn(async () => ({
-				settings: {
-					editorCueDisplay: display,
-					editorHookCardStyle: "gradient",
-				},
-			})),
-			saveData: vi.fn(async () => {}),
+			loadData: vi.fn(async () => ({ settings: stored })),
+			saveData,
 		});
 
 		await (
 			plugin as unknown as { loadPluginData(): Promise<void> }
 		).loadPluginData();
 
-		expect(plugin.settings.editorCueDisplay).toBe("inline-cues");
-		expect("editorHookCardStyle" in plugin.settings).toBe(false);
-	});
-
-	it("drops the removed rail card style without changing a retained display", async () => {
-		const plugin = new CueCraftPlugin({} as never, {} as never);
-		Object.assign(plugin as unknown as Record<string, unknown>, {
-			credentialStore: unavailableCredentialStore(),
-			loadData: vi.fn(async () => ({
-				settings: {
-					editorCueDisplay: "cornell",
-					editorHookCardStyle: "gradient",
-				},
-			})),
-			saveData: vi.fn(async () => {}),
-		});
-
-		await (
-			plugin as unknown as { loadPluginData(): Promise<void> }
-		).loadPluginData();
-
-		expect(plugin.settings.editorCueDisplay).toBe("cornell");
-		expect("editorHookCardStyle" in plugin.settings).toBe(false);
-	});
-
-	it("drops the removed Editing View preset while preserving custom rail widths", async () => {
-		for (const [storedSettings, expectedCornellWidth, expectedCustom] of [
-			[{ cueColumnWidth: "wide" }, "wide", null],
-			[
-				{
-					cueColumnWidth: "narrow",
-					editorCueWidthPreset: "wide",
-					editorCueCustomWidthPx: 240,
-				},
-				"narrow",
-				240,
-			],
-			[
-				{
-					cueColumnWidth: "wide",
-					editorCueWidthPreset: "invalid",
-					editorCueCustomWidthPx: 240.5,
-				},
-				"wide",
-				null,
-			],
-		] as const) {
-			const plugin = new CueCraftPlugin({} as never, {} as never);
-			Object.assign(plugin as unknown as Record<string, unknown>, {
-				credentialStore: unavailableCredentialStore(),
-				loadData: vi.fn(async () => ({ settings: storedSettings })),
-				saveData: vi.fn(async () => {}),
-			});
-
-			await (
-				plugin as unknown as { loadPluginData(): Promise<void> }
-			).loadPluginData();
-
-			expect(plugin.settings.cueColumnWidth).toBe(expectedCornellWidth);
-			expect("editorCueWidthPreset" in plugin.settings).toBe(false);
-			expect(plugin.settings.editorCueCustomWidthPx).toBe(expectedCustom);
+		expect(plugin.settings.noteBriefInstructionsOverride).toBe(expected);
+		expect(plugin.settings).not.toHaveProperty("summaryInstructionsOverride");
+		expect(saveData).toHaveBeenCalledTimes(saves);
+		if (saves) {
+			const persisted = saveData.mock.calls[0]?.[0] as {
+				settings: Record<string, unknown>;
+			};
+			expect(persisted.settings.noteBriefInstructionsOverride).toBe(expected);
+			expect(persisted.settings).not.toHaveProperty(
+				"summaryInstructionsOverride"
+			);
 		}
-	});
-
-	it("dispatches Medium to Editing View without changing Cornell width", async () => {
-		const plugin = new CueCraftPlugin({} as never, {} as never);
-		Object.assign(plugin as unknown as Record<string, unknown>, {
-			credentialStore: unavailableCredentialStore(),
-			loadData: vi.fn(async () => ({
-				settings: {
-					cueColumnWidth: "wide",
-					editorCueWidthPreset: "narrow",
-					editorCueCustomWidthPx: null,
-				},
-			})),
-			saveData: vi.fn(async () => {}),
-		});
-
-		await (
-			plugin as unknown as { loadPluginData(): Promise<void> }
-		).loadPluginData();
-
-		const document = new JSDOM("<div class='cm-editor'></div>").window.document;
-		const editorDom = document.querySelector<HTMLElement>(".cm-editor")!;
-		const dispatch = vi.fn();
-		const file = { path: "notes/width.md" };
-		const view = {
-			file,
-			editor: {
-				cm: { dom: editorDom, dispatch },
-				getValue: () => "# Width",
-			},
-		};
-		Object.assign(plugin as unknown as Record<string, unknown>, {
-			app: {
-				workspace: {
-					getActiveViewOfType: () => view,
-				},
-			},
-			cacheStore: { get: () => null },
-			cueSectionCollapse: {},
-			updateEditorHookLayout: vi.fn(),
-		});
-
-		(
-			plugin as unknown as {
-				renderCues(file: { path: string }): void;
-			}
-		).renderCues(file);
-
-		const effect = dispatch.mock.calls[0]?.[0].effects as {
-			value: { cueColumnWidth: string };
-		};
-		expect(effect.value.cueColumnWidth).toBe("medium");
-		expect(plugin.settings.cueColumnWidth).toBe("wide");
 	});
 
 	it("loads malformed collapse data as empty without disturbing other data", async () => {
@@ -299,13 +250,13 @@ describe("plugin data cache migration", () => {
 		expect(plugin.settings.showRailSupportTerms).toBe(false);
 	});
 
-	it("persists a category-free v6 cache without discarding an invalid cache entry", async () => {
-		const v5 = richV5Cache();
+	it("persists a canonical v7 cache without discarding an invalid cache entry", async () => {
+		const v6 = richV6Cache();
 		const invalid = { schemaVersion: 99, sections: ["unknown"] };
 		const loaded = {
 			settings: {},
 			caches: {
-				"notes/retrieval.md": v5,
+				"notes/retrieval.md": v6,
 				"notes/unrecognized.md": invalid,
 			},
 			hidden: { "notes/hidden.md": true },
@@ -335,13 +286,24 @@ describe("plugin data cache migration", () => {
 
 		expect(saveData).toHaveBeenCalledTimes(1);
 		const persisted = saveData.mock.calls[0][0] as typeof loaded;
-		expect(persisted.caches["notes/retrieval.md"]).toEqual(migrateCache(v5));
+		expect(persisted.caches["notes/retrieval.md"]).toEqual(migrateCache(v6));
 		expect(persisted.caches["notes/retrieval.md"].schemaVersion).toBe(
 			CACHE_SCHEMA_VERSION
 		);
 		expect(persisted.caches["notes/retrieval.md"].sections[0]).not.toHaveProperty(
-			"category"
+			"confidence"
 		);
+		expect(persisted.caches["notes/retrieval.md"].sections[0]).not.toHaveProperty(
+			"rationale"
+		);
+		expect(persisted.caches["notes/retrieval.md"]).not.toHaveProperty("summary");
+		expect(persisted.caches["notes/retrieval.md"].outline).toEqual({
+			keyThemes: ["retrieval", "memory"],
+		});
+		expect(persisted.caches["notes/retrieval.md"].sections[1]).toMatchObject({
+			heading: "Summary",
+			error: "question is required",
+		});
 		expect(persisted.caches["notes/unrecognized.md"]).toEqual(invalid);
 		expect(persisted.hidden).toEqual(loaded.hidden);
 		expect(persisted.cueSectionCollapse).toEqual({

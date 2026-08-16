@@ -65,14 +65,12 @@ export interface CueGenerationOptions {
 	cueDensity: CueDensity;
 	questionStyle: QuestionStyle;
 	generateKeywords: boolean;
-	autoSummary: boolean;
 }
 
 export const DEFAULT_CUE_GENERATION_OPTIONS: CueGenerationOptions = {
 	cueDensity: DEFAULT_CUE_DENSITY,
 	questionStyle: DEFAULT_QUESTION_STYLE,
 	generateKeywords: true,
-	autoSummary: true,
 };
 
 export function cueDensityGuidance(value: unknown): string {

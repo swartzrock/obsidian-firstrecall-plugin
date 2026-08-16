@@ -2,10 +2,8 @@ import { z } from "zod/v3";
 
 /**
  * Validation for CueCraft provider output. The app accepts a little model
- * variation at the boundary, then normalizes to the cue and summary contracts.
+ * variation at the boundary, then normalizes to the Cue and Note Brief contracts.
  */
-export const confidenceSchema = z.enum(["high", "medium", "low"]);
-
 export const sectionLensSchema = z.object({
 	takeaway: z.string().trim().min(1, "sectionLens.takeaway is required"),
 	keyPhrase: z.string().trim().min(1, "sectionLens.keyPhrase is required"),
@@ -30,39 +28,12 @@ function coerceKeywords(value: unknown): unknown {
 	return out;
 }
 
-/** Normalize confidence casing; fall back to "medium" when unrecognized. */
-function coerceConfidence(value: unknown): unknown {
-	if (typeof value === "number" && Number.isFinite(value)) {
-		if (value >= 0.67) return "high";
-		if (value >= 0.34) return "medium";
-		return "low";
-	}
-	if (typeof value !== "string") return value;
-	const normalized = value.trim().toLowerCase();
-	return confidenceSchema.options.includes(normalized as z.infer<typeof confidenceSchema>)
-		? normalized
-		: "medium";
-}
-
 export const cueOutputSchema = z.object({
 	question: z.string().trim().min(1, "question is required"),
 	keywords: z.preprocess(coerceKeywords, z.array(z.string().min(1)).min(2).max(5)),
-	confidence: z.preprocess(coerceConfidence, confidenceSchema),
-	rationale: z.preprocess(
-		(value) => (value === null ? undefined : value),
-		z.string().trim().optional()
-	),
 	sectionLens: z.preprocess(
 		(value) => (value === null ? undefined : value),
 		sectionLensSchema.optional()
-	),
-});
-
-export const summaryOutputSchema = z.object({
-	summary: z.string().trim().min(1, "summary is required"),
-	learningObjective: z.preprocess(
-		(value) => (value === null ? undefined : value),
-		z.string().trim().optional()
 	),
 });
 
@@ -83,13 +54,6 @@ export const cueGenerationSchema = z.object({
 	keywords: z
 		.array(z.string())
 		.describe("2 to 5 short keyword hints that help recall the answer."),
-	confidence: z
-		.enum(["high", "medium", "low"])
-		.describe("How confident you are this cue tests the section well."),
-	rationale: z
-		.string()
-		.nullable()
-		.describe("If confidence is low, a short reason why this cue may need review."),
 	sectionLens: z
 		.object({
 			takeaway: z
@@ -103,16 +67,6 @@ export const cueGenerationSchema = z.object({
 				.describe("One short sentence explaining why the phrase matters for recall."),
 		})
 		.describe("A compact AI-native review lens for this section."),
-});
-
-export const summaryGenerationSchema = z.object({
-	summary: z
-		.string()
-		.describe("One concise study takeaway sentence capturing the most important idea or relationship."),
-	learningObjective: z
-		.string()
-		.nullable()
-		.describe("One short sentence stating what the reader should be able to do."),
 });
 
 const noteBriefCardGenerationSchema = z.object({
@@ -137,7 +91,6 @@ export const noteBriefGenerationSchema = z.object({
 
 export type CueOutput = z.infer<typeof cueOutputSchema>;
 export type SectionLens = z.infer<typeof sectionLensSchema>;
-export type SummaryOutput = z.infer<typeof summaryOutputSchema>;
 export type NoteBriefOutput = z.infer<typeof noteBriefOutputSchema>;
 
 export interface CueBatchValidationItem {
@@ -280,18 +233,6 @@ export function validateCueBatch(
 		}
 	}
 	return { ok: true, value: items };
-}
-
-export function validateSummary(raw: string): ValidationResult<SummaryOutput> {
-	const json = extractJson(raw);
-	if (json === null) {
-		return { ok: false, error: "response was not valid JSON" };
-	}
-	const parsed = summaryOutputSchema.safeParse(json);
-	if (!parsed.success) {
-		return { ok: false, error: formatZodError(parsed.error) };
-	}
-	return { ok: true, value: parsed.data };
 }
 
 export function validateNoteBrief(raw: string): ValidationResult<NoteBriefOutput> {

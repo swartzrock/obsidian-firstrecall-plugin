@@ -3,7 +3,7 @@
 	"name": "CueCraft",
 	"version": "0.1.0",
 	"minAppVersion": "1.11.4",
-	"description": "Turn notes and study folders into active-recall sessions: AI-generated Cornell-style cue questions, keywords, and summaries shown beside your notes. Non-destructive — your Markdown is never modified.",
+	"description": "Turn notes and study folders into in-note active-recall sessions with questions, keyword supports, Section Lens, and optional Note Briefs. Your Markdown is never modified.",
 	"author": "swartzrock",
 	"authorUrl": "https://github.com/swartzrock",
 	"isDesktopOnly": true

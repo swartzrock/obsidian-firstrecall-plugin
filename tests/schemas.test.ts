@@ -4,7 +4,6 @@ import {
 	validateCue,
 	validateCueBatch,
 	validateNoteBrief,
-	validateSummary,
 } from "../src/schemas";
 
 describe("extractJson", () => {
@@ -26,7 +25,6 @@ describe("extractJson", () => {
 		const cue = {
 			question: "What does the product promise?",
 			keywords: ["promise", "study"],
-			confidence: "high",
 			sectionLens: {
 				takeaway: "CueCraft turns notes into study cues.",
 				keyPhrase: "study cues",
@@ -48,22 +46,22 @@ describe("extractJson", () => {
 describe("validateCue", () => {
 	it("accepts a well-formed cue", () => {
 		const r = validateCue(
-			'{"question":"What is X?","keywords":["a","b"],"confidence":"high"}'
+			'{"question":"What is X?","keywords":["a","b"]}'
 		);
-		expect(r.ok).toBe(true);
-		if (r.ok) expect(r.value.keywords).toHaveLength(2);
+		expect(r).toEqual({
+			ok: true,
+			value: { question: "What is X?", keywords: ["a", "b"] },
+		});
 	});
 
 	it("rejects fewer than 2 keywords (H1.1)", () => {
-		const r = validateCue(
-			'{"question":"Q","keywords":["only"],"confidence":"high"}'
-		);
+		const r = validateCue('{"question":"Q","keywords":["only"]}');
 		expect(r.ok).toBe(false);
 	});
 
 	it("trims more than 5 keywords down to 5 instead of failing", () => {
 		const r = validateCue(
-			'{"question":"Q","keywords":["a","b","c","d","e","f","g"],"confidence":"high"}'
+			'{"question":"Q","keywords":["a","b","c","d","e","f","g"]}'
 		);
 		expect(r.ok).toBe(true);
 		if (r.ok) expect(r.value.keywords).toEqual(["a", "b", "c", "d", "e"]);
@@ -71,34 +69,10 @@ describe("validateCue", () => {
 
 	it("drops blank and duplicate keywords before validating", () => {
 		const r = validateCue(
-			'{"question":"Q","keywords":["a"," ","A","b","a"],"confidence":"low"}'
+			'{"question":"Q","keywords":["a"," ","A","b","a"]}'
 		);
 		expect(r.ok).toBe(true);
 		if (r.ok) expect(r.value.keywords).toEqual(["a", "b"]);
-	});
-
-	it("normalizes confidence casing", () => {
-		const r = validateCue(
-			'{"question":"Q","keywords":["a","b"],"confidence":" High "}'
-		);
-		expect(r.ok).toBe(true);
-		if (r.ok) expect(r.value.confidence).toBe("high");
-	});
-
-	it("normalizes numeric confidence scores from local models", () => {
-		const r = validateCue(
-			'{"question":"Q","keywords":["a","b"],"confidence":0.95}'
-		);
-		expect(r.ok).toBe(true);
-		if (r.ok) expect(r.value.confidence).toBe("high");
-	});
-
-	it("accepts an optional rationale", () => {
-		const r = validateCue(
-			'{"question":"Q","keywords":["a","b"],"confidence":"low","rationale":"The section is sparse."}'
-		);
-		expect(r.ok).toBe(true);
-		if (r.ok) expect(r.value.rationale).toBe("The section is sparse.");
 	});
 
 	it.each([null, "sequences", "unrelated"])(
@@ -108,9 +82,7 @@ describe("validateCue", () => {
 				JSON.stringify({
 					question: "Q",
 					keywords: ["a", "b"],
-					confidence: "high",
 					category,
-					rationale: "Grounded in the section.",
 					sectionLens: {
 						takeaway: "Focus on the main idea.",
 						keyPhrase: "main idea",
@@ -124,8 +96,6 @@ describe("validateCue", () => {
 				value: {
 					question: "Q",
 					keywords: ["a", "b"],
-					confidence: "high",
-					rationale: "Grounded in the section.",
 					sectionLens: {
 						takeaway: "Focus on the main idea.",
 						keyPhrase: "main idea",
@@ -141,7 +111,6 @@ describe("validateCue", () => {
 			JSON.stringify({
 				question: "Q",
 				keywords: ["a", "b"],
-				confidence: "high",
 				sectionLens: {
 					takeaway: "Focus on agent autonomy.",
 					keyPhrase: "agent autonomy",
@@ -160,7 +129,6 @@ describe("validateCue", () => {
 			JSON.stringify({
 				question: "Q",
 				keywords: ["a", "b"],
-				confidence: "high",
 				sectionLens: {
 					keyPhrase: "agent autonomy",
 					explanation: "This phrase separates multi-step work from chat.",
@@ -171,26 +139,8 @@ describe("validateCue", () => {
 		if (!r.ok) expect(r.error).toMatch(/sectionLens\.takeaway/);
 	});
 
-	it("accepts a nullable rationale from strict structured output", () => {
-		const r = validateCue(
-			'{"question":"Q","keywords":["a","b"],"confidence":"high","rationale":null}'
-		);
-		expect(r.ok).toBe(true);
-		if (r.ok) expect(r.value.rationale).toBeUndefined();
-	});
-
-	it("falls back to medium for an unrecognized confidence value", () => {
-		const r = validateCue(
-			'{"question":"Q","keywords":["a","b"],"confidence":"sure"}'
-		);
-		expect(r.ok).toBe(true);
-		if (r.ok) expect(r.value.confidence).toBe("medium");
-	});
-
 	it("rejects an empty question", () => {
-		const r = validateCue(
-			'{"question":"","keywords":["a","b"],"confidence":"low"}'
-		);
+		const r = validateCue('{"question":"","keywords":["a","b"]}');
 		expect(r.ok).toBe(false);
 	});
 
@@ -206,11 +156,10 @@ describe("validateCueBatch", () => {
 		const r = validateCueBatch(
 			JSON.stringify({
 				cues: [
-					{ question: "Q1?", keywords: ["a", "b"], confidence: "high" },
+					{ question: "Q1?", keywords: ["a", "b"] },
 					{
 						question: "Q2?",
 						keywords: ["c", "d"],
-						confidence: "medium",
 						category: "intervals",
 					},
 				],
@@ -229,8 +178,8 @@ describe("validateCueBatch", () => {
 		const r = validateCueBatch(
 			JSON.stringify({
 				cues: [
-					{ question: "Q1?", keywords: ["a", "b"], confidence: "high" },
-					{ question: "", keywords: ["c", "d"], confidence: "medium" },
+					{ question: "Q1?", keywords: ["a", "b"] },
+					{ question: "", keywords: ["c", "d"] },
 				],
 			}),
 			3
@@ -241,27 +190,6 @@ describe("validateCueBatch", () => {
 			expect(r.value[1].error).toMatch(/question/);
 			expect(r.value[2].error).toMatch(/missing cue/i);
 		}
-	});
-});
-
-describe("validateSummary", () => {
-	it("accepts a summary with optional learningObjective", () => {
-		const r = validateSummary(
-			'{"summary":"It covers X and Y.","learningObjective":"Understand X."}'
-		);
-		expect(r.ok).toBe(true);
-	});
-
-	it("accepts a nullable learningObjective from strict structured output", () => {
-		const r = validateSummary(
-			'{"summary":"It covers X and Y.","learningObjective":null}'
-		);
-		expect(r.ok).toBe(true);
-		if (r.ok) expect(r.value.learningObjective).toBeUndefined();
-	});
-
-	it("rejects a missing summary", () => {
-		expect(validateSummary("{}").ok).toBe(false);
 	});
 });
 

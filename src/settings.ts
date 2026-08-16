@@ -9,16 +9,8 @@ import {
 } from "obsidian";
 import type CueCraftPlugin from "./main";
 import {
-	CORNELL_STYLES,
-	DEFAULT_CORNELL_STYLE,
-	type CornellStyle,
-} from "./cornell-style";
-import {
-	CUE_COLUMN_WIDTHS,
 	CUE_FONT_SIZES,
-	DEFAULT_CUE_COLUMN_WIDTH,
 	DEFAULT_CUE_FONT_SIZE,
-	type CueColumnWidth,
 	type CueFontSize,
 } from "./cornell-layout";
 import {
@@ -30,17 +22,7 @@ import {
 	type CueDensity,
 	type QuestionStyle,
 } from "./cue-generation";
-import { DEFAULT_CUE_ACCENT, type CueAccent } from "./cornell-accent";
 import {
-	DEFAULT_CORNELL_DISPLAY_MODE,
-	cornellDisplayModeOption,
-	type CornellDisplayMode,
-} from "./cornell-display";
-import {
-	cornellDisplayModeThumbnailOptions,
-	cornellStyleThumbnailOptions,
-	cueAccentThumbnailOptions,
-	cueColumnWidthThumbnailOptions,
 	cueFontSizeThumbnailOptions,
 	editorCueDisplayThumbnailOptions,
 	renderAppearanceThumbnailGroup,
@@ -52,10 +34,7 @@ import {
 	editorCueDisplayOption,
 	type EditorCueDisplay,
 } from "./editor-cue-display";
-import {
-	cornellViewSettingsSummary,
-	editingViewSettingsSummary,
-} from "./settings-summaries";
+import { editingViewSettingsSummary } from "./settings-summaries";
 import {
 	ByokProvider,
 	isByokProviderId,
@@ -136,10 +115,10 @@ import {
 	resolveCueInstructions,
 } from "./cue-instructions";
 import {
-	DEFAULT_SUMMARY_INSTRUCTIONS,
-	normalizeSummaryInstructionsOverride,
-	resolveSummaryInstructions,
-} from "./summary-instructions";
+	DEFAULT_NOTE_BRIEF_INSTRUCTIONS,
+	normalizeNoteBriefInstructionsOverride,
+	resolveNoteBriefInstructions,
+} from "./note-brief-instructions";
 
 /**
  * CueCraft supports a local provider (Ollama), local CLI providers, and several
@@ -153,7 +132,6 @@ type SettingsSubpage =
 	| "home"
 	| "ai-model"
 	| "cue-generation"
-	| "cornell-view"
 	| "editing-view";
 type CueCraftSettingsSubpage =
 	| SettingsSubpage
@@ -176,10 +154,7 @@ export interface CueCraftSettings {
 	byok: ByokStoredSettings;
 	cuePreset: CuePreset;
 	studyHideMode: StudyHideMode;
-	cornellDisplayMode: CornellDisplayMode;
 	editorCueDisplay: EditorCueDisplay;
-	cornellStyle: CornellStyle;
-	cueColumnWidth: CueColumnWidth;
 	editorCueCustomWidthPx: number | null;
 	cueFontSize: CueFontSize;
 	autoGenerateOnSave: boolean;
@@ -189,19 +164,14 @@ export interface CueCraftSettings {
 	cueDensity: CueDensity;
 	questionStyle: QuestionStyle;
 	generateKeywords: boolean;
-	autoSummary: boolean;
 	cueInstructionsOverride: string;
-	summaryInstructionsOverride: string;
+	noteBriefInstructionsOverride: string;
 	showSectionLens: boolean;
 	showNoteBrief: boolean;
 	showRailSummary: boolean;
 	showRailQuestions: boolean;
 	showRailSupportTerms: boolean;
 	renderInReadingMode: boolean;
-	foldCueColumnOnMobile: boolean;
-	cueAccent: CueAccent;
-	showCueBorder: boolean;
-	compactChips: boolean;
 }
 
 export const DEFAULT_SETTINGS: CueCraftSettings = {
@@ -249,10 +219,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	},
 	cuePreset: "conceptual",
 	studyHideMode: "blur",
-	cornellDisplayMode: DEFAULT_CORNELL_DISPLAY_MODE,
 	editorCueDisplay: DEFAULT_EDITOR_CUE_DISPLAY,
-	cornellStyle: DEFAULT_CORNELL_STYLE,
-	cueColumnWidth: DEFAULT_CUE_COLUMN_WIDTH,
 	editorCueCustomWidthPx: null,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
 	autoGenerateOnSave: false,
@@ -263,19 +230,14 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	cueDensity: DEFAULT_CUE_DENSITY,
 	questionStyle: DEFAULT_QUESTION_STYLE,
 	generateKeywords: true,
-	autoSummary: true,
 	cueInstructionsOverride: "",
-	summaryInstructionsOverride: "",
+	noteBriefInstructionsOverride: "",
 	showSectionLens: DEFAULT_SHOW_SECTION_LENS,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
 	showRailSummary: true,
 	showRailQuestions: true,
 	showRailSupportTerms: true,
 	renderInReadingMode: true,
-	foldCueColumnOnMobile: true,
-	cueAccent: DEFAULT_CUE_ACCENT,
-	showCueBorder: true,
-	compactChips: false,
 };
 
 export class CueCraftSettingTab extends PluginSettingTab {
@@ -314,17 +276,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderSubpageHeader(
 					containerEl,
 					"Cue Generation",
-					"Question style, density, summaries, and auto-generation behavior."
+					"Question style, density, prompts, and auto-generation behavior."
 				);
 				this.renderCueGenerationSection(containerEl, false);
-				break;
-			case "cornell-view":
-				this.renderSubpageHeader(
-					containerEl,
-					"Cornell View",
-					"Styling, layout, cue accents, and visual density for the Cornell pane."
-				);
-				this.renderCornellViewSection(containerEl, false);
 				break;
 			case "editing-view":
 				this.renderSubpageHeader(
@@ -379,12 +333,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			description: "Control cue style, density, keywords, summaries, and save-time generation.",
 			summary: this.cueGenerationSummary(),
 			onOpen: () => this.openSubpage("cue-generation"),
-		});
-		this.renderSettingsNavCard(navEl, {
-			title: "Cornell View",
-			description: "Adjust Cornell pane styling, sizing, accents, and compact display options.",
-			summary: this.cornellViewSummary(),
-			onOpen: () => this.openSubpage("cornell-view"),
 		});
 		this.renderSettingsNavCard(navEl, {
 			title: "Editing View",
@@ -500,10 +448,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		return `${this.plugin.settings.cuePreset} preset · ${cueDensityLabel(
 			this.plugin.settings.cueDensity
 		)} density · ${this.plugin.settings.questionStyle} questions`;
-	}
-
-	private cornellViewSummary(): string {
-		return cornellViewSettingsSummary(this.plugin.settings);
 	}
 
 	private editingViewSummary(): string {
@@ -878,19 +822,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					})
 			);
 
-		new Setting(containerEl)
-			.setName("Auto-write section summary")
-			.setDesc("Draft a whole-note summary after section cues are generated.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.autoSummary)
-					.onChange(async (value) => {
-						this.plugin.settings.autoSummary = value;
-						await this.plugin.saveSettings();
-						this.plugin.noteCueSettingsChanged();
-					})
-				);
-
 		const cueInstructionsSetting = new Setting(containerEl)
 			.setName("Cue system prompt")
 			.setDesc(
@@ -924,45 +855,42 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			"cuecraft-instructions-setting"
 		);
 
-		const studyReviewInstructionsSetting = new Setting(containerEl)
-			.setName("Summary/Note Brief system prompt")
+		const noteBriefInstructionsSetting = new Setting(containerEl)
+			.setName("Note Brief system prompt")
 			.setDesc(
-				"Controls the content, emphasis, tone, wording, and teaching style of Summary and Note Brief. CueCraft still requires valid Summary and Note Brief fields. An existing Summary customization now guides both Summary and Note Brief. Reset to follow future default improvements."
+				"Controls the content, emphasis, tone, wording, and teaching style of Note Brief. CueCraft still requires valid Note Brief fields. Reset to follow future default improvements."
 			);
-		studyReviewInstructionsSetting.addTextArea((textArea) => {
+		noteBriefInstructionsSetting.addTextArea((textArea) => {
 			textArea
 				.setValue(
-					resolveSummaryInstructions(
-						this.plugin.settings.summaryInstructionsOverride
+					resolveNoteBriefInstructions(
+						this.plugin.settings.noteBriefInstructionsOverride
 					)
 				)
 				.onChange(async (value) => {
-					this.plugin.settings.summaryInstructionsOverride =
-						normalizeSummaryInstructionsOverride(value);
+					this.plugin.settings.noteBriefInstructionsOverride =
+						normalizeNoteBriefInstructionsOverride(value);
 					await this.persistInstructions();
 				});
 			textArea.inputEl.rows = 8;
 			textArea.inputEl.addClass("cuecraft-instructions-input");
-			textArea.inputEl.setAttr(
-				"aria-label",
-				"Summary/Note Brief system prompt"
-			);
+			textArea.inputEl.setAttr("aria-label", "Note Brief system prompt");
 
-			studyReviewInstructionsSetting.addButton((button) =>
+			noteBriefInstructionsSetting.addButton((button) =>
 				button.setButtonText("Reset to default").onClick(async () => {
-					this.plugin.settings.summaryInstructionsOverride = "";
-					textArea.setValue(DEFAULT_SUMMARY_INSTRUCTIONS);
+					this.plugin.settings.noteBriefInstructionsOverride = "";
+					textArea.setValue(DEFAULT_NOTE_BRIEF_INSTRUCTIONS);
 					await this.persistInstructions();
 				})
 			);
 		});
-		studyReviewInstructionsSetting.settingEl.addClass(
+		noteBriefInstructionsSetting.settingEl.addClass(
 			"cuecraft-instructions-setting"
 		);
 
 		new Setting(containerEl)
 			.setName("Auto-generate on save")
-			.setDesc("Draft cues and a summary automatically whenever a note is saved.")
+			.setDesc("Draft cues and review artifacts automatically whenever a note is saved.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.autoGenerateOnSave)
@@ -1304,7 +1232,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private refreshReviewSurfaces(): void {
 		this.plugin.refreshEditorCues();
 		this.plugin.refreshReadingModeSurface();
-		this.plugin.refreshCornellViews();
 	}
 
 	// ── Editing View ──────────────────────────────────────────────────────
@@ -1421,143 +1348,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	): void {
 		this.renderCueThumbnailSetting(containerEl, config, (afterSave) =>
 			this.saveEditingViewChange(afterSave)
-		);
-	}
-
-	// ── Cornell View ──────────────────────────────────────────────────────
-	private renderCornellViewSection(
-		containerEl: HTMLElement,
-		showHeading: boolean
-	): void {
-		if (showHeading) {
-			new Setting(containerEl).setName("Cornell View").setHeading();
-		}
-
-		const displayDesc = (): string =>
-			cornellDisplayModeOption(this.plugin.settings.cornellDisplayMode)
-				.description;
-		this.renderCornellViewThumbnailSetting<CornellDisplayMode>(containerEl, {
-			name: "Cornell display mode",
-			description: displayDesc,
-			options: cornellDisplayModeThumbnailOptions(),
-			value: () => this.plugin.settings.cornellDisplayMode,
-			setValue: (value) => {
-				this.plugin.settings.cornellDisplayMode = value;
-			},
-			className: "cuecraft-thumbnail-group-display-mode",
-		});
-
-		const styleDesc = (): string =>
-			CORNELL_STYLES.find((s) => s.id === this.plugin.settings.cornellStyle)
-				?.description ?? "Visual preset for the Cornell view.";
-		this.renderCornellViewThumbnailSetting<CornellStyle>(containerEl, {
-			name: "Cornell view style",
-			description: styleDesc,
-			options: cornellStyleThumbnailOptions(),
-			value: () => this.plugin.settings.cornellStyle,
-			setValue: (value) => {
-				this.plugin.settings.cornellStyle = value;
-			},
-			className: "cuecraft-thumbnail-group-view-style",
-		});
-
-		const widthDesc = (): string =>
-			CUE_COLUMN_WIDTHS.find(
-				(w) => w.id === this.plugin.settings.cueColumnWidth
-			)?.description ?? "Width of the Cornell cue rail.";
-		this.renderCornellViewThumbnailSetting<CueColumnWidth>(containerEl, {
-			name: "Cue column width",
-			description: widthDesc,
-			options: cueColumnWidthThumbnailOptions(),
-			value: () => this.plugin.settings.cueColumnWidth,
-			setValue: (value) => {
-				this.plugin.settings.cueColumnWidth = value;
-			},
-			className: "cuecraft-thumbnail-group-cue-width",
-		});
-
-		const fontDesc = (): string =>
-			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
-				?.description ?? "Font size of the Cornell cue text.";
-		this.renderCornellViewThumbnailSetting<CueFontSize>(containerEl, {
-			name: "Cue font size",
-			description: fontDesc,
-			options: cueFontSizeThumbnailOptions(),
-			value: () => this.plugin.settings.cueFontSize,
-			setValue: (value) => {
-				this.plugin.settings.cueFontSize = value;
-			},
-			className: "cuecraft-thumbnail-group-cue-font",
-		});
-
-		this.renderCornellViewThumbnailSetting<CueAccent>(containerEl, {
-			name: "Cue accent color",
-			description: () => "Accent used for the cue rail and support text.",
-			options: cueAccentThumbnailOptions(),
-			value: () => this.plugin.settings.cueAccent,
-			setValue: (value) => {
-				this.plugin.settings.cueAccent = value;
-			},
-			className: "cuecraft-thumbnail-group-accent",
-		});
-
-		new Setting(containerEl)
-			.setName("Show cue column border")
-			.setDesc("Draw a divider between the cue column and note content.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.showCueBorder)
-					.onChange(async (value) => {
-						this.plugin.settings.showCueBorder = value;
-						await this.saveCornellViewChange();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Compact supports")
-			.setDesc("Use smaller support text with tighter spacing.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.compactChips)
-					.onChange(async (value) => {
-						this.plugin.settings.compactChips = value;
-						await this.saveCornellViewChange();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Fold cue column on mobile")
-			.setDesc("Collapse the left cue column into a tap-to-expand panel on narrow screens.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.foldCueColumnOnMobile)
-					.onChange(async (value) => {
-						this.plugin.settings.foldCueColumnOnMobile = value;
-						await this.saveCornellViewChange();
-					})
-			);
-	}
-
-	private async saveCornellViewChange(afterSave?: () => void): Promise<void> {
-		await this.plugin.saveSettings();
-		this.plugin.refreshCornellViews();
-		afterSave?.();
-	}
-
-	private renderCornellViewThumbnailSetting<T extends string>(
-		containerEl: HTMLElement,
-		config: {
-			name: string;
-			description: () => string;
-			options: readonly AppearanceThumbnailOption<T>[];
-			value: () => T;
-			setValue: (value: T) => void;
-			afterSave?: () => void;
-			className?: string;
-		}
-	): void {
-		this.renderCueThumbnailSetting(containerEl, config, (afterSave) =>
-			this.saveCornellViewChange(afterSave)
 		);
 	}
 

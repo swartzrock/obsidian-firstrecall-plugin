@@ -135,6 +135,20 @@ describe("settings CSS", () => {
 			/\.cuecraft-cue\[data-confidence=["'][^"']+["']\]\s*\{[^}]*border-(?:left|inline-start)-color/
 		);
 		expect(confidenceRail).toBeNull();
+		expect(styles).not.toContain("data-confidence");
+	});
+
+	it("removes dedicated Cornell pane selectors while retaining editor card selectors", () => {
+		expect(styles).not.toContain(".cuecraft-cornell-view");
+		expect(styles).not.toContain(".cuecraft-cornell-toolbar");
+		expect(styles).not.toContain(".cuecraft-cornell-grid");
+		expect(styles).not.toContain(".cuecraft-hook-mode");
+		expect(styles).not.toContain(".cuecraft-note-brief-cornell");
+		expect(styles).toContain(".cuecraft-editor-cornell-card");
+		expect(styles).toContain(".cuecraft-cornell-cue");
+		expect(styles).toContain(".cuecraft-cornell-q");
+		expect(styles).toContain(".cuecraft-cornell-kw");
+		expect(styles).toContain(".cuecraft-cornell-support-term");
 	});
 
 	it("keeps Note Brief insight columns flat", () => {
@@ -379,13 +393,6 @@ describe("settings CSS", () => {
 		expect(cornellQuestionRule).toContain(
 			"font-weight: var(--font-normal, 400)"
 		);
-		const minimalCardRule = ruleFor(
-			".cuecraft-style-minimal .cuecraft-cornell-cue"
-		);
-		expect(minimalCardRule).toContain("border: 1px solid var(--cc-border)");
-		expect(minimalCardRule).toContain(
-			"border-inline-start: 3px solid var(--cc-border)"
-		);
 		const responsiveMediumRule = ruleFor(
 			".markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-medium"
 		);
@@ -396,7 +403,6 @@ describe("settings CSS", () => {
 		expect(responsiveLargeRule).toContain("font-size: var(--font-ui-medium)");
 
 		expect(styles).toContain("width: min(16rem, 28vw)");
-		expect(styles).toContain("width: clamp(11.5rem, 20vw, 16rem)");
 	});
 
 	it("styles the Editing View resize grip and scopes Custom width to rail cards", () => {
