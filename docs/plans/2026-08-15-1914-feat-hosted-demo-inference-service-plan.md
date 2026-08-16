@@ -13,7 +13,7 @@ execution: code
 
 ## Goal Capsule
 
-- **Objective:** Define an independently deployable Cloudflare service that gives approximately 50 anonymous Cuecraft installations per UTC day one complete demo bundle: cues for up to five sections, a Summary, and a Note Brief.
+- **Objective:** Define an independently deployable Cloudflare service that can admit up to 50 bounded full-demo attempts per UTC day. Each successful attempt returns cues for up to five sections, a Summary, and a Note Brief. This is a capacity ceiling, not a guarantee that 50 distinct installations receive successful results.
 - **Product authority:** This plan owns the hosted service, public inference contract, quota policy, privacy boundary, and operational stop conditions. The Cuecraft plugin remains a separate consumer governed by `docs/plans/2026-08-15-1914-feat-hosted-demo-obsidian-integration-plan.md`.
 - **Open blockers:** None for planning. Public release remains gated on representative Qwen quality, structured-output and schema-validity behavior, latency, neuron usage, and validation that the maximum admitted request stays within the Workers Free active-CPU limit.
 
@@ -23,7 +23,7 @@ execution: code
 
 ### Summary
 
-Build a narrow Cloudflare-hosted inference service that returns a complete Cuecraft demo bundle for one bounded note request. Run it on Cloudflare Free, reserve capacity for approximately 50 daily installations, and fail closed until the next UTC reset when the application allowance is exhausted.
+Build a narrow Cloudflare-hosted inference service that returns a complete Cuecraft demo bundle for one bounded note request. Run it on Cloudflare Free, admit at most 50 daily attempts within the neuron allowance, and fail closed until the next UTC reset when an applicable allowance is exhausted. Anonymous assertions deter casual abuse but do not guarantee fair distribution among distinct people or installations.
 
 ### Problem Frame
 
@@ -34,7 +34,7 @@ An anonymous public inference service introduces a denial-of-wallet risk and can
 ### Key Decisions
 
 - **Launch on Cloudflare Free and fail closed at the daily application cap.** (session-settled: user-approved — chosen over paid or self-hosted launch infrastructure: the free tier can serve the initial audience and can later upgrade in place.) Governs R6–R11.
-- **Provide the full demo bundle to approximately 50 daily users.** (session-settled: user-directed — chosen over cue-only capacity for approximately 100 daily users: the demo must show the complete Cuecraft experience.) Governs R2, R4, R7–R9.
+- **Budget for up to 50 admitted full-demo attempts per UTC day.** (session-settled: user-approved — this is an application capacity ceiling rather than a guarantee of 50 successful or fairly distributed experiences; chosen over cue-only capacity for approximately 100 daily attempts because every successful demo must show the complete Cuecraft experience.) Governs R2, R4, R7–R9, R16, and R19.
 - **Bound cue generation to five sections.** (session-settled: user-directed — chosen over whole-note cue generation: the bounded set controls cost while Summary and Note Brief preserve the complete experience.) Governs R2, R4, R12.
 - **Use Qwen3 30B-A3B on Workers AI for the initial service.** (session-settled: user-approved — chosen over RunPod or a fixed VPS: managed inference is cheaper and simpler at launch volume.) Governs R6 and R12.
 - **Keep the deployed service in its own repository.** The service owns its versioned API contract; this document is a seed artifact until that repository exists. Governs R1 and R5.
@@ -80,8 +80,8 @@ The first service implementation should use this stack. Planning may revise a co
 | HTTP API | Native Fetch handler | Expose `POST /v1/demo-bundles`, a minimal health route, and a protected operator control route. Do not introduce Hono for the initial route count. |
 | Contract validation | Zod | Validate the public request, the public response, and parsed model output. Keep the versioned JSON contract authoritative in the service repository. |
 | Exact quota state | One SQLite-backed Durable Object class named `QuotaLedger` | Access it through typed RPC. Use direct `ctx.storage.sql` queries and a short synchronous transaction; do not use an ORM, D1, or KV for authoritative admission. |
-| Inference | Workers AI binding with `@cf/qwen/qwen3-30b-a3b-fp8` | Use fixed Cuecraft prompts, one non-streaming compound call, explicit token bounds, and no client-selected model or generation parameters. |
-| Model gateway | AI Gateway | Keep caching off, set payload collection off explicitly, retain metadata, and configure a coarse emergency rate limit. It is defense in depth, not the quota ledger. |
+| Inference | Workers AI REST API with `@cf/qwen/qwen3-30b-a3b-fp8`, routed through AI Gateway | Authenticate with a server-held, least-privilege Cloudflare API token. Use fixed Cuecraft prompts, one non-streaming compound call, explicit token bounds, and no client-selected model or generation parameters. Do not use the Workers AI binding while it lacks a payload-only logging control. |
+| Model gateway | AI Gateway | On every REST request, set `cf-aig-skip-cache: true` and `cf-aig-collect-log-payload: false` so responses are not cached and metadata is retained without request or response bodies. Configure a coarse emergency rate limit. It is defense in depth, not the quota ledger. |
 | Burst control | Workers Rate Limiting binding | Apply a permissive short-window limit before admission. Treat it as local and eventually consistent, never as exact accounting. |
 | Operational metrics | Workers Analytics Engine and whitelisted Workers Logs | Emit one content-free operation event and content-free exception metadata. Do not add a third-party telemetry service at launch. |
 | Testing | Vitest with the Cloudflare Workers integration | Run contract, quota-concurrency, Durable Object eviction, and mocked-inference tests in the Workers runtime; keep a separate deployed smoke test using synthetic content. |
@@ -94,7 +94,7 @@ The first service implementation should use this stack. Planning may revise a co
 3. A Rate Limiting binding applies cheap burst control without deciding the exact allowance.
 4. The Worker calls `QuotaLedger.admit()` with HMAC-derived installation, session, and operation keys.
 5. `QuotaLedger` performs one atomic read-modify-write transaction and returns either a denial or a durable reservation identifier.
-6. After admission, the Worker calls Qwen once through AI Gateway. The model call occurs outside the Durable Object transaction so inference latency never holds the quota lock.
+6. After admission, the Worker calls Qwen once over the Workers AI REST path through AI Gateway, using a server-held API token and per-request cache-skip and payload-suppression controls. The model call occurs outside the Durable Object transaction so inference latency never holds the quota lock.
 7. Zod validates the parsed cues, Summary, and Note Brief as one complete response. A malformed component fails the whole operation.
 8. The Worker records the content-free result metadata, calls `QuotaLedger.finish()`, and returns the complete bundle or a structured failure.
 
@@ -147,7 +147,7 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 
 ### Actors
 
-- A1. **Anonymous Cuecraft installation:** Requests one daily full-demo bundle without creating an account or supplying an API key.
+- A1. **Anonymous Cuecraft installation:** Requests one daily full-demo attempt without creating an account or supplying an API key.
 - A2. **Cuecraft integration:** Selects bounded note content, presents consent, supplies anonymous identifiers, and consumes the service contract.
 - A3. **Hosted demo service:** Validates requests, admits quota, performs inference, validates outputs, and returns machine-readable results or denials.
 - A4. **Service operator:** Observes aggregate usage, disables the service when necessary, and decides whether to upgrade the Cloudflare plan.
@@ -165,10 +165,10 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 
 **Free-tier capacity and quotas**
 
-- R6. Initial inference shall use Cloudflare Workers AI model `@cf/qwen/qwen3-30b-a3b-fp8` under the Workers Free allocation.
-- R7. Each admitted full-demo operation shall reserve no more than 180 neurons so 50 operations fit within the 9,000-neuron application allowance.
-- R8. The service shall admit at most one full-demo operation per anonymous installation per session, per rolling hour, and per UTC day.
-- R9. The service shall stop admitting operations when either 50 daily operations have been admitted or the 9,000-neuron daily application allowance has been reserved, whichever occurs first.
+- R6. Initial inference shall use Cloudflare Workers AI model `@cf/qwen/qwen3-30b-a3b-fp8` through the AI Gateway REST path under the Workers Free allocation.
+- R7. Each admitted full-demo attempt shall reserve no more than 180 neurons so 50 attempts fit within the 9,000-neuron application allowance.
+- R8. The service shall admit at most one full-demo attempt per anonymous installation per session, per rolling hour, and per UTC day.
+- R9. The service shall stop admitting attempts when either 50 daily attempts have been admitted or the 9,000-neuron daily application allowance has been reserved, whichever occurs first. These limits bound service capacity but do not guarantee 50 distinct installations, fair allocation, or 50 successful responses.
 - R10. Daily service and installation allowances shall reset at 00:00 UTC; exhaustion shall not fall through to paid inference or another provider.
 - R11. Admission shall be atomic across concurrent requests, and duplicate operation identifiers shall never reserve or spend a second allowance.
 
@@ -198,7 +198,7 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 - R27. The initial inference path shall request all section cues, the Summary, and the Note Brief in one non-streaming Qwen call with one fixed compound output contract.
 - R28. Model input, prompt, schema, and output bounds shall be selected from deployed measurements that keep the worst admitted operation within 180 neurons.
 - R29. Model output shall pass application-owned schema validation regardless of provider structured-output support; no repair call shall be enabled unless its worst-case cost also fits inside the original reservation.
-- R30. Every Workers AI call shall traverse AI Gateway with response caching disabled and request and response payload collection explicitly disabled while retaining metadata.
+- R30. Every Workers AI call shall use the AI Gateway REST path with a server-held, least-privilege Cloudflare API token, `cf-aig-skip-cache: true`, and `cf-aig-collect-log-payload: false` so responses are not cached and request and response bodies are not stored while operational metadata is retained.
 - R31. Workers Rate Limiting and AI Gateway limits may reject obvious bursts, but their decisions shall never replace the authoritative Durable Object admission transaction.
 - R32. The service shall emit only content-free operation data to Analytics Engine and whitelisted content-free exception metadata to Workers Logs.
 - R33. The operator kill switch shall be stored in the quota ledger and changed through a protected operator route so admissions can stop without a redeploy.
@@ -228,7 +228,7 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 
 ### Acceptance Examples
 
-- AE1. **Covers R2, R4, R7–R9, R18.** Given an eligible installation with remaining allowances and five valid sections, when it requests a full-demo operation, then it receives five valid cue results, one valid Summary, and one valid Note Brief within a single reserved daily operation.
+- AE1. **Covers R2, R4, R7–R9, R18.** Given an eligible installation with remaining allowances, five valid sections, and a schema-valid model result, when it requests a full-demo attempt, then it receives five valid cue results, one valid Summary, and one valid Note Brief within a single reserved daily attempt.
 - AE2. **Covers R2, R12, R19.** Given a request containing six sections or exceeding the selected source bound, when validation runs, then the service rejects it without reserving quota or invoking Workers AI.
 - AE3. **Covers R8, R10, R20.** Given an installation that already admitted a daily operation, when it submits a new operation identifier before 00:00 UTC, then the service performs no inference and returns the daily reset time.
 - AE4. **Covers R9–R11.** Given concurrent requests racing for the last daily capacity, when admission runs, then only capacity already covered by the remaining reservation is admitted and no duplicate identifier receives a second reservation.
@@ -244,7 +244,8 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 
 ### Success Criteria
 
-- A representative capped-note validation run can admit 50 complete operations while staying below Cloudflare's 10,000-neuron free limit and at or below the service's 9,000-neuron application allowance.
+- A representative capped-note validation run can admit and invoke 50 bounded attempts while staying below Cloudflare's 10,000-neuron free limit and at or below the service's 9,000-neuron application allowance.
+- Product and quota language describes capacity as up to 50 admitted attempts rather than 50 distinct users or guaranteed successful bundles.
 - Every response labeled successful in the validation run contains all requested cue results, Summary, and Note Brief in their agreed schemas.
 - Concurrency testing cannot exceed session, installation, daily-operation, or reserved-neuron limits.
 - Log inspection confirms that no note-derived input or output payload is persisted by service-controlled storage or logging.
@@ -290,7 +291,8 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 - [Cloudflare Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/) documents Free Worker and SQLite-backed Durable Object allowances.
 - [Cloudflare Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/) documents the 10,000-neuron daily Free allocation and current model prices.
 - [Qwen3 30B-A3B model page](https://developers.cloudflare.com/ai/models/%40cf/qwen/qwen3-30b-a3b-fp8/) documents the selected model and its current unit pricing.
-- [Cloudflare AI Gateway pricing](https://developers.cloudflare.com/ai-gateway/reference/pricing/) and [logging controls](https://developers.cloudflare.com/ai-gateway/observability/logging/) document free core rate limiting and metadata-only logs.
+- [Cloudflare AI Gateway pricing](https://developers.cloudflare.com/ai-gateway/reference/pricing/), [REST request controls](https://developers.cloudflare.com/ai-gateway/usage/rest-api/), and [logging controls](https://developers.cloudflare.com/ai-gateway/observability/logging/) document free core rate limiting, per-request cache controls, and metadata-only logs.
+- [AI Gateway Workers binding methods](https://developers.cloudflare.com/ai-gateway/usage/worker-binding-methods/) document the binding's all-or-nothing `collectLog` option; the initial service therefore uses the REST header that suppresses payload storage while retaining metadata.
 - [Workers AI data usage](https://developers.cloudflare.com/workers-ai/platform/data-usage/) documents Cloudflare's current customer-content commitments.
 - [TypeScript on Workers](https://developers.cloudflare.com/workers/languages/typescript/) documents the first-class TypeScript runtime and generated binding types.
 - [SQLite-backed Durable Object storage](https://developers.cloudflare.com/durable-objects/api/sqlite-storage-api/) documents direct SQL access, transactions, input gates, and output gates.
