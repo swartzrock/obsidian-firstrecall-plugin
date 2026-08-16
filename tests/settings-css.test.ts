@@ -523,6 +523,8 @@ describe("settings CSS", () => {
 		expect(controlsRule).toContain("background: var(--background-secondary)");
 		expect(styles).toContain(".cuecraft-study-progress-track");
 		expect(styles).toContain(".cuecraft-study-progress-fill");
+		expect(ruleFor(".cuecraft-study-help")).toContain("cursor: help");
+		expect(styles).toContain(".cuecraft-study-help:focus-visible");
 
 		const cueRule = ruleFor(".cuecraft-reading-study-cue");
 		expect(cueRule).toContain("cursor: pointer");

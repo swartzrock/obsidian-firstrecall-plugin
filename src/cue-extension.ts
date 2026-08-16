@@ -15,7 +15,7 @@ import {
 	gutter,
 } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
-import { setIcon } from "obsidian";
+import { setIcon, setTooltip } from "obsidian";
 import type { NoteCache } from "./cache";
 import {
 	buildEditorHookCard,
@@ -2139,6 +2139,20 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			host.setAttribute("role", "region");
 			host.setAttribute("aria-label", "Study controls");
 
+			const help = doc.createElement("span");
+			help.className = "cuecraft-study-help";
+			help.tabIndex = 0;
+			help.setAttribute(
+				"aria-label",
+				"Click hidden text or a cue card to reveal its section"
+			);
+			setIcon(help, "circle-help");
+			setTooltip(
+				help,
+				"Click hidden text or a cue card to reveal its section",
+				{ placement: "bottom" }
+			);
+
 			const progress = doc.createElement("span");
 			progress.className = "cuecraft-editor-study-progress";
 			progress.setAttribute("aria-live", "polite");
@@ -2191,7 +2205,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			showAll.addEventListener("click", onShowAll);
 			hideAll.addEventListener("click", onHideAll);
 			exit.addEventListener("click", onExit);
-			host.append(progress, progressTrack, showAll, hideAll, exit);
+			host.append(help, progress, progressTrack, showAll, hideAll, exit);
 			(projection.controlsContainer ?? this.view.scrollDOM).prepend(host);
 			this.controlHost = host;
 			this.controlCleanup = () => {

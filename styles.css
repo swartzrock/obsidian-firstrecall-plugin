@@ -2863,6 +2863,25 @@ html.cuecraft-editor-cue-width-resizing * {
 	font-size: var(--font-ui-smaller);
 }
 
+.cuecraft-study-help {
+	display: inline-flex;
+	flex: 0 0 auto;
+	align-items: center;
+	justify-content: center;
+	color: var(--text-muted);
+	cursor: help;
+}
+
+.cuecraft-study-help svg {
+	width: 15px;
+	height: 15px;
+}
+
+.cuecraft-study-help:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 2px;
+}
+
 .cuecraft-study-action {
 	display: inline-flex;
 	align-items: center;
