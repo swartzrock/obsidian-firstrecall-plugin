@@ -921,7 +921,9 @@ export default class CueCraftPlugin extends Plugin {
 		this.app.workspace.iterateAllLeaves((leaf) => {
 			if (leaf.view.getViewType() !== "markdown") return;
 			const view = leaf.view as MarkdownView;
-			const cm = (view.editor as unknown as { cm?: EditorView }).cm;
+			const cm = (
+				view.editor as unknown as { cm?: EditorView } | undefined
+			)?.cm;
 			if (!cm || seen.has(cm)) return;
 			seen.add(cm);
 			this.renderCuesInView(view, forceLayout);

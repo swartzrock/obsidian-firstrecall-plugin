@@ -41,6 +41,25 @@ function studyCache() {
 }
 
 describe("Editing View cue refresh", () => {
+	it("skips Markdown leaves whose editor is not initialized", () => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const uninitializedView = {
+			getViewType: () => "markdown",
+			editor: undefined,
+		};
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			app: {
+				workspace: {
+					iterateAllLeaves: (
+						visit: (leaf: { view: typeof uninitializedView }) => void
+					) => visit({ view: uninitializedView }),
+				},
+			},
+		});
+
+		expect(() => plugin.refreshEditorCues()).not.toThrow();
+	});
+
 	it("applies a display change to an open editor when settings has focus", () => {
 		const document = new JSDOM("<div class='cm-editor'></div>").window.document;
 		const editorDom = document.querySelector<HTMLElement>(".cm-editor")!;
