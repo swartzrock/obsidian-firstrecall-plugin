@@ -55,7 +55,7 @@ The **Note Brief** belongs to the whole note and appears near the top. A **Secti
 | **Socratic reasoning** | A Question type that leads the reader to explain assumptions, implications, or reasoning. |
 | **Auto-generation** | Whether CueCraft generates study material automatically after a note change or save. |
 | **Auto-generation delay** | How long CueCraft waits after the triggering change before starting automatic generation. |
-| **Cue display** | The global presentation layout used for Section cues. It changes placement or visual form, not generated content. |
+| **Cue display** | The presentation layout used for Section cues while editing. It changes placement or visual form, not generated content; Reading remains inline. |
 | **Cue font size** | The global text size used in generated study components. It does not affect model output. |
 | **Show Note Brief** | Whether the whole-note Note Brief is visible. The generated Note Brief remains cached while hidden. |
 | **Show Summary** | Whether Summary is visible in Section cues. |
@@ -117,7 +117,7 @@ Use the preferred replacement in new interface copy and user-facing documentatio
 | **Cue preset**, **Cue density**, or **Question style** | **Question type** | These overlapping controls are replaced by one coherent choice. |
 | **Generate cue supports** | **Show Terms** | Terms are always generated; the remaining user choice is whether to show them. |
 | **System prompt** in the interface | **Section cue instructions** or **Note Brief instructions** | The exact artifact-specific name makes scope and authority clear and does not imply an editable override. |
-| **Editing View** as a settings category | **Main settings** for appearance; **Cue Generation** for generation | Appearance applies consistently in both Editing and Reading modes. Editing View remains valid only when naming Obsidian's actual note mode. |
+| **Editing View** as a settings category | **Main settings** for appearance; **Cue Generation** for generation | Shared visibility and font choices apply in both note modes, while Cue display controls the Editing layout. Editing View remains valid only when naming Obsidian's actual note mode. |
 | **Cornell View** | Name the current visible artifact or note mode directly | The dedicated Cornell View has been retired. |
 
 ## Capitalization
