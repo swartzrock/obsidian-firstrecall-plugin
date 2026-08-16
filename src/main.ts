@@ -629,6 +629,12 @@ export default class CueCraftPlugin extends Plugin {
 				this.studySession.toggleReveal(path, sectionId);
 				this.refreshStudyProjections();
 			},
+			showAll: () => {
+				const current = this.studySession.snapshot();
+				if (current.revealedCount === current.total) return;
+				this.studySession.showAll(path);
+				this.refreshStudyProjections();
+			},
 			hideAll: () => {
 				if (this.studySession.snapshot().revealedCount === 0) return;
 				this.studySession.hideAll(path);

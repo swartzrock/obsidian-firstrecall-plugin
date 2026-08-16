@@ -498,7 +498,7 @@ describe("settings CSS", () => {
 		expect(controlsRule).toContain("top: 0");
 		expect(controlsRule).toContain("z-index: 10");
 		expect(controlsRule).toContain("width: 100%");
-		expect(controlsRule).toContain("background: var(--background-primary)");
+		expect(controlsRule).toContain("background: var(--background-secondary)");
 		expect(controlsRule).toContain(
 			"border: 1px solid var(--background-modifier-border)"
 		);
@@ -520,6 +520,7 @@ describe("settings CSS", () => {
 		expect(controlsRule).toContain("top: 0");
 		expect(controlsRule).toContain("z-index: 10");
 		expect(controlsRule).toContain("width: 100%");
+		expect(controlsRule).toContain("background: var(--background-secondary)");
 		expect(styles).toContain(".cuecraft-study-progress-track");
 		expect(styles).toContain(".cuecraft-study-progress-fill");
 

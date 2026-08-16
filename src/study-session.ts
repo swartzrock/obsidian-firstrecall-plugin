@@ -37,6 +37,7 @@ export interface StudyProjection {
 	snapshot: StudySessionSnapshot;
 	controlsContainer?: HTMLElement;
 	toggleSection(sectionId: string): void;
+	showAll(): void;
 	hideAll(): void;
 	exit(): void;
 	documentChanged?(markdown: string): void;
@@ -188,6 +189,11 @@ export class StudySessionController {
 		}
 		if (this.revealed.has(sectionId)) this.revealed.delete(sectionId);
 		else this.revealed.add(sectionId);
+		return this.snapshot();
+	}
+
+	showAll(path: string): StudySessionSnapshot {
+		if (path === this.path) this.revealed = new Set(this.sections.keys());
 		return this.snapshot();
 	}
 

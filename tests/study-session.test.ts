@@ -120,7 +120,7 @@ describe("resolveStudySections", () => {
 });
 
 describe("StudySessionController", () => {
-	it("starts fresh, toggles sections independently, and hides all", () => {
+	it("starts fresh, toggles sections independently, and shows or hides all", () => {
 		const sections = resolveAll("# Alpha\nA body.\n# Beta\nB body.");
 		const controller = new StudySessionController();
 
@@ -147,6 +147,12 @@ describe("StudySessionController", () => {
 			revealedCount: 0,
 			total: 2,
 		});
+		controller.showAll("notes/a.md");
+		expect(controller.snapshot()).toMatchObject({
+			revealedCount: 2,
+			total: 2,
+		});
+		controller.hideAll("notes/a.md");
 
 		controller.toggleReveal("notes/a.md", "alpha");
 		expect(controller.start("notes/a.md", sections).revealedCount).toBe(0);
@@ -160,6 +166,7 @@ describe("StudySessionController", () => {
 
 		controller.toggleReveal("notes/a.md", "missing");
 		controller.toggleReveal("notes/b.md", "alpha");
+		controller.showAll("notes/b.md");
 		controller.hideAll("notes/b.md");
 
 		expect(controller.snapshot().revealedCount).toBe(1);

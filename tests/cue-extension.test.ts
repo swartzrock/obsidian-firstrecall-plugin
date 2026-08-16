@@ -226,6 +226,7 @@ describe("Editing View Study projection", () => {
 	it("maps admitted answer ranges through ordinary edits until reconciliation", () => {
 		const callbacks = {
 			toggleSection: vi.fn(),
+			showAll: vi.fn(),
 			hideAll: vi.fn(),
 			exit: vi.fn(),
 		};
@@ -284,6 +285,7 @@ describe("Editing View Study projection", () => {
 						study: {
 							snapshot: studySnapshot(),
 							toggleSection: vi.fn(),
+							showAll: vi.fn(),
 							hideAll: vi.fn(),
 							exit: vi.fn(),
 							documentChanged,
@@ -316,6 +318,7 @@ describe("Editing View Study projection", () => {
 				study: {
 					snapshot: studySnapshot(),
 					toggleSection,
+					showAll: vi.fn(),
 					hideAll: vi.fn(),
 					exit: vi.fn(),
 				},
@@ -372,6 +375,7 @@ describe("Editing View Study projection", () => {
 		const state = EditorState.create({ doc: "# Terms\nbody" });
 		const callbacks = {
 			toggleSection: vi.fn(),
+			showAll: vi.fn(),
 			hideAll: vi.fn(),
 			exit: vi.fn(),
 		};
@@ -416,6 +420,7 @@ describe("Editing View Study projection", () => {
 	it("renders one control host and reveals before placing the clicked cursor", () => {
 		const order: string[] = [];
 		const toggleSection = vi.fn(() => order.push("reveal"));
+		const showAll = vi.fn();
 		const hideAll = vi.fn();
 		const exit = vi.fn();
 		let destroyedControls: HTMLElement | null = null;
@@ -440,6 +445,7 @@ describe("Editing View Study projection", () => {
 							snapshot: studySnapshot(),
 							controlsContainer,
 							toggleSection,
+							showAll,
 							hideAll,
 							exit,
 						},
@@ -467,9 +473,23 @@ describe("Editing View Study projection", () => {
 					)?.style.width
 				).toBe("0%");
 				const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
+				expect([...buttons].map((button) => button.textContent)).toEqual([
+					"Show All Sections",
+					"Hide All Sections",
+					"Exit Study Mode",
+				]);
+				expect([...buttons].map((button) => button.dataset.icon)).toEqual([
+					"eye",
+					"eye-off",
+					"log-out",
+				]);
+				expect(buttons[0].disabled).toBe(false);
+				expect(buttons[1].disabled).toBe(true);
 				buttons[0].click();
 				buttons[1].click();
-				expect(hideAll).toHaveBeenCalledTimes(1);
+				buttons[2].click();
+				expect(showAll).toHaveBeenCalledTimes(1);
+				expect(hideAll).not.toHaveBeenCalled();
 				expect(exit).toHaveBeenCalledTimes(1);
 
 				Object.defineProperty(view, "posAtCoords", {
@@ -502,7 +522,9 @@ describe("Editing View Study projection", () => {
 				expect(view.dom.classList.contains("cuecraft-editor-study-active")).toBe(false);
 				buttons[0].click();
 				buttons[1].click();
-				expect(hideAll).toHaveBeenCalledTimes(1);
+				buttons[2].click();
+				expect(showAll).toHaveBeenCalledTimes(1);
+				expect(hideAll).not.toHaveBeenCalled();
 				expect(exit).toHaveBeenCalledTimes(1);
 
 				view.dispatch({
@@ -513,6 +535,7 @@ describe("Editing View Study projection", () => {
 							snapshot: studySnapshot(),
 							controlsContainer,
 							toggleSection,
+							showAll,
 							hideAll,
 							exit,
 						},
@@ -531,7 +554,9 @@ describe("Editing View Study projection", () => {
 		);
 		destroyedButtons?.[0]?.click();
 		destroyedButtons?.[1]?.click();
-		expect(hideAll).toHaveBeenCalledTimes(1);
+		destroyedButtons?.[2]?.click();
+		expect(showAll).toHaveBeenCalledTimes(1);
+		expect(hideAll).not.toHaveBeenCalled();
 		expect(exit).toHaveBeenCalledTimes(1);
 	});
 });

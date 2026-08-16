@@ -2694,7 +2694,7 @@ html.cuecraft-editor-cue-width-resizing * {
 	padding: 6px 12px;
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
-	background: var(--background-primary);
+	background: var(--background-secondary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 0;
 }
@@ -2845,7 +2845,7 @@ html.cuecraft-editor-cue-width-resizing * {
 	padding: 6px 12px;
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
-	background: var(--background-primary);
+	background: var(--background-secondary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 0;
 }
@@ -2861,6 +2861,18 @@ html.cuecraft-editor-cue-width-resizing * {
 	min-height: 26px;
 	padding: 2px 8px;
 	font-size: var(--font-ui-smaller);
+}
+
+.cuecraft-study-action {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	white-space: nowrap;
+}
+
+.cuecraft-study-action svg {
+	width: 14px;
+	height: 14px;
 }
 
 .cuecraft-study-progress-track {

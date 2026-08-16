@@ -2163,24 +2163,39 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			}%`;
 			progressTrack.append(progressFill);
 
+			const showAll = doc.createElement("button");
+			showAll.type = "button";
+			showAll.className =
+				"cuecraft-study-action cuecraft-editor-study-show-all";
+			setIcon(showAll, "eye");
+			showAll.append("Show All Sections");
+			showAll.disabled = snapshot.revealedCount === snapshot.total;
+
 			const hideAll = doc.createElement("button");
 			hideAll.type = "button";
-			hideAll.className = "cuecraft-editor-study-hide-all";
-			hideAll.textContent = "Hide all";
+			hideAll.className =
+				"cuecraft-study-action cuecraft-editor-study-hide-all";
+			setIcon(hideAll, "eye-off");
+			hideAll.append("Hide All Sections");
+			hideAll.disabled = snapshot.revealedCount === 0;
 
 			const exit = doc.createElement("button");
 			exit.type = "button";
-			exit.className = "cuecraft-editor-study-exit";
-			exit.textContent = "Exit";
+			exit.className = "cuecraft-study-action cuecraft-editor-study-exit";
+			setIcon(exit, "log-out");
+			exit.append("Exit Study Mode");
 
+			const onShowAll = () => projection.showAll();
 			const onHideAll = () => projection.hideAll();
 			const onExit = () => projection.exit();
+			showAll.addEventListener("click", onShowAll);
 			hideAll.addEventListener("click", onHideAll);
 			exit.addEventListener("click", onExit);
-			host.append(progress, progressTrack, hideAll, exit);
+			host.append(progress, progressTrack, showAll, hideAll, exit);
 			(projection.controlsContainer ?? this.view.scrollDOM).prepend(host);
 			this.controlHost = host;
 			this.controlCleanup = () => {
+				showAll.removeEventListener("click", onShowAll);
 				hideAll.removeEventListener("click", onHideAll);
 				exit.removeEventListener("click", onExit);
 			};

@@ -8,6 +8,8 @@
  * the Reading Study DOM projection and control lifecycle.
  */
 
+import { setIcon } from "obsidian";
+
 import {
 	buildCueLineData,
 	type CueLineData,
@@ -270,29 +272,42 @@ export function syncReadingStudyControls(
 		progressFill.className = "cuecraft-study-progress-fill";
 		progressTrack.append(progressFill);
 
+		const showAll = doc.createElement("button");
+		showAll.type = "button";
+		showAll.className =
+			"cuecraft-study-action cuecraft-reading-study-show-all";
+		setIcon(showAll, "eye");
+		showAll.append("Show All Sections");
+
 		const hideAll = doc.createElement("button");
 		hideAll.type = "button";
-		hideAll.className = "cuecraft-reading-study-hide-all";
-		hideAll.textContent = "Hide all";
+		hideAll.className =
+			"cuecraft-study-action cuecraft-reading-study-hide-all";
+		setIcon(hideAll, "eye-off");
+		hideAll.append("Hide All Sections");
 
 		const exit = doc.createElement("button");
 		exit.type = "button";
-		exit.className = "cuecraft-reading-study-exit";
-		exit.textContent = "Exit";
+		exit.className = "cuecraft-study-action cuecraft-reading-study-exit";
+		setIcon(exit, "log-out");
+		exit.append("Exit Study Mode");
 
+		const onShowAll = () => readingStudyControlState.get(host!)?.projection.showAll();
 		const onHideAll = () => readingStudyControlState.get(host!)?.projection.hideAll();
 		const onExit = () => {
 			readingStudyControlState.get(host!)?.projection.exit();
 			restoreReadingStudyBlock(container);
 			removeReadingStudyControls(controlsContainer);
 		};
+		showAll.addEventListener("click", onShowAll);
 		hideAll.addEventListener("click", onHideAll);
 		exit.addEventListener("click", onExit);
-		host.append(progress, progressTrack, hideAll, exit);
+		host.append(progress, progressTrack, showAll, hideAll, exit);
 		controlsContainer.prepend(host);
 		readingStudyControlState.set(host, {
 			projection,
 			cleanup: () => {
+				showAll.removeEventListener("click", onShowAll);
 				hideAll.removeEventListener("click", onHideAll);
 				exit.removeEventListener("click", onExit);
 			},
@@ -336,6 +351,17 @@ export function syncReadingStudyControls(
 			}%`;
 		}
 	}
+	const showAll = host.querySelector<HTMLButtonElement>(
+		".cuecraft-reading-study-show-all"
+	);
+	if (showAll) {
+		showAll.disabled =
+			projection.snapshot.revealedCount === projection.snapshot.total;
+	}
+	const hideAll = host.querySelector<HTMLButtonElement>(
+		".cuecraft-reading-study-hide-all"
+	);
+	if (hideAll) hideAll.disabled = projection.snapshot.revealedCount === 0;
 }
 
 export function readingNoteBriefDisplayState(opts: {

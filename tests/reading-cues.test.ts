@@ -198,6 +198,7 @@ describe("projectReadingStudyBlock", () => {
 		const projection = {
 			snapshot: studySnapshot(),
 			toggleSection,
+			showAll: vi.fn(),
 			hideAll: vi.fn(),
 			exit: vi.fn(),
 		};
@@ -270,6 +271,7 @@ describe("projectReadingStudyBlock", () => {
 		projectReadingStudyBlock(block, getSectionInfo, {
 			snapshot: hidden,
 			toggleSection: vi.fn(),
+			showAll: vi.fn(),
 			hideAll: vi.fn(),
 			exit: vi.fn(),
 		});
@@ -284,6 +286,7 @@ describe("projectReadingStudyBlock", () => {
 		projectReadingStudyBlock(block, getSectionInfo, {
 			snapshot: revealed,
 			toggleSection: vi.fn(),
+			showAll: vi.fn(),
 			hideAll: vi.fn(),
 			exit: vi.fn(),
 		});
@@ -305,11 +308,13 @@ describe("syncReadingStudyControls", () => {
 		const controlsContainer = dom.window.document.querySelector<HTMLElement>(
 			"#controls"
 		)!;
+		const showAll = vi.fn();
 		const hideAll = vi.fn();
 		const exit = vi.fn();
 		const projection = {
 			snapshot: studySnapshot(),
 			toggleSection: vi.fn(),
+			showAll,
 			hideAll,
 			exit,
 		};
@@ -332,9 +337,23 @@ describe("syncReadingStudyControls", () => {
 		expect(progressTrack.getAttribute("aria-valuenow")).toBe("0");
 		expect(progressTrack.getAttribute("aria-valuemax")).toBe("1");
 		const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
+		expect([...buttons].map((button) => button.textContent)).toEqual([
+			"Show All Sections",
+			"Hide All Sections",
+			"Exit Study Mode",
+		]);
+		expect([...buttons].map((button) => button.dataset.icon)).toEqual([
+			"eye",
+			"eye-off",
+			"log-out",
+		]);
+		expect(buttons[0].disabled).toBe(false);
+		expect(buttons[1].disabled).toBe(true);
 		buttons[0].click();
 		buttons[1].click();
-		expect(hideAll).toHaveBeenCalledTimes(1);
+		buttons[2].click();
+		expect(showAll).toHaveBeenCalledTimes(1);
+		expect(hideAll).not.toHaveBeenCalled();
 		expect(exit).toHaveBeenCalledTimes(1);
 		expect(
 			controlsContainer.querySelector(".cuecraft-reading-study-controls")
@@ -342,7 +361,9 @@ describe("syncReadingStudyControls", () => {
 
 		buttons[0].click();
 		buttons[1].click();
-		expect(hideAll).toHaveBeenCalledTimes(1);
+		buttons[2].click();
+		expect(showAll).toHaveBeenCalledTimes(1);
+		expect(hideAll).not.toHaveBeenCalled();
 		expect(exit).toHaveBeenCalledTimes(1);
 	});
 });
