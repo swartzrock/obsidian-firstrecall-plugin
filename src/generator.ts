@@ -17,8 +17,6 @@ export interface SectionResult {
 	contentHash: string;
 	keywords: string[] | null;
 	question: string | null;
-	confidence: "high" | "medium" | "low" | null;
-	rationale: string | null;
 	sectionLens: SectionLens | null;
 	/** Non-null when this section failed validation/generation (isolated). */
 	error: string | null;
@@ -26,10 +24,8 @@ export interface SectionResult {
 
 export interface NoteGenerationResult {
 	sections: SectionResult[];
-	summary: string | null;
-	learningObjective: string | null;
 	noteBrief: NoteBriefOutput | null;
-	/** True if generation was cancelled before completing the summary. */
+	/** True if generation was cancelled before completing all current artifacts. */
 	canceled: boolean;
 }
 
@@ -136,8 +132,6 @@ function emptySectionResult(
 		contentHash: section.contentHash,
 		keywords: null,
 		question: null,
-		confidence: null,
-		rationale: null,
 		sectionLens: null,
 		error: null,
 	};
@@ -161,8 +155,6 @@ function applyCueResult(
 	}
 	result.keywords = item.cue.keywords;
 	result.question = item.cue.question;
-	result.confidence = item.cue.confidence;
-	result.rationale = item.cue.rationale ?? null;
 	result.sectionLens = item.cue.sectionLens ?? null;
 }
 
@@ -281,8 +273,8 @@ export async function generateNoteBriefForSections(
 }
 
 /**
- * Generate cues for every section in bounded parallel batches, then the whole-note review
- * artifacts. Per-section failures are isolated (recorded as `error`, never thrown).
+ * Generate cues for every section in bounded parallel batches, then the Note Brief.
+ * Per-section failures are isolated (recorded as `error`, never thrown).
  * Cancellation is checked between batches: in-flight sections finish, then
  * generation stops and partial results are returned.
  */
@@ -362,8 +354,6 @@ export async function generateNote(
 		}
 	}
 
-	let summary: string | null = null;
-	let learningObjective: string | null = null;
 	let noteBrief: NoteBriefOutput | null = null;
 	const completedResults = results.filter(
 		(r): r is SectionResult => Boolean(r)
@@ -372,8 +362,6 @@ export async function generateNote(
 	if (canceled || signal?.aborted) {
 		return {
 			sections: completedResults,
-			summary,
-			learningObjective,
 			noteBrief,
 			canceled: true,
 		};
@@ -387,27 +375,7 @@ export async function generateNote(
 			done++;
 			onProgress?.(done, total);
 		}
-		return { sections: completedResults, summary, learningObjective, noteBrief, canceled };
-	}
-
-	if (options.autoSummary && completedResults.length) {
-		const t0 = Date.now();
-		try {
-			const sum = await provider.generateSummary(
-				{
-					noteTitle,
-					fullText: clampText(markdown, maxContextChars),
-					sectionQuestions: questions,
-				},
-				signal
-			);
-			summary = sum.summary;
-			learningObjective = sum.learningObjective ?? null;
-			console.debug(`CueCraft summary done (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
-		} catch {
-			console.debug(`CueCraft summary failed (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
-			summary = null;
-		}
+		return { sections: completedResults, noteBrief, canceled };
 	}
 	if (!signal?.aborted) {
 		noteBrief = await generateNoteBriefForSections({
@@ -425,5 +393,5 @@ export async function generateNote(
 	}
 	if (signal?.aborted) canceled = true;
 
-	return { sections: completedResults, summary, learningObjective, noteBrief, canceled };
+	return { sections: completedResults, noteBrief, canceled };
 }

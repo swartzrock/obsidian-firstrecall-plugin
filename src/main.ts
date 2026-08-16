@@ -16,10 +16,7 @@ import {
 	CueCraftSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
-import {
-	DEFAULT_EDITOR_CUE_WIDTH_PRESET,
-	normalizeEditorCueCustomWidthPx,
-} from "./editor-cue-width";
+import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
 import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import {
 	normalizeAutoGenerationSettleDelaySeconds,
@@ -93,10 +90,6 @@ import {
 	type StudySessionSnapshot,
 } from "./study-session";
 import {
-	DEFAULT_CORNELL_DISPLAY_MODE,
-	isCornellDisplayMode,
-} from "./cornell-display";
-import {
 	DEFAULT_EDITOR_CUE_DISPLAY,
 	isEditorCueDisplay,
 } from "./editor-cue-display";
@@ -116,13 +109,8 @@ import {
 	loadCueSectionCollapseMap,
 	type CueSectionCollapseMap,
 } from "./cue-section-collapse";
-import {
-	buildCornellModel,
-	type CornellModel,
-} from "./cornell";
-import { CornellView, VIEW_TYPE_CORNELL } from "./cornell-view";
 import type { CueGenerationOptions } from "./cue-generation";
-import { normalizeSummaryInstructionsOverride } from "./summary-instructions";
+import { normalizeNoteBriefInstructionsOverride } from "./note-brief-instructions";
 import { statusLabel, type CueStatus } from "./status";
 import { formatCueCraftNotice } from "./notice";
 import {
@@ -159,6 +147,7 @@ const STUDY_RIBBON_ICON = "book-open-check";
 const STUDY_READY_LABEL = "CueCraft: Study this note";
 const STUDY_ACTIVE_LABEL = "CueCraft: Exit Study";
 const STUDY_GENERATE_FIRST = "CueCraft: generate cues for this note first.";
+const LEGACY_CORNELL_VIEW_TYPE = "cuecraft-cornell";
 
 type StudyProjectionMode = "source" | "preview";
 
@@ -242,11 +231,6 @@ export default class CueCraftPlugin extends Plugin {
 		this.settingTab = new CueCraftSettingTab(this.app, this);
 		this.addSettingTab(this.settingTab);
 
-		this.registerView(
-			VIEW_TYPE_CORNELL,
-			(leaf) => new CornellView(leaf, this)
-		);
-
 		this.statusBarEl = this.addStatusBarItem();
 		this.statusBarEl.addClass("cuecraft-status");
 		this.statusBarEl.addEventListener("click", () => this.onPillClick());
@@ -319,9 +303,10 @@ export default class CueCraftPlugin extends Plugin {
 		// Defer the first render until the workspace is restored: during onload
 		// the restored editor's CodeMirror instance isn't ready yet, so an early
 		// renderCues would no-op and the cues would never appear on startup.
-		this.app.workspace.onLayoutReady(() =>
-			this.onActiveFile(this.app.workspace.getActiveFile())
-		);
+		this.app.workspace.onLayoutReady(() => {
+			this.app.workspace.detachLeavesOfType(LEGACY_CORNELL_VIEW_TYPE);
+			this.onActiveFile(this.app.workspace.getActiveFile());
+		});
 	}
 
 	onunload(): void {
@@ -348,7 +333,9 @@ export default class CueCraftPlugin extends Plugin {
 	private async loadPluginData(): Promise<void> {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
 		const rawSettings = loaded?.settings ?? loaded ?? {};
+		const rawSettingsRecord = rawSettings as Record<string, unknown>;
 		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
+		let settingsChanged = false;
 		normalizeCueCraftProviderSettings(settings, DEFAULT_SETTINGS, rawSettings);
 		const credentialMigration = await migrateCueCraftCloudCredentials(
 			settings,
@@ -367,17 +354,25 @@ export default class CueCraftPlugin extends Plugin {
 			(settings as { cueInstructionsOverride?: unknown })
 				.cueInstructionsOverride
 		);
-		settings.summaryInstructionsOverride =
-			normalizeSummaryInstructionsOverride(
-				(settings as { summaryInstructionsOverride?: unknown })
-					.summaryInstructionsOverride
-			);
-		delete (settings as unknown as Record<string, unknown>)
-			.editorCueWidthPreset;
-		delete (settings as unknown as Record<string, unknown>)
-			.editorHookCardStyle;
-		delete (settings as unknown as Record<string, unknown>)
-			.readingModeDisplay;
+		const hasCurrentNoteBriefOverride = Object.prototype.hasOwnProperty.call(
+			rawSettingsRecord,
+			"noteBriefInstructionsOverride"
+		);
+		const noteBriefOverrideSource = hasCurrentNoteBriefOverride
+			? rawSettingsRecord.noteBriefInstructionsOverride
+			: rawSettingsRecord.summaryInstructionsOverride;
+		settings.noteBriefInstructionsOverride =
+			normalizeNoteBriefInstructionsOverride(noteBriefOverrideSource);
+		if (
+			Object.prototype.hasOwnProperty.call(
+				rawSettingsRecord,
+				"summaryInstructionsOverride"
+			) ||
+			(hasCurrentNoteBriefOverride &&
+				settings.noteBriefInstructionsOverride !== noteBriefOverrideSource)
+		) {
+			settingsChanged = true;
+		}
 		settings.editorCueCustomWidthPx = normalizeEditorCueCustomWidthPx(
 			(rawSettings as { editorCueCustomWidthPx?: unknown })
 				.editorCueCustomWidthPx
@@ -410,12 +405,24 @@ export default class CueCraftPlugin extends Plugin {
 		) {
 			settings.editorCueDisplay = DEFAULT_EDITOR_CUE_DISPLAY;
 		}
-		if (
-			!isCornellDisplayMode(
-				(settings as { cornellDisplayMode?: unknown }).cornellDisplayMode
-			)
-		) {
-			settings.cornellDisplayMode = DEFAULT_CORNELL_DISPLAY_MODE;
+		for (const key of [
+			"summaryInstructionsOverride",
+			"autoSummary",
+			"cornellDisplayMode",
+			"cornellStyle",
+			"cueColumnWidth",
+			"cueAccent",
+			"showCueBorder",
+			"compactChips",
+			"foldCueColumnOnMobile",
+			"editorCueWidthPreset",
+			"editorHookCardStyle",
+			"readingModeDisplay",
+		] as const) {
+			if (Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)) {
+				settingsChanged = true;
+			}
+			delete (settings as unknown as Record<string, unknown>)[key];
 		}
 		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
 		const {
@@ -430,7 +437,11 @@ export default class CueCraftPlugin extends Plugin {
 		this.retainedCaches = retainedCaches;
 		this.data = { settings, caches, hidden, cueSectionCollapse };
 		this.settings = this.data.settings;
-		if (credentialMigration.settingsChanged || cachesChanged) {
+		if (
+			credentialMigration.settingsChanged ||
+			cachesChanged ||
+			settingsChanged
+		) {
 			await this.persistPluginData();
 		}
 	}
@@ -577,7 +588,6 @@ export default class CueCraftPlugin extends Plugin {
 				showRailSummary: this.settings.showRailSummary,
 				showRailQuestions: this.settings.showRailQuestions,
 				showRailSupportTerms: this.settings.showRailSupportTerms,
-				cueColumnWidth: DEFAULT_EDITOR_CUE_WIDTH_PRESET,
 				cueFontSize: this.settings.cueFontSize,
 				editorCueWidthController: this.editorCueWidthController,
 				noteBrief:
@@ -1151,11 +1161,6 @@ export default class CueCraftPlugin extends Plugin {
 			callback: () => this.clearCues(),
 		});
 		this.addCommand({
-			id: "open-cornell-view",
-			name: "Open Active Note in Cornell View",
-			callback: () => void this.openActiveNoteInCornellView(),
-		});
-		this.addCommand({
 			id: "review-this-note",
 			name: "Review This Note (Study Mode)",
 			callback: () => void this.reviewThisNote(),
@@ -1211,18 +1216,6 @@ export default class CueCraftPlugin extends Plugin {
 		}
 	}
 
-	/** Open the current Markdown note in the dedicated Cornell view without entering Study Mode. */
-	private async openActiveNoteInCornellView(target?: TFile): Promise<void> {
-		const file = target ?? this.app.workspace.getActiveFile();
-		if (!file) {
-			new Notice("CueCraft: open a note to view in Cornell.");
-			return;
-		}
-		await this.app.workspace.getLeaf(false).openFile(file);
-		const view = await this.activateCornellView();
-		await view?.render();
-	}
-
 	/** Start an idempotent in-note Study session, activating only a requested note. */
 	private async reviewThisNote(target?: TFile): Promise<void> {
 		const file = target ?? this.app.workspace.getActiveFile();
@@ -1260,33 +1253,6 @@ export default class CueCraftPlugin extends Plugin {
 		this.setStatus("study");
 		this.refreshStudyEntryStates();
 		this.refreshStudyProjections();
-	}
-
-	/** Open (or focus) the Cornell view in a main-area tab; returns the view. */
-	private async activateCornellView(): Promise<CornellView | null> {
-		const { workspace } = this.app;
-		const existing = workspace.getLeavesOfType(VIEW_TYPE_CORNELL)[0];
-		if (existing) {
-			workspace.revealLeaf(existing);
-			return existing.view instanceof CornellView ? existing.view : null;
-		}
-		const leaf = workspace.getLeaf("tab");
-		await leaf.setViewState({ type: VIEW_TYPE_CORNELL, active: true });
-		workspace.revealLeaf(leaf);
-		return leaf.view instanceof CornellView ? leaf.view : null;
-	}
-
-	/** Build the Cornell layout model for a note, or null when it has no cache. */
-	async buildCornellFor(
-		file: TFile
-	): Promise<{ title: string; model: CornellModel } | null> {
-		const cache = this.cacheStore.get(file.path);
-		if (!cache) return null;
-		const markdown = await this.app.vault.cachedRead(file);
-		return {
-			title: file.basename,
-			model: buildCornellModel(cache, parseSections(markdown)),
-		};
 	}
 
 	/** Whether a note has generated cues cached. */
@@ -1516,7 +1482,6 @@ export default class CueCraftPlugin extends Plugin {
 			});
 			return root;
 		}
-		if (cue.confidence) root.dataset.confidence = cue.confidence;
 		root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
 		appendSectionLens(root, cue.sectionLens);
 		if (cue.keywords.length) {
@@ -1526,14 +1491,6 @@ export default class CueCraftPlugin extends Plugin {
 			});
 		}
 		return root;
-	}
-
-	/** Re-render any open Cornell views (e.g. after generate/clear/style change). */
-	refreshCornellViews(): void {
-		for (const leaf of this.app.workspace.getLeavesOfType(VIEW_TYPE_CORNELL)) {
-			const view = leaf.view;
-			if (view instanceof CornellView) void view.render();
-		}
 	}
 
 	/** Mark cue content settings dirty; the settings tab asks on close. */
@@ -1645,7 +1602,6 @@ export default class CueCraftPlugin extends Plugin {
 			cueDensity: s.cueDensity,
 			questionStyle: s.questionStyle,
 			generateKeywords: s.generateKeywords,
-			autoSummary: s.autoSummary,
 		};
 	}
 
@@ -1742,7 +1698,7 @@ export default class CueCraftPlugin extends Plugin {
 
 	/**
 	 * Regenerate the cue for a single section (by id) and merge it back into the
-	 * cache. Public so the Cornell view can call it directly from per-cue buttons.
+	 * cache. Public so callers can target an explicit note and section.
 	 * When `toneOverride` is supplied it replaces the global cue preset for this
 	 * single regeneration, so users can ask for a different question style without
 	 * changing their default setting.
@@ -1810,14 +1766,12 @@ export default class CueCraftPlugin extends Plugin {
 			this.currentRun = null;
 			await this.updateStatusForFile(this.app.workspace.getActiveFile());
 			this.renderCues(file);
-			this.refreshCornellViews();
 		}
 	}
 
 	/**
 	 * Regenerate only sections that need provider work, then reconcile cached
 	 * section order/metadata with the current note. Defaults to the active note.
-	 * Public so the Cornell view toolbar can trigger it.
 	 */
 	async regenerateStaleSections(
 		target?: TFile,
@@ -1857,7 +1811,6 @@ export default class CueCraftPlugin extends Plugin {
 			await this.visibility.show(file.path);
 			await this.updateStatusForFile(this.app.workspace.getActiveFile());
 			this.renderCues(file);
-			this.refreshCornellViews();
 			if (!opts.automatic) {
 				new Notice("CueCraft: no sections need regeneration.");
 			}
@@ -1940,7 +1893,6 @@ export default class CueCraftPlugin extends Plugin {
 			this.currentRun = null;
 			await this.updateStatusForFile(this.app.workspace.getActiveFile());
 			this.renderCues(file);
-			this.refreshCornellViews();
 		}
 	}
 
@@ -2130,7 +2082,6 @@ export default class CueCraftPlugin extends Plugin {
 			});
 			this.currentRun = null;
 			await this.updateStatusForFile(this.app.workspace.getActiveFile());
-			this.refreshCornellViews();
 			if (!opts.automatic || summary.failed) {
 				new Notice(this.studyAreaSummaryNotice(area, summary));
 			}
@@ -2398,7 +2349,7 @@ export default class CueCraftPlugin extends Plugin {
 				new Notice(
 					`CueCraft: generated ${ok} cue(s)` +
 						(failed ? `, ${failed} failed` : "") +
-						(result.summary ? " + summary." : ".")
+						(result.noteBrief ? " + Note Brief." : ".")
 				);
 			} else if (failed) {
 				new Notice(`CueCraft: auto-generation finished with ${failed} failed section(s).`);
@@ -2413,7 +2364,6 @@ export default class CueCraftPlugin extends Plugin {
 			this.currentRun = null;
 			await this.updateStatusForFile(this.app.workspace.getActiveFile());
 			this.renderCues(file);
-			this.refreshCornellViews();
 		}
 	}
 
@@ -2432,7 +2382,6 @@ export default class CueCraftPlugin extends Plugin {
 		new Notice("CueCraft: cleared generated cues for this note.");
 		await this.updateStatusForFile(file);
 		this.renderCues(file);
-		this.refreshCornellViews();
 	}
 
 	/**
@@ -2472,8 +2421,6 @@ function toCachedSection(result: SectionResult): CachedSection {
 		contentHash: result.contentHash,
 		keywords: result.keywords,
 		question: result.question,
-		confidence: result.confidence,
-		rationale: result.rationale,
 		sectionLens: result.sectionLens,
 		error: result.error,
 	};

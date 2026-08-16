@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-	DEFAULT_EDITOR_CUE_WIDTH_PRESET,
 	EDITOR_CUE_WIDTH_MAX_PX,
 	EDITOR_CUE_WIDTH_MIN_PX,
 	editorCueWidthFromKeyboard,
@@ -10,10 +9,6 @@ import {
 } from "../src/editor-cue-width";
 
 describe("Editing View cue width preferences", () => {
-	it("uses Medium as the fixed starting width before a custom drag", () => {
-		expect(DEFAULT_EDITOR_CUE_WIDTH_PRESET).toBe("medium");
-	});
-
 	it("accepts only finite, whole custom pixel widths inside the stored bounds", () => {
 		for (const valid of [96, 240, 512]) {
 			expect(normalizeEditorCueCustomWidthPx(valid)).toBe(valid);

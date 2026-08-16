@@ -1,8 +1,3 @@
-import {
-	type CueColumnWidth,
-} from "./cornell-layout";
-
-export const DEFAULT_EDITOR_CUE_WIDTH_PRESET: CueColumnWidth = "medium";
 export const EDITOR_CUE_WIDTH_MIN_PX = 96;
 export const EDITOR_CUE_WIDTH_MAX_PX = 512;
 export const EDITOR_CUE_WIDTH_KEYBOARD_STEP_PX = 8;

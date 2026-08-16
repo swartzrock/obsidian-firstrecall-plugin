@@ -41,14 +41,10 @@ function cacheFor(markdown: string): NoteCache {
 					contentHash: section.contentHash,
 					keywords: ["tools"],
 					question: `Question for ${section.heading}`,
-					confidence: "high",
-					rationale: null,
 					sectionLens: null,
 					error: null,
 				},
 			],
-			summary: null,
-			learningObjective: null,
 			noteBrief: null,
 			canceled: false,
 		},
@@ -188,6 +184,10 @@ function createHarness() {
 	}> = [];
 	const openedFiles: string[] = [];
 	const viewStates: string[] = [];
+	let restoredLeaves: Array<{ type: string; active: boolean }> = [];
+	const detachLeavesOfType = vi.fn((type: string) => {
+		restoredLeaves = restoredLeaves.filter((leaf) => leaf.type !== type);
+	});
 	let layoutReady: (() => void) | null = null;
 	let cachedRead = async (target: TFile) => markdownByPath.get(target.path) ?? "";
 	const workspace = {
@@ -196,7 +196,9 @@ function createHarness() {
 		getActiveViewOfType: () => activeView,
 		iterateAllLeaves: (visit: (leaf: (typeof leaves)[number]) => void) =>
 			leaves.forEach(visit),
-		getLeavesOfType: () => [],
+		getLeavesOfType: (type: string) =>
+			restoredLeaves.filter((leaf) => leaf.type === type),
+		detachLeavesOfType,
 		on: (name: string, callback: EventCallback) => {
 			workspaceEvents.set(name, callback);
 			return {};
@@ -237,6 +239,7 @@ function createHarness() {
 		},
 	};
 	const plugin = new CueCraftPlugin(app as never, {} as never);
+	const registerView = vi.fn();
 	const data = {
 		settings: structuredClone(DEFAULT_SETTINGS),
 		caches: {
@@ -252,7 +255,7 @@ function createHarness() {
 		loadPluginData: vi.fn(async () => undefined),
 		saveData: vi.fn(async () => undefined),
 		addSettingTab: vi.fn(),
-		registerView: vi.fn(),
+		registerView,
 		registerEditorExtension: vi.fn(),
 		registerMarkdownPostProcessor: vi.fn(),
 		registerEvent: vi.fn(),
@@ -282,6 +285,8 @@ function createHarness() {
 		dispatches,
 		openedFiles,
 		viewStates,
+		registerView,
+		detachLeavesOfType,
 		statusBar,
 		workspaceEvents,
 		vaultEvents,
@@ -296,6 +301,10 @@ function createHarness() {
 			activeView = view;
 			activeFile = selectedFile;
 		},
+		restoreLayout: (next: Array<{ type: string; active: boolean }>) => {
+			restoredLeaves = [...next];
+		},
+		restoredLayout: () => [...restoredLeaves],
 		addView: (target = noteFile) => {
 			const view = makeView(target);
 			leaves.push({ view });
@@ -310,6 +319,49 @@ beforeEach(() => {
 });
 
 describe("Study plugin orchestration", () => {
+	it.each([
+		[
+			"active",
+			[
+				{ type: "cuecraft-cornell", active: true },
+				{ type: "markdown", active: false },
+			],
+		],
+		[
+			"background",
+			[
+				{ type: "markdown", active: true },
+				{ type: "cuecraft-cornell", active: false },
+			],
+		],
+		[
+			"duplicates",
+			[
+				{ type: "cuecraft-cornell", active: true },
+				{ type: "markdown", active: false },
+				{ type: "cuecraft-cornell", active: false },
+			],
+		],
+		["only leaf", [{ type: "cuecraft-cornell", active: true }]],
+	] as const)("detaches restored %s legacy leaves without redirecting or starting Study", async (_name, restored) => {
+		const harness = createHarness();
+		harness.restoreLayout([...restored]);
+
+		await harness.plugin.onload();
+		harness.layoutReady();
+
+		expect(harness.registerView).not.toHaveBeenCalled();
+		expect(harness.commands.has("open-cornell-view")).toBe(false);
+		expect(harness.detachLeavesOfType).toHaveBeenCalledOnce();
+		expect(harness.detachLeavesOfType).toHaveBeenCalledWith("cuecraft-cornell");
+		expect(harness.restoredLayout()).toEqual(
+			restored.filter((leaf) => leaf.type !== "cuecraft-cornell")
+		);
+		expect(harness.openedFiles).toEqual([]);
+		expect(harness.viewStates).toEqual([]);
+		expect(harness.controller().snapshot().active).toBe(false);
+	});
+
 	it("keeps one enabled or aria-disabled Study action in every Markdown header and a distinct ribbon shortcut", async () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
@@ -341,7 +393,7 @@ describe("Study plugin orchestration", () => {
 		expect(notices).toEqual([GENERATE_FIRST, GENERATE_FIRST, GENERATE_FIRST]);
 	});
 
-	it("starts and toggles in-note Study while review stays idempotent and Cornell remains explicit", async () => {
+	it("starts and toggles in-note Study while review stays idempotent", async () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
 		harness.layoutReady();
@@ -372,8 +424,8 @@ describe("Study plugin orchestration", () => {
 		await harness.commands.get("toggle-study-mode")?.callback();
 		expect(harness.controller().snapshot().revealedCount).toBe(0);
 
-		await harness.commands.get("open-cornell-view")?.callback();
-		expect(harness.viewStates).toContain("cuecraft-cornell");
+		expect(harness.commands.has("open-cornell-view")).toBe(false);
+		expect(harness.viewStates).toEqual([]);
 	});
 
 	it("exits Study immediately when an editor change makes the cue stale", async () => {

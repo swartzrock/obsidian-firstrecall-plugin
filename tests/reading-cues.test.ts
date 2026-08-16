@@ -36,7 +36,6 @@ function cacheFrom(
 		contentHash: s.contentHash,
 		keywords: ["k1", "k2"],
 		question: `Q:${s.heading}`,
-		confidence: "high" as const,
 		sectionLens: SECTION_LENS,
 		error: null as string | null,
 		...overrides(s, i),
@@ -128,7 +127,7 @@ describe("buildReadingCueMap", () => {
 	it("omits sections that were never generated", () => {
 		const cache = cacheFrom((_s, i) =>
 			i === 1
-				? { error: null, question: null, keywords: null, confidence: null }
+				? { error: null, question: null, keywords: null }
 				: {}
 		);
 		const map = buildReadingCueMap(cache, NOTE);

@@ -39,7 +39,6 @@ describe("local CLI cue batch prompt", () => {
 								{
 									question: "What makes a stack LIFO?",
 									keywords: ["stack", "LIFO"],
-									confidence: "high",
 									sectionLens: {
 										takeaway: "Stacks remove the newest item first.",
 										keyPhrase: "last-in-first-out",
@@ -49,7 +48,6 @@ describe("local CLI cue batch prompt", () => {
 								{
 									question: "What makes a queue FIFO?",
 									keywords: ["queue", "FIFO"],
-									confidence: "high",
 									sectionLens: {
 										takeaway: "Queues remove the oldest item first.",
 										keyPhrase: "first-in-first-out",
@@ -63,7 +61,7 @@ describe("local CLI cue batch prompt", () => {
 		};
 		const provider = wrapCueCraftByokRuntime(runtime, {
 			cueInstructionsOverride: cuePolicy,
-			summaryInstructionsOverride: reviewPolicy,
+			noteBriefInstructionsOverride: reviewPolicy,
 		});
 
 		await expect(
@@ -103,7 +101,6 @@ describe("local CLI cue batch prompt", () => {
 			for (const field of [
 				"question",
 				"keywords",
-				"confidence",
 				"sectionLens",
 				"takeaway",
 				"keyPhrase",
@@ -147,7 +144,7 @@ describe("local CLI cue batch prompt", () => {
 		};
 		const provider = wrapCueCraftByokRuntime(runtime, {
 			cueInstructionsOverride: cuePolicy,
-			summaryInstructionsOverride: "",
+			noteBriefInstructionsOverride: "",
 		});
 
 		await expect(
@@ -167,7 +164,7 @@ describe("local CLI cue batch prompt", () => {
 		);
 	});
 
-	it("does not request or describe cue categories", () => {
+	it("does not request or describe retired cue metadata or categories", () => {
 		const prompt = buildCueBatchPrompt(
 			[
 				{
@@ -183,7 +180,6 @@ describe("local CLI cue batch prompt", () => {
 
 		expect(prompt).toContain('"question"');
 		expect(prompt).toContain('"keywords"');
-		expect(prompt).toContain('"confidence"');
 		expect(prompt).toContain('"sectionLens"');
 		expect(prompt).not.toContain('"category"');
 		expect(prompt).not.toContain("sequences");
@@ -198,7 +194,6 @@ describe("local CLI cue batch prompt", () => {
 		expect(schema.properties.cues.items.required).toEqual([
 			"question",
 			"keywords",
-			"confidence",
 			"sectionLens",
 		]);
 	});
@@ -210,21 +205,17 @@ describe("local CLI cue batch prompt", () => {
 					{
 						question: "Q1?",
 						keywords: ["a", "b"],
-						confidence: "high",
 						category: null,
 					},
 					{
 						question: "Q2?",
 						keywords: ["c", "d"],
-						confidence: "medium",
 						category: "sequences",
 					},
 					{
 						question: "Q3?",
 						keywords: ["e", "f"],
-						confidence: "low",
 						category: "unrelated",
-						rationale: "The section is sparse.",
 					},
 				],
 			}),
@@ -237,22 +228,18 @@ describe("local CLI cue batch prompt", () => {
 					cue: {
 						question: "Q1?",
 						keywords: ["a", "b"],
-						confidence: "high",
 					},
 				},
 				{
 					cue: {
 						question: "Q2?",
 						keywords: ["c", "d"],
-						confidence: "medium",
 					},
 				},
 				{
 					cue: {
 						question: "Q3?",
 						keywords: ["e", "f"],
-						confidence: "low",
-						rationale: "The section is sparse.",
 					},
 				},
 			],

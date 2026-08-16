@@ -21,8 +21,6 @@ function studyCache() {
 					contentHash: section.contentHash,
 					keywords: ["tools"],
 					question: "What do agents use?",
-					confidence: "high",
-					rationale: null,
 					sectionLens: null,
 					error: null,
 				},

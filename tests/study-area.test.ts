@@ -97,8 +97,6 @@ function buildCache(markdown = NOTE): NoteCache {
 		contentHash: section.contentHash,
 		keywords: ["cell"],
 		question: `Q:${section.heading}`,
-		confidence: "high" as const,
-		rationale: null,
 		error: null,
 	}));
 	const result: NoteGenerationResult = {

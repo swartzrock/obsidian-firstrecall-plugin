@@ -4,11 +4,9 @@ import type {
 	ByokProviderStatus,
 } from "@swartzrock/byok-runtime";
 import type { CueGenerationOptions } from "./cue-generation";
-import type { CueOutput, NoteBriefOutput, SummaryOutput } from "./schemas";
+import type { CueOutput, NoteBriefOutput } from "./schemas";
 
-export type CueCraftCueConfidence = "high" | "medium" | "low";
 export type CueCraftCueOutput = CueOutput;
-export type CueCraftSummaryOutput = SummaryOutput;
 export type CueCraftNoteBriefOutput = NoteBriefOutput;
 
 export interface CueCraftCueInput {
@@ -22,12 +20,6 @@ export interface CueCraftCueInput {
 export interface CueCraftCueBatchResult {
 	cue?: CueOutput;
 	error?: string;
-}
-
-export interface CueCraftSummaryInput {
-	noteTitle: string;
-	fullText: string;
-	sectionQuestions: string[];
 }
 
 export interface CueCraftNoteBriefSectionInput {
@@ -58,10 +50,6 @@ export interface CueCraftCueProviderRuntime {
 		inputs: CueCraftCueInput[],
 		signal?: AbortSignal
 	): Promise<CueCraftCueBatchResult[]>;
-	generateSummary(
-		input: CueCraftSummaryInput,
-		signal?: AbortSignal
-	): Promise<SummaryOutput>;
 	generateNoteBrief?(
 		input: CueCraftNoteBriefInput,
 		signal?: AbortSignal

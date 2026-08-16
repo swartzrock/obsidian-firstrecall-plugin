@@ -1,5 +1,10 @@
 # CueCraft v1.0 — User Stories & Acceptance Criteria
 
+> **Historical baseline:** These stories preserve the original v1.0 acceptance contract and are not
+> current product guidance. See the [README](../README.md) and
+> [current progress entry](./CueCraft-Progress.md#current-product-state--2026-08-15) for the shipped
+> generation, display, and in-note Study contract.
+
 Formal, testable requirements for the v1.0 MVP defined in
 [`CueCraft-MVP-Scope.md`](./CueCraft-MVP-Scope.md).
 

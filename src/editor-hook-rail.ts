@@ -1,8 +1,4 @@
-import {
-	buildShortFormHookTitle,
-	shortFormHookTitleDensity,
-} from "./short-form-hook";
-import type { CueLineData, Confidence } from "./cue-extension";
+import type { CueLineData } from "./cue-extension";
 import type { EditorCueDisplay } from "./editor-cue-display";
 import type { SectionLens } from "./schemas";
 
@@ -24,7 +20,6 @@ export interface EditorHookCard {
 	hookTitle: string;
 	originalQuestion: string;
 	keywords: string[];
-	confidence: Confidence | null;
 	sectionLens: SectionLens | null;
 	error: string | null;
 	titleDensity: "standard" | "long" | "dense";
@@ -56,10 +51,9 @@ export function buildEditorHookCard(
 		hookTitle,
 		originalQuestion: cue.question,
 		keywords: cue.keywords,
-		confidence: cue.confidence,
 		sectionLens: cue.sectionLens,
 		error: cue.error,
-		titleDensity: shortFormHookTitleDensity(hookTitle),
+		titleDensity: editorHookTitleDensity(hookTitle),
 		state,
 		tone: index % 2 === 0 ? "warm" : "cool",
 		gradientIndex: index % 3,
@@ -72,5 +66,25 @@ export function buildEditorHookCard(
 function editorHookTitle(cue: CueLineData): string {
 	return cue.error
 		? "Cue unavailable"
-		: buildShortFormHookTitle(cue.question) ?? cue.heading;
+		: buildEditorHookTitle(cue.question) ?? cue.heading;
+}
+
+export function buildEditorHookTitle(question: string | null): string | null {
+	const normalized = question
+		?.replace(/\s+/g, " ")
+		.replace(/\s+([,.;:!?])/g, "$1")
+		.trim();
+	if (!normalized) return null;
+	const withoutTerminalQuestion = normalized.replace(/[?\s]+$/g, "").trim();
+	return withoutTerminalQuestion || normalized;
+}
+
+export function editorHookTitleDensity(
+	title: string
+): "standard" | "long" | "dense" {
+	const normalized = title.replace(/\s+/g, " ").trim();
+	const wordCount = normalized ? normalized.split(" ").length : 0;
+	if (normalized.length > 88 || wordCount > 13) return "dense";
+	if (normalized.length > 66 || wordCount > 10) return "long";
+	return "standard";
 }

@@ -25,7 +25,6 @@ function cacheFrom(
 		contentHash: s.contentHash,
 		keywords: ["k1", "k2"],
 		question: `Q:${s.heading}`,
-		confidence: "high" as const,
 		error: null as string | null,
 		...overrides(s, i),
 	}));

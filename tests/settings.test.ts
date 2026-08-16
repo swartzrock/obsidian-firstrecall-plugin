@@ -7,11 +7,6 @@ import {
 	normalizeAutoGenerationSettleDelaySeconds,
 } from "../src/auto-generation-delay";
 import {
-	DEFAULT_CORNELL_DISPLAY_MODE,
-	cornellDisplayModeOption,
-	isCornellDisplayMode,
-} from "../src/cornell-display";
-import {
 	DEFAULT_EDITOR_CUE_DISPLAY,
 	EDITOR_CUE_DISPLAY_OPTIONS,
 	editorCueDisplayOption,
@@ -22,11 +17,8 @@ import {
 	DEFAULT_SHOW_SECTION_LENS,
 } from "../src/review-surfaces";
 import { DEFAULT_CUE_INSTRUCTIONS } from "../src/cue-instructions";
-import {
-	cornellViewSettingsSummary,
-	editingViewSettingsSummary,
-} from "../src/settings-summaries";
-import { DEFAULT_SUMMARY_INSTRUCTIONS } from "../src/summary-instructions";
+import { editingViewSettingsSummary } from "../src/settings-summaries";
+import { DEFAULT_NOTE_BRIEF_INSTRUCTIONS } from "../src/note-brief-instructions";
 
 function createObsidianMock() {
 	class MockPluginSettingTab {
@@ -268,7 +260,6 @@ type MockPlugin = {
 	settings: CueCraftSettings;
 	saveSettings: ReturnType<typeof vi.fn>;
 	refreshEditorCues: ReturnType<typeof vi.fn>;
-	refreshCornellViews: ReturnType<typeof vi.fn>;
 	refreshReadingModeSurface: ReturnType<typeof vi.fn>;
 	noteCueSettingsChanged: ReturnType<typeof vi.fn>;
 	promptForCueSettingsRegeneration: ReturnType<typeof vi.fn>;
@@ -353,7 +344,6 @@ async function setupSettingsTab(): Promise<{
 		settings: structuredClone(DEFAULT_SETTINGS),
 		saveSettings: vi.fn(async () => undefined),
 		refreshEditorCues: vi.fn(),
-		refreshCornellViews: vi.fn(),
 		refreshReadingModeSurface: vi.fn(),
 		noteCueSettingsChanged: vi.fn(),
 		promptForCueSettingsRegeneration: vi.fn(),
@@ -484,12 +474,15 @@ describe("settings defaults", () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
 		expect(DEFAULT_SETTINGS.cueInstructionsOverride).toBe("");
-		expect(DEFAULT_SETTINGS.summaryInstructionsOverride).toBe("");
+		expect(DEFAULT_SETTINGS.noteBriefInstructionsOverride).toBe("");
+		expect(DEFAULT_SETTINGS).not.toHaveProperty("summaryInstructionsOverride");
+		expect(DEFAULT_SETTINGS).not.toHaveProperty("autoSummary");
 	});
 
-	it("normalizes an invalid stored Cue override without altering a legacy Summary override", async () => {
+	it("normalizes an invalid Cue override and migrates a legacy Summary override", async () => {
 		const { default: CueCraftPlugin } = await import("../src/main");
 		const legacySummaryOverride = "  Preserve this legacy Summary policy.  ";
+		const saveData = vi.fn(async () => {});
 		const missing = async () => ({
 			ok: false as const,
 			reason: "missing-credential" as const,
@@ -509,6 +502,7 @@ describe("settings defaults", () => {
 					summaryInstructionsOverride: legacySummaryOverride,
 				},
 			})),
+			saveData,
 		});
 
 		await (
@@ -516,9 +510,11 @@ describe("settings defaults", () => {
 		).loadPluginData();
 
 		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.summaryInstructionsOverride).toBe(
+		expect(plugin.settings.noteBriefInstructionsOverride).toBe(
 			legacySummaryOverride
 		);
+		expect(plugin.settings).not.toHaveProperty("summaryInstructionsOverride");
+		expect(saveData).toHaveBeenCalledTimes(1);
 	});
 
 	it("defaults auto-generation settle delay to 10 seconds", () => {
@@ -562,11 +558,19 @@ describe("settings defaults", () => {
 		expect("readingModeDisplay" in DEFAULT_SETTINGS).toBe(false);
 	});
 
-	it("defaults Cornell display mode to the classic Cornell view", () => {
-		expect(DEFAULT_CORNELL_DISPLAY_MODE).toBe("classic");
-		expect(cornellDisplayModeOption(DEFAULT_CORNELL_DISPLAY_MODE).label).toBe(
-			"Cornell"
-		);
+	it("contains no dedicated Cornell pane settings", async () => {
+		const { DEFAULT_SETTINGS } = await loadSettingsModule();
+		for (const key of [
+			"cornellDisplayMode",
+			"cornellStyle",
+			"cueColumnWidth",
+			"cueAccent",
+			"showCueBorder",
+			"compactChips",
+			"foldCueColumnOnMobile",
+		]) {
+			expect(DEFAULT_SETTINGS).not.toHaveProperty(key);
+		}
 	});
 
 	it("shows every Editing View cue section by default", async () => {
@@ -587,14 +591,6 @@ describe("settings defaults", () => {
 	it("defaults generated review surfaces to visible", () => {
 		expect(DEFAULT_SHOW_SECTION_LENS).toBe(true);
 		expect(DEFAULT_SHOW_NOTE_BRIEF).toBe(true);
-	});
-
-	it("validates persisted Cornell display mode values", () => {
-		expect(isCornellDisplayMode("classic")).toBe(true);
-		expect(isCornellDisplayMode("hook")).toBe(true);
-		for (const bad of ["", "hooks", "study", null, undefined, 1, {}]) {
-			expect(isCornellDisplayMode(bad)).toBe(false);
-		}
 	});
 
 	it("validates persisted editor cue display values", () => {
@@ -626,30 +622,8 @@ describe("settings defaults", () => {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}
 	});
-	it("summarizes Cornell View settings without editor-only state", () => {
+	it("summarizes Editing View settings", () => {
 		const settings = {
-			cornellDisplayMode: "hook",
-			cornellStyle: "legal-pad",
-			cueColumnWidth: "wide",
-			cueFontSize: "large",
-			editorCueDisplay: "hook-minimap",
-			showRailSummary: false,
-			showRailQuestions: false,
-			showRailSupportTerms: false,
-		} as const;
-
-		expect(cornellViewSettingsSummary(settings)).toBe(
-			"Hook rail · Legal Pad · wide width · large text"
-		);
-		expect(cornellViewSettingsSummary(settings)).not.toContain("Hook minimap");
-		expect(cornellViewSettingsSummary(settings)).not.toContain("questions");
-	});
-
-	it("summarizes Editing View settings without Cornell-only state", () => {
-		const settings = {
-			cornellDisplayMode: "hook",
-			cornellStyle: "legal-pad",
-			cueColumnWidth: "narrow",
 			cueFontSize: "large",
 			editorCueDisplay: "hook-minimap",
 			showRailSummary: false,
@@ -664,18 +638,18 @@ describe("settings defaults", () => {
 		expect(editingViewSettingsSummary(settings)).not.toContain("width");
 	});
 
-	it("renders Cornell View and Editing View settings destinations", async () => {
+	it("renders Editing View without a dedicated Cornell View destination", async () => {
 		const { tab } = await setupSettingsTab();
 
 		tab.display();
 
 		const text = settingText(tab.containerEl);
-		expect(text).toContain("Cornell View");
+		expect(text).not.toContain("Cornell View");
 		expect(text).toContain("Editing View");
 		expect(text).not.toContain("Appearance");
 	});
 
-	it("renders independent Cue and Study review policies without persisting defaults", async () => {
+	it("renders independent Cue and Note Brief policies without persisting defaults", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 
 		tab.display();
@@ -685,14 +659,14 @@ describe("settings defaults", () => {
 			'[data-setting-name="Cue system prompt"]'
 		);
 		const reviewSetting = tab.containerEl.querySelector<HTMLElement>(
-			'[data-setting-name="Summary/Note Brief system prompt"]'
+			'[data-setting-name="Note Brief system prompt"]'
 		);
 		expect(cueSetting?.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe(
 			DEFAULT_CUE_INSTRUCTIONS
 		);
 		expect(
 			reviewSetting?.querySelector<HTMLTextAreaElement>("textarea")?.value
-		).toBe(DEFAULT_SUMMARY_INSTRUCTIONS);
+		).toBe(DEFAULT_NOTE_BRIEF_INSTRUCTIONS);
 		expect(cueSetting?.textContent).toContain(
 			"Controls the content, emphasis, tone, wording, and teaching style of section cues."
 		);
@@ -700,10 +674,10 @@ describe("settings defaults", () => {
 			"CueCraft still requires valid Cue and Section Lens fields."
 		);
 		expect(reviewSetting?.textContent).toContain(
-			"Controls the content, emphasis, tone, wording, and teaching style of Summary and Note Brief."
+			"Controls the content, emphasis, tone, wording, and teaching style of Note Brief."
 		);
 		expect(reviewSetting?.textContent).toContain(
-			"CueCraft still requires valid Summary and Note Brief fields."
+			"CueCraft still requires valid Note Brief fields."
 		);
 		expect(
 			cueSetting?.querySelector<HTMLTextAreaElement>(
@@ -712,30 +686,27 @@ describe("settings defaults", () => {
 		).not.toBeNull();
 		expect(
 			reviewSetting?.querySelector<HTMLTextAreaElement>(
-				'textarea[aria-label="Summary/Note Brief system prompt"]'
+				'textarea[aria-label="Note Brief system prompt"]'
 			)
 		).not.toBeNull();
 		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.summaryInstructionsOverride).toBe("");
+		expect(plugin.settings.noteBriefInstructionsOverride).toBe("");
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
 
-	it("shows an existing Summary customization under the shared review label", async () => {
+	it("shows an existing Note Brief customization under its current label", async () => {
 		const { tab, plugin } = await setupSettingsTab();
-		const legacyCustomization = "  Preserve this legacy Summary policy.  ";
-		plugin.settings.summaryInstructionsOverride = legacyCustomization;
+		const customization = "  Preserve this Note Brief policy.  ";
+		plugin.settings.noteBriefInstructionsOverride = customization;
 
 		tab.display();
 		openSettingsCard(tab, "Cue generation");
 
 		const setting = tab.containerEl.querySelector<HTMLElement>(
-			'[data-setting-name="Summary/Note Brief system prompt"]'
+			'[data-setting-name="Note Brief system prompt"]'
 		);
 		expect(setting?.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe(
-			legacyCustomization
-		);
-		expect(setting?.textContent).toContain(
-			"An existing Summary customization now guides both Summary and Note Brief."
+			customization
 		);
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
@@ -755,11 +726,11 @@ describe("settings defaults", () => {
 		);
 		await changeTextArea(
 			tab.containerEl,
-			"Summary/Note Brief system prompt",
+			"Note Brief system prompt",
 			reviewCustomization
 		);
 		expect(plugin.settings.cueInstructionsOverride).toBe(cueCustomization);
-		expect(plugin.settings.summaryInstructionsOverride).toBe(reviewCustomization);
+		expect(plugin.settings.noteBriefInstructionsOverride).toBe(reviewCustomization);
 
 		await clickSettingButton(
 			tab.containerEl,
@@ -767,15 +738,15 @@ describe("settings defaults", () => {
 			"Reset to default"
 		);
 		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.summaryInstructionsOverride).toBe(reviewCustomization);
+		expect(plugin.settings.noteBriefInstructionsOverride).toBe(reviewCustomization);
 
 		await clickSettingButton(
 			tab.containerEl,
-			"Summary/Note Brief system prompt",
+			"Note Brief system prompt",
 			"Reset to default"
 		);
 		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.summaryInstructionsOverride).toBe("");
+		expect(plugin.settings.noteBriefInstructionsOverride).toBe("");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(4);
 		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(4);
 	});
@@ -798,12 +769,12 @@ describe("settings defaults", () => {
 		);
 		await changeTextArea(
 			tab.containerEl,
-			"Summary/Note Brief system prompt",
+			"Note Brief system prompt",
 			"   \n   "
 		);
 
 		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.summaryInstructionsOverride).toBe("");
+		expect(plugin.settings.noteBriefInstructionsOverride).toBe("");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(3);
 		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(3);
 	});
@@ -811,7 +782,7 @@ describe("settings defaults", () => {
 	it("serializes a cross-control reset and marks it dirty before persistence", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		let finishFirstSave: (() => void) | undefined;
-		plugin.settings.summaryInstructionsOverride = "Compare sections.";
+		plugin.settings.noteBriefInstructionsOverride = "Compare sections.";
 		plugin.saveSettings.mockImplementationOnce(
 			() =>
 				new Promise<void>((resolve) => {
@@ -831,11 +802,11 @@ describe("settings defaults", () => {
 
 		const reviewReset = clickSettingButton(
 			tab.containerEl,
-			"Summary/Note Brief system prompt",
+			"Note Brief system prompt",
 			"Reset to default"
 		);
 		await Promise.resolve();
-		expect(plugin.settings.summaryInstructionsOverride).toBe("");
+		expect(plugin.settings.noteBriefInstructionsOverride).toBe("");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
 		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(2);
 
@@ -871,27 +842,6 @@ describe("settings defaults", () => {
 
 		finishSave?.();
 		await change;
-	});
-
-	it("keeps Cornell View controls Cornell-only", async () => {
-		const { tab } = await setupSettingsTab();
-
-		tab.display();
-		openSettingsCard(tab, "Cornell View");
-
-		const text = settingText(tab.containerEl);
-		expect(text).toContain("Cornell display mode");
-		expect(text).toContain("Cornell view style");
-		expect(text).toContain("Cue column width");
-		expect(text).toContain("Cue font size");
-		expect(text).toContain("Cue accent color");
-		expect(text).toContain("Show cue column border");
-		expect(text).toContain("Compact supports");
-		expect(text).toContain("Fold cue column on mobile");
-		expect(text).not.toContain("Editor cue display");
-		expect(text).not.toContain("Rail card background");
-		expect(text).not.toContain("Show cue questions");
-		expect(text).not.toContain("Show support terms");
 	});
 
 	it("shows Editing View controls for the current editor cue display", async () => {
@@ -944,7 +894,6 @@ describe("settings defaults", () => {
 		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshCornellViews).toHaveBeenCalledTimes(1);
 	});
 
 	it("keeps at least one compact Editing View cue section selected", async () => {
@@ -972,7 +921,6 @@ describe("settings defaults", () => {
 		expect(terms?.title).toBe("At least one cue section is required.");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
-		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
 	});
 
 	it("refreshes editor cues for Editing View display thumbnails", async () => {
@@ -991,7 +939,6 @@ describe("settings defaults", () => {
 		expect(settingText(tab.containerEl)).not.toContain("Rail card background");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
 	});
 
 	it("keeps a dragged width when the Editing View font changes", async () => {
@@ -1003,38 +950,8 @@ describe("settings defaults", () => {
 		await clickThumbnail(tab.containerEl, "Cue font size", "large");
 
 		expect(plugin.settings.editorCueCustomWidthPx).toBe(240);
-		expect(plugin.settings.cueColumnWidth).toBe("medium");
 		expect(plugin.settings.cueFontSize).toBe("large");
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshCornellViews).not.toHaveBeenCalled();
-	});
-
-	it("keeps editor width preferences unchanged when Cornell width changes", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.editorCueCustomWidthPx = 240;
-
-		tab.display();
-		openSettingsCard(tab, "Cornell View");
-		await clickThumbnail(tab.containerEl, "Cue column width", "wide");
-
-		expect(plugin.settings.cueColumnWidth).toBe("wide");
-		expect(plugin.settings.editorCueCustomWidthPx).toBe(240);
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshCornellViews).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshEditorCues).not.toHaveBeenCalled();
-	});
-
-	it("refreshes Cornell views for Cornell View controls", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-
-		tab.display();
-		openSettingsCard(tab, "Cornell View");
-		await changeToggle(tab.containerEl, "Show cue column border", false);
-
-		expect(plugin.settings.showCueBorder).toBe(false);
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshCornellViews).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshEditorCues).not.toHaveBeenCalled();
 	});
 });
