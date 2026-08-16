@@ -2681,25 +2681,28 @@ html.cuecraft-editor-cue-width-resizing * {
 
 .cuecraft-reading-study-controls {
 	position: sticky;
-	top: 8px;
+	top: 0;
 	z-index: 10;
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	width: max-content;
-	max-width: calc(100% - 16px);
-	margin: 8px 8px 8px auto;
-	padding: 5px 6px 5px 10px;
+	gap: 8px;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 40px;
+	margin: 0 0 12px;
+	padding: 6px 12px;
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	box-shadow: var(--shadow-s);
+	border-radius: 0;
 }
 
 .cuecraft-reading-study-progress {
 	white-space: nowrap;
+	color: var(--text-normal);
+	font-variant-numeric: tabular-nums;
+	font-weight: var(--font-medium);
 }
 
 .cuecraft-reading-study-controls button {
@@ -2828,31 +2831,56 @@ html.cuecraft-editor-cue-width-resizing * {
 
 .cuecraft-editor-study-controls {
 	position: sticky;
-	top: 8px;
+	top: 0;
 	z-index: 10;
 	display: flex;
 	align-items: center;
-	gap: 6px;
-	width: max-content;
-	max-width: calc(100% - 16px);
-	margin: 8px 8px 8px auto;
-	padding: 5px 6px 5px 10px;
+	gap: 8px;
+	box-sizing: border-box;
+	width: 100%;
+	min-height: 40px;
+	margin: 0 0 12px;
+	padding: 6px 12px;
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
-	border-radius: var(--radius-s);
-	box-shadow: var(--shadow-s);
+	border-radius: 0;
 }
 
 .cuecraft-editor-study-progress {
 	white-space: nowrap;
+	color: var(--text-normal);
+	font-variant-numeric: tabular-nums;
+	font-weight: var(--font-medium);
 }
 
 .cuecraft-editor-study-controls button {
 	min-height: 26px;
 	padding: 2px 8px;
 	font-size: var(--font-ui-smaller);
+}
+
+.cuecraft-study-progress-track {
+	flex: 1 1 auto;
+	min-width: 40px;
+	height: 3px;
+	overflow: hidden;
+	background: var(--background-modifier-border);
+	border-radius: var(--radius-s);
+}
+
+.cuecraft-study-progress-fill {
+	height: 100%;
+	background: var(--interactive-accent);
+	border-radius: inherit;
+	transition: width 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.cuecraft-study-progress-fill {
+		transition: none;
+	}
 }
 
 /* Study Mode: note-side answers blur until the cue is revealed. */

@@ -319,6 +319,12 @@ describe("syncReadingStudyControls", () => {
 			".cuecraft-reading-study-controls"
 		)!;
 		expect(controls.textContent).toContain("0 / 1 revealed");
+		const progressTrack = controls.querySelector<HTMLElement>(
+			".cuecraft-study-progress-track"
+		)!;
+		expect(progressTrack.getAttribute("role")).toBe("progressbar");
+		expect(progressTrack.getAttribute("aria-valuenow")).toBe("0");
+		expect(progressTrack.getAttribute("aria-valuemax")).toBe("1");
 		const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
 		buttons[0].click();
 		buttons[1].click();

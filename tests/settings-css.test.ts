@@ -495,8 +495,9 @@ describe("settings CSS", () => {
 
 		const controlsRule = ruleFor(".cuecraft-editor-study-controls");
 		expect(controlsRule).toContain("position: sticky");
-		expect(controlsRule).toContain("top: 8px");
+		expect(controlsRule).toContain("top: 0");
 		expect(controlsRule).toContain("z-index: 10");
+		expect(controlsRule).toContain("width: 100%");
 		expect(controlsRule).toContain("background: var(--background-primary)");
 		expect(controlsRule).toContain(
 			"border: 1px solid var(--background-modifier-border)"
@@ -516,8 +517,11 @@ describe("settings CSS", () => {
 
 		const controlsRule = ruleFor(".cuecraft-reading-study-controls");
 		expect(controlsRule).toContain("position: sticky");
-		expect(controlsRule).toContain("top: 8px");
+		expect(controlsRule).toContain("top: 0");
 		expect(controlsRule).toContain("z-index: 10");
+		expect(controlsRule).toContain("width: 100%");
+		expect(styles).toContain(".cuecraft-study-progress-track");
+		expect(styles).toContain(".cuecraft-study-progress-fill");
 
 		const cueRule = ruleFor(".cuecraft-reading-study-cue");
 		expect(cueRule).toContain("cursor: pointer");

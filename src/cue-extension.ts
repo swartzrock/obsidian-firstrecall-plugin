@@ -2144,6 +2144,25 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			progress.setAttribute("aria-live", "polite");
 			progress.textContent = `${snapshot.revealedCount} / ${snapshot.total} revealed`;
 
+			const progressTrack = doc.createElement("div");
+			progressTrack.className = "cuecraft-study-progress-track";
+			progressTrack.setAttribute("role", "progressbar");
+			progressTrack.setAttribute("aria-valuemin", "0");
+			progressTrack.setAttribute("aria-valuemax", String(snapshot.total));
+			progressTrack.setAttribute(
+				"aria-valuenow",
+				String(snapshot.revealedCount)
+			);
+			progressTrack.setAttribute("aria-label", "Sections revealed");
+			const progressFill = doc.createElement("div");
+			progressFill.className = "cuecraft-study-progress-fill";
+			progressFill.style.width = `${
+				snapshot.total > 0
+					? (snapshot.revealedCount / snapshot.total) * 100
+					: 0
+			}%`;
+			progressTrack.append(progressFill);
+
 			const hideAll = doc.createElement("button");
 			hideAll.type = "button";
 			hideAll.className = "cuecraft-editor-study-hide-all";
@@ -2158,7 +2177,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			const onExit = () => projection.exit();
 			hideAll.addEventListener("click", onHideAll);
 			exit.addEventListener("click", onExit);
-			host.append(progress, hideAll, exit);
+			host.append(progress, progressTrack, hideAll, exit);
 			this.view.scrollDOM.prepend(host);
 			this.controlHost = host;
 			this.controlCleanup = () => {

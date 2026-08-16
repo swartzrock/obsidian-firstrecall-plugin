@@ -260,6 +260,15 @@ export function syncReadingStudyControls(
 		progress.className = "cuecraft-reading-study-progress";
 		progress.setAttribute("aria-live", "polite");
 
+		const progressTrack = doc.createElement("div");
+		progressTrack.className = "cuecraft-study-progress-track";
+		progressTrack.setAttribute("role", "progressbar");
+		progressTrack.setAttribute("aria-valuemin", "0");
+		progressTrack.setAttribute("aria-label", "Sections revealed");
+		const progressFill = doc.createElement("div");
+		progressFill.className = "cuecraft-study-progress-fill";
+		progressTrack.append(progressFill);
+
 		const hideAll = doc.createElement("button");
 		hideAll.type = "button";
 		hideAll.className = "cuecraft-reading-study-hide-all";
@@ -278,7 +287,7 @@ export function syncReadingStudyControls(
 		};
 		hideAll.addEventListener("click", onHideAll);
 		exit.addEventListener("click", onExit);
-		host.append(progress, hideAll, exit);
+		host.append(progress, progressTrack, hideAll, exit);
 		container.prepend(host);
 		readingStudyControlState.set(host, {
 			projection,
@@ -302,6 +311,29 @@ export function syncReadingStudyControls(
 	);
 	if (progress) {
 		progress.textContent = `${projection.snapshot.revealedCount} / ${projection.snapshot.total} revealed`;
+	}
+	const progressTrack = host.querySelector<HTMLElement>(
+		".cuecraft-study-progress-track"
+	);
+	if (progressTrack) {
+		progressTrack.setAttribute(
+			"aria-valuemax",
+			String(projection.snapshot.total)
+		);
+		progressTrack.setAttribute(
+			"aria-valuenow",
+			String(projection.snapshot.revealedCount)
+		);
+		const progressFill = progressTrack.querySelector<HTMLElement>(
+			".cuecraft-study-progress-fill"
+		);
+		if (progressFill) {
+			progressFill.style.width = `${
+				projection.snapshot.total > 0
+					? (projection.snapshot.revealedCount / projection.snapshot.total) * 100
+					: 0
+			}%`;
+		}
 	}
 }
 
