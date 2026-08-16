@@ -531,6 +531,9 @@ describe("settings CSS", () => {
 		expect(ruleFor(".cuecraft-study-help")).toContain(
 			"background: var(--background-primary)"
 		);
+		expect(ruleFor(".cuecraft-study-help-copy")).toContain(
+			"flex-direction: column"
+		);
 		expect(ruleFor(".cuecraft-study-progress-track")).toContain(
 			"flex: 1 1 120px"
 		);

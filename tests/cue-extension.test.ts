@@ -484,9 +484,15 @@ describe("Editing View Study projection", () => {
 				expect(controls.textContent).toContain("0 / 1 revealed");
 				const help = controls.firstElementChild as HTMLElement;
 				expect(help.classList.contains("cuecraft-study-help")).toBe(true);
-				expect(help.dataset.icon).toBe("circle-help");
-				expect(help.textContent).toBe(
-					"Use the eye buttons on cue cards to show or hide sections"
+				expect(help.dataset.icon).toBe("eye");
+				expect(
+					help.querySelector(".cuecraft-study-help-title")?.textContent
+				).toBe("Show or hide sections");
+				expect(
+					help.querySelector(".cuecraft-study-help-detail")?.textContent
+				).toBe("Click the eye icon on any cue card.");
+				expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
+					2
 				);
 				const actions = controls.querySelector<HTMLElement>(
 					".cuecraft-study-actions"

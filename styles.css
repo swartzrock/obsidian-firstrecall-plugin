@@ -2898,13 +2898,12 @@ button.cuecraft-study-section-toggle svg {
 	display: inline-flex;
 	flex: 0 1 auto;
 	align-items: center;
-	gap: 5px;
-	max-width: 380px;
+	gap: 7px;
+	max-width: 300px;
 	min-height: 26px;
 	box-sizing: border-box;
-	padding: 3px 8px;
+	padding: 5px 8px;
 	color: var(--text-normal);
-	line-height: 1.25;
 	background: var(--background-primary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-s);
@@ -2912,8 +2911,26 @@ button.cuecraft-study-section-toggle svg {
 
 .cuecraft-study-help svg {
 	flex: 0 0 auto;
-	width: 14px;
-	height: 14px;
+	width: 16px;
+	height: 16px;
+}
+
+.cuecraft-study-help-copy {
+	display: flex;
+	min-width: 0;
+	flex-direction: column;
+	gap: 1px;
+	line-height: 1.2;
+	overflow-wrap: anywhere;
+}
+
+.cuecraft-study-help-title {
+	font-weight: var(--font-medium);
+}
+
+.cuecraft-study-help-detail {
+	color: var(--text-muted);
+	font-size: var(--font-smallest);
 }
 
 .cuecraft-study-action {

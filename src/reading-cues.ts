@@ -254,8 +254,17 @@ export function syncReadingStudyControls(
 
 		const help = doc.createElement("span");
 		help.className = "cuecraft-study-help";
-		setIcon(help, "circle-help");
-		help.append("Use the eye buttons on cue cards to show or hide sections");
+		setIcon(help, "eye");
+		const helpCopy = doc.createElement("span");
+		helpCopy.className = "cuecraft-study-help-copy";
+		const helpTitle = doc.createElement("span");
+		helpTitle.className = "cuecraft-study-help-title";
+		helpTitle.textContent = "Show or hide sections";
+		const helpDetail = doc.createElement("span");
+		helpDetail.className = "cuecraft-study-help-detail";
+		helpDetail.textContent = "Click the eye icon on any cue card.";
+		helpCopy.append(helpTitle, helpDetail);
+		help.append(helpCopy);
 
 		const progress = doc.createElement("span");
 		progress.className = "cuecraft-reading-study-progress";
