@@ -8,7 +8,7 @@
  * the Reading Study DOM projection and control lifecycle.
  */
 
-import { setIcon, setTooltip } from "obsidian";
+import { setIcon } from "obsidian";
 
 import {
 	buildCueLineData,
@@ -261,17 +261,8 @@ export function syncReadingStudyControls(
 
 		const help = doc.createElement("span");
 		help.className = "cuecraft-study-help";
-		help.tabIndex = 0;
-		help.setAttribute(
-			"aria-label",
-			"Click hidden text or a cue card to reveal its section"
-		);
 		setIcon(help, "circle-help");
-		setTooltip(
-			help,
-			"Click hidden text or a cue card to reveal its section",
-			{ placement: "bottom" }
-		);
+		help.append("Click hidden text or a cue card to reveal its section");
 
 		const progress = doc.createElement("span");
 		progress.className = "cuecraft-reading-study-progress";

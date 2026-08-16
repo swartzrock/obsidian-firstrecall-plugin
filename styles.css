@@ -2685,6 +2685,7 @@ html.cuecraft-editor-cue-width-resizing * {
 	z-index: 10;
 	display: flex;
 	flex: 0 0 auto;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 8px;
 	box-sizing: border-box;
@@ -2836,6 +2837,7 @@ html.cuecraft-editor-cue-width-resizing * {
 	z-index: 10;
 	display: flex;
 	flex: 0 0 auto;
+	flex-wrap: wrap;
 	align-items: center;
 	gap: 8px;
 	box-sizing: border-box;
@@ -2865,21 +2867,24 @@ html.cuecraft-editor-cue-width-resizing * {
 
 .cuecraft-study-help {
 	display: inline-flex;
-	flex: 0 0 auto;
+	flex: 0 1 auto;
 	align-items: center;
-	justify-content: center;
-	color: var(--text-muted);
-	cursor: help;
+	gap: 5px;
+	max-width: 380px;
+	min-height: 26px;
+	box-sizing: border-box;
+	padding: 3px 8px;
+	color: var(--text-normal);
+	line-height: 1.25;
+	background: var(--background-primary);
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
 }
 
 .cuecraft-study-help svg {
-	width: 15px;
-	height: 15px;
-}
-
-.cuecraft-study-help:focus-visible {
-	outline: 2px solid var(--interactive-accent);
-	outline-offset: 2px;
+	flex: 0 0 auto;
+	width: 14px;
+	height: 14px;
 }
 
 .cuecraft-study-action {
@@ -2895,8 +2900,9 @@ html.cuecraft-editor-cue-width-resizing * {
 }
 
 .cuecraft-study-progress-track {
-	flex: 1 1 auto;
-	min-width: 40px;
+	flex: 0 1 180px;
+	width: 180px;
+	min-width: 80px;
 	height: 3px;
 	overflow: hidden;
 	background: var(--background-modifier-border);

@@ -333,11 +333,7 @@ describe("syncReadingStudyControls", () => {
 		const help = controls.firstElementChild as HTMLElement;
 		expect(help.classList.contains("cuecraft-study-help")).toBe(true);
 		expect(help.dataset.icon).toBe("circle-help");
-		expect(help.dataset.tooltip).toBe(
-			"Click hidden text or a cue card to reveal its section"
-		);
-		expect(help.dataset.tooltipPlacement).toBe("bottom");
-		expect(help.getAttribute("aria-label")).toBe(
+		expect(help.textContent).toBe(
 			"Click hidden text or a cue card to reveal its section"
 		);
 		const progressTrack = controls.querySelector<HTMLElement>(

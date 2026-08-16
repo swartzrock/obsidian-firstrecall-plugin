@@ -15,7 +15,7 @@ import {
 	gutter,
 } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
-import { setIcon, setTooltip } from "obsidian";
+import { setIcon } from "obsidian";
 import type { NoteCache } from "./cache";
 import {
 	buildEditorHookCard,
@@ -2141,17 +2141,8 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 
 			const help = doc.createElement("span");
 			help.className = "cuecraft-study-help";
-			help.tabIndex = 0;
-			help.setAttribute(
-				"aria-label",
-				"Click hidden text or a cue card to reveal its section"
-			);
 			setIcon(help, "circle-help");
-			setTooltip(
-				help,
-				"Click hidden text or a cue card to reveal its section",
-				{ placement: "bottom" }
-			);
+			help.append("Click hidden text or a cue card to reveal its section");
 
 			const progress = doc.createElement("span");
 			progress.className = "cuecraft-editor-study-progress";
