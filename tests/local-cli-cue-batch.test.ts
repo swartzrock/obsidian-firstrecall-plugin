@@ -183,6 +183,51 @@ describe("local CLI cue batch prompt", () => {
 		expect(calls[1].prompt).toContain("Previous reply:\nstill not json");
 	});
 
+	it("repairs item-level validation failures once", async () => {
+		const calls: ByokTextGenerationInput[] = [];
+		const validCue = {
+			question: "What makes a queue FIFO?",
+			keywords: ["queue", "FIFO"],
+			sectionLens: {
+				takeaway: "Queues remove the oldest item first.",
+				keyPhrase: "first-in-first-out",
+				explanation: "The phrase defines queue order.",
+			},
+		};
+		const runtime: ByokProviderRuntime = {
+			id: "codex-cli",
+			label: "Fake Codex CLI",
+			requiresNetwork: true,
+			requiresDownload: false,
+			testConnection: async () => ({ ok: true, message: "Connected." }),
+			listModels: async () => [],
+			generateText: async (input) => {
+				calls.push(input);
+				return {
+					text: JSON.stringify({
+						cues: calls.length === 1 ? [{}] : [validCue],
+					}),
+				};
+			},
+		};
+		const provider = wrapCueCraftByokRuntime(runtime);
+
+		await expect(
+			provider.generateCues?.([
+				{
+					heading: "Queues",
+					content: "A queue removes the oldest item first.",
+					options: { questionType: "conceptual" },
+				},
+			])
+		).resolves.toEqual([{ cue: validCue }]);
+		expect(calls).toHaveLength(2);
+		expect(calls[1].prompt).toContain(
+			"Your previous reply could not be validated (section 1:"
+		);
+		expect(calls[1].prompt).toContain("Previous reply:");
+	});
+
 	it("does not request or describe retired cue metadata or categories", () => {
 		const prompt = buildCueBatchPrompt([
 				{

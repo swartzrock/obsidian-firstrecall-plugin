@@ -1,21 +1,7 @@
 /**
  * The single Question-generation choice shared by persistence, prompts, and UI.
  */
-export type QuestionType =
-	| "conceptual"
-	| "direct-recall"
-	| "exam-practice"
-	| "vocabulary-check"
-	| "socratic-reasoning";
-
-export interface QuestionTypeInfo {
-	id: QuestionType;
-	label: string;
-	description: string;
-	guidance: string;
-}
-
-export const QUESTION_TYPES: readonly QuestionTypeInfo[] = [
+export const QUESTION_TYPES = [
 	{
 		id: "conceptual",
 		label: "Conceptual question",
@@ -53,7 +39,10 @@ export const QUESTION_TYPES: readonly QuestionTypeInfo[] = [
 	},
 ] as const;
 
-export const DEFAULT_QUESTION_TYPE: QuestionType = "conceptual";
+export type QuestionType = (typeof QUESTION_TYPES)[number]["id"];
+export type QuestionTypeInfo = (typeof QUESTION_TYPES)[number];
+
+export const DEFAULT_QUESTION_TYPE: QuestionType = QUESTION_TYPES[0].id;
 
 /** Narrow an arbitrary value to a supported Question type. */
 export function isQuestionType(value: unknown): value is QuestionType {

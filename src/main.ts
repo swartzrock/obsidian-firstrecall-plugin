@@ -17,6 +17,7 @@ import {
 	DEFAULT_SETTINGS,
 } from "./settings";
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
+import { cueFontSizeClass } from "./cornell-layout";
 import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import {
 	normalizeAutoGenerationSettleDelaySeconds,
@@ -490,11 +491,11 @@ export default class CueCraftPlugin extends Plugin {
 		await write;
 	}
 
-	async saveSettings(): Promise<void> {
+	async saveSettings(options: { refreshReviewSurfaces?: boolean } = {}): Promise<void> {
 		this.data.settings = this.settings;
 		await this.persistPluginData();
 		this.updateRibbonLabel();
-		this.refreshStudyProjections();
+		if (options.refreshReviewSurfaces !== false) this.refreshStudyProjections();
 		void this.updateStatusForFile(this.app.workspace.getActiveFile());
 	}
 
@@ -1001,14 +1002,11 @@ export default class CueCraftPlugin extends Plugin {
 	/** Force every open Reading view to rerender its post-processed cue surface. */
 	refreshReadingModeSurface(): void {
 		this.readingCueMemo = null;
-		const seen = new Set<MarkdownView>();
-		this.app.workspace.iterateAllLeaves((leaf) => {
-			if (leaf.view.getViewType() !== "markdown") return;
+		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
 			const view = leaf.view as MarkdownView;
-			if (seen.has(view) || view.getMode() !== "preview") return;
-			seen.add(view);
+			if (view.getMode() !== "preview") continue;
 			view.previewMode.rerender(true);
-		});
+		}
 	}
 
 	private refreshActiveReadingView(file: TFile): void {
@@ -1313,12 +1311,9 @@ export default class CueCraftPlugin extends Plugin {
 	 * resolved line->cue map for the current (path, source-text) to avoid
 	 * re-parsing for every heading element.
 	 */
-	private readingCueMemo: {
+	private readingCueMemo: ReadingCueVisibility & {
 		path: string;
 		text: string;
-		showSummary: boolean;
-		showQuestion: boolean;
-		showTerms: boolean;
 		map: Map<number, CueLineData>;
 	} | null = null;
 
@@ -1394,9 +1389,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		const noteBriefAnchorLine = noteBriefState.showNoteBrief
-			? [...buildReadingCueMap(cache, firstInfo?.text ?? "").keys()].sort(
-					(a, b) => a - b
-				)[0]
+			? buildReadingCueMap(cache, firstInfo?.text ?? "").keys().next().value
 			: undefined;
 
 		for (const heading of headings) {
@@ -1542,6 +1535,7 @@ export default class CueCraftPlugin extends Plugin {
 		visibility: ReadingCueVisibility
 	): HTMLElement {
 		const root = createDiv({ cls: "cuecraft-cue cuecraft-cue-reading" });
+		root.addClass(cueFontSizeClass(this.settings.cueFontSize));
 		root.dataset.cuecraftSectionId = cue.sectionId;
 		root.setAttr("role", "note");
 		if (cue.error) {
@@ -1553,11 +1547,11 @@ export default class CueCraftPlugin extends Plugin {
 			});
 			return root;
 		}
-		if (visibility.showSummary) appendSectionLens(root, cue.sectionLens);
+		appendSectionLens(root, cue.sectionLens);
 		if (visibility.showQuestion) {
 			root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
 		}
-		if (visibility.showTerms && cue.keywords.length) {
+		if (cue.keywords.length) {
 			root.createDiv({
 				cls: "cuecraft-cue-keywords",
 				text: cue.keywords.join(" \u00b7 "),

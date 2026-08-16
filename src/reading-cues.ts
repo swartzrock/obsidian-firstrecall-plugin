@@ -26,11 +26,7 @@ export interface ReadingCueDisplayState {
 	showInlineCues: boolean;
 }
 
-export interface ReadingCueVisibility {
-	showSummary: boolean;
-	showQuestion: boolean;
-	showTerms: boolean;
-}
+export type ReadingCueVisibility = Required<CueLineDataOptions>;
 
 export interface ReadingNoteBriefDisplayState {
 	showNoteBrief: boolean;

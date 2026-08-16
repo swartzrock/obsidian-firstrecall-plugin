@@ -1,9 +1,8 @@
 import { composeSectionCueBatchPrompt } from "./cue-instructions";
+import { DEFAULT_QUESTION_TYPE } from "./cue-generation";
 import type { CueCraftCueBatchResult, CueCraftCueInput } from "./cue-provider";
 import { validateCueBatch } from "./schemas";
-import {
-	SECTION_LENS_JSON_SCHEMA,
-} from "./review-artifact-prompts";
+import { SECTION_LENS_JSON_SCHEMA } from "./review-artifact-prompts";
 
 const CUE_BATCH_ITEM_SCHEMA = {
 	type: "object",
@@ -51,7 +50,7 @@ export function buildCueBatchPrompt(
 		.join("\n---\n");
 
 	return composeSectionCueBatchPrompt({
-		questionType: first?.options?.questionType ?? "conceptual",
+		questionType: first?.options?.questionType ?? DEFAULT_QUESTION_TYPE,
 		sectionCount: inputs.length,
 		sectionList: sections,
 		noteContext: first?.noteContext ?? "",

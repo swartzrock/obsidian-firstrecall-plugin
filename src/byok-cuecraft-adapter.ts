@@ -23,6 +23,7 @@ import {
 	recordProviderConnectionSuccess,
 } from "./byok-setup-status";
 import { sortFetchedModelIds } from "./byok-model-options";
+import { DEFAULT_QUESTION_TYPE } from "./cue-generation";
 import {
 	buildSectionCueInstructionsTemplate,
 	buildSectionCuePrompt,
@@ -364,11 +365,17 @@ async function generateCueBatchFromTextProvider(
 		signal
 	);
 	let result = parseCueBatch(raw.text, inputs.length);
-	if (typeof result === "string") {
-		debugModelTextFailure("cueBatch", "initial", raw.text, result);
+	const itemErrors = (batch: Exclude<typeof result, string>) =>
+		batch.results.flatMap((item, index) =>
+			item.error ? [`section ${index + 1}: ${item.error}`] : []
+		);
+	const initialError =
+		typeof result === "string" ? result : itemErrors(result).join("; ");
+	if (initialError) {
+		debugModelTextFailure("cueBatch", "initial", raw.text, initialError);
 		const repairPrompt =
 			basePrompt +
-			`\nYour previous reply could not be validated (${result}).\n` +
+			`\nYour previous reply could not be validated (${initialError}).\n` +
 			`Previous reply:\n${raw.text}\n` +
 			`Reply again with ONLY the corrected JSON object.`;
 		const retry = await runtime.generateText(
@@ -380,8 +387,10 @@ async function generateCueBatchFromTextProvider(
 			signal
 		);
 		result = parseCueBatch(retry.text, inputs.length);
-		if (typeof result === "string") {
-			debugModelTextFailure("cueBatch", "repair", retry.text, result);
+		const repairError =
+			typeof result === "string" ? result : itemErrors(result).join("; ");
+		if (repairError) {
+			debugModelTextFailure("cueBatch", "repair", retry.text, repairError);
 		}
 	}
 	if (typeof result === "string") {
@@ -423,7 +432,7 @@ export function wrapCueCraftByokRuntime(
 			logSystemPrompt(
 				"Cue Batch",
 				buildSectionCueInstructionsTemplate(
-					inputs[0]?.options.questionType ?? "conceptual",
+					inputs[0]?.options.questionType ?? DEFAULT_QUESTION_TYPE,
 					"batch"
 				)
 			);

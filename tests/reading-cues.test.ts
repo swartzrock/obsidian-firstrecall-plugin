@@ -504,6 +504,7 @@ describe("Reading postprocessor Study plumbing", () => {
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			settings: {
 				...DEFAULT_SETTINGS,
+				cueFontSize: "large",
 				showSummary: false,
 				showQuestion: false,
 				showTerms: false,
@@ -552,6 +553,9 @@ describe("Reading postprocessor Study plumbing", () => {
 		render();
 
 		expect(block.querySelectorAll(".cuecraft-cue-reading")).toHaveLength(3);
+		expect(
+			block.querySelectorAll(".cuecraft-cue-reading.cuecraft-cuefont-large")
+		).toHaveLength(3);
 		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
 			"true"
 		);

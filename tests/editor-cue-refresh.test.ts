@@ -209,8 +209,7 @@ describe("Editing View cue refresh", () => {
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			app: {
 				workspace: {
-					iterateAllLeaves: (visit: (leaf: (typeof leaves)[number]) => void) =>
-						leaves.forEach(visit),
+					getLeavesOfType: () => leaves,
 				},
 			},
 		});

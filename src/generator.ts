@@ -1,7 +1,6 @@
 import { cueEligibleSections, parseSections } from "./parser";
 import {
-	DEFAULT_CUE_GENERATION_OPTIONS,
-	isQuestionType,
+	questionTypeInfo,
 	type CueGenerationOptions,
 } from "./cue-generation";
 import type {
@@ -99,9 +98,7 @@ export function resolveGenerationOptions(
 	options?: Partial<CueGenerationOptions>
 ): CueGenerationOptions {
 	return {
-		questionType: isQuestionType(options?.questionType)
-			? options.questionType
-			: DEFAULT_CUE_GENERATION_OPTIONS.questionType,
+		questionType: questionTypeInfo(options?.questionType).id,
 	};
 }
 

@@ -125,7 +125,11 @@ function createObsidianMock() {
 	}
 
 	class MockToggle {
-		constructor(private input: HTMLInputElement) {}
+		readonly toggleEl: HTMLInputElement;
+
+		constructor(private input: HTMLInputElement) {
+			this.toggleEl = input;
+		}
 
 		setValue(value: boolean): this {
 			this.input.checked = value;
@@ -656,6 +660,9 @@ describe("settings defaults", () => {
 			showTerms: false,
 		});
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(4);
+		for (const call of plugin.saveSettings.mock.calls) {
+			expect(call).toEqual([{ refreshReviewSurfaces: false }]);
+		}
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(4);
 		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledTimes(4);
 		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
@@ -668,6 +675,9 @@ describe("settings defaults", () => {
 		expect(settingText(tab.containerEl)).toContain("Changes Section cue layout in Editing only; Reading remains inline.");
 		expect(settingText(tab.containerEl)).toContain("Applies in Editing and Reading.");
 		await clickThumbnail(tab.containerEl, "Cue display", "cornell");
+		expect(plugin.saveSettings).toHaveBeenLastCalledWith({
+			refreshReviewSurfaces: false,
+		});
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshReadingModeSurface).not.toHaveBeenCalled();
 

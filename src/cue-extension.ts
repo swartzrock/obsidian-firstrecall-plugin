@@ -1538,12 +1538,13 @@ export function buildCueWidgetDecorations(
 
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
-		if (!shouldRenderEditorCue(payload, cue)) continue;
+		const studyOptions = cueStudyRenderOptions(payload, cue);
+		if (!shouldRenderEditorCue(payload, cue, studyOptions)) continue;
 		const headingLine = doc.line(cue.line);
 		const cueOptions = {
 			...options,
 			...cueCollapseRenderOptions(payload, cue),
-			...cueStudyRenderOptions(payload, cue),
+			...studyOptions,
 		};
 		// Block widget rendered on its own line just after the heading.
 		ranges.push(
@@ -1570,13 +1571,14 @@ export function buildCueGutterMarkers(
 	const options = editorCueRenderOptionsFromPayload(payload);
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
-		if (!shouldRenderEditorCue(payload, cue)) continue;
+		const studyOptions = cueStudyRenderOptions(payload, cue);
+		if (!shouldRenderEditorCue(payload, cue, studyOptions)) continue;
 		const markerLine = doc.line(cue.line);
 		const cardState = cue.line === currentCueLine ? "current" : "upcoming";
 		const markerOptions = {
 			...options,
 			...cueCollapseRenderOptions(payload, cue),
-			...cueStudyRenderOptions(payload, cue),
+			...studyOptions,
 		};
 		builder.add(
 			markerLine.from,
@@ -1662,10 +1664,11 @@ function cueStudyRenderOptions(
 
 function shouldRenderEditorCue(
 	payload: CueEditorRenderState,
-	cue: CueLineData
+	cue: CueLineData,
+	studyOptions: Pick<CueRenderOptions, "showQuestion" | "study">
 ): boolean {
 	if (cue.error) return true;
-	const inStudy = Boolean(cueStudyRenderOptions(payload, cue).study);
+	const inStudy = Boolean(studyOptions.study);
 	return Boolean(
 		((inStudy || (payload.showQuestion ?? true)) &&
 			cue.question.trim().length > 0) ||
