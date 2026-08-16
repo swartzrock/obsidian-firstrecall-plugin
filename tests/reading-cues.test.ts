@@ -220,10 +220,19 @@ describe("projectReadingStudyBlock", () => {
 		const fallbackCue = block.querySelector<HTMLElement>(
 			'[data-cuecraft-section-id="fallback"]'
 		)!;
-		expect(strictCue.getAttribute("role")).toBe("button");
-		expect(strictCue.getAttribute("aria-expanded")).toBe("false");
+		expect(strictCue.getAttribute("role")).toBe("note");
+		expect(strictCue.hasAttribute("tabindex")).toBe(false);
 		expect(fallbackCue.getAttribute("role")).toBe("note");
 		expect(fallbackCue.hasAttribute("tabindex")).toBe(false);
+		const toggle = strictCue.querySelector<HTMLButtonElement>(
+			".cuecraft-study-section-toggle"
+		)!;
+		expect(toggle.getAttribute("aria-label")).toBe("Show section");
+		expect(toggle.getAttribute("aria-pressed")).toBe("false");
+		expect(toggle.dataset.icon).toBe("eye");
+		expect(toggle.dataset.tooltip).toBe("Show section");
+		expect(toggle.dataset.tooltipPlacement).toBe("right");
+		expect(fallbackCue.querySelector(".cuecraft-study-section-toggle")).toBeNull();
 
 		strictCue.click();
 		strictCue.dispatchEvent(
@@ -233,11 +242,10 @@ describe("projectReadingStudyBlock", () => {
 			new dom.window.KeyboardEvent("keydown", { bubbles: true, key: " " })
 		);
 		fallbackCue.click();
-		expect(toggleSection.mock.calls).toEqual([
-			["strict"],
-			["strict"],
-			["strict"],
-		]);
+		expect(toggleSection).not.toHaveBeenCalled();
+		toggle.click();
+		expect(toggleSection).toHaveBeenCalledOnce();
+		expect(toggleSection).toHaveBeenCalledWith("strict");
 
 		const owned = block.querySelector<HTMLElement>("#owned")!;
 		expect(owned.classList.contains("cuecraft-reading-study-answer")).toBe(true);
@@ -277,6 +285,10 @@ describe("projectReadingStudyBlock", () => {
 		});
 		const answer = block.querySelector<HTMLElement>("#answer")!;
 		expect(answer.getAttribute("aria-hidden")).toBe("true");
+		expect(
+			block.querySelector<HTMLButtonElement>(".cuecraft-study-section-toggle")
+				?.getAttribute("aria-label")
+		).toBe("Show section");
 
 		const revealed = {
 			...hidden,
@@ -292,10 +304,17 @@ describe("projectReadingStudyBlock", () => {
 		});
 		expect(answer.classList.contains("is-hidden")).toBe(false);
 		expect(answer.hasAttribute("aria-hidden")).toBe(false);
+		const revealedToggle = block.querySelector<HTMLButtonElement>(
+			".cuecraft-study-section-toggle"
+		)!;
+		expect(revealedToggle.getAttribute("aria-label")).toBe("Hide section");
+		expect(revealedToggle.getAttribute("aria-pressed")).toBe("true");
+		expect(revealedToggle.dataset.icon).toBe("eye-off");
 
 		projectReadingStudyBlock(block, getSectionInfo, null);
 		expect(answer.classList.contains("cuecraft-reading-study-answer")).toBe(false);
 		expect(answer.hasAttribute("aria-hidden")).toBe(false);
+		expect(block.querySelector(".cuecraft-study-section-toggle")).toBeNull();
 	});
 });
 
@@ -334,7 +353,7 @@ describe("syncReadingStudyControls", () => {
 		expect(help.classList.contains("cuecraft-study-help")).toBe(true);
 		expect(help.dataset.icon).toBe("circle-help");
 		expect(help.textContent).toBe(
-			"Click hidden text or a cue card to reveal its section"
+			"Use the eye buttons on cue cards to show or hide sections"
 		);
 		const actions = controls.querySelector<HTMLElement>(
 			".cuecraft-study-actions"
@@ -492,10 +511,16 @@ describe("Reading postprocessor Study plumbing", () => {
 				.visibility.isHidden(path)
 		).toBe(true);
 
+		const firstCueSelector =
+			`[data-cuecraft-section-id="${cache.sections[0].id}"]`;
+		block.querySelector<HTMLElement>(firstCueSelector)?.click();
+		render();
+		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
+			"true"
+		);
 		block
-			.querySelector<HTMLElement>(
-				`[data-cuecraft-section-id="${cache.sections[0].id}"]`
-			)
+			.querySelector<HTMLElement>(firstCueSelector)
+			?.querySelector<HTMLButtonElement>(".cuecraft-study-section-toggle")
 			?.click();
 		render();
 		expect(block.querySelector<HTMLElement>("#a")?.hasAttribute("aria-hidden")).toBe(

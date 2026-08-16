@@ -15,7 +15,7 @@ import {
 	gutter,
 } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
-import { setIcon } from "obsidian";
+import { setIcon, setTooltip } from "obsidian";
 import type { NoteCache } from "./cache";
 import {
 	buildEditorHookCard,
@@ -399,30 +399,26 @@ function applyEditorStudyCueInteraction(
 	element.classList.add("cuecraft-editor-study-cue");
 	element.dataset.studySectionId = study.sectionId;
 	element.dataset.studyState = study.revealed ? "revealed" : "hidden";
-	element.setAttribute("role", "button");
-	element.setAttribute("aria-expanded", String(study.revealed));
-	element.tabIndex = 0;
 
-	const activate = () => study.toggleSection(study.sectionId);
+	const toggle = element.ownerDocument.createElement("button");
+	toggle.type = "button";
+	toggle.className = "cuecraft-study-section-toggle";
+	toggle.dataset.revealed = String(study.revealed);
+	const label = study.revealed ? "Hide section" : "Show section";
+	toggle.setAttribute("aria-label", label);
+	toggle.setAttribute("aria-pressed", String(study.revealed));
+	setIcon(toggle, study.revealed ? "eye-off" : "eye");
+	setTooltip(toggle, label, { placement: "right" });
 	const onClick = (event: MouseEvent) => {
-		const target = event.target as Element | null;
-		if (target !== element && target?.closest("button, a, input, select, textarea")) {
-			return;
-		}
-		activate();
-	};
-	const onKeyDown = (event: KeyboardEvent) => {
-		if (event.target !== element || (event.key !== "Enter" && event.key !== " ")) {
-			return;
-		}
 		event.preventDefault();
-		activate();
+		event.stopPropagation();
+		study.toggleSection(study.sectionId);
 	};
-	element.addEventListener("click", onClick);
-	element.addEventListener("keydown", onKeyDown);
+	toggle.addEventListener("click", onClick);
+	element.append(toggle);
 	editorStudyCueInteractionCleanup.set(element, () => {
-		element.removeEventListener("click", onClick);
-		element.removeEventListener("keydown", onKeyDown);
+		toggle.removeEventListener("click", onClick);
+		toggle.remove();
 		editorStudyCueInteractionCleanup.delete(element);
 	});
 }
@@ -2063,38 +2059,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 		private controlCleanup: (() => void) | null = null;
 		private destroyed = false;
 
-		private readonly onAnswerClick = (event: MouseEvent) => {
-			const target = event.target as Element | null;
-			const answer = target?.closest<HTMLElement>(
-				".cuecraft-editor-study-answer.is-hidden"
-			);
-			if (!answer || !this.view.dom.contains(answer)) return;
-			const projection = this.view.state.field(cueStudyField).projection;
-			const sectionId = answer.dataset.studySectionId;
-			if (
-				!projection?.snapshot.active ||
-				!sectionId ||
-				!projection.snapshot.sections.some(
-					(section) => section.sectionId === sectionId && !section.revealed
-				)
-			) {
-				return;
-			}
-			const position = this.view.posAtCoords({
-				x: event.clientX,
-				y: event.clientY,
-			});
-			if (position === null) return;
-			projection.toggleSection(sectionId);
-			this.view.dispatch({
-				selection: {
-					anchor: Math.max(0, Math.min(position, this.view.state.doc.length)),
-				},
-			});
-		};
-
 		constructor(private readonly view: EditorView) {
-			view.dom.addEventListener("click", this.onAnswerClick);
 			this.renderControls();
 		}
 
@@ -2142,7 +2107,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			const help = doc.createElement("span");
 			help.className = "cuecraft-study-help";
 			setIcon(help, "circle-help");
-			help.append("Click hidden text or a cue card to reveal its section");
+			help.append("Use the eye buttons on cue cards to show or hide sections");
 
 			const progress = doc.createElement("span");
 			progress.className = "cuecraft-editor-study-progress";
@@ -2218,7 +2183,6 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 
 		destroy(): void {
 			this.destroyed = true;
-			this.view.dom.removeEventListener("click", this.onAnswerClick);
 			this.removeControls();
 			this.view.dom.classList.remove("cuecraft-editor-study-active");
 		}

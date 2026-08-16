@@ -335,9 +335,17 @@ describe("Editing View Study projection", () => {
 			const studyCue = rendered[0].dom.querySelector<HTMLElement>(
 				".cuecraft-cue"
 			)!;
-			expect(studyCue.getAttribute("role")).toBe("button");
-			expect(studyCue.getAttribute("aria-expanded")).toBe("false");
+			expect(studyCue.getAttribute("role")).toBe("note");
+			expect(studyCue.hasAttribute("tabindex")).toBe(false);
 			expect(studyCue.dataset.studyState).toBe("hidden");
+			const toggle = studyCue.querySelector<HTMLButtonElement>(
+				".cuecraft-study-section-toggle"
+			)!;
+			expect(toggle.getAttribute("aria-label")).toBe("Show section");
+			expect(toggle.getAttribute("aria-pressed")).toBe("false");
+			expect(toggle.dataset.icon).toBe("eye");
+			expect(toggle.dataset.tooltip).toBe("Show section");
+			expect(toggle.dataset.tooltipPlacement).toBe("right");
 			studyCue.click();
 			studyCue.dispatchEvent(
 				new document.defaultView!.KeyboardEvent("keydown", {
@@ -351,23 +359,42 @@ describe("Editing View Study projection", () => {
 					key: " ",
 				})
 			);
-			expect(toggleSection.mock.calls).toEqual([
-				["section-terms"],
-				["section-terms"],
-				["section-terms"],
-			]);
+			expect(toggleSection).not.toHaveBeenCalled();
+			toggle.click();
+			expect(toggleSection).toHaveBeenCalledOnce();
+			expect(toggleSection).toHaveBeenCalledWith("section-terms");
 
 			for (const item of rendered.slice(1)) {
 				const root = item.dom.querySelector<HTMLElement>(".cuecraft-cue")!;
 				expect(root.getAttribute("role")).toBe("note");
-				expect(root.hasAttribute("aria-expanded")).toBe(false);
+				expect(root.querySelector(".cuecraft-study-section-toggle")).toBeNull();
 				root.click();
 			}
-			expect(toggleSection).toHaveBeenCalledTimes(3);
+			expect(toggleSection).toHaveBeenCalledTimes(1);
 
 			rendered[0].widget.destroy?.(rendered[0].dom);
-			studyCue.click();
-			expect(toggleSection).toHaveBeenCalledTimes(3);
+			toggle.click();
+			expect(toggleSection).toHaveBeenCalledTimes(1);
+
+			const revealedCue = renderCueElement(
+				cue(),
+				"inline-cues",
+				0,
+				"upcoming",
+				{
+					study: {
+						sectionId: "section-terms",
+						revealed: true,
+						toggleSection,
+					},
+				}
+			);
+			const hideToggle = revealedCue.querySelector<HTMLButtonElement>(
+				".cuecraft-study-section-toggle"
+			)!;
+			expect(hideToggle.getAttribute("aria-label")).toBe("Hide section");
+			expect(hideToggle.getAttribute("aria-pressed")).toBe("true");
+			expect(hideToggle.dataset.icon).toBe("eye-off");
 		});
 	});
 
@@ -417,9 +444,8 @@ describe("Editing View Study projection", () => {
 		expect(markerFor(studySnapshot()).eq(markerFor(revealed))).toBe(false);
 	});
 
-	it("renders one control host and reveals before placing the clicked cursor", () => {
-		const order: string[] = [];
-		const toggleSection = vi.fn(() => order.push("reveal"));
+	it("renders one control host without revealing from hidden text clicks", () => {
+		const toggleSection = vi.fn();
 		const showAll = vi.fn();
 		const hideAll = vi.fn();
 		const exit = vi.fn();
@@ -428,12 +454,7 @@ describe("Editing View Study projection", () => {
 		let destroyedEditor: HTMLElement | null = null;
 		withEditorView(
 			"# Terms\nbody",
-			[
-				cueEditorExtension,
-				EditorView.updateListener.of((update) => {
-					if (update.selectionSet) order.push("selection");
-				}),
-			],
+			cueEditorExtension,
 			(view, parent) => {
 				const controlsContainer = document.createElement("section");
 				parent.before(controlsContainer);
@@ -465,7 +486,7 @@ describe("Editing View Study projection", () => {
 				expect(help.classList.contains("cuecraft-study-help")).toBe(true);
 				expect(help.dataset.icon).toBe("circle-help");
 				expect(help.textContent).toBe(
-					"Click hidden text or a cue card to reveal its section"
+					"Use the eye buttons on cue cards to show or hide sections"
 				);
 				const actions = controls.querySelector<HTMLElement>(
 					".cuecraft-study-actions"
@@ -502,10 +523,6 @@ describe("Editing View Study projection", () => {
 				expect(hideAll).not.toHaveBeenCalled();
 				expect(exit).toHaveBeenCalledTimes(1);
 
-				Object.defineProperty(view, "posAtCoords", {
-					configurable: true,
-					value: () => 10,
-				});
 				const hidden = parent.querySelector<HTMLElement>(
 					".cuecraft-editor-study-answer.is-hidden"
 				)!;
@@ -516,9 +533,7 @@ describe("Editing View Study projection", () => {
 						clientY: 20,
 					})
 				);
-				expect(toggleSection).toHaveBeenCalledWith("section-terms");
-				expect(order).toEqual(["reveal", "selection"]);
-				expect(view.state.selection.main.head).toBe(10);
+				expect(toggleSection).not.toHaveBeenCalled();
 				expect(view.state.doc.toString()).toBe("# Terms\nbody");
 
 				view.dispatch({

@@ -504,8 +504,13 @@ describe("settings CSS", () => {
 		);
 
 		const cueRule = ruleFor(".cuecraft-editor-study-cue");
-		expect(cueRule).toContain("cursor: pointer");
-		expect(styles).toContain(".cuecraft-editor-study-cue:focus-visible");
+		expect(cueRule).toContain("position: relative");
+		expect(ruleFor("button.cuecraft-study-section-toggle")).toContain(
+			"border: 1px solid var(--background-modifier-border)"
+		);
+		expect(ruleFor("button.cuecraft-study-section-toggle")).toContain(
+			"inset-inline-end: -14px"
+		);
 	});
 
 	it("styles inline-only Reading Study without the Cornell review launcher", () => {
@@ -534,8 +539,7 @@ describe("settings CSS", () => {
 		);
 
 		const cueRule = ruleFor(".cuecraft-reading-study-cue");
-		expect(cueRule).toContain("cursor: pointer");
-		expect(styles).toContain(".cuecraft-reading-study-cue:focus-visible");
+		expect(cueRule).toContain("position: relative");
 		expect(styles).not.toContain(".cuecraft-reading-review");
 	});
 });
