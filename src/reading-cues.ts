@@ -307,7 +307,10 @@ export function syncReadingStudyControls(
 		showAll.addEventListener("click", onShowAll);
 		hideAll.addEventListener("click", onHideAll);
 		exit.addEventListener("click", onExit);
-		host.append(help, progress, progressTrack, showAll, hideAll, exit);
+		const actions = doc.createElement("div");
+		actions.className = "cuecraft-study-actions";
+		actions.append(showAll, hideAll, exit);
+		host.append(help, progress, progressTrack, actions);
 		controlsContainer.prepend(host);
 		readingStudyControlState.set(host, {
 			projection,

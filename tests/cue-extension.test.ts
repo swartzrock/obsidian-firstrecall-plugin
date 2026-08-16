@@ -467,6 +467,10 @@ describe("Editing View Study projection", () => {
 				expect(help.textContent).toBe(
 					"Click hidden text or a cue card to reveal its section"
 				);
+				const actions = controls.querySelector<HTMLElement>(
+					".cuecraft-study-actions"
+				)!;
+				expect(actions.querySelectorAll("button")).toHaveLength(3);
 				const progressTrack = controls.querySelector<HTMLElement>(
 					".cuecraft-study-progress-track"
 				)!;

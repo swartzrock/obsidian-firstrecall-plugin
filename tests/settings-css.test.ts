@@ -527,7 +527,10 @@ describe("settings CSS", () => {
 			"background: var(--background-primary)"
 		);
 		expect(ruleFor(".cuecraft-study-progress-track")).toContain(
-			"flex: 0 1 180px"
+			"flex: 1 1 120px"
+		);
+		expect(ruleFor(".cuecraft-study-actions")).toContain(
+			"margin-inline-start: auto"
 		);
 
 		const cueRule = ruleFor(".cuecraft-reading-study-cue");
