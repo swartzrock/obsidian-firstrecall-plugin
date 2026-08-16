@@ -72,7 +72,7 @@ flowchart TB
 - R4. The Section cue card must provide controls labeled `Show Summary`, `Show Question`, and `Show Terms` beside their matching component titles.
 - R5. Note Brief, Summary, Question, and Terms visibility choices must apply identically in Editing and Reading modes.
 - R6. Cue display and cue font size must live on the main page as appearance controls outside the generated-artifact cards.
-- R7. Visibility and appearance changes must update the note presentation without regenerating content.
+- R7. Visibility and shared font changes must refresh every open Editing and Reading presentation without regenerating content; Cue display changes must refresh every open Editing presentation.
 - R8. Hiding Note Brief, Summary, Question, or Terms must not suppress generation of that artifact or remove its cached content.
 
 **Question generation**
@@ -92,6 +92,9 @@ flowchart TB
 - R18. Note Brief instructions must show the exact assembled policy, overview and three-card contract, and placeholders for full-note and successful-section-cue inputs.
 - R19. Advanced must contain no prompt editor, save action, or custom-instruction reset; existing custom prompt overrides must be discarded in favor of CueCraft defaults.
 - R20. Changing Question type must immediately update the read-only Section cue template and mark generated Question content as changed for the existing regeneration handoff.
+- R27. Question type helper copy must explain the selected type, state that the choice guides newly generated or regenerated Questions only, does not directly guide Summary, Terms, or Note Brief, and does not rewrite cached Questions until regeneration.
+- R28. Appearance helper copy must state that Cue display changes Editing layout only, while cue font size applies in Editing and Reading.
+- R29. Each read-only instruction template must have a programmatic label matching its visible `Section cue instructions` or `Note Brief instructions` title.
 
 **Generation behavior**
 
@@ -145,13 +148,13 @@ flowchart TB
 
 ### Acceptance Examples
 
-- AE1. **Covers R1-R6.** Given the user opens CueCraft settings, when the main page renders, then it shows Note Brief and Section cue artifact cards plus cue display and font controls, and it does not show an Editing View destination.
+- AE1. **Covers R1-R6, R28.** Given the user opens CueCraft settings, when the main page renders, then it shows Note Brief and Section cue artifact cards plus cue display and font controls with their mode scope explained, and it does not show an Editing View destination.
 - AE2. **Covers R3-R5.** Given a visibility choice changes on either artifact card, when the user views the note in Editing or Reading mode, then the same matching component visibility applies in both modes.
 - AE3. **Covers R7-R8.** Given generated content is cached, when the user hides and later shows a component, then the component returns without regeneration and with its prior content intact.
 - AE4. **Covers R9-R12.** Given Question type is Exam practice, when CueCraft generates a section cue, then the Question uses exam-style wording while Summary, Terms, and Note Brief retain their normal contracts.
 - AE5. **Covers R11-R12.** Given each available Question type, when the read-only Section cue template is inspected, then it contains one type-specific instruction and no separate preset, density, or question-style instruction.
 - AE6. **Covers R13.** Given Show Terms is off, when CueCraft generates and exports content, then Terms remain available to Note Brief and exports while staying hidden in Editing and Reading modes.
-- AE7. **Covers R15-R18.** Given Advanced is collapsed by default, when the user expands it, then two separately titled exact instruction templates appear with placeholders instead of active-note source text.
+- AE7. **Covers R15-R18, R29.** Given Advanced is collapsed by default, when the user expands it, then two separately titled and programmatically labeled exact instruction templates appear with placeholders instead of active-note source text.
 - AE8. **Covers R19.** Given stored custom prompt overrides from an earlier version, when the upgraded settings load, then CueCraft uses its current default policies and exposes no editable legacy prompt text.
 - AE9. **Covers R20.** Given the user changes Question type, when the Section cue template refreshes, then it reflects the new type before any provider request occurs.
 - AE10. **Covers R21-R22.** Given auto-generation is enabled, when its delay elapses, then the interface describes and performs generation for section cues and Note Brief rather than describing only generic cues.
@@ -160,6 +163,7 @@ flowchart TB
 - AE13. **Covers R24.** Given all Section cue components are hidden, when Study starts and later exits, then Question is available during Study and the all-hidden saved state returns afterward.
 - AE14. **Covers R9-R12, R25.** Given a global Question type, when the user regenerates one section, then CueCraft uses that type without presenting a second tone or preset choice.
 - AE15. **Covers R6, R26.** Given the user changes Cue display, when both note modes refresh, then Editing adopts the selected layout and Reading remains inline.
+- AE16. **Covers R20, R27.** Given the user views Question type, when the selector renders or its value changes, then helper copy explains the selected type, its Question-only scope, and that cached content changes only after regeneration.
 
 ### Scope Boundaries
 
@@ -209,7 +213,7 @@ Product Contract preservation: changed R10 to distinguish direct instruction sco
 
   `renderInReadingMode` is removed without mapping it to the component flags. This prevents an old Reading-only preference from hiding Editing content after the model becomes global.
 
-- KTD2. **Use one Question type registry from persistence through generation.** (session-settled: user-directed — chosen over retaining preset, density, and style as independent inputs: one typed registry prevents prompt and UI combinations from drifting.) The registry owns IDs, labels, descriptions, guidance, validation, defaults, and legacy migration. Generation inputs and per-section regeneration carry only the resolved Question type. This decision governs R9-R14, R20, R25.
+- KTD2. **Use one Question type registry from persistence through generation.** (session-settled: user-directed — chosen over retaining preset, density, and style as independent inputs: one typed registry prevents prompt and UI combinations from drifting.) The registry owns IDs, labels, descriptions, guidance, validation, defaults, and legacy migration. Generation inputs and per-section regeneration carry only the resolved Question type. This decision governs R9-R14, R20, R25, R27.
 
   | Legacy non-default signal | Candidate Question type |
   | --- | --- |
@@ -223,7 +227,7 @@ Product Contract preservation: changed R10 to distinguish direct instruction sco
 
 - KTD3. **Make Terms an invariant output and visibility-only setting.** Remove `generateKeywords` from generation options and prompt branching. Keep the existing required two-to-five keyword schema, cache fields, Note Brief input, and export behavior. This avoids a cache migration and governs R8, R13, and R23.
 
-- KTD4. **Build inspected templates with the production prompt composers.** (session-settled: user-approved — chosen over a provider-neutral paraphrase: the inspector should show the selected provider's exact initial-generation template.) Export pure CueCraft-owned builders for the single-section, CLI batch, and Note Brief initial templates. Runtime calls and Advanced use the same builders with different source values. Repair suffixes and transport schemas stay on their existing runtime paths per the scope boundary. This decision governs R15-R20.
+- KTD4. **Build inspected templates with the production prompt composers.** (session-settled: user-approved — chosen over a provider-neutral paraphrase: the inspector should show the selected provider's exact initial-generation template.) Export pure CueCraft-owned builders for the single-section, CLI batch, and Note Brief initial templates. Every CLI Section cue request, including one-section and stale-section regeneration, uses the batch builder so the provider-selected Advanced template stays exact. Runtime calls and Advanced use the same builders with different source values. Repair suffixes and transport schemas stay on their existing runtime paths per the scope boundary. This decision governs R15-R20, R25, R29.
 
 - KTD5. **Project one visibility state into both note modes with a Study exception.** (session-settled: user-approved — chosen over forcing one ordinary component to remain visible: users may hide all Section cue content while Study retains its required interaction.) Ordinary Editing and Reading rendering consume the canonical flags and omit empty Section cue containers. Active Study supplies a temporary Question override without mutating settings. This decision governs R5, R7-R8, R24, and R26.
 
@@ -231,7 +235,7 @@ Product Contract preservation: changed R10 to distinguish direct instruction sco
 
 - KTD7. **Reuse the settings-close regeneration handoff.** Question type changes mark the existing in-memory content-dirty flag before persistence. Closing settings offers full regeneration only for the active cached note. Appearance changes, disclosure changes, and instruction inspection do not mark content dirty. This decision governs R7, R20-R21.
 
-- KTD8. **Extend the existing settings components without introducing a new settings framework.** (session-settled: user-directed — chosen over plain settings rows or in-note controls: the main page should use miniature artifact cards that resemble the generated content.) Keep navigation, persistence orchestration, and artifact-card DOM assembly in the settings tab. Reuse the existing thumbnail renderer for Cue display and Cue font size. Use native controls and an accessible disclosure for Advanced. This decision governs R1-R6 and R15-R19.
+- KTD8. **Extend the existing settings components without introducing a new settings framework.** (session-settled: user-directed — chosen over plain settings rows or in-note controls: the main page should use miniature artifact cards that resemble the generated content.) Keep navigation, persistence orchestration, and artifact-card DOM assembly in the settings tab. Reuse the existing thumbnail renderer for Cue display and Cue font size. Use native controls, scoped helper copy, an accessible disclosure, and programmatically labeled instruction fields. This decision governs R1-R6, R15-R19, and R27-R29.
 
 ### High-Level Technical Design
 
@@ -329,14 +333,14 @@ The builders own the exact initial template text and placeholder locations. Runt
 ### U2. Share generation instructions across runtime and inspection
 
 - **Goal:** Make every Section cue generation route use one Question type and invariant Terms, while Section cue and Note Brief routes use the same initial templates exposed by Advanced for their respective artifacts.
-- **Requirements:** R9-R20, R22, R25; F2-F5; AE4-AE9, AE14; KTD2-KTD4, KTD6-KTD7.
-- **Dependencies:** U1-U2.
+- **Requirements:** R9-R20, R22, R25, R27, R29; F2-F5; AE4-AE9, AE14, AE16; KTD2-KTD4, KTD6-KTD7.
+- **Dependencies:** U1.
 - **Files:** `src/cue-instructions.ts`, `src/note-brief-instructions.ts`, `src/review-artifact-prompts.ts`, `src/cue-provider.ts`, `src/generator.ts`, `src/byok-cuecraft-adapter.ts`, `src/local-cli-cue-batch.ts`, `src/main.ts`, `tests/cue-instructions.test.ts`, `tests/note-brief-instructions.test.ts`, `tests/review-artifact-prompts.test.ts`, `tests/generator.test.ts`, `tests/byok-cuecraft-adapter.test.ts`, `tests/local-cli-cue-batch.test.ts`, `tests/export.test.ts`.
 - **Approach:**
   1. Expand the artifact instruction modules into pure initial-template builders per KTD4.
   2. Replace preset, density, style, and keyword options in provider inputs and generator entry points with the resolved Question type.
   3. Remove editable-policy envelopes and override resolution while retaining CueCraft-owned source boundaries, schemas, validation, and repair behavior.
-  4. Make manual section regeneration use the global Question type without the legacy tone modal.
+  4. Make every CLI Section cue path use the batch builder, including one-item manual and stale regeneration, and use the global Question type without the legacy tone modal.
   5. Keep cache construction backward-compatible per KTD6 and use the existing dirty handoff per KTD7.
 - **Execution note:** Preserve route-level characterization coverage before consolidating prompt builders; prompt drift is the primary regression risk.
 - **Patterns to follow:** Keep the existing object/text/repair separation in `src/byok-cuecraft-adapter.ts` and the existing Note Brief source composition in `src/review-artifact-prompts.ts`.
@@ -352,6 +356,7 @@ The builders own the exact initial template text and placeholder locations. Runt
   9. Covers AE9. Change Question type and assert the initial template changes before a provider request while the content-dirty handoff is marked once.
   10. Covers AE14. Regenerate one section and assert the global Question type is forwarded with no tone-selection step.
   11. Accept and decline the settings-close regeneration handoff and assert the existing active-note behavior remains unchanged.
+  12. With a CLI provider selected, regenerate one section and a stale section set and assert both use the inspected batch template, including a one-item batch.
 - **Verification:** Single, batch, Note Brief, manual, automatic, and study-area generation routes use the canonical builders and pass their route-focused tests.
 
 ### Phase 2. Align presentation and settings with visible artifacts
@@ -360,14 +365,14 @@ The builders own the exact initial template text and placeholder locations. Runt
 
 - **Goal:** Make component visibility consistent across ordinary note modes without breaking Study.
 - **Requirements:** R3-R8, R24, R26; F1, F6; AE2-AE3, AE12-AE13, AE15; KTD1, KTD5.
-- **Dependencies:** U1.
+- **Dependencies:** U1-U2.
 - **Files:** `src/cue-extension.ts`, `src/reading-cues.ts`, `src/main.ts`, `tests/cue-extension.test.ts`, `tests/reading-cues.test.ts`, `tests/editor-cue-refresh.test.ts`, `tests/study-plugin-integration.test.ts`.
 - **Approach:**
   1. Pass the canonical visibility fields into both projection pipelines and include them in Reading memo invalidation.
   2. Give Reading rendering the same independent Summary, Question, and Terms decisions already supported by editor cards.
   3. Suppress ordinary Section cue DOM when no component or error state is visible.
   4. Apply the active Study override from KTD5 in both note modes without persisting it.
-  5. Keep Cue display layout selection scoped to Editing while refreshing Reading for shared visibility and font changes.
+  5. Keep Cue display layout selection scoped to Editing while invalidating Reading memo state and rerendering every open preview-mode Markdown leaf for shared visibility and font changes.
 - **Patterns to follow:** Reuse `CueLineData` filtering and the current Reading Study visibility override rather than adding a second Study state.
 - **Test scenarios:**
   1. Covers AE2. Toggle each component independently and assert identical visibility in ordinary Editing and Reading.
@@ -378,33 +383,35 @@ The builders own the exact initial template text and placeholder locations. Runt
   6. Covers AE13. Repeat the temporary Question behavior in Reading without mutating saved settings.
   7. Toggle visibility while Reading memoization is warm and assert the next render reflects the new flags.
   8. Covers AE15. Change Cue display and assert Editing changes layout while Reading remains inline.
+  9. Change shared visibility or font with active and inactive Reading panes open and assert both rerender immediately.
 - **Verification:** Both note modes render the same saved component selection, and Study retains its temporary functional projection.
 
 ### U4. Rebuild settings around artifact cards and Advanced inspection
 
 - **Goal:** Make each setting visibly map to Note Brief, Summary, Question, or Terms while separating appearance from generation.
-- **Requirements:** R1-R7, R9, R11, R15-R22, R26; F1-F3; AE1-AE2, AE5, AE7, AE9-AE10, AE15; KTD4, KTD7-KTD8.
+- **Requirements:** R1-R7, R9, R11, R15-R22, R26-R29; F1-F3; AE1-AE2, AE5, AE7, AE9-AE10, AE15-AE16; KTD4, KTD7-KTD8.
 - **Dependencies:** U1-U3.
 - **Files:** `src/settings.ts`, `src/appearance-thumbnail-controls.ts`, `src/settings-summaries.ts` (delete if unused), `styles.css`, `docs/CueCraft-Glossary.md`, `tests/settings.test.ts`, `tests/settings-css.test.ts`, `tests/appearance-thumbnail-controls.test.ts`.
 - **Approach:**
   1. Remove the Editing View destination and render the retained appearance thumbnails on the main page.
   2. Add non-interactive miniature Note Brief and Section cue containers with native controls named after their matching components.
-  3. Replace the overlapping Cue Generation controls with the registry-backed Question type selector and retain the automation controls with artifact-specific copy.
-  4. Add a collapsed Advanced disclosure with route-aware, read-only Section cue and Note Brief templates from U2.
+  3. Replace the overlapping Cue Generation controls with the registry-backed Question type selector, a dynamic selected-type description, fixed Question-only scope and regeneration-timing helper copy, and retained automation controls with artifact-specific copy.
+  4. Add a collapsed Advanced disclosure with route-aware, read-only, programmatically labeled Section cue and Note Brief templates from U2.
   5. Separate cross-surface appearance refresh from the content-dirty callback so only Question type changes offer regeneration.
-  6. Update the glossary where helper copy clarifies that Cue display applies while editing.
+  6. Add appearance helper copy that distinguishes Editing-only Cue display from the cross-mode font setting, and keep the glossary aligned.
 - **Patterns to follow:** Reuse `renderAppearanceThumbnailGroup()`, settings navigation keyboard behavior, native Obsidian `Setting` controls, and the current responsive settings CSS.
 - **Test scenarios:**
   1. Covers AE1. Render the main page and assert Note Brief and Section cue cards, Cue display, and Cue font size are present while Editing View navigation is absent.
   2. Assert the cards are presentation groups rather than click targets and each visibility control has a unique accessible name.
   3. Toggle each card control with keyboard input and assert save plus both-surface refresh occur without marking content dirty.
   4. Render Cue Generation and assert Question type plus automation remain while preset, density, style, cue supports, and editable prompt controls are absent.
-  5. Covers AE7. Assert Advanced is collapsed by default, uses an accessible disclosure state, and exposes two selectable read-only template fields after expansion.
+  5. Covers AE7. Assert Advanced is collapsed by default, uses an accessible disclosure state, and exposes two selectable read-only template fields whose programmatic labels match their visible titles after expansion.
   6. Switch between a non-CLI and CLI provider and assert Section cue instructions select the matching single or batch template while Note Brief instructions remain separately titled.
   7. Covers AE9. Change Question type and assert the visible Section cue template and settings summary update before the regeneration handoff.
   8. Expand or collapse Advanced and assert no save, provider work, or regeneration handoff occurs.
   9. Render the settings page at narrow width and assert artifact cards, thumbnails, labels, and read-only templates remain usable without horizontal clipping.
   10. Search rendered copy and the glossary for retired user-facing terms outside the designated legacy translation table.
+  11. Covers AE16. Change each Question type and assert its registry description updates immediately while fixed helper copy names Question-only scope and regeneration timing; assert appearance helper copy distinguishes the mode scope of Cue display and cue font size.
 - **Verification:** Settings tests and CSS contract tests prove the artifact mapping, accessibility, responsive layout, and separation of appearance from generation.
 
 ---
