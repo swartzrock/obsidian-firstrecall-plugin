@@ -13,7 +13,7 @@ execution: code
 
 ## Goal Capsule
 
-- **Objective:** Define an independently deployable Cloudflare service that can admit up to 50 bounded full-demo attempts per UTC day. Each successful attempt returns cues for up to five sections, a Summary, and a Note Brief. This is a capacity ceiling, not a guarantee that 50 distinct installations receive successful results.
+- **Objective:** Define an independently deployable Cloudflare service that can admit up to 50 bounded full-demo attempts per UTC day. Each successful attempt returns a question, keyword supports, and a Section Lens for up to five sections, plus one Note Brief. This is a capacity ceiling, not a guarantee that 50 distinct installations receive successful results.
 - **Product authority:** This plan owns the hosted service, public inference contract, quota policy, privacy boundary, and operational stop conditions. The Cuecraft plugin remains a separate consumer governed by `docs/plans/2026-08-15-1914-feat-hosted-demo-obsidian-integration-plan.md`.
 - **Open blockers:** None for planning. Public release remains gated on representative Qwen quality, structured-output and schema-validity behavior, latency, neuron usage, and validation that the maximum admitted request stays within the Workers Free active-CPU limit.
 
@@ -35,7 +35,7 @@ An anonymous public inference service introduces a denial-of-wallet risk and can
 
 - **Launch on Cloudflare Free and fail closed at the daily application cap.** (session-settled: user-approved — chosen over paid or self-hosted launch infrastructure: the free tier can serve the initial audience and can later upgrade in place.) Governs R6–R11.
 - **Budget for up to 50 admitted full-demo attempts per UTC day.** (session-settled: user-approved — this is an application capacity ceiling rather than a guarantee of 50 successful or fairly distributed experiences; chosen over cue-only capacity for approximately 100 daily attempts because every successful demo must show the complete Cuecraft experience.) Governs R2, R4, R7–R9, R16, and R19.
-- **Bound cue generation to five sections.** (session-settled: user-directed — chosen over whole-note cue generation: the bounded set controls cost while Summary and Note Brief preserve the complete experience.) Governs R2, R4, R12.
+- **Bound cue generation to five sections.** (session-settled: user-directed — chosen over whole-note cue generation: the bounded set controls cost while Section Lens and Note Brief preserve the complete current experience.) Governs R2, R4, R12.
 - **Use Qwen3 30B-A3B on Workers AI for the initial service.** (session-settled: user-approved — chosen over RunPod or a fixed VPS: managed inference is cheaper and simpler at launch volume.) Governs R6 and R12.
 - **Keep the deployed service in its own repository.** The service owns its versioned API contract; this document is a seed artifact until that repository exists. Governs R1 and R5.
 - **Make the Durable Object ledger authoritative for quota admission.** AI Gateway and network limits provide defense in depth rather than exact allowance accounting. Governs R7–R11.
@@ -95,7 +95,7 @@ The first service implementation should use this stack. Planning may revise a co
 4. The Worker calls `QuotaLedger.admit()` with HMAC-derived installation, session, and operation keys.
 5. `QuotaLedger` performs one atomic read-modify-write transaction and returns either a denial or a durable reservation identifier.
 6. After admission, the Worker calls Qwen once over the Workers AI REST path through AI Gateway, using a server-held API token and per-request cache-skip and payload-suppression controls. The model call occurs outside the Durable Object transaction so inference latency never holds the quota lock.
-7. Zod validates the parsed cues, Summary, and Note Brief as one complete response. A malformed component fails the whole operation.
+7. Zod validates each parsed question, keyword list, and Section Lens plus the Note Brief as one complete response. A malformed component fails the whole operation.
 8. The Worker records the content-free result metadata, calls `QuotaLedger.finish()`, and returns the complete bundle or a structured failure.
 
 If the Worker or model fails after admission, the reservation remains spent. This fail-closed behavior prevents retries or crashes from exceeding the shared allowance.
@@ -138,7 +138,6 @@ The initial implementation shall attempt one compound response shaped like:
 ```json
 {
   "sections": [],
-  "summary": {},
   "noteBrief": {}
 }
 ```
@@ -160,7 +159,7 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 - R1. The hosted demo service shall be independently deployable and shall not depend on the Cuecraft plugin build or release process.
 - R2. The service shall expose one versioned full-demo operation accepting a note title, bounded whole-note context, one to five ordered section inputs, anonymous installation and session assertions, and an operation identifier.
 - R3. The public contract shall not expose general chat messages, client-selected models, client-selected token limits, provider credentials, or arbitrary system instructions.
-- R4. A successful response shall contain one schema-valid cue result per requested section, a schema-valid Summary result, and a schema-valid Note Brief result.
+- R4. A successful response shall contain one schema-valid result per requested section with `question`, `keywords`, and `sectionLens`, plus one schema-valid `noteBrief` result.
 - R5. The service repository shall be authoritative for request and response compatibility, supported contract versions, quota-denial reasons, and reset-time semantics.
 
 **Free-tier capacity and quotas**
@@ -195,7 +194,7 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 - R24. Zod schemas shall validate requests before admission and validate parsed model output and public responses before success.
 - R25. Exact quota admission shall use typed Durable Object RPC and direct SQLite queries inside a short atomic transaction; no model or other network call shall occur inside that transaction.
 - R26. Client-supplied installation, session, and operation identifiers shall be HMAC-derived with a server-held secret before storage; no shared secret shall be embedded in Cuecraft.
-- R27. The initial inference path shall request all section cues, the Summary, and the Note Brief in one non-streaming Qwen call with one fixed compound output contract.
+- R27. The initial inference path shall request all section questions, keyword supports, Section Lenses, and the Note Brief in one non-streaming Qwen call with one fixed compound output contract.
 - R28. Model input, prompt, schema, and output bounds shall be selected from deployed measurements that keep the worst admitted operation within 180 neurons.
 - R29. Model output shall pass application-owned schema validation regardless of provider structured-output support; no repair call shall be enabled unless its worst-case cost also fits inside the original reservation.
 - R30. Every Workers AI call shall use the AI Gateway REST path with a server-held, least-privilege Cloudflare API token, `cf-aig-skip-cache: true`, and `cf-aig-collect-log-payload: false` so responses are not cached and request and response bodies are not stored while operational metadata is retained.
@@ -211,7 +210,7 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
   - **Trigger:** A1 requests hosted generation from A2.
   - **Actors:** A1, A2, A3, A5
   - **Steps:** A3 validates the version and bounds, atomically reserves the applicable allowances, constructs fixed Cuecraft prompts, runs the bounded inference work, validates the complete bundle, records metadata-only usage, and returns the result.
-  - **Outcome:** A2 receives all requested cues, Summary, and Note Brief under one operation result.
+  - **Outcome:** A2 receives all requested section questions, keyword supports, Section Lenses, and the Note Brief under one operation result.
   - **Covers:** R2–R16, R18–R32
 - F2. **Reject an exhausted allowance**
   - **Trigger:** A1 requests another operation after a session, hourly, installation-daily, or global allowance is exhausted.
@@ -228,11 +227,11 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 
 ### Acceptance Examples
 
-- AE1. **Covers R2, R4, R7–R9, R18.** Given an eligible installation with remaining allowances, five valid sections, and a schema-valid model result, when it requests a full-demo attempt, then it receives five valid cue results, one valid Summary, and one valid Note Brief within a single reserved daily attempt.
+- AE1. **Covers R2, R4, R7–R9, R18.** Given an eligible installation with remaining allowances, five valid sections, and a schema-valid model result, when it requests a full-demo attempt, then it receives five valid section results with questions, keyword supports, and Section Lenses plus one valid Note Brief within a single reserved daily attempt.
 - AE2. **Covers R2, R12, R19.** Given a request containing six sections or exceeding the selected source bound, when validation runs, then the service rejects it without reserving quota or invoking Workers AI.
 - AE3. **Covers R8, R10, R20.** Given an installation that already admitted a daily operation, when it submits a new operation identifier before 00:00 UTC, then the service performs no inference and returns the daily reset time.
 - AE4. **Covers R9–R11.** Given concurrent requests racing for the last daily capacity, when admission runs, then only capacity already covered by the remaining reservation is admitted and no duplicate identifier receives a second reservation.
-- AE5. **Covers R18, R19.** Given inference returns a malformed Summary or Note Brief after admission, when validation runs, then the service returns an operation failure, does not label the bundle complete, and retains the spent reservation.
+- AE5. **Covers R18, R19.** Given inference returns a malformed section result or Note Brief after admission, when validation runs, then the service returns an operation failure, does not label the bundle complete, and retains the spent reservation.
 - AE6. **Covers R14, R15.** Given a successful operation, when the operator inspects Worker, Durable Object, and AI Gateway records, then metadata needed for quota and operations is present but note and artifact content is absent.
 - AE7. **Covers R17.** Given the operator disables admissions, when an otherwise eligible installation requests generation, then the service makes no inference call and returns a temporary unavailability response.
 - AE8. **Covers R22–R26.** Given concurrent valid requests for the last capacity, when their native Worker handlers call `QuotaLedger.admit()`, then one short SQLite transaction applies all exact quota checks and identifiers are persisted only as server-derived HMAC values.
@@ -246,7 +245,7 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 
 - A representative capped-note validation run can admit and invoke 50 bounded attempts while staying below Cloudflare's 10,000-neuron free limit and at or below the service's 9,000-neuron application allowance.
 - Product and quota language describes capacity as up to 50 admitted attempts rather than 50 distinct users or guaranteed successful bundles.
-- Every response labeled successful in the validation run contains all requested cue results, Summary, and Note Brief in their agreed schemas.
+- Every response labeled successful in the validation run contains all requested section questions, keyword supports, Section Lenses, and the Note Brief in their agreed schemas.
 - Concurrency testing cannot exceed session, installation, daily-operation, or reserved-neuron limits.
 - Log inspection confirms that no note-derived input or output payload is persisted by service-controlled storage or logging.
 - The deployed Worker remains within the Cloudflare Free per-invocation CPU limit under representative requests.
@@ -285,9 +284,10 @@ The Qwen model contract exposes a `response_format` parameter, while Cloudflare'
 
 ### Sources and Research
 
-- `src/cue-provider.ts` defines the existing cue, batched-cue, Summary, and optional Note Brief provider capabilities that the external contract must satisfy.
-- `src/generator.ts` shows the current ordered section generation followed by whole-note Summary and Note Brief generation.
-- `src/settings.ts` establishes the current default provider, section concurrency of five, automatic Summary default, and note-review settings.
+- `src/schemas.ts` defines the current cue shape (`question`, `keywords`, and `sectionLens`) and Note Brief shape that the external contract must satisfy.
+- `src/cue-provider.ts` defines the existing cue, batched-cue, and optional Note Brief provider capabilities.
+- `src/generator.ts` shows the current ordered section generation followed by whole-note Note Brief generation.
+- `src/settings.ts` establishes the current default provider, section concurrency of five, and review-surface settings.
 - [Cloudflare Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/) documents Free Worker and SQLite-backed Durable Object allowances.
 - [Cloudflare Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/) documents the 10,000-neuron daily Free allocation and current model prices.
 - [Qwen3 30B-A3B model page](https://developers.cloudflare.com/ai/models/%40cf/qwen/qwen3-30b-a3b-fp8/) documents the selected model and its current unit pricing.
