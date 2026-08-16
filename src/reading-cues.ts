@@ -232,13 +232,14 @@ export function removeReadingStudyControls(container: HTMLElement): void {
 	}
 }
 
-/** Keep one sticky Study control host in the active Reading view container. */
+/** Keep one Study control host beneath the active Reading view header. */
 export function syncReadingStudyControls(
 	container: HTMLElement,
-	projection: StudyProjection | null
+	projection: StudyProjection | null,
+	controlsContainer: HTMLElement = container
 ): void {
 	const hosts = Array.from(
-		container.querySelectorAll<HTMLElement>(
+		controlsContainer.querySelectorAll<HTMLElement>(
 			".cuecraft-reading-study-controls"
 		)
 	);
@@ -283,12 +284,12 @@ export function syncReadingStudyControls(
 		const onExit = () => {
 			readingStudyControlState.get(host!)?.projection.exit();
 			restoreReadingStudyBlock(container);
-			removeReadingStudyControls(container);
+			removeReadingStudyControls(controlsContainer);
 		};
 		hideAll.addEventListener("click", onHideAll);
 		exit.addEventListener("click", onExit);
 		host.append(progress, progressTrack, hideAll, exit);
-		container.prepend(host);
+		controlsContainer.prepend(host);
 		readingStudyControlState.set(host, {
 			projection,
 			cleanup: () => {
@@ -301,7 +302,7 @@ export function syncReadingStudyControls(
 		if (state) state.projection = projection;
 		else {
 			removeReadingStudyControlHost(host);
-			syncReadingStudyControls(container, projection);
+			syncReadingStudyControls(container, projection, controlsContainer);
 			return;
 		}
 	}

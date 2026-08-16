@@ -2684,6 +2684,7 @@ html.cuecraft-editor-cue-width-resizing * {
 	top: 0;
 	z-index: 10;
 	display: flex;
+	flex: 0 0 auto;
 	align-items: center;
 	gap: 8px;
 	box-sizing: border-box;
@@ -2834,6 +2835,7 @@ html.cuecraft-editor-cue-width-resizing * {
 	top: 0;
 	z-index: 10;
 	display: flex;
+	flex: 0 0 auto;
 	align-items: center;
 	gap: 8px;
 	box-sizing: border-box;

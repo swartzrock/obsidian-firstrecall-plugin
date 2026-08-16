@@ -35,6 +35,7 @@ export interface StudySessionSnapshot {
 
 export interface StudyProjection {
 	snapshot: StudySessionSnapshot;
+	controlsContainer?: HTMLElement;
 	toggleSection(sectionId: string): void;
 	hideAll(): void;
 	exit(): void;

@@ -68,6 +68,7 @@ interface HarnessView {
 	file: TFile;
 	leaf: { view: HarnessView };
 	containerEl: HTMLElement;
+	contentEl: HTMLElement;
 	getViewType(): string;
 	getMode(): "source" | "preview";
 	editor: {
@@ -137,10 +138,15 @@ function createHarness() {
 	const statusBar = document.createElement("div");
 	const makeView = (target: TFile): HarnessView => {
 		const view = {} as HarnessView;
+		const containerEl = document.createElement("section");
+		const contentEl = document.createElement("div");
+		contentEl.className = "view-content";
+		containerEl.append(contentEl);
 		Object.assign(view, {
 			file: target,
 			leaf: { view },
-			containerEl: document.createElement("section"),
+			containerEl,
+			contentEl,
 			getViewType: () => "markdown",
 			getMode: () => mode,
 			editor: {
@@ -342,7 +348,6 @@ describe("Study plugin orchestration", () => {
 		const headerAction = document.querySelector<HTMLElement>(
 			".cuecraft-study-header-action"
 		)!;
-
 		headerAction.click();
 		expect(harness.controller().snapshot()).toMatchObject({
 			active: true,
@@ -354,8 +359,10 @@ describe("Study plugin orchestration", () => {
 		expect(harness.openedFiles).toEqual([]);
 		const studyPayload = harness.dispatches.at(-1)?.payload.study as {
 			snapshot: { sections: Array<{ sectionId: string }> };
+			controlsContainer: HTMLElement;
 			toggleSection(sectionId: string): void;
 		};
+		expect(studyPayload.controlsContainer).toBe(harness.firstView.contentEl);
 		studyPayload.toggleSection(studyPayload.snapshot.sections[0].sectionId);
 		await harness.commands.get("review-this-note")?.callback();
 		expect(harness.controller().snapshot().revealedCount).toBe(1);

@@ -614,15 +614,17 @@ export default class CueCraftPlugin extends Plugin {
 			view.editor.getValue(),
 			cache
 		);
-		return snapshot ? this.studyProjection(snapshot, file.path) : null;
+		return snapshot ? this.studyProjection(snapshot, file.path, view) : null;
 	}
 
 	private studyProjection(
 		snapshot: StudySessionSnapshot,
-		path: string
+		path: string,
+		view: MarkdownView
 	): StudyProjection {
 		return {
 			snapshot,
+			controlsContainer: this.studyControlsContainer(view),
 			toggleSection: (sectionId) => {
 				this.studySession.toggleReveal(path, sectionId);
 				this.refreshStudyProjections();
@@ -648,6 +650,21 @@ export default class CueCraftPlugin extends Plugin {
 				}
 			},
 		};
+	}
+
+	private studyControlsContainer(view: MarkdownView): HTMLElement {
+		const contentEl = (view as MarkdownView & { contentEl?: HTMLElement })
+			.contentEl;
+		const containerEl = (
+			view as MarkdownView & { containerEl?: HTMLElement }
+		).containerEl;
+		return (
+			contentEl ??
+			containerEl?.closest<HTMLElement>(".view-content") ??
+			containerEl?.querySelector<HTMLElement>(".view-content") ??
+			containerEl ??
+			(view.editor as unknown as { cm: EditorView }).cm.dom
+		);
 	}
 
 	private reconcileStudyForSource(
@@ -688,7 +705,7 @@ export default class CueCraftPlugin extends Plugin {
 		this.projectedStudySurface = null;
 		if (projected.mode === "preview") {
 			restoreReadingStudyBlock(projected.view.containerEl);
-			removeReadingStudyControls(projected.view.containerEl);
+			removeReadingStudyControls(this.studyControlsContainer(projected.view));
 			return;
 		}
 		this.renderCuesInView(projected.view, false, false);
@@ -1341,7 +1358,13 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const readingContainer = this.activeReadingContainer(path, el);
 		if (readingContainer) {
-			syncReadingStudyControls(readingContainer, study);
+			syncReadingStudyControls(
+				readingContainer,
+				study,
+				activeView
+					? this.studyControlsContainer(activeView)
+					: readingContainer
+			);
 		}
 		if (!cache || (!displayState.showInlineCues && !noteBriefState.showNoteBrief)) {
 			return;
@@ -1402,7 +1425,7 @@ export default class CueCraftPlugin extends Plugin {
 		const snapshot = this.reconcileStudyForSource(path, source, cache);
 		if (!snapshot) return null;
 		this.moveStudyProjectionTo(activeView, "preview");
-		return this.studyProjection(snapshot, path);
+		return this.studyProjection(snapshot, path, activeView);
 	}
 
 	private activeReadingContainer(

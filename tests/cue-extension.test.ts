@@ -430,12 +430,15 @@ describe("Editing View Study projection", () => {
 				}),
 			],
 			(view, parent) => {
+				const controlsContainer = document.createElement("section");
+				parent.before(controlsContainer);
 				view.dispatch({
 					effects: setCuesEffect.of({
 						cues: [cue()],
 						display: "inline-cues",
 						study: {
 							snapshot: studySnapshot(),
+							controlsContainer,
 							toggleSection,
 							hideAll,
 							exit,
@@ -443,9 +446,12 @@ describe("Editing View Study projection", () => {
 					}),
 				});
 
-				expect(parent.querySelectorAll(".cuecraft-editor-study-controls")).toHaveLength(1);
+				expect(
+					controlsContainer.querySelectorAll(".cuecraft-editor-study-controls")
+				).toHaveLength(1);
+				expect(parent.querySelector(".cuecraft-editor-study-controls")).toBeNull();
 				expect(view.dom.classList.contains("cuecraft-editor-study-active")).toBe(true);
-				const controls = parent.querySelector<HTMLElement>(
+				const controls = controlsContainer.querySelector<HTMLElement>(
 					".cuecraft-editor-study-controls"
 				)!;
 				expect(controls.textContent).toContain("0 / 1 revealed");
@@ -505,13 +511,14 @@ describe("Editing View Study projection", () => {
 						display: "inline-cues",
 						study: {
 							snapshot: studySnapshot(),
+							controlsContainer,
 							toggleSection,
 							hideAll,
 							exit,
 						},
 					}),
 				});
-				destroyedControls = parent.querySelector<HTMLElement>(
+				destroyedControls = controlsContainer.querySelector<HTMLElement>(
 					".cuecraft-editor-study-controls"
 				);
 				destroyedButtons = destroyedControls?.querySelectorAll("button") ?? null;

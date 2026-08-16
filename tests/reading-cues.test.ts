@@ -298,8 +298,13 @@ describe("projectReadingStudyBlock", () => {
 
 describe("syncReadingStudyControls", () => {
 	it("keeps one live control host and cleans it up on Exit", () => {
-		const dom = new JSDOM("<div id=container></div>");
+		const dom = new JSDOM(
+			"<div id=controls></div><div id=container></div>"
+		);
 		const container = dom.window.document.querySelector<HTMLElement>("#container")!;
+		const controlsContainer = dom.window.document.querySelector<HTMLElement>(
+			"#controls"
+		)!;
 		const hideAll = vi.fn();
 		const exit = vi.fn();
 		const projection = {
@@ -309,13 +314,14 @@ describe("syncReadingStudyControls", () => {
 			exit,
 		};
 
-		syncReadingStudyControls(container, projection);
-		syncReadingStudyControls(container, projection);
+		syncReadingStudyControls(container, projection, controlsContainer);
+		syncReadingStudyControls(container, projection, controlsContainer);
 
 		expect(
-			container.querySelectorAll(".cuecraft-reading-study-controls")
+			controlsContainer.querySelectorAll(".cuecraft-reading-study-controls")
 		).toHaveLength(1);
-		const controls = container.querySelector<HTMLElement>(
+		expect(container.querySelector(".cuecraft-reading-study-controls")).toBeNull();
+		const controls = controlsContainer.querySelector<HTMLElement>(
 			".cuecraft-reading-study-controls"
 		)!;
 		expect(controls.textContent).toContain("0 / 1 revealed");
@@ -331,7 +337,7 @@ describe("syncReadingStudyControls", () => {
 		expect(hideAll).toHaveBeenCalledTimes(1);
 		expect(exit).toHaveBeenCalledTimes(1);
 		expect(
-			container.querySelector(".cuecraft-reading-study-controls")
+			controlsContainer.querySelector(".cuecraft-reading-study-controls")
 		).toBeNull();
 
 		buttons[0].click();

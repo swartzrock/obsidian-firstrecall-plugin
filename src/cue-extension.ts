@@ -2178,7 +2178,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			hideAll.addEventListener("click", onHideAll);
 			exit.addEventListener("click", onExit);
 			host.append(progress, progressTrack, hideAll, exit);
-			this.view.scrollDOM.prepend(host);
+			(projection.controlsContainer ?? this.view.scrollDOM).prepend(host);
 			this.controlHost = host;
 			this.controlCleanup = () => {
 				hideAll.removeEventListener("click", onHideAll);
