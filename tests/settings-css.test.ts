@@ -11,20 +11,18 @@ function ruleFor(selector: string): string {
 }
 
 describe("settings CSS", () => {
-	it("lays out cue section checkboxes as a compact wrapping row", () => {
-		const controlRule = ruleFor(
-			".cuecraft-cue-sections-setting .setting-item-control"
-		);
-		expect(controlRule).toContain("flex-wrap: wrap");
-		expect(controlRule).toContain("justify-content: flex-start");
-		expect(controlRule).toContain("gap:");
+	it("styles artifact-matched settings cards without fixed widths", () => {
+		const cardRule = ruleFor(".cuecraft-settings-artifact-card");
+		expect(cardRule).toContain("min-width: 0");
+		expect(cardRule).toContain("border: 1px solid");
+		expect(cardRule).not.toMatch(/\n\twidth:/);
 
-		const optionRule = ruleFor(".cuecraft-cue-section-option");
-		expect(optionRule).toContain("display: inline-flex");
-		expect(optionRule).toContain("align-items: center");
+		const partsRule = ruleFor(".cuecraft-settings-artifact-parts");
+		expect(partsRule).toContain("display: flex");
+		expect(partsRule).toContain("flex-wrap: wrap");
 	});
 
-	it("uses shared instruction-control hooks for both policies", () => {
+	it("uses shared read-only instruction-control hooks for both templates", () => {
 		const settingRule = ruleFor(".cuecraft-instructions-setting");
 		expect(settingRule).toContain("flex-direction: column");
 		expect(settingRule).toContain("align-items: stretch");
@@ -37,9 +35,12 @@ describe("settings CSS", () => {
 
 		const inputRule = ruleFor(".cuecraft-instructions-input");
 		expect(inputRule).toContain("width: 100%");
+		expect(inputRule).toContain("max-width: 100%");
+		expect(inputRule).toContain("box-sizing: border-box");
 		expect(inputRule).toContain("min-height: 10rem");
 
-		expect(styles).not.toContain("cuecraft-summary-instructions");
+		expect(styles).toContain(".cuecraft-generation-advanced");
+		expect(styles).toContain(".cuecraft-generation-instructions");
 	});
 
 	it("stacks active CLI command labels above the command input", () => {

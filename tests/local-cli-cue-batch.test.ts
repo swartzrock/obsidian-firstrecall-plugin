@@ -140,8 +140,15 @@ describe("local CLI cue batch prompt", () => {
 			"Reply again with ONLY the corrected JSON object."
 		);
 		expect(systemPromptLog).toHaveBeenCalledOnce();
+		const inspectedTemplate = buildSectionCueInstructionsTemplate(
+			"exam-practice",
+			"batch"
+		);
 		expect(systemPromptLog).toHaveBeenCalledWith(
-			`[CueCraft BYOK] Cue Batch system prompt\n${initialTemplate}`
+			`[CueCraft BYOK] Cue Batch system prompt\n${inspectedTemplate}`
+		);
+		expect(systemPromptLog.mock.calls[0]?.[0]).not.toContain(
+			"A stack removes the newest item first."
 		);
 	});
 
