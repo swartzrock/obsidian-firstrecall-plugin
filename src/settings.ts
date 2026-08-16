@@ -1068,7 +1068,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	// ── Note format ───────────────────────────────────────────────────────
 	private renderArtifactVisibilitySection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Generated components").setHeading();
+		new Setting(containerEl).setName("Study aids").setHeading();
 		const noteBriefCard = this.createArtifactCard(
 			containerEl,
 			"Note Brief",
@@ -1096,7 +1096,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const cueCard = this.createArtifactCard(
 			containerEl,
 			"Section cue",
-			"Choose which generated components appear in Editing and Reading."
+			"Choose which parts of each Section cue appear in Editing and Reading."
 		);
 
 		new Setting(cueCard)

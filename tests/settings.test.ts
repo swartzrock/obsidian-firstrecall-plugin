@@ -618,7 +618,8 @@ describe("settings defaults", () => {
 		tab.display();
 
 		const text = settingText(tab.containerEl);
-		expect(text).toContain("Generated components");
+		expect(text).toContain("Study aids");
+		expect(text).not.toContain("Generated components");
 		expect(text).toContain("Appearance");
 		expect(text).not.toContain("Editing View");
 		expect(text).not.toContain("Note format");
