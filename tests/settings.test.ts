@@ -11,7 +11,6 @@ import {
 	cornellDisplayModeOption,
 	isCornellDisplayMode,
 } from "../src/cornell-display";
-import { DEFAULT_READING_MODE_DISPLAY } from "../src/reading-cues";
 import {
 	DEFAULT_EDITOR_CUE_DISPLAY,
 	EDITOR_CUE_DISPLAY_OPTIONS,
@@ -558,8 +557,9 @@ describe("settings defaults", () => {
 		]);
 	});
 
-	it("defaults Reading mode to the compact review button", () => {
-		expect(DEFAULT_READING_MODE_DISPLAY).toBe("review-button");
+	it("uses fixed inline Reading cues without a display preference", async () => {
+		const { DEFAULT_SETTINGS } = await loadSettingsModule();
+		expect("readingModeDisplay" in DEFAULT_SETTINGS).toBe(false);
 	});
 
 	it("defaults Cornell display mode to the classic Cornell view", () => {
@@ -925,7 +925,7 @@ describe("settings defaults", () => {
 		const text = settingText(tab.containerEl);
 		expect(text).toContain("Note format");
 		expect(text).toContain("Show CueCraft in Reading mode");
-		expect(text).toContain("Reading mode display");
+		expect(text).not.toContain("Reading mode display");
 		expect(text).toContain("Show summaries in Reading mode");
 		expect(text).toContain("Show Note Brief");
 		expect(text).not.toContain("Show cue questions");

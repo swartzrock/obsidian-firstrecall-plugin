@@ -75,6 +75,31 @@ function unavailableCredentialStore(): SecureCredentialStore {
 }
 
 describe("plugin data cache migration", () => {
+	it("drops the legacy Reading display preference from future saves", async () => {
+		const saveData = vi.fn(async () => {});
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: { readingModeDisplay: "review-button" },
+			})),
+			saveData,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+		await (
+			plugin as unknown as { persistPluginData(): Promise<void> }
+		).persistPluginData();
+
+		expect("readingModeDisplay" in plugin.settings).toBe(false);
+		const persisted = saveData.mock.calls.at(-1)?.[0] as {
+			settings: Record<string, unknown>;
+		};
+		expect(persisted.settings).not.toHaveProperty("readingModeDisplay");
+	});
+
 	it.each([
 		"cornell-exam-prep",
 		"cornell-minimal",

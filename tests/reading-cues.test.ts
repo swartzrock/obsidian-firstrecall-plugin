@@ -1,14 +1,19 @@
-import { describe, it, expect } from "vitest";
+import { JSDOM } from "jsdom";
+import { describe, it, expect, vi } from "vitest";
 import {
 	buildReadingCueMap,
-	READING_MODE_DISPLAY_OPTIONS,
-	readingModeDisplayState,
+	projectReadingStudyBlock,
+	readingCueDisplayState,
 	readingNoteBriefDisplayState,
-	readingReviewAffordanceState,
+	syncReadingStudyControls,
 } from "../src/reading-cues";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
+import type { StudySessionSnapshot } from "../src/study-session";
+import { resolveStudySections, type StudySessionController } from "../src/study-session";
+import CueCraftPlugin from "../src/main";
+import { DEFAULT_SETTINGS } from "../src/settings";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
 const SECTION_LENS = {
@@ -51,6 +56,29 @@ function cacheFrom(
 		generationMode: "whole-note-context",
 		noteModifiedAt: 1,
 	});
+}
+
+function studySnapshot(): StudySessionSnapshot {
+	return {
+		active: true,
+		path: "notes/example.md",
+		sections: [
+			{
+				sectionId: "strict",
+				heading: "Strict",
+				question: "What is strict?",
+				contentHash: "hash",
+				headingLine: 1,
+				bodyStartLine: 2,
+				bodyEndLine: 3,
+				headingRange: { from: 0, to: 8 },
+				bodyRange: { from: 9, to: 20 },
+				revealed: false,
+			},
+		],
+		revealedCount: 0,
+		total: 1,
+	};
 }
 
 describe("buildReadingCueMap", () => {
@@ -109,123 +137,427 @@ describe("buildReadingCueMap", () => {
 	});
 });
 
-describe("readingReviewAffordanceState", () => {
-	it("shows the Cornell review entry when usable cues are available and visible", () => {
+describe("readingCueDisplayState", () => {
+	it("uses fixed inline cues and lets active Study override saved visibility gates", () => {
 		expect(
-			readingReviewAffordanceState({
-				hasUsableCues: true,
+			readingCueDisplayState({
+				renderInReadingMode: true,
+				hasCache: true,
 				isHidden: false,
+				studyActive: false,
 			})
-		).toEqual({
-			visible: true,
-			action: "review-this-note",
-		});
-	});
+		).toEqual({ showInlineCues: true });
 
-	it("hides the Cornell review entry when cues are hidden", () => {
-		expect(
-			readingReviewAffordanceState({
-				hasUsableCues: true,
-				isHidden: true,
-			})
-		).toEqual({
-			visible: false,
-			action: null,
-		});
-	});
+		for (const savedGate of [
+			{ renderInReadingMode: false, isHidden: false },
+			{ renderInReadingMode: true, isHidden: true },
+		]) {
+			expect(
+				readingCueDisplayState({
+					...savedGate,
+					hasCache: true,
+					studyActive: false,
+				})
+			).toEqual({ showInlineCues: false });
+			expect(
+				readingCueDisplayState({
+					...savedGate,
+					hasCache: true,
+					studyActive: true,
+				})
+			).toEqual({ showInlineCues: true });
+		}
 
-	it("hides the Cornell review entry when no usable cues exist", () => {
 		expect(
-			readingReviewAffordanceState({
-				hasUsableCues: false,
+			readingCueDisplayState({
+				renderInReadingMode: true,
+				hasCache: false,
 				isHidden: false,
+				studyActive: true,
 			})
-		).toEqual({
-			visible: false,
-			action: null,
-		});
+		).toEqual({ showInlineCues: false });
 	});
 });
 
-describe("readingModeDisplayState", () => {
-	it("keeps Reading mode display choices focused on native Reading surfaces", () => {
-		expect(READING_MODE_DISPLAY_OPTIONS.map((option) => option.id)).toEqual([
-			"inline-cues",
-			"review-button",
-		]);
-	});
-
-	it("shows only the review button for the default Reading mode display", () => {
-		expect(
-			readingModeDisplayState({
-				display: "review-button",
-				renderInReadingMode: true,
-				hasCache: true,
-				hasUsableCues: true,
-				isHidden: false,
-			})
-		).toEqual({
-			showInlineCues: false,
-			showReviewButton: true,
-		});
-	});
-
-	it("shows inline cues only when inline cues are selected", () => {
-		expect(
-			readingModeDisplayState({
-				display: "inline-cues",
-				renderInReadingMode: true,
-				hasCache: true,
-				hasUsableCues: true,
-				isHidden: false,
-			})
-		).toEqual({
-			showInlineCues: true,
-			showReviewButton: false,
-		});
-	});
-
-	it("hides all Reading-mode surfaces when disabled, hidden, uncached, or unusable", () => {
-		const hidden = {
-			showInlineCues: false,
-			showReviewButton: false,
+describe("projectReadingStudyBlock", () => {
+	it("conceals only confidently owned strict sections and stays idempotent", () => {
+		const dom = new JSDOM(`
+			<div id="block">
+				<h2 data-lines="0:0">Strict</h2>
+				<div class="cuecraft-cue" data-cuecraft-section-id="strict">Prompt</div>
+				<p id="owned" data-lines="1:1">Owned answer</p>
+				<div id="ambiguous-a" data-lines="2:2">Ambiguous A</div>
+				<div id="ambiguous-b" data-lines="2:2">Ambiguous B</div>
+				<h2 data-lines="3:3">Fallback</h2>
+				<div class="cuecraft-cue" data-cuecraft-section-id="fallback">Fallback prompt</div>
+				<p data-lines="4:4">Fallback answer</p>
+			</div>
+		`);
+		const block = dom.window.document.querySelector<HTMLElement>("#block")!;
+		const toggleSection = vi.fn();
+		const projection = {
+			snapshot: studySnapshot(),
+			toggleSection,
+			showAll: vi.fn(),
+			hideAll: vi.fn(),
+			exit: vi.fn(),
 		};
+		const getSectionInfo = (element: HTMLElement) => {
+			const [lineStart, lineEnd] = (element.dataset.lines ?? "")
+				.split(":")
+				.map(Number);
+			return Number.isFinite(lineStart) && Number.isFinite(lineEnd)
+				? { lineStart, lineEnd }
+				: null;
+		};
+
+		projectReadingStudyBlock(block, getSectionInfo, projection);
+		projectReadingStudyBlock(block, getSectionInfo, projection);
+
+		const strictCue = block.querySelector<HTMLElement>(
+			'[data-cuecraft-section-id="strict"]'
+		)!;
+		const fallbackCue = block.querySelector<HTMLElement>(
+			'[data-cuecraft-section-id="fallback"]'
+		)!;
+		expect(strictCue.getAttribute("role")).toBe("note");
+		expect(strictCue.hasAttribute("tabindex")).toBe(false);
+		expect(fallbackCue.getAttribute("role")).toBe("note");
+		expect(fallbackCue.hasAttribute("tabindex")).toBe(false);
+		const toggle = strictCue.querySelector<HTMLButtonElement>(
+			".cuecraft-study-section-toggle"
+		)!;
+		expect(toggle.getAttribute("aria-label")).toBe("Show section");
+		expect(toggle.getAttribute("aria-pressed")).toBe("false");
+		expect(toggle.dataset.icon).toBe("eye");
+		expect(toggle.dataset.tooltip).toBe("Show section");
+		expect(toggle.dataset.tooltipPlacement).toBe("right");
+		expect(fallbackCue.querySelector(".cuecraft-study-section-toggle")).toBeNull();
+
+		strictCue.click();
+		strictCue.dispatchEvent(
+			new dom.window.KeyboardEvent("keydown", { bubbles: true, key: "Enter" })
+		);
+		strictCue.dispatchEvent(
+			new dom.window.KeyboardEvent("keydown", { bubbles: true, key: " " })
+		);
+		fallbackCue.click();
+		expect(toggleSection).not.toHaveBeenCalled();
+		toggle.click();
+		expect(toggleSection).toHaveBeenCalledOnce();
+		expect(toggleSection).toHaveBeenCalledWith("strict");
+
+		const owned = block.querySelector<HTMLElement>("#owned")!;
+		expect(owned.classList.contains("cuecraft-reading-study-answer")).toBe(true);
+		expect(owned.classList.contains("is-hidden")).toBe(true);
+		expect(owned.getAttribute("aria-hidden")).toBe("true");
+		for (const id of ["ambiguous-a", "ambiguous-b"]) {
+			const ambiguous = block.querySelector<HTMLElement>(`#${id}`)!;
+			expect(ambiguous.classList.contains("is-hidden")).toBe(false);
+			expect(ambiguous.hasAttribute("aria-hidden")).toBe(false);
+		}
+	});
+
+	it("reveals and restores answer semantics", () => {
+		const dom = new JSDOM(`
+			<div id="block">
+				<h2 data-lines="0:0">Strict</h2>
+				<div class="cuecraft-cue" data-cuecraft-section-id="strict">Prompt</div>
+				<p id="answer" data-lines="1:1">Answer</p>
+			</div>
+		`);
+		const block = dom.window.document.querySelector<HTMLElement>("#block")!;
+		const getSectionInfo = (element: HTMLElement) => {
+			const [lineStart, lineEnd] = (element.dataset.lines ?? "")
+				.split(":")
+				.map(Number);
+			return Number.isFinite(lineStart) && Number.isFinite(lineEnd)
+				? { lineStart, lineEnd }
+				: null;
+		};
+		const hidden = studySnapshot();
+		projectReadingStudyBlock(block, getSectionInfo, {
+			snapshot: hidden,
+			toggleSection: vi.fn(),
+			showAll: vi.fn(),
+			hideAll: vi.fn(),
+			exit: vi.fn(),
+		});
+		const answer = block.querySelector<HTMLElement>("#answer")!;
+		expect(answer.getAttribute("aria-hidden")).toBe("true");
 		expect(
-			readingModeDisplayState({
-				display: "review-button",
+			block.querySelector<HTMLButtonElement>(".cuecraft-study-section-toggle")
+				?.getAttribute("aria-label")
+		).toBe("Show section");
+
+		const revealed = {
+			...hidden,
+			sections: hidden.sections.map((section) => ({ ...section, revealed: true })),
+			revealedCount: 1,
+		};
+		projectReadingStudyBlock(block, getSectionInfo, {
+			snapshot: revealed,
+			toggleSection: vi.fn(),
+			showAll: vi.fn(),
+			hideAll: vi.fn(),
+			exit: vi.fn(),
+		});
+		expect(answer.classList.contains("is-hidden")).toBe(false);
+		expect(answer.hasAttribute("aria-hidden")).toBe(false);
+		const revealedToggle = block.querySelector<HTMLButtonElement>(
+			".cuecraft-study-section-toggle"
+		)!;
+		expect(revealedToggle.getAttribute("aria-label")).toBe("Hide section");
+		expect(revealedToggle.getAttribute("aria-pressed")).toBe("true");
+		expect(revealedToggle.dataset.icon).toBe("eye-off");
+
+		projectReadingStudyBlock(block, getSectionInfo, null);
+		expect(answer.classList.contains("cuecraft-reading-study-answer")).toBe(false);
+		expect(answer.hasAttribute("aria-hidden")).toBe(false);
+		expect(block.querySelector(".cuecraft-study-section-toggle")).toBeNull();
+	});
+});
+
+describe("syncReadingStudyControls", () => {
+	it("keeps one live control host and cleans it up on Exit", () => {
+		const dom = new JSDOM(
+			"<div id=controls></div><div id=container></div>"
+		);
+		const container = dom.window.document.querySelector<HTMLElement>("#container")!;
+		const controlsContainer = dom.window.document.querySelector<HTMLElement>(
+			"#controls"
+		)!;
+		const showAll = vi.fn();
+		const hideAll = vi.fn();
+		const exit = vi.fn();
+		const projection = {
+			snapshot: studySnapshot(),
+			toggleSection: vi.fn(),
+			showAll,
+			hideAll,
+			exit,
+		};
+
+		syncReadingStudyControls(container, projection, controlsContainer);
+		syncReadingStudyControls(container, projection, controlsContainer);
+
+		expect(
+			controlsContainer.querySelectorAll(".cuecraft-reading-study-controls")
+		).toHaveLength(1);
+		expect(container.querySelector(".cuecraft-reading-study-controls")).toBeNull();
+		const controls = controlsContainer.querySelector<HTMLElement>(
+			".cuecraft-reading-study-controls"
+		)!;
+		expect(controls.textContent).toContain("0 / 1 revealed");
+		const help = controls.firstElementChild as HTMLElement;
+		expect(help.classList.contains("cuecraft-study-help")).toBe(true);
+		expect(help.dataset.icon).toBe("eye");
+		expect(help.querySelector(".cuecraft-study-help-title")?.textContent).toBe(
+			"Show or hide sections"
+		);
+		expect(help.querySelector(".cuecraft-study-help-detail")?.textContent).toBe(
+			"Click the eye icon on any cue card."
+		);
+		expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
+			2
+		);
+		const actions = controls.querySelector<HTMLElement>(
+			".cuecraft-study-actions"
+		)!;
+		expect(actions.querySelectorAll("button")).toHaveLength(3);
+		const progressTrack = controls.querySelector<HTMLElement>(
+			".cuecraft-study-progress-track"
+		)!;
+		expect(progressTrack.getAttribute("role")).toBe("progressbar");
+		expect(progressTrack.getAttribute("aria-valuenow")).toBe("0");
+		expect(progressTrack.getAttribute("aria-valuemax")).toBe("1");
+		const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
+		expect([...buttons].map((button) => button.textContent)).toEqual([
+			"Show All Sections",
+			"Hide All Sections",
+			"Exit Study Mode",
+		]);
+		expect([...buttons].map((button) => button.dataset.icon)).toEqual([
+			"eye",
+			"eye-off",
+			"log-out",
+		]);
+		expect(buttons[0].disabled).toBe(false);
+		expect(buttons[1].disabled).toBe(true);
+		buttons[0].click();
+		buttons[1].click();
+		buttons[2].click();
+		expect(showAll).toHaveBeenCalledTimes(1);
+		expect(hideAll).not.toHaveBeenCalled();
+		expect(exit).toHaveBeenCalledTimes(1);
+		expect(
+			controlsContainer.querySelector(".cuecraft-reading-study-controls")
+		).toBeNull();
+
+		buttons[0].click();
+		buttons[1].click();
+		buttons[2].click();
+		expect(showAll).toHaveBeenCalledTimes(1);
+		expect(hideAll).not.toHaveBeenCalled();
+		expect(exit).toHaveBeenCalledTimes(1);
+	});
+});
+
+describe("Reading postprocessor Study plumbing", () => {
+	it("temporarily forces strict inline cues without mutating saved visibility", () => {
+		const dom = new JSDOM(`
+			<div class="markdown-preview-view" id="container">
+				<div id="block">
+					<h1 data-lines="0:0">A</h1><p id="a" data-lines="1:1">alpha</p>
+					<h2 data-lines="2:2">B</h2><p id="b" data-lines="3:3">beta</p>
+					<h2 data-lines="4:4">C</h2><p id="c" data-lines="5:5">gamma</p>
+				</div>
+			</div>
+		`);
+		globalThis.window = dom.window as unknown as typeof globalThis.window;
+		globalThis.document = dom.window.document;
+		globalThis.HTMLElement = dom.window.HTMLElement;
+		const proto = dom.window.HTMLElement.prototype as HTMLElement & {
+			addClass?: (...classes: string[]) => void;
+			hasClass?: (className: string) => boolean;
+			setAttr?: (name: string, value: string) => void;
+			createDiv?: (options?: { text?: string; cls?: string }) => HTMLElement;
+		};
+		proto.addClass = function addClass(...classes: string[]) {
+			this.classList.add(...classes);
+		};
+		proto.hasClass = function hasClass(className: string) {
+			return this.classList.contains(className);
+		};
+		proto.setAttr = function setAttr(name: string, value: string) {
+			this.setAttribute(name, value);
+		};
+		const makeDiv = (options: { text?: string; cls?: string } = {}) => {
+			const element = dom.window.document.createElement("div");
+			if (options.text) element.textContent = options.text;
+			if (options.cls) element.className = options.cls;
+			return element;
+		};
+		proto.createDiv = function createDiv(options = {}) {
+			const element = makeDiv(options);
+			this.appendChild(element);
+			return element;
+		};
+		(globalThis as unknown as { createDiv: typeof makeDiv }).createDiv = makeDiv;
+
+		const path = "notes/example.md";
+		const cache = cacheFrom();
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const container = dom.window.document.querySelector<HTMLElement>("#container")!;
+		const block = dom.window.document.querySelector<HTMLElement>("#block")!;
+		const view = {
+			file: { path },
+			getMode: () => "preview",
+			containerEl: container,
+			editor: { getValue: () => NOTE },
+			addAction: () => dom.window.document.createElement("button"),
+		};
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			settings: {
+				...DEFAULT_SETTINGS,
 				renderInReadingMode: false,
-				hasCache: true,
-				hasUsableCues: true,
-				isHidden: false,
-			})
-		).toEqual(hidden);
+				generateKeywords: false,
+				showSectionLens: false,
+			},
+			app: {
+				workspace: {
+					getActiveFile: () => ({ path }),
+					getActiveViewOfType: () => view,
+					iterateAllLeaves: () => undefined,
+				},
+			},
+			cacheStore: { get: () => cache },
+			visibility: { isHidden: () => true },
+			refreshReadingModeSurface: vi.fn(),
+			refreshEditorCues: vi.fn(),
+		});
+		const controller = (
+			plugin as unknown as { studySession: StudySessionController }
+		).studySession;
+		controller.start(
+			path,
+			resolveStudySections(NOTE, cache.sections, parseSections(NOTE))
+		);
+		const context = {
+			sourcePath: path,
+			getSectionInfo: (element: HTMLElement) => {
+				const [lineStart, lineEnd] = (element.dataset.lines ?? "")
+					.split(":")
+					.map(Number);
+				return Number.isFinite(lineStart) && Number.isFinite(lineEnd)
+					? { text: NOTE, lineStart, lineEnd }
+					: null;
+			},
+		};
+
+		const render = () =>
+			(
+				plugin as unknown as {
+					renderReadingCues(
+						element: HTMLElement,
+						context: typeof context
+					): void;
+				}
+			).renderReadingCues(block, context);
+		render();
+		render();
+
+		expect(block.querySelectorAll(".cuecraft-cue-reading")).toHaveLength(3);
+		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
+			"true"
+		);
+		expect(plugin.settings.renderInReadingMode).toBe(false);
 		expect(
-			readingModeDisplayState({
-				display: "review-button",
-				renderInReadingMode: true,
-				hasCache: false,
-				hasUsableCues: true,
-				isHidden: false,
-			})
-		).toEqual(hidden);
+			(plugin as unknown as { visibility: { isHidden(path: string): boolean } })
+				.visibility.isHidden(path)
+		).toBe(true);
+
+		const firstCueSelector =
+			`[data-cuecraft-section-id="${cache.sections[0].id}"]`;
+		block.querySelector<HTMLElement>(firstCueSelector)?.click();
+		render();
+		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
+			"true"
+		);
+		block
+			.querySelector<HTMLElement>(firstCueSelector)
+			?.querySelector<HTMLButtonElement>(".cuecraft-study-section-toggle")
+			?.click();
+		render();
+		expect(block.querySelector<HTMLElement>("#a")?.hasAttribute("aria-hidden")).toBe(
+			false
+		);
+		expect(block.querySelector<HTMLElement>("#b")?.getAttribute("aria-hidden")).toBe(
+			"true"
+		);
 		expect(
-			readingModeDisplayState({
-				display: "review-button",
-				renderInReadingMode: true,
-				hasCache: true,
-				hasUsableCues: true,
-				isHidden: true,
-			})
-		).toEqual(hidden);
+			container.querySelector(".cuecraft-reading-study-controls")?.textContent
+		).toContain("1 / 3 revealed");
+
+		container
+			.querySelector<HTMLButtonElement>(".cuecraft-reading-study-hide-all")
+			?.click();
+		render();
+		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
+			"true"
+		);
 		expect(
-			readingModeDisplayState({
-				display: "review-button",
-				renderInReadingMode: true,
-				hasCache: true,
-				hasUsableCues: false,
-				isHidden: false,
-			})
-		).toEqual(hidden);
+			container.querySelector(".cuecraft-reading-study-controls")?.textContent
+		).toContain("0 / 3 revealed");
+
+		container
+			.querySelector<HTMLButtonElement>(".cuecraft-reading-study-exit")
+			?.click();
+		expect(block.querySelector<HTMLElement>("#a")?.hasAttribute("aria-hidden")).toBe(
+			false
+		);
+		expect(container.querySelector(".cuecraft-reading-study-controls")).toBeNull();
+		expect(controller.snapshot().active).toBe(false);
 	});
 });
 

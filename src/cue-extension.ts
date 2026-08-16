@@ -15,7 +15,7 @@ import {
 	gutter,
 } from "@codemirror/view";
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
-import { setIcon } from "obsidian";
+import { setIcon, setTooltip } from "obsidian";
 import type { NoteCache } from "./cache";
 import {
 	buildEditorHookCard,
@@ -34,6 +34,7 @@ import { buildCornellSupportPresentation } from "./cornell";
 import { cornellStyleClass, type CornellStyle } from "./cornell-style";
 import { isCueEligibleSection, type Section } from "./parser";
 import type { NoteBriefOutput, SectionLens } from "./schemas";
+import type { StudyProjection, StudySessionSnapshot } from "./study-session";
 import {
 	CUE_SECTION_KINDS,
 	type CueSectionCollapseController,
@@ -91,6 +92,7 @@ export interface CueLineDataOptions {
 export interface CueEditorRenderState {
 	cues: CueLineData[];
 	display: EditorCueDisplay;
+	study?: StudyProjection;
 	notePath?: string;
 	collapseController?: CueSectionCollapseController;
 	noteBrief?: NoteBriefOutput | null;
@@ -114,6 +116,7 @@ interface CueRenderOptions extends EditorHookCardOptions {
 	cueFontSize?: CueFontSize;
 	editorCueWidthController?: EditorCueWidthController;
 	collapse?: CueSectionCollapseRenderState;
+	study?: CueStudySectionRenderState;
 }
 
 interface CueSectionCollapseRenderState {
@@ -123,6 +126,12 @@ interface CueSectionCollapseRenderState {
 	collapsed: Record<CueSectionKind, boolean>;
 }
 
+interface CueStudySectionRenderState {
+	sectionId: string;
+	revealed: boolean;
+	toggleSection(sectionId: string): void;
+}
+
 const RAIL_CARD_SECTION_GAP = 12;
 const RAIL_CARD_SPACER_TOLERANCE = 1;
 export const RAIL_CARD_LAYOUT_EVENT = "cuecraft-rail-card-layout";
@@ -130,6 +139,7 @@ const EDITOR_CUE_WIDTH_PROPERTY = "--cuecraft-editor-cue-width";
 const EDITOR_CUE_WIDTH_CUSTOM_CLASS = "cuecraft-editor-cue-width-custom";
 const EDITOR_CUE_WIDTH_RESIZING_CLASS = "cuecraft-editor-cue-width-resizing";
 const editorCueWidthInteractionCleanup = new WeakMap<HTMLElement, () => void>();
+const editorStudyCueInteractionCleanup = new WeakMap<HTMLElement, () => void>();
 const editorCueWidthLayoutFrames = new WeakMap<
 	HTMLElement,
 	{ id: number; kind: "animation-frame" | "timeout" }
@@ -194,6 +204,8 @@ class CueWidget extends WidgetType {
 				editorHookCardOptionsKey(this.options) &&
 			other.options.collapse?.controller ===
 				this.options.collapse?.controller &&
+			other.options.study?.toggleSection ===
+				this.options.study?.toggleSection &&
 			other.cue.sectionId === this.cue.sectionId &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
@@ -240,8 +252,13 @@ class CueWidget extends WidgetType {
 			| { closest?: (selector: string) => Element | null }
 			| null;
 		return Boolean(
+			this.options.study ||
 			target?.closest?.(".cuecraft-editor-hook-section-toggle")
 		);
+	}
+
+	destroy(dom: Node): void {
+		cleanupEditorStudyCueInteractions(dom);
 	}
 }
 
@@ -302,6 +319,8 @@ class CueGutterMarker extends GutterMarker {
 				editorHookCardOptionsKey(this.options) &&
 			other.options.collapse?.controller ===
 				this.options.collapse?.controller &&
+			other.options.study?.toggleSection ===
+				this.options.study?.toggleSection &&
 			other.cue.sectionId === this.cue.sectionId &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
@@ -339,6 +358,7 @@ class CueGutterMarker extends GutterMarker {
 		if (dom.nodeType === dom.ELEMENT_NODE) {
 			editorCueWidthInteractionCleanup.get(dom as HTMLElement)?.();
 		}
+		cleanupEditorStudyCueInteractions(dom);
 	}
 }
 
@@ -350,16 +370,70 @@ export function renderCueElement(
 	options: CueRenderOptions = {}
 ): HTMLElement {
 	const cornellStyle = cornellEditorDisplayStyle(display);
+	let element: HTMLElement;
 	if (cornellStyle) {
-		return renderCornellCueElement(cue, display, cornellStyle, state, options);
-	}
-	if (!isInlineEditorDisplay(display)) {
-		return renderEditorHookElement(
+		element = renderCornellCueElement(
+			cue,
+			display,
+			cornellStyle,
+			state,
+			options
+		);
+	} else if (!isInlineEditorDisplay(display)) {
+		element = renderEditorHookElement(
 			buildEditorHookCard(cue, display, index, state, options),
 			options
 		);
+	} else {
+		element = renderInlineCueElement(cue, options);
 	}
-	return renderInlineCueElement(cue, options);
+	applyEditorStudyCueInteraction(element, options.study);
+	return element;
+}
+
+function applyEditorStudyCueInteraction(
+	element: HTMLElement,
+	study: CueStudySectionRenderState | undefined
+): void {
+	if (!study) return;
+	element.classList.add("cuecraft-editor-study-cue");
+	element.dataset.studySectionId = study.sectionId;
+	element.dataset.studyState = study.revealed ? "revealed" : "hidden";
+
+	const toggle = element.ownerDocument.createElement("button");
+	toggle.type = "button";
+	toggle.className = "cuecraft-study-section-toggle";
+	toggle.dataset.revealed = String(study.revealed);
+	const label = study.revealed ? "Hide section" : "Show section";
+	toggle.setAttribute("aria-label", label);
+	toggle.setAttribute("aria-pressed", String(study.revealed));
+	setIcon(toggle, study.revealed ? "eye-off" : "eye");
+	setTooltip(toggle, label, { placement: "right" });
+	const onClick = (event: MouseEvent) => {
+		event.preventDefault();
+		event.stopPropagation();
+		study.toggleSection(study.sectionId);
+	};
+	toggle.addEventListener("click", onClick);
+	element.append(toggle);
+	editorStudyCueInteractionCleanup.set(element, () => {
+		toggle.removeEventListener("click", onClick);
+		toggle.remove();
+		editorStudyCueInteractionCleanup.delete(element);
+	});
+}
+
+function cleanupEditorStudyCueInteractions(dom: Node): void {
+	if (dom.nodeType !== dom.ELEMENT_NODE) return;
+	const element = dom as HTMLElement;
+	if (element.classList.contains("cuecraft-editor-study-cue")) {
+		editorStudyCueInteractionCleanup.get(element)?.();
+	}
+	for (const cue of element.querySelectorAll<HTMLElement>(
+		".cuecraft-editor-study-cue"
+	)) {
+		editorStudyCueInteractionCleanup.get(cue)?.();
+	}
 }
 
 function renderCornellCueElement(
@@ -1422,6 +1496,29 @@ export const setRailSpacersEffect =
 const emptyCueGutterMarkers = RangeSet.of<GutterMarker>([]);
 const emptyRailSpacerMap = new Map<number, number>();
 
+export function buildEditorStudyAnswerDecorations(
+	state: EditorState,
+	snapshot: StudySessionSnapshot | null | undefined
+): DecorationSet {
+	if (!snapshot?.active) return Decoration.none;
+	const ranges: Range<Decoration>[] = [];
+	for (const section of snapshot.sections) {
+		if (section.revealed) continue;
+		const { from, to } = section.bodyRange;
+		if (from < 0 || to <= from || to > state.doc.length) continue;
+		ranges.push(
+			Decoration.mark({
+				class: "cuecraft-editor-study-answer is-hidden",
+				attributes: {
+					"aria-hidden": "true",
+					"data-study-section-id": section.sectionId,
+				},
+			}).range(from, to)
+		);
+	}
+	return ranges.length ? Decoration.set(ranges, true) : Decoration.none;
+}
+
 export function buildCueWidgetDecorations(
 	state: EditorState,
 	payload: CueEditorRenderState
@@ -1449,6 +1546,7 @@ export function buildCueWidgetDecorations(
 		const cueOptions = {
 			...options,
 			...cueCollapseRenderOptions(payload, cue),
+			...cueStudyRenderOptions(payload, cue),
 		};
 		// Block widget rendered on its own line just after the heading.
 		ranges.push(
@@ -1480,6 +1578,7 @@ export function buildCueGutterMarkers(
 		const markerOptions = {
 			...options,
 			...cueCollapseRenderOptions(payload, cue),
+			...cueStudyRenderOptions(payload, cue),
 		};
 		builder.add(
 			markerLine.from,
@@ -1535,10 +1634,33 @@ function editorHookCardOptionsKey(options: CueRenderOptions): string {
 		options.cueFontSize ?? "",
 		options.collapse?.notePath ?? "",
 		options.collapse?.sectionId ?? "",
+		options.study?.sectionId ?? "",
+		String(options.study?.revealed ?? false),
 		...CUE_SECTION_KINDS.map((kind) =>
 			String(options.collapse?.collapsed[kind] ?? false)
 		),
 	].join("\u0001");
+}
+
+function cueStudyRenderOptions(
+	payload: CueEditorRenderState,
+	cue: CueLineData
+): Pick<CueRenderOptions, "study"> {
+	const projection = payload.study;
+	if (!projection?.snapshot.active || cue.error || cue.question.trim().length === 0) {
+		return {};
+	}
+	const section = projection.snapshot.sections.find(
+		(candidate) => candidate.sectionId === cue.sectionId
+	);
+	if (!section) return {};
+	return {
+		study: {
+			sectionId: section.sectionId,
+			revealed: section.revealed,
+			toggleSection: projection.toggleSection,
+		},
+	};
 }
 
 function cueCollapseRenderOptions(
@@ -1679,6 +1801,69 @@ function railSpacerMapsEqual(
 	}
 	return true;
 }
+
+function mapStudySnapshotThroughChanges(
+	snapshot: StudySessionSnapshot,
+	tr: Transaction
+): StudySessionSnapshot {
+	if (!tr.docChanged) return snapshot;
+	const sections = snapshot.sections.map((section) => {
+		const headingFrom = tr.changes.mapPos(section.headingRange.from, -1);
+		const headingTo = tr.changes.mapPos(section.headingRange.to, 1);
+		const bodyFrom = tr.changes.mapPos(section.bodyRange.from, -1);
+		const bodyTo = tr.changes.mapPos(section.bodyRange.to, 1);
+		const headingPos = Math.min(headingFrom, tr.state.doc.length);
+		const bodyStartPos = Math.min(bodyFrom, tr.state.doc.length);
+		const bodyEndPos = Math.min(Math.max(bodyFrom, bodyTo - 1), tr.state.doc.length);
+		return {
+			...section,
+			headingLine: tr.state.doc.lineAt(headingPos).number,
+			bodyStartLine: tr.state.doc.lineAt(bodyStartPos).number,
+			bodyEndLine: tr.state.doc.lineAt(bodyEndPos).number,
+			headingRange: { from: headingFrom, to: headingTo },
+			bodyRange: { from: bodyFrom, to: bodyTo },
+		};
+	});
+	return { ...snapshot, sections };
+}
+
+export interface CueStudyFieldState {
+	decorations: DecorationSet;
+	projection: StudyProjection | null;
+}
+
+export const cueStudyField = StateField.define<CueStudyFieldState>({
+	create() {
+		return { decorations: Decoration.none, projection: null };
+	},
+	update(value, tr) {
+		let projection = value.projection;
+		let rebuild = false;
+		for (const effect of tr.effects) {
+			if (effect.is(setCuesEffect)) {
+				projection = effect.value.study ?? null;
+				rebuild = true;
+			}
+		}
+		if (projection && tr.docChanged && !rebuild) {
+			projection = {
+				...projection,
+				snapshot: mapStudySnapshotThroughChanges(projection.snapshot, tr),
+			};
+			rebuild = true;
+		}
+		if (!rebuild) return value;
+		return {
+			decorations: buildEditorStudyAnswerDecorations(
+				tr.state,
+				projection?.snapshot
+			),
+			projection,
+		};
+	},
+	provide: (field) =>
+		EditorView.decorations.from(field, (value) => value.decorations),
+});
 
 export const cueField = StateField.define<DecorationSet>({
 	create() {
@@ -1868,6 +2053,151 @@ const cueRailLayoutPlugin = ViewPlugin.fromClass(
 	}
 );
 
+const cueEditorStudyPlugin = ViewPlugin.fromClass(
+	class {
+		private controlHost: HTMLElement | null = null;
+		private controlCleanup: (() => void) | null = null;
+		private destroyed = false;
+
+		constructor(private readonly view: EditorView) {
+			this.renderControls();
+		}
+
+		update(update: ViewUpdate): void {
+			if (update.docChanged) {
+				const projection = this.view.state.field(cueStudyField).projection;
+				const documentChanged = projection?.documentChanged;
+				const markdown = update.state.doc.toString();
+				if (documentChanged) {
+					queueMicrotask(() => {
+						if (this.destroyed) return;
+						const current = this.view.state.field(cueStudyField).projection;
+						if (
+							current?.documentChanged === documentChanged &&
+							this.view.state.doc.toString() === markdown
+						) {
+							documentChanged(markdown);
+						}
+					});
+				}
+			}
+			if (
+				update.transactions.some((tr) =>
+					tr.effects.some((effect) => effect.is(setCuesEffect))
+				)
+			) {
+				this.renderControls();
+			}
+		}
+
+		private renderControls(): void {
+			this.removeControls();
+			const projection = this.view.state.field(cueStudyField).projection;
+			const snapshot = projection?.snapshot;
+			const active = Boolean(projection && snapshot?.active);
+			this.view.dom.classList.toggle("cuecraft-editor-study-active", active);
+			if (!projection || !snapshot?.active) return;
+
+			const doc = this.view.dom.ownerDocument;
+			const host = doc.createElement("div");
+			host.className = "cuecraft-editor-study-controls";
+			host.setAttribute("role", "region");
+			host.setAttribute("aria-label", "Study controls");
+
+			const help = doc.createElement("span");
+			help.className = "cuecraft-study-help";
+			setIcon(help, "eye");
+			const helpCopy = doc.createElement("span");
+			helpCopy.className = "cuecraft-study-help-copy";
+			const helpTitle = doc.createElement("span");
+			helpTitle.className = "cuecraft-study-help-title";
+			helpTitle.textContent = "Show or hide sections";
+			const helpDetail = doc.createElement("span");
+			helpDetail.className = "cuecraft-study-help-detail";
+			helpDetail.textContent = "Click the eye icon on any cue card.";
+			helpCopy.append(helpTitle, helpDetail);
+			help.append(helpCopy);
+
+			const progress = doc.createElement("span");
+			progress.className = "cuecraft-editor-study-progress";
+			progress.setAttribute("aria-live", "polite");
+			progress.textContent = `${snapshot.revealedCount} / ${snapshot.total} revealed`;
+
+			const progressTrack = doc.createElement("div");
+			progressTrack.className = "cuecraft-study-progress-track";
+			progressTrack.setAttribute("role", "progressbar");
+			progressTrack.setAttribute("aria-valuemin", "0");
+			progressTrack.setAttribute("aria-valuemax", String(snapshot.total));
+			progressTrack.setAttribute(
+				"aria-valuenow",
+				String(snapshot.revealedCount)
+			);
+			progressTrack.setAttribute("aria-label", "Sections revealed");
+			const progressFill = doc.createElement("div");
+			progressFill.className = "cuecraft-study-progress-fill";
+			progressFill.style.width = `${
+				snapshot.total > 0
+					? (snapshot.revealedCount / snapshot.total) * 100
+					: 0
+			}%`;
+			progressTrack.append(progressFill);
+
+			const showAll = doc.createElement("button");
+			showAll.type = "button";
+			showAll.className =
+				"cuecraft-study-action cuecraft-editor-study-show-all";
+			setIcon(showAll, "eye");
+			showAll.append("Show All Sections");
+			showAll.disabled = snapshot.revealedCount === snapshot.total;
+
+			const hideAll = doc.createElement("button");
+			hideAll.type = "button";
+			hideAll.className =
+				"cuecraft-study-action cuecraft-editor-study-hide-all";
+			setIcon(hideAll, "eye-off");
+			hideAll.append("Hide All Sections");
+			hideAll.disabled = snapshot.revealedCount === 0;
+
+			const exit = doc.createElement("button");
+			exit.type = "button";
+			exit.className = "cuecraft-study-action cuecraft-editor-study-exit";
+			setIcon(exit, "log-out");
+			exit.append("Exit Study Mode");
+
+			const onShowAll = () => projection.showAll();
+			const onHideAll = () => projection.hideAll();
+			const onExit = () => projection.exit();
+			showAll.addEventListener("click", onShowAll);
+			hideAll.addEventListener("click", onHideAll);
+			exit.addEventListener("click", onExit);
+			const actions = doc.createElement("div");
+			actions.className = "cuecraft-study-actions";
+			actions.append(showAll, hideAll, exit);
+			host.append(help, progress, progressTrack, actions);
+			(projection.controlsContainer ?? this.view.scrollDOM).prepend(host);
+			this.controlHost = host;
+			this.controlCleanup = () => {
+				showAll.removeEventListener("click", onShowAll);
+				hideAll.removeEventListener("click", onHideAll);
+				exit.removeEventListener("click", onExit);
+			};
+		}
+
+		private removeControls(): void {
+			this.controlCleanup?.();
+			this.controlCleanup = null;
+			this.controlHost?.remove();
+			this.controlHost = null;
+		}
+
+		destroy(): void {
+			this.destroyed = true;
+			this.removeControls();
+			this.view.dom.classList.remove("cuecraft-editor-study-active");
+		}
+	}
+);
+
 export function railLayoutUpdateNeedsMeasure(update: ViewUpdate): boolean {
 	const cuesChanged = update.transactions.some((tr) =>
 		tr.effects.some((effect) => effect.is(setCuesEffect))
@@ -1889,8 +2219,10 @@ export function railLayoutUpdateNeedsMeasure(update: ViewUpdate): boolean {
 /** Editor extension that renders CueCraft cues. Register via registerEditorExtension. */
 export const cueEditorExtension = [
 	cueField,
+	cueStudyField,
 	cueRailSpacerField,
 	cueGutterField,
 	cueGutter,
 	cueRailLayoutPlugin,
+	cueEditorStudyPlugin,
 ];

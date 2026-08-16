@@ -472,4 +472,77 @@ describe("settings CSS", () => {
 			"transform: translateX(calc(-100% + 1rem))"
 		);
 	});
+
+	it("styles non-collapsing Editing Study answers and sticky controls", () => {
+		expect(styles).not.toContain("body.cuecraft-study-active");
+		expect(ruleFor(".cuecraft-study-header-action")).toContain(
+			"display: inline-flex"
+		);
+		expect(ruleFor(".cuecraft-study-header-label")).toContain("display: inline");
+		expect(styles).toContain(
+			'.cuecraft-study-header-action[aria-disabled="true"]'
+		);
+		expect(styles).toContain(".cuecraft-study-ribbon.is-active");
+
+		const answerRule = ruleFor(
+			".markdown-source-view.mod-cm6 .cuecraft-editor-study-answer.is-hidden"
+		);
+		expect(answerRule).toContain("filter: blur(4px)");
+		expect(answerRule).toContain("cursor: text");
+		expect(answerRule).not.toContain("display: none");
+		expect(answerRule).not.toContain("visibility: hidden");
+		expect(answerRule).not.toContain("max-height");
+
+		const controlsRule = ruleFor(".cuecraft-editor-study-controls");
+		expect(controlsRule).toContain("position: sticky");
+		expect(controlsRule).toContain("top: 0");
+		expect(controlsRule).toContain("z-index: 10");
+		expect(controlsRule).toContain("width: 100%");
+		expect(controlsRule).toContain("background: var(--background-secondary)");
+		expect(controlsRule).toContain(
+			"border: 1px solid var(--background-modifier-border)"
+		);
+
+		const cueRule = ruleFor(".cuecraft-editor-study-cue");
+		expect(cueRule).toContain("position: relative");
+		expect(ruleFor("button.cuecraft-study-section-toggle")).toContain(
+			"border: 1px solid var(--background-modifier-border)"
+		);
+		expect(ruleFor("button.cuecraft-study-section-toggle")).toContain(
+			"inset-inline-end: -14px"
+		);
+	});
+
+	it("styles inline-only Reading Study without the Cornell review launcher", () => {
+		const answerRule = ruleFor(
+			".cuecraft-reading-study-answer.is-hidden"
+		);
+		expect(answerRule).toContain("visibility: hidden");
+		expect(answerRule).not.toContain("display: none");
+
+		const controlsRule = ruleFor(".cuecraft-reading-study-controls");
+		expect(controlsRule).toContain("position: sticky");
+		expect(controlsRule).toContain("top: 0");
+		expect(controlsRule).toContain("z-index: 10");
+		expect(controlsRule).toContain("width: 100%");
+		expect(controlsRule).toContain("background: var(--background-secondary)");
+		expect(styles).toContain(".cuecraft-study-progress-track");
+		expect(styles).toContain(".cuecraft-study-progress-fill");
+		expect(ruleFor(".cuecraft-study-help")).toContain(
+			"background: var(--background-primary)"
+		);
+		expect(ruleFor(".cuecraft-study-help-copy")).toContain(
+			"flex-direction: column"
+		);
+		expect(ruleFor(".cuecraft-study-progress-track")).toContain(
+			"flex: 1 1 120px"
+		);
+		expect(ruleFor(".cuecraft-study-actions")).toContain(
+			"margin-inline-start: auto"
+		);
+
+		const cueRule = ruleFor(".cuecraft-reading-study-cue");
+		expect(cueRule).toContain("position: relative");
+		expect(styles).not.toContain(".cuecraft-reading-review");
+	});
 });

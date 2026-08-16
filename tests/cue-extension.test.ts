@@ -1,14 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 import { JSDOM } from "jsdom";
-import { EditorState } from "@codemirror/state";
+import { EditorState, type Extension } from "@codemirror/state";
 import { Decoration, EditorView } from "@codemirror/view";
 import {
 	applyEditorCueWidthPreview,
 	buildCueGutterMarkers,
 	buildCueLineData,
+	buildEditorStudyAnswerDecorations,
 	buildCueWidgetDecorations,
 	cueEditorExtension,
 	cueGutterField,
+	cueStudyField,
 	RAIL_CARD_LAYOUT_EVENT,
 	buildRailSpacerDecorations,
 	cueRailSpacerField,
@@ -31,6 +33,7 @@ import type {
 	CueSectionCollapseController,
 	CueSectionKind,
 } from "../src/cue-section-collapse";
+import type { StudySessionSnapshot } from "../src/study-session";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
 const SECTION_LENS = {
@@ -88,6 +91,47 @@ function withDocument<T>(fn: () => T): T {
 	}
 }
 
+function withEditorView<T>(
+	docText: string,
+	extensions: Extension,
+	fn: (view: EditorView, parent: HTMLElement) => T
+): T {
+	const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
+		pretendToBeVisual: true,
+	});
+	const previousGlobals = new Map<PropertyKey, PropertyDescriptor | undefined>();
+	const testGlobals: Record<PropertyKey, unknown> = {
+		window: dom.window,
+		document: dom.window.document,
+		navigator: dom.window.navigator,
+		MutationObserver: dom.window.MutationObserver,
+		HTMLElement: dom.window.HTMLElement,
+		Node: dom.window.Node,
+		DOMRect: dom.window.DOMRect,
+		getComputedStyle: dom.window.getComputedStyle.bind(dom.window),
+	};
+	for (const [key, value] of Object.entries(testGlobals)) {
+		previousGlobals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
+		Object.defineProperty(globalThis, key, { configurable: true, value });
+	}
+	const parent = dom.window.document.querySelector<HTMLElement>("main");
+	if (!parent) throw new Error("Missing editor parent");
+	const view = new EditorView({
+		state: EditorState.create({ doc: docText, extensions }),
+		parent,
+	});
+	try {
+		return fn(view, parent);
+	} finally {
+		view.destroy();
+		dom.window.close();
+		for (const [key, descriptor] of previousGlobals) {
+			if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+			else delete (globalThis as Record<PropertyKey, unknown>)[key];
+		}
+	}
+}
+
 function collapseController(initial: readonly CueSectionKind[] = []): {
 	controller: CueSectionCollapseController;
 	collapsed: Set<CueSectionKind>;
@@ -123,6 +167,430 @@ function cue(overrides: Partial<CueLineData> = {}): CueLineData {
 		...overrides,
 	};
 }
+
+function studySnapshot(
+	overrides: Partial<StudySessionSnapshot> = {}
+): StudySessionSnapshot {
+	return {
+		active: true,
+		path: "notes/agents.md",
+		sections: [
+			{
+				sectionId: "section-terms",
+				headingLine: 1,
+				bodyStartLine: 2,
+				bodyEndLine: 2,
+				headingRange: { from: 0, to: 7 },
+				bodyRange: { from: 8, to: 12 },
+				revealed: false,
+			},
+		],
+		revealedCount: 0,
+		total: 1,
+		...overrides,
+	};
+}
+
+describe("Editing View Study projection", () => {
+	it("conceals only an admitted answer body and removes it from the accessibility tree", () => {
+		const state = EditorState.create({ doc: "# Terms\nbody" });
+		const decorations = buildEditorStudyAnswerDecorations(
+			state,
+			studySnapshot()
+		);
+		const ranges: Array<{
+			from: number;
+			to: number;
+			className: string | undefined;
+			ariaHidden: string | undefined;
+		}> = [];
+		decorations.between(0, state.doc.length, (from, to, value) => {
+			ranges.push({
+				from,
+				to,
+				className: value.spec.class,
+				ariaHidden: value.spec.attributes?.["aria-hidden"],
+			});
+		});
+
+		expect(ranges).toEqual([
+			{
+				from: 8,
+				to: 12,
+				className: "cuecraft-editor-study-answer is-hidden",
+				ariaHidden: "true",
+			},
+		]);
+	});
+
+	it("maps admitted answer ranges through ordinary edits until reconciliation", () => {
+		const callbacks = {
+			toggleSection: vi.fn(),
+			showAll: vi.fn(),
+			hideAll: vi.fn(),
+			exit: vi.fn(),
+		};
+		let state = EditorState.create({
+			doc: "# Terms\nbody",
+			extensions: [cueStudyField],
+		});
+		state = state.update({
+			effects: setCuesEffect.of({
+				cues: [cue()],
+				display: "inline-cues",
+				study: { snapshot: studySnapshot(), ...callbacks },
+			}),
+		}).state;
+		state = state.update({ changes: { from: 0, insert: "intro\n" } }).state;
+		state = state.update({ changes: { from: 16, insert: "XX" } }).state;
+
+		const concealed: Array<[number, number]> = [];
+		state
+			.field(cueStudyField)
+			.decorations.between(0, state.doc.length, (from, to) => {
+				concealed.push([from, to]);
+			});
+		expect(concealed).toEqual([[14, 20]]);
+		expect(state.doc.toString()).toBe("intro\n# Terms\nboXXdy");
+
+		const revealed = studySnapshot({
+			sections: studySnapshot().sections.map((section) => ({
+				...section,
+				bodyRange: { from: 14, to: 20 },
+				revealed: true,
+			})),
+			revealedCount: 1,
+		});
+		state = state.update({
+			effects: setCuesEffect.of({
+				cues: [cue({ line: 2 })],
+				display: "inline-cues",
+				study: { snapshot: revealed, ...callbacks },
+			}),
+		}).state;
+		expect(state.field(cueStudyField).decorations.size).toBe(0);
+	});
+
+	it("notifies the active Study projection after a document change", () => {
+		const queuedMicrotasks: Array<() => void> = [];
+		const originalQueueMicrotask = globalThis.queueMicrotask;
+		globalThis.queueMicrotask = (callback) => queuedMicrotasks.push(callback);
+		try {
+			withEditorView("# Terms\nbody", cueEditorExtension, (view) => {
+				const documentChanged = vi.fn();
+				view.dispatch({
+					effects: setCuesEffect.of({
+						cues: [cue()],
+						display: "inline-cues",
+						study: {
+							snapshot: studySnapshot(),
+							toggleSection: vi.fn(),
+							showAll: vi.fn(),
+							hideAll: vi.fn(),
+							exit: vi.fn(),
+							documentChanged,
+						},
+					}),
+				});
+				queuedMicrotasks.length = 0;
+				view.dispatch({ changes: { from: view.state.doc.length, insert: "!" } });
+				for (const callback of queuedMicrotasks.splice(0)) callback();
+
+				expect(documentChanged).toHaveBeenCalledOnce();
+				expect(documentChanged).toHaveBeenCalledWith("# Terms\nbody!");
+			});
+		} finally {
+			globalThis.queueMicrotask = originalQueueMicrotask;
+		}
+	});
+
+	it("makes only admitted successful cues accessible reveal controls", () => {
+		withDocument(() => {
+			const toggleSection = vi.fn();
+			const state = EditorState.create({ doc: "# Terms\nbody" });
+			const widgets = buildCueWidgetDecorations(state, {
+				cues: [
+					cue(),
+					cue({ sectionId: "failed", error: "No response", question: "" }),
+					cue({ sectionId: "fallback" }),
+				],
+				display: "inline-cues",
+				study: {
+					snapshot: studySnapshot(),
+					toggleSection,
+					showAll: vi.fn(),
+					hideAll: vi.fn(),
+					exit: vi.fn(),
+				},
+			});
+			const rendered: Array<{ widget: { destroy?(dom: Node): void }; dom: HTMLElement }> = [];
+			widgets.between(0, state.doc.length, (_from, _to, value) => {
+				const widget = value.spec.widget as {
+					toDOM(): HTMLElement;
+					destroy?(dom: Node): void;
+				};
+				rendered.push({ widget, dom: widget.toDOM() });
+			});
+
+			const studyCue = rendered[0].dom.querySelector<HTMLElement>(
+				".cuecraft-cue"
+			)!;
+			expect(studyCue.getAttribute("role")).toBe("note");
+			expect(studyCue.hasAttribute("tabindex")).toBe(false);
+			expect(studyCue.dataset.studyState).toBe("hidden");
+			const toggle = studyCue.querySelector<HTMLButtonElement>(
+				".cuecraft-study-section-toggle"
+			)!;
+			expect(toggle.getAttribute("aria-label")).toBe("Show section");
+			expect(toggle.getAttribute("aria-pressed")).toBe("false");
+			expect(toggle.dataset.icon).toBe("eye");
+			expect(toggle.dataset.tooltip).toBe("Show section");
+			expect(toggle.dataset.tooltipPlacement).toBe("right");
+			studyCue.click();
+			studyCue.dispatchEvent(
+				new document.defaultView!.KeyboardEvent("keydown", {
+					bubbles: true,
+					key: "Enter",
+				})
+			);
+			studyCue.dispatchEvent(
+				new document.defaultView!.KeyboardEvent("keydown", {
+					bubbles: true,
+					key: " ",
+				})
+			);
+			expect(toggleSection).not.toHaveBeenCalled();
+			toggle.click();
+			expect(toggleSection).toHaveBeenCalledOnce();
+			expect(toggleSection).toHaveBeenCalledWith("section-terms");
+
+			for (const item of rendered.slice(1)) {
+				const root = item.dom.querySelector<HTMLElement>(".cuecraft-cue")!;
+				expect(root.getAttribute("role")).toBe("note");
+				expect(root.querySelector(".cuecraft-study-section-toggle")).toBeNull();
+				root.click();
+			}
+			expect(toggleSection).toHaveBeenCalledTimes(1);
+
+			rendered[0].widget.destroy?.(rendered[0].dom);
+			toggle.click();
+			expect(toggleSection).toHaveBeenCalledTimes(1);
+
+			const revealedCue = renderCueElement(
+				cue(),
+				"inline-cues",
+				0,
+				"upcoming",
+				{
+					study: {
+						sectionId: "section-terms",
+						revealed: true,
+						toggleSection,
+					},
+				}
+			);
+			const hideToggle = revealedCue.querySelector<HTMLButtonElement>(
+				".cuecraft-study-section-toggle"
+			)!;
+			expect(hideToggle.getAttribute("aria-label")).toBe("Hide section");
+			expect(hideToggle.getAttribute("aria-pressed")).toBe("true");
+			expect(hideToggle.dataset.icon).toBe("eye-off");
+		});
+	});
+
+	it("includes Study reveal state in cue widget and gutter equality", () => {
+		const state = EditorState.create({ doc: "# Terms\nbody" });
+		const callbacks = {
+			toggleSection: vi.fn(),
+			showAll: vi.fn(),
+			hideAll: vi.fn(),
+			exit: vi.fn(),
+		};
+		const revealed = studySnapshot({
+			sections: studySnapshot().sections.map((section) => ({
+				...section,
+				revealed: true,
+			})),
+			revealedCount: 1,
+		});
+		const payload = (snapshot: StudySessionSnapshot): CueEditorRenderState => ({
+			cues: [cue()],
+			display: "inline-cues",
+			study: { snapshot, ...callbacks },
+		});
+		const widgetFor = (snapshot: StudySessionSnapshot) => {
+			let widget: { eq(other: unknown): boolean } | null = null;
+			buildCueWidgetDecorations(state, payload(snapshot)).between(
+				0,
+				state.doc.length,
+				(_from, _to, value) => {
+					widget = value.spec.widget as { eq(other: unknown): boolean };
+				}
+			);
+			return widget!;
+		};
+		expect(widgetFor(studySnapshot()).eq(widgetFor(revealed))).toBe(false);
+
+		const markerFor = (snapshot: StudySessionSnapshot) => {
+			let marker: { eq(other: unknown): boolean } | null = null;
+			buildCueGutterMarkers(state, {
+				...payload(snapshot),
+				display: "cornell",
+			}).between(0, state.doc.length, (_from, _to, value) => {
+				marker = value as { eq(other: unknown): boolean };
+			});
+			return marker!;
+		};
+		expect(markerFor(studySnapshot()).eq(markerFor(revealed))).toBe(false);
+	});
+
+	it("renders one control host without revealing from hidden text clicks", () => {
+		const toggleSection = vi.fn();
+		const showAll = vi.fn();
+		const hideAll = vi.fn();
+		const exit = vi.fn();
+		let destroyedControls: HTMLElement | null = null;
+		let destroyedButtons: NodeListOf<HTMLButtonElement> | null = null;
+		let destroyedEditor: HTMLElement | null = null;
+		withEditorView(
+			"# Terms\nbody",
+			cueEditorExtension,
+			(view, parent) => {
+				const controlsContainer = document.createElement("section");
+				parent.before(controlsContainer);
+				view.dispatch({
+					effects: setCuesEffect.of({
+						cues: [cue()],
+						display: "inline-cues",
+						study: {
+							snapshot: studySnapshot(),
+							controlsContainer,
+							toggleSection,
+							showAll,
+							hideAll,
+							exit,
+						},
+					}),
+				});
+
+				expect(
+					controlsContainer.querySelectorAll(".cuecraft-editor-study-controls")
+				).toHaveLength(1);
+				expect(parent.querySelector(".cuecraft-editor-study-controls")).toBeNull();
+				expect(view.dom.classList.contains("cuecraft-editor-study-active")).toBe(true);
+				const controls = controlsContainer.querySelector<HTMLElement>(
+					".cuecraft-editor-study-controls"
+				)!;
+				expect(controls.textContent).toContain("0 / 1 revealed");
+				const help = controls.firstElementChild as HTMLElement;
+				expect(help.classList.contains("cuecraft-study-help")).toBe(true);
+				expect(help.dataset.icon).toBe("eye");
+				expect(
+					help.querySelector(".cuecraft-study-help-title")?.textContent
+				).toBe("Show or hide sections");
+				expect(
+					help.querySelector(".cuecraft-study-help-detail")?.textContent
+				).toBe("Click the eye icon on any cue card.");
+				expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
+					2
+				);
+				const actions = controls.querySelector<HTMLElement>(
+					".cuecraft-study-actions"
+				)!;
+				expect(actions.querySelectorAll("button")).toHaveLength(3);
+				const progressTrack = controls.querySelector<HTMLElement>(
+					".cuecraft-study-progress-track"
+				)!;
+				expect(progressTrack.getAttribute("role")).toBe("progressbar");
+				expect(progressTrack.getAttribute("aria-valuenow")).toBe("0");
+				expect(progressTrack.getAttribute("aria-valuemax")).toBe("1");
+				expect(
+					progressTrack.querySelector<HTMLElement>(
+						".cuecraft-study-progress-fill"
+					)?.style.width
+				).toBe("0%");
+				const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
+				expect([...buttons].map((button) => button.textContent)).toEqual([
+					"Show All Sections",
+					"Hide All Sections",
+					"Exit Study Mode",
+				]);
+				expect([...buttons].map((button) => button.dataset.icon)).toEqual([
+					"eye",
+					"eye-off",
+					"log-out",
+				]);
+				expect(buttons[0].disabled).toBe(false);
+				expect(buttons[1].disabled).toBe(true);
+				buttons[0].click();
+				buttons[1].click();
+				buttons[2].click();
+				expect(showAll).toHaveBeenCalledTimes(1);
+				expect(hideAll).not.toHaveBeenCalled();
+				expect(exit).toHaveBeenCalledTimes(1);
+
+				const hidden = parent.querySelector<HTMLElement>(
+					".cuecraft-editor-study-answer.is-hidden"
+				)!;
+				hidden.dispatchEvent(
+					new document.defaultView!.MouseEvent("click", {
+						bubbles: true,
+						clientX: 20,
+						clientY: 20,
+					})
+				);
+				expect(toggleSection).not.toHaveBeenCalled();
+				expect(view.state.doc.toString()).toBe("# Terms\nbody");
+
+				view.dispatch({
+					effects: setCuesEffect.of({
+						cues: [cue()],
+						display: "inline-cues",
+					}),
+				});
+				expect(parent.querySelector(".cuecraft-editor-study-controls")).toBeNull();
+				expect(parent.querySelector(".cuecraft-editor-study-answer")).toBeNull();
+				expect(view.dom.classList.contains("cuecraft-editor-study-active")).toBe(false);
+				buttons[0].click();
+				buttons[1].click();
+				buttons[2].click();
+				expect(showAll).toHaveBeenCalledTimes(1);
+				expect(hideAll).not.toHaveBeenCalled();
+				expect(exit).toHaveBeenCalledTimes(1);
+
+				view.dispatch({
+					effects: setCuesEffect.of({
+						cues: [cue()],
+						display: "inline-cues",
+						study: {
+							snapshot: studySnapshot(),
+							controlsContainer,
+							toggleSection,
+							showAll,
+							hideAll,
+							exit,
+						},
+					}),
+				});
+				destroyedControls = controlsContainer.querySelector<HTMLElement>(
+					".cuecraft-editor-study-controls"
+				);
+				destroyedButtons = destroyedControls?.querySelectorAll("button") ?? null;
+				destroyedEditor = view.dom;
+			}
+		);
+		expect(destroyedControls?.isConnected).toBe(false);
+		expect(destroyedEditor?.classList.contains("cuecraft-editor-study-active")).toBe(
+			false
+		);
+		destroyedButtons?.[0]?.click();
+		destroyedButtons?.[1]?.click();
+		destroyedButtons?.[2]?.click();
+		expect(showAll).toHaveBeenCalledTimes(1);
+		expect(hideAll).not.toHaveBeenCalled();
+		expect(exit).toHaveBeenCalledTimes(1);
+	});
+});
 
 function renderCornellMarker(
 	controller: CueSectionCollapseController,

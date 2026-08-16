@@ -226,3 +226,12 @@ export function requestUrl(): Promise<unknown> {
 export function setIcon(el: HTMLElement, icon: string): void {
 	el.dataset.icon = icon;
 }
+
+export function setTooltip(
+	el: HTMLElement,
+	tooltip: string,
+	options?: { placement?: string }
+): void {
+	el.dataset.tooltip = tooltip;
+	if (options?.placement) el.dataset.tooltipPlacement = options.placement;
+}
