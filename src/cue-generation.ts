@@ -1,104 +1,146 @@
 /**
- * Cue-generation knobs shared by CueCraft provider prompts and settings UI.
+ * The single Question-generation choice shared by persistence, prompts, and UI.
  */
-export type QuestionStyle = "recall" | "socratic" | "exam";
+export type QuestionType =
+	| "conceptual"
+	| "direct-recall"
+	| "exam-practice"
+	| "vocabulary-check"
+	| "socratic-reasoning";
 
-export interface QuestionStyleInfo {
-	id: QuestionStyle;
+export interface QuestionTypeInfo {
+	id: QuestionType;
 	label: string;
 	description: string;
+	guidance: string;
 }
 
-export const QUESTION_STYLES: readonly QuestionStyleInfo[] = [
+export const QUESTION_TYPES: readonly QuestionTypeInfo[] = [
 	{
-		id: "recall",
-		label: "Recall",
-		description: "Direct active-recall questions (the default).",
+		id: "conceptual",
+		label: "Conceptual question",
+		description: "Tests the section's main idea and an important relationship.",
+		guidance:
+			"Ask one clear question that tests the section's main idea and one important relationship or implication.",
 	},
 	{
-		id: "socratic",
-		label: "Socratic",
-		description: "Open, probing questions that push deeper reasoning.",
+		id: "direct-recall",
+		label: "Direct recall",
+		description: "Asks for the single most important fact or idea.",
+		guidance:
+			"Ask one short, direct recall question focused on the single most important fact or idea.",
 	},
 	{
-		id: "exam",
-		label: "Exam-style",
-		description: "Test-style questions phrased like an exam prompt.",
+		id: "exam-practice",
+		label: "Exam practice",
+		description: "Uses precise wording similar to an exam prompt.",
+		guidance:
+			"Ask one precise exam-style question that a student could reasonably be tested on.",
+	},
+	{
+		id: "vocabulary-check",
+		label: "Vocabulary check",
+		description: "Checks understanding of a key term in context.",
+		guidance:
+			"Ask one question that checks the meaning or use of the section's most important term in context.",
+	},
+	{
+		id: "socratic-reasoning",
+		label: "Socratic reasoning",
+		description: "Prompts an explanation of why or how the idea works.",
+		guidance:
+			"Ask one open Socratic question that prompts the learner to explain why or how the idea works.",
 	},
 ] as const;
 
-export const DEFAULT_QUESTION_STYLE: QuestionStyle = "recall";
+export const DEFAULT_QUESTION_TYPE: QuestionType = "conceptual";
 
-/** Narrow an arbitrary value to a known {@link QuestionStyle}. */
-export function isQuestionStyle(value: unknown): value is QuestionStyle {
-	return QUESTION_STYLES.some((q) => q.id === value);
+/** Narrow an arbitrary value to a supported Question type. */
+export function isQuestionType(value: unknown): value is QuestionType {
+	return QUESTION_TYPES.some((type) => type.id === value);
 }
 
-/** How detailed each section's single recall cue should be. */
-export type CueDensity = 1 | 2 | 3;
-
-export interface CueDensityInfo {
-	value: CueDensity;
-	label: string;
-}
-
-export const CUE_DENSITIES: readonly CueDensityInfo[] = [
-	{ value: 1, label: "Minimal" },
-	{ value: 2, label: "Balanced" },
-	{ value: 3, label: "Thorough" },
-] as const;
-
-export const DEFAULT_CUE_DENSITY: CueDensity = 2;
-
-/** Narrow an arbitrary value to a known {@link CueDensity}. */
-export function isCueDensity(value: unknown): value is CueDensity {
-	return CUE_DENSITIES.some((d) => d.value === value);
-}
-
-/** Human-readable label for a density value (falls back to the default). */
-export function cueDensityLabel(value: unknown): string {
-	const density = isCueDensity(value) ? value : DEFAULT_CUE_DENSITY;
-	return CUE_DENSITIES.find((d) => d.value === density)?.label ?? "Balanced";
+/** Resolve display and prompt copy, falling back to the product default. */
+export function questionTypeInfo(value: unknown): QuestionTypeInfo {
+	const type = isQuestionType(value) ? value : DEFAULT_QUESTION_TYPE;
+	return (
+		QUESTION_TYPES.find((candidate) => candidate.id === type) ??
+		QUESTION_TYPES[0]
+	);
 }
 
 export interface CueGenerationOptions {
-	cueDensity: CueDensity;
-	questionStyle: QuestionStyle;
-	generateKeywords: boolean;
+	questionType: QuestionType;
 }
 
 export const DEFAULT_CUE_GENERATION_OPTIONS: CueGenerationOptions = {
-	cueDensity: DEFAULT_CUE_DENSITY,
-	questionStyle: DEFAULT_QUESTION_STYLE,
-	generateKeywords: true,
+	questionType: DEFAULT_QUESTION_TYPE,
 };
 
-export function cueDensityGuidance(value: unknown): string {
-	const density = isCueDensity(value) ? value : DEFAULT_CUE_DENSITY;
-	switch (density) {
-		case 1:
-			return "Keep the cue minimal: one short, direct question focused on the single most important idea.";
-		case 2:
-			return "Use balanced detail: one clear question that tests the section's main idea and one important relationship or implication.";
-		case 3:
-			return "Make the cue thorough: one rich question that may include a short scenario, comparison, or multi-step recall task while still staying concise.";
-	}
+interface LegacyQuestionSettings {
+	cuePreset?: unknown;
+	cueDensity?: unknown;
+	questionStyle?: unknown;
 }
 
-export function questionStyleGuidance(value: unknown): string {
-	const style = isQuestionStyle(value) ? value : DEFAULT_QUESTION_STYLE;
-	switch (style) {
-		case "recall":
-			return "Phrase the cue as a direct active-recall question.";
-		case "socratic":
-			return "Phrase the cue as an open Socratic question that pushes the learner to explain why or how the idea works.";
-		case "exam":
-			return "Phrase the cue like an exam prompt, using precise wording a student could be tested on.";
-	}
-}
+const LEGACY_CUE_PRESETS: ReadonlySet<unknown> = new Set([
+	"conceptual",
+	"exam-prep",
+	"vocabulary",
+	"minimal",
+]);
+const LEGACY_CUE_DENSITIES: ReadonlySet<unknown> = new Set([1, 2, 3]);
+const LEGACY_QUESTION_STYLES: ReadonlySet<unknown> = new Set([
+	"recall",
+	"socratic",
+	"exam",
+]);
 
-export function keywordGuidance(generateKeywords: boolean): string {
-	return generateKeywords
-		? "Return 2 to 5 compact keyword hints."
-		: "Return the minimum 2 very short keyword hints for compatibility; the UI may hide them.";
+/**
+ * Collapse the retired preset, density, and style knobs into one Question type.
+ * Invalid values and combinations that nominate different types intentionally
+ * return the neutral Conceptual question default.
+ */
+export function resolveLegacyQuestionType(
+	legacy: LegacyQuestionSettings
+): QuestionType {
+	const candidates = new Set<QuestionType>();
+
+	if (Object.prototype.hasOwnProperty.call(legacy, "cuePreset")) {
+		if (!LEGACY_CUE_PRESETS.has(legacy.cuePreset)) {
+			return DEFAULT_QUESTION_TYPE;
+		}
+		switch (legacy.cuePreset) {
+			case "exam-prep":
+				candidates.add("exam-practice");
+				break;
+			case "vocabulary":
+				candidates.add("vocabulary-check");
+				break;
+			case "minimal":
+				candidates.add("direct-recall");
+		}
+	}
+
+	if (Object.prototype.hasOwnProperty.call(legacy, "cueDensity")) {
+		if (!LEGACY_CUE_DENSITIES.has(legacy.cueDensity)) {
+			return DEFAULT_QUESTION_TYPE;
+		}
+		if (legacy.cueDensity === 1) candidates.add("direct-recall");
+	}
+
+	if (Object.prototype.hasOwnProperty.call(legacy, "questionStyle")) {
+		if (!LEGACY_QUESTION_STYLES.has(legacy.questionStyle)) {
+			return DEFAULT_QUESTION_TYPE;
+		}
+		if (legacy.questionStyle === "exam") candidates.add("exam-practice");
+		if (legacy.questionStyle === "socratic") {
+			candidates.add("socratic-reasoning");
+		}
+	}
+
+	const [candidate] = candidates;
+	return candidates.size === 1 && candidate
+		? candidate
+		: DEFAULT_QUESTION_TYPE;
 }

@@ -14,13 +14,8 @@ import {
 	type CueFontSize,
 } from "./cornell-layout";
 import {
-	CUE_DENSITIES,
-	DEFAULT_CUE_DENSITY,
-	DEFAULT_QUESTION_STYLE,
-	QUESTION_STYLES,
-	cueDensityLabel,
-	type CueDensity,
-	type QuestionStyle,
+	DEFAULT_QUESTION_TYPE,
+	type QuestionType,
 } from "./cue-generation";
 import {
 	cueFontSizeThumbnailOptions,
@@ -105,10 +100,7 @@ import {
 	normalizeAutoGenerationSettleDelaySeconds,
 	type AutoGenerationSettleDelaySeconds,
 } from "./auto-generation-delay";
-import {
-	DEFAULT_SHOW_NOTE_BRIEF,
-	DEFAULT_SHOW_SECTION_LENS,
-} from "./review-surfaces";
+import { DEFAULT_SHOW_NOTE_BRIEF } from "./review-surfaces";
 import {
 	DEFAULT_CUE_INSTRUCTIONS,
 	normalizeCueInstructionsOverride,
@@ -126,7 +118,6 @@ import {
  * cloud provider keeps its own API key + model id; only the selected provider's
  * fields are surfaced.
  */
-export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
 type SettingsSubpage =
 	| "home"
@@ -152,7 +143,7 @@ const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 
 export interface CueCraftSettings {
 	byok: ByokStoredSettings;
-	cuePreset: CuePreset;
+	questionType: QuestionType;
 	studyHideMode: StudyHideMode;
 	editorCueDisplay: EditorCueDisplay;
 	editorCueCustomWidthPx: number | null;
@@ -161,17 +152,10 @@ export interface CueCraftSettings {
 	autoGenerationSettleDelaySeconds: AutoGenerationSettleDelaySeconds;
 	studyAreas: StudyArea[];
 	sectionConcurrency: number;
-	cueDensity: CueDensity;
-	questionStyle: QuestionStyle;
-	generateKeywords: boolean;
-	cueInstructionsOverride: string;
-	noteBriefInstructionsOverride: string;
-	showSectionLens: boolean;
 	showNoteBrief: boolean;
-	showRailSummary: boolean;
-	showRailQuestions: boolean;
-	showRailSupportTerms: boolean;
-	renderInReadingMode: boolean;
+	showSummary: boolean;
+	showQuestion: boolean;
+	showTerms: boolean;
 }
 
 export const DEFAULT_SETTINGS: CueCraftSettings = {
@@ -217,7 +201,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 		},
 		verification: {},
 	},
-	cuePreset: "conceptual",
+	questionType: DEFAULT_QUESTION_TYPE,
 	studyHideMode: "blur",
 	editorCueDisplay: DEFAULT_EDITOR_CUE_DISPLAY,
 	editorCueCustomWidthPx: null,
@@ -227,17 +211,10 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 		DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
 	studyAreas: DEFAULT_STUDY_AREAS,
 	sectionConcurrency: 5,
-	cueDensity: DEFAULT_CUE_DENSITY,
-	questionStyle: DEFAULT_QUESTION_STYLE,
-	generateKeywords: true,
-	cueInstructionsOverride: "",
-	noteBriefInstructionsOverride: "",
-	showSectionLens: DEFAULT_SHOW_SECTION_LENS,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
-	showRailSummary: true,
-	showRailQuestions: true,
-	showRailSupportTerms: true,
-	renderInReadingMode: true,
+	showSummary: true,
+	showQuestion: true,
+	showTerms: true,
 };
 
 export class CueCraftSettingTab extends PluginSettingTab {

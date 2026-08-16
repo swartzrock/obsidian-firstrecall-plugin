@@ -470,18 +470,35 @@ describe("settings defaults", () => {
 		});
 	});
 
-	it("stores blank overrides until the user customizes either instruction policy", async () => {
+	it("uses one Question type and canonical artifact visibility defaults", async () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
-		expect(DEFAULT_SETTINGS.cueInstructionsOverride).toBe("");
-		expect(DEFAULT_SETTINGS.noteBriefInstructionsOverride).toBe("");
-		expect(DEFAULT_SETTINGS).not.toHaveProperty("summaryInstructionsOverride");
-		expect(DEFAULT_SETTINGS).not.toHaveProperty("autoSummary");
+		expect(DEFAULT_SETTINGS).toMatchObject({
+			questionType: "conceptual",
+			showNoteBrief: true,
+			showSummary: true,
+			showQuestion: true,
+			showTerms: true,
+		});
+		for (const key of [
+			"cuePreset",
+			"cueDensity",
+			"questionStyle",
+			"generateKeywords",
+			"cueInstructionsOverride",
+			"noteBriefInstructionsOverride",
+			"showSectionLens",
+			"showRailSummary",
+			"showRailQuestions",
+			"showRailSupportTerms",
+			"renderInReadingMode",
+		]) {
+			expect(DEFAULT_SETTINGS).not.toHaveProperty(key);
+		}
 	});
 
-	it("normalizes an invalid Cue override and migrates a legacy Summary override", async () => {
+	it("discards legacy custom instruction overrides", async () => {
 		const { default: CueCraftPlugin } = await import("../src/main");
-		const legacySummaryOverride = "  Preserve this legacy Summary policy.  ";
 		const saveData = vi.fn(async () => {});
 		const missing = async () => ({
 			ok: false as const,
@@ -498,8 +515,9 @@ describe("settings defaults", () => {
 			},
 			loadData: vi.fn(async () => ({
 				settings: {
-					cueInstructionsOverride: ["invalid"],
-					summaryInstructionsOverride: legacySummaryOverride,
+					cueInstructionsOverride: "Custom Cue policy.",
+					noteBriefInstructionsOverride: "Custom Note Brief policy.",
+					summaryInstructionsOverride: "Legacy Summary policy.",
 				},
 			})),
 			saveData,
@@ -509,10 +527,8 @@ describe("settings defaults", () => {
 			plugin as unknown as { loadPluginData(): Promise<void> }
 		).loadPluginData();
 
-		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.noteBriefInstructionsOverride).toBe(
-			legacySummaryOverride
-		);
+		expect(plugin.settings).not.toHaveProperty("cueInstructionsOverride");
+		expect(plugin.settings).not.toHaveProperty("noteBriefInstructionsOverride");
 		expect(plugin.settings).not.toHaveProperty("summaryInstructionsOverride");
 		expect(saveData).toHaveBeenCalledTimes(1);
 	});
@@ -573,12 +589,12 @@ describe("settings defaults", () => {
 		}
 	});
 
-	it("shows every Editing View cue section by default", async () => {
+	it("shows every Section cue component by default", async () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
-		expect(DEFAULT_SETTINGS.showRailSummary).toBe(true);
-		expect(DEFAULT_SETTINGS.showRailQuestions).toBe(true);
-		expect(DEFAULT_SETTINGS.showRailSupportTerms).toBe(true);
+		expect(DEFAULT_SETTINGS.showSummary).toBe(true);
+		expect(DEFAULT_SETTINGS.showQuestion).toBe(true);
+		expect(DEFAULT_SETTINGS.showTerms).toBe(true);
 	});
 
 	it("defaults editor cue display to inline cues", () => {

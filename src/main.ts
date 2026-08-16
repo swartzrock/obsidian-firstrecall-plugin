@@ -109,8 +109,12 @@ import {
 	loadCueSectionCollapseMap,
 	type CueSectionCollapseMap,
 } from "./cue-section-collapse";
-import type { CueGenerationOptions } from "./cue-generation";
-import { normalizeNoteBriefInstructionsOverride } from "./note-brief-instructions";
+import {
+	DEFAULT_QUESTION_TYPE,
+	isQuestionType,
+	resolveLegacyQuestionType,
+	type CueGenerationOptions,
+} from "./cue-generation";
 import { statusLabel, type CueStatus } from "./status";
 import { formatCueCraftNotice } from "./notice";
 import {
@@ -133,7 +137,6 @@ import {
 	type StudyAreaQueueItem,
 	type StudyAreaRunSummary,
 } from "./study-area";
-import { normalizeCueInstructionsOverride } from "./cue-instructions";
 
 interface PluginData {
 	settings: CueCraftSettings;
@@ -350,53 +353,71 @@ export default class CueCraftPlugin extends Plugin {
 				(settings as { autoGenerationSettleDelaySeconds?: unknown })
 					.autoGenerationSettleDelaySeconds
 			);
-		settings.cueInstructionsOverride = normalizeCueInstructionsOverride(
-			(settings as { cueInstructionsOverride?: unknown })
-				.cueInstructionsOverride
-		);
-		const hasCurrentNoteBriefOverride = Object.prototype.hasOwnProperty.call(
-			rawSettingsRecord,
-			"noteBriefInstructionsOverride"
-		);
-		const noteBriefOverrideSource = hasCurrentNoteBriefOverride
-			? rawSettingsRecord.noteBriefInstructionsOverride
-			: rawSettingsRecord.summaryInstructionsOverride;
-		settings.noteBriefInstructionsOverride =
-			normalizeNoteBriefInstructionsOverride(noteBriefOverrideSource);
-		if (
-			Object.prototype.hasOwnProperty.call(
-				rawSettingsRecord,
-				"summaryInstructionsOverride"
-			) ||
-			(hasCurrentNoteBriefOverride &&
-				settings.noteBriefInstructionsOverride !== noteBriefOverrideSource)
-		) {
-			settingsChanged = true;
+		const rawQuestionType = rawSettingsRecord.questionType;
+		if (isQuestionType(rawQuestionType)) {
+			settings.questionType = rawQuestionType;
+		} else {
+			const hasLegacyQuestionSettings = [
+				"cuePreset",
+				"cueDensity",
+				"questionStyle",
+			].some((key) =>
+				Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)
+			);
+			settings.questionType = hasLegacyQuestionSettings
+				? resolveLegacyQuestionType(rawSettingsRecord)
+				: DEFAULT_QUESTION_TYPE;
+			if (
+				Object.prototype.hasOwnProperty.call(rawSettingsRecord, "questionType")
+			) {
+				settingsChanged = true;
+			}
 		}
 		settings.editorCueCustomWidthPx = normalizeEditorCueCustomWidthPx(
 			(rawSettings as { editorCueCustomWidthPx?: unknown })
 				.editorCueCustomWidthPx
 		);
-		for (const key of [
-			"showSectionLens",
-			"showNoteBrief",
-			"showRailSummary",
-			"showRailQuestions",
-			"showRailSupportTerms",
-		] as const) {
-			if (
-				typeof (settings as unknown as Record<string, unknown>)[key] !==
-				"boolean"
-			) {
-				settings[key] = DEFAULT_SETTINGS[key];
+		const firstBoolean = (
+			keys: readonly string[],
+			fallback: boolean
+		): boolean => {
+			for (const key of keys) {
+				const value = rawSettingsRecord[key];
+				if (typeof value === "boolean") return value;
 			}
-		}
-		if (
-			!settings.showRailSummary &&
-			!settings.showRailQuestions &&
-			!settings.showRailSupportTerms
-		) {
-			settings.showRailSummary = true;
+			return fallback;
+		};
+		settings.showSummary = firstBoolean(
+			["showSummary", "showRailSummary", "showSectionLens"],
+			DEFAULT_SETTINGS.showSummary
+		);
+		settings.showQuestion = firstBoolean(
+			["showQuestion", "showRailQuestions"],
+			DEFAULT_SETTINGS.showQuestion
+		);
+		settings.showTerms = firstBoolean(
+			["showTerms", "showRailSupportTerms", "generateKeywords"],
+			DEFAULT_SETTINGS.showTerms
+		);
+		settings.showNoteBrief = firstBoolean(
+			["showNoteBrief"],
+			DEFAULT_SETTINGS.showNoteBrief
+		);
+		for (const key of [
+			"questionType",
+			"showSummary",
+			"showQuestion",
+			"showTerms",
+			"showNoteBrief",
+		] as const) {
+			if (!Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)) {
+				continue;
+			}
+			const isValid =
+				key === "questionType"
+					? isQuestionType(rawSettingsRecord[key])
+					: typeof rawSettingsRecord[key] === "boolean";
+			if (!isValid) settingsChanged = true;
 		}
 		if (
 			!isEditorCueDisplay(
@@ -406,7 +427,18 @@ export default class CueCraftPlugin extends Plugin {
 			settings.editorCueDisplay = DEFAULT_EDITOR_CUE_DISPLAY;
 		}
 		for (const key of [
+			"cuePreset",
+			"cueDensity",
+			"questionStyle",
+			"generateKeywords",
+			"cueInstructionsOverride",
+			"noteBriefInstructionsOverride",
 			"summaryInstructionsOverride",
+			"showSectionLens",
+			"showRailSummary",
+			"showRailQuestions",
+			"showRailSupportTerms",
+			"renderInReadingMode",
 			"autoSummary",
 			"cornellDisplayMode",
 			"cornellStyle",
