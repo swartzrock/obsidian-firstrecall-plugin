@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CueCraft public web showcase — ideation</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --page: #f3f0e9;
+      --surface: #fffdf8;
+      --surface-2: #edf3ee;
+      --surface-3: #e9eef5;
+      --ink: #17231e;
+      --muted: #5b6962;
+      --line: #d4ddd6;
+      --accent: #176a4a;
+      --accent-soft: #dff1e7;
+      --accent-text: #0f553a;
+      --info-soft: #e3edf8;
+      --info-text: #254f75;
+      --warn-soft: #f8ebcf;
+      --warn-text: #765115;
+      --danger-soft: #f7e3df;
+      --danger-text: #7b3329;
+      --shadow: 0 16px 42px rgba(28, 45, 36, 0.08);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page: #101512;
+        --surface: #18201b;
+        --surface-2: #1d2b23;
+        --surface-3: #1d2935;
+        --ink: #edf4ef;
+        --muted: #afbbb4;
+        --line: #344139;
+        --accent: #73d7a8;
+        --accent-soft: #173d2b;
+        --accent-text: #abe9cb;
+        --info-soft: #1b354d;
+        --info-text: #bedaf3;
+        --warn-soft: #493716;
+        --warn-text: #f4d38d;
+        --danger-soft: #472723;
+        --danger-text: #f2bbb2;
+        --shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font: 15.5px/1.62 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: var(--accent); text-underline-offset: 0.18em; }
+    code {
+      font: 0.9em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 0.35rem;
+      padding: 0.08rem 0.32rem;
+    }
+    strong { color: inherit; }
+    .page { width: min(94vw, 960px); margin: 0 auto; padding: 3rem 0 5rem; }
+    .hero {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 1.4rem;
+      box-shadow: var(--shadow);
+      padding: clamp(1.5rem, 4vw, 3.2rem);
+    }
+    .eyebrow { margin: 0 0 0.55rem; color: var(--accent); font-size: 0.73rem; font-weight: 800; letter-spacing: 0.13em; text-transform: uppercase; }
+    h1, h2, h3 { line-height: 1.18; letter-spacing: -0.025em; }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.45rem); max-width: 18ch; }
+    h2 { margin: 0 0 1rem; font-size: clamp(1.45rem, 3vw, 2rem); }
+    h3 { margin: 0; font-size: 1.24rem; }
+    p { max-width: 74ch; }
+    .lede { margin: 1.15rem 0 0; color: var(--muted); font-size: 1.08rem; max-width: 70ch; }
+    .meta, .chips, .stats { display: flex; flex-wrap: wrap; gap: 0.58rem; }
+    .meta { margin-top: 1.45rem; }
+    .chip {
+      display: inline-flex; align-items: center; min-height: 1.85rem;
+      padding: 0.3rem 0.68rem; border: 1px solid var(--line); border-radius: 999px;
+      background: var(--surface-2); color: var(--accent-text); font-size: 0.78rem; font-weight: 740;
+    }
+    .chip.info { background: var(--info-soft); color: var(--info-text); }
+    .chip.warn { background: var(--warn-soft); color: var(--warn-text); }
+    .chip.rank { background: var(--accent-soft); color: var(--accent-text); }
+    .stats { margin-top: 1.35rem; }
+    .stat { min-width: 7.4rem; padding: 0.75rem 0.92rem; border-radius: 0.85rem; background: var(--surface-3); color: var(--info-text); }
+    .stat b { display: block; margin-bottom: 0.22rem; font-size: 1.38rem; line-height: 1; }
+    .stat span { font-size: 0.73rem; font-weight: 780; letter-spacing: 0.06em; text-transform: uppercase; }
+    nav.top-nav { display: flex; flex-wrap: wrap; gap: 0.65rem 1.15rem; margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+    nav.top-nav a { font-size: 0.86rem; font-weight: 730; text-decoration: none; }
+    section { margin-top: 3.7rem; }
+    .section-intro { color: var(--muted); max-width: 72ch; }
+    .ground-grid, .axis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .ground-card, .axis-card, .callout {
+      background: var(--surface); border: 1px solid var(--line); border-radius: 1rem; padding: 1.15rem 1.25rem;
+    }
+    .ground-card h3, .axis-card h3 { margin-bottom: 0.5rem; }
+    .ground-card p, .axis-card p { margin: 0; color: var(--muted); }
+    .callout { margin-top: 1rem; background: var(--accent-soft); color: var(--accent-text); }
+    .callout.warn { background: var(--warn-soft); color: var(--warn-text); }
+    .callout p { margin: 0; }
+    .jump-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.6rem; list-style: none; margin: 1.3rem 0 1.8rem; padding: 0; }
+    .jump-list a { display: block; height: 100%; padding: 0.75rem 0.82rem; border: 1px solid var(--line); border-radius: 0.78rem; background: var(--surface); text-decoration: none; font-weight: 720; }
+    .idea-card { margin-top: 1rem; border: 1px solid var(--line); border-radius: 1.12rem; background: var(--surface); padding: clamp(1.15rem, 3vw, 1.7rem); box-shadow: 0 8px 24px rgba(29, 43, 36, 0.045); }
+    .idea-head { display: flex; align-items: flex-start; gap: 0.9rem; }
+    .rank-number { flex: 0 0 auto; display: grid; place-items: center; width: 2.3rem; height: 2.3rem; border-radius: 0.72rem; background: var(--accent-soft); color: var(--accent-text); font-weight: 820; }
+    .chips { margin: 0.85rem 0 1rem; }
+    .idea-fields { display: grid; grid-template-columns: 8.3rem minmax(0, 1fr); gap: 0.72rem 1rem; margin: 0; }
+    .idea-fields dt { color: var(--muted); font-size: 0.74rem; font-weight: 820; letter-spacing: 0.07em; text-transform: uppercase; }
+    .idea-fields dd { margin: 0; max-width: 74ch; }
+    .diagram { margin: 1.2rem 0 1.3rem; padding: 0.85rem; border: 1px solid var(--line); border-radius: 0.9rem; background: var(--surface-3); overflow-x: auto; }
+    .diagram svg { display: block; width: 100%; min-width: 720px; height: auto; }
+    .diagram figcaption { margin-top: 0.65rem; color: var(--info-text); font-size: 0.8rem; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--line); }
+    th, td { padding: 0.72rem 0.78rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { background: var(--surface-2); color: var(--accent-text); font-size: 0.75rem; letter-spacing: 0.06em; text-transform: uppercase; }
+    tbody tr:last-child td { border-bottom: 0; }
+    .table-wrap { overflow-x: auto; border-radius: 0.95rem; }
+    footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.8rem; }
+    @media (max-width: 720px) {
+      .ground-grid, .axis-grid, .jump-list { grid-template-columns: 1fr; }
+      .idea-fields { grid-template-columns: 1fr; gap: 0.2rem; }
+      .idea-fields dd { margin-bottom: 0.65rem; }
+      th, td { min-width: 9rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">Ranked ideation</p>
+      <h1>CueCraft’s public web showcase</h1>
+      <p class="lede">A realistic Obsidian-style learning experience with one real LLM moment—designed so the shared Groq key is never exposed and a single visitor cannot turn the page into a free inference proxy.</p>
+      <div class="meta" aria-label="Document metadata">
+        <span class="chip"><time datetime="2026-08-15">2026-08-15</time></span>
+        <span class="chip info">Topic · cuecraft-public-web-showcase</span>
+        <span class="chip info">Mode · repo-grounded</span>
+      </div>
+      <p><strong>Focus:</strong> Showcase the working CueCraft plugin with realistic notes and a real hosted LLM; compare secure Worker, Durable Object, identity, and provider-quota options before requirements or implementation planning.</p>
+      <div class="stats" aria-label="Ideation counts">
+        <div class="stat"><b>29</b><span>raw candidates</span></div>
+        <div class="stat"><b>7</b><span>ranked ideas</span></div>
+        <div class="stat"><b>22</b><span>merged or cut</span></div>
+        <div class="stat"><b>5</b><span>topic axes</span></div>
+      </div>
+      <nav class="top-nav" aria-label="Document sections">
+        <a href="#grounding-context">Grounding Context</a>
+        <a href="#topic-axes">Topic Axes</a>
+        <a href="#ranked-ideas">Ranked Ideas</a>
+        <a href="#rejection-summary">Rejection Summary</a>
+      </nav>
+    </header>
+
+    <section id="grounding-context">
+      <p class="eyebrow">What the ideas had to survive</p>
+      <h2>Grounding Context</h2>
+      <div class="ground-grid">
+        <article class="ground-card">
+          <h3>Browser reality</h3>
+          <p>The shipped plugin is desktop-only: its production bundle targets Node/CommonJS and externalizes Obsidian, Electron, and CodeMirror. The browser path is an honest host adapter—not the unchanged plugin bundle.</p>
+        </article>
+        <article class="ground-card">
+          <h3>Reusable CueCraft core</h3>
+          <p>Parsing, schemas, cache types, Cornell model construction, interaction state, and exported DOM renderers already provide browser-safe seams. Provider generation is injected behind a typed CueCraft runtime.</p>
+        </article>
+        <article class="ground-card">
+          <h3>Hidden cost multiplier</h3>
+          <p>A full note may trigger one call per section, Summary, Note Brief, schema repair, rate-limit retries, and five-way concurrency. The safe public unit is a bounded artifact—not “generate this note.”</p>
+        </article>
+        <article class="ground-card">
+          <h3>Model specialization</h3>
+          <p>CueCraft already owns the pedagogical prompt, source boundary, schemas, validation, and repair. Groq does not train models, and LoRA inference is enterprise-only, so free-plan specialization means a qualified base model plus CueCraft’s contract.</p>
+        </article>
+        <article class="ground-card">
+          <h3>Identity is a product choice</h3>
+          <p>Turnstile proves an admission event. A signed cookie and IP/subnet approximate a browser session. Only authentication supplies a durable “person” to which an exact allowance can be attached.</p>
+        </article>
+        <article class="ground-card">
+          <h3>Limiters have different jobs</h3>
+          <p>Worker Rate Limiting is fast, location-local, and eventually consistent. A Durable Object can serialize exact session credits and concurrency. A dedicated Groq project quota is the final blast-radius boundary.</p>
+        </article>
+      </div>
+      <div class="callout warn">
+        <p><strong>Current provider envelope.</strong> On 2026-08-15, relevant Groq free-plan models were documented at 30 RPM, 1,000 RPD, 8,000 TPM, and 200,000 TPD at the organization level. Treat the account’s live Limits page as authoritative and keep the demo’s project cap below it. See <a href="https://console.groq.com/docs/rate-limits">Groq rate limits</a>, <a href="https://console.groq.com/docs/projects">projects and quotas</a>, and <a href="https://console.groq.com/docs/lora">LoRA availability</a>.</p>
+      </div>
+      <div class="callout">
+        <p><strong>Cloudflare facts used in the cut.</strong> See the official docs for <a href="https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/">Worker Rate Limiting</a>, <a href="https://developers.cloudflare.com/turnstile/get-started/server-side-validation/">Turnstile validation</a>, <a href="https://developers.cloudflare.com/durable-objects/best-practices/rules-of-durable-objects/">Durable Object sharding</a>, and <a href="https://developers.cloudflare.com/ai-gateway/configuration/bring-your-own-keys/">AI Gateway BYOK</a>.</p>
+      </div>
+    </section>
+
+    <section id="topic-axes">
+      <p class="eyebrow">Surface map</p>
+      <h2>Topic Axes</h2>
+      <div class="axis-grid">
+        <article class="axis-card"><h3>1. Browser showcase authenticity</h3><p>Which CueCraft layers are real, which are host adapters, and what the page may honestly claim.</p></article>
+        <article class="axis-card"><h3>2. Live generation scope</h3><p>What one visitor can regenerate and the maximum upstream exposure of that action.</p></article>
+        <article class="axis-card"><h3>3. LLM contract and model fit</h3><p>How CueCraft supplies specialization and how a current Groq model earns selection.</p></article>
+        <article class="axis-card"><h3>4. Visitor identity and abuse resistance</h3><p>What anonymous signals can guarantee, when login is justified, and how capability is narrowed.</p></article>
+        <article class="axis-card"><h3>5. Quota ledger and deployment topology</h3><p>Where approximate bursts, exact credits, global reserves, telemetry, and provider caps belong.</p></article>
+      </div>
+    </section>
+
+    <section id="ranked-ideas">
+      <p class="eyebrow">Survivors after adversarial verification</p>
+      <h2>Ranked Ideas</h2>
+      <p class="section-intro">These are directions, not a build plan. The top architecture is intentionally stricter than the simplest option; both survive because the right choice depends on how much anonymous traffic the showcase is expected to attract.</p>
+      <ol class="jump-list">
+        <li><a href="#idea-1">1. Strict anonymous live lane</a></li>
+        <li><a href="#idea-2">2. CueCraft Web Host with one live aperture</a></li>
+        <li><a href="#idea-3">3. CueCraft generation profile and model bake-off</a></li>
+        <li><a href="#idea-4">4. Worker-only MVP with a hard backstop</a></li>
+        <li><a href="#idea-5">5. Truthful identity ladder</a></li>
+        <li><a href="#idea-6">6. Zero-spend launch, graceful brownout always</a></li>
+        <li><a href="#idea-7">7. Operations-rich AI Gateway layer</a></li>
+      </ol>
+
+      <article class="idea-card" id="idea-1">
+        <div class="idea-head"><span class="rank-number">1</span><div><h3>1. Strict anonymous live lane</h3><div class="chips"><span class="chip rank">Top pick</span><span class="chip">Confidence · 93%</span><span class="chip warn">Complexity · High</span></div></div></div>
+        <p>Put a Cloudflare Worker in front of a narrow CueCraft operation. After Turnstile admission, mint a signed anonymous session; a session-sharded Durable Object atomically reserves the bounded operation allowance, enforces one in-flight request and idempotency, then the Worker calls a fixed Groq model using a secret. A small global guardian leases bounded reserve blocks rather than proxying every stream, while a dedicated Groq project quota caps the final blast radius.</p>
+        <figure class="diagram">
+          <svg viewBox="0 0 900 300" role="img" aria-labelledby="d1-title d1-desc">
+            <title id="d1-title">Illustrative strict anonymous live lane</title>
+            <desc id="d1-desc">A browser session passes Turnstile admission to a validating Worker, then a session Durable Object reserves exact credits and single-flight state before an optional operations layer and a dedicated Groq project. A separate reserve guardian leases bounded capacity.</desc>
+            <defs><marker id="arrow1" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 Z" fill="var(--accent)"/></marker></defs>
+            <rect x="25" y="90" width="145" height="80" rx="16" fill="var(--surface)" stroke="var(--line)"/>
+            <text x="97" y="121" text-anchor="middle" font-size="15" font-weight="700" fill="var(--ink)">Browser</text><text x="97" y="145" text-anchor="middle" font-size="12" fill="var(--muted)">Turnstile + signed session</text>
+            <rect x="220" y="90" width="165" height="80" rx="16" fill="var(--accent-soft)" stroke="var(--accent)"/>
+            <text x="302" y="121" text-anchor="middle" font-size="15" font-weight="700" fill="var(--accent-text)">Worker boundary</text><text x="302" y="145" text-anchor="middle" font-size="12" fill="var(--accent-text)">validate narrow CueCraft RPC</text>
+            <rect x="435" y="90" width="170" height="80" rx="16" fill="var(--info-soft)" stroke="var(--info-text)"/>
+            <text x="520" y="119" text-anchor="middle" font-size="15" font-weight="700" fill="var(--info-text)">Session DO</text><text x="520" y="141" text-anchor="middle" font-size="12" fill="var(--info-text)">reserve · one in flight</text><text x="520" y="158" text-anchor="middle" font-size="12" fill="var(--info-text)">single-flight result</text>
+            <rect x="665" y="90" width="190" height="80" rx="16" fill="var(--warn-soft)" stroke="var(--warn-text)"/>
+            <text x="760" y="119" text-anchor="middle" font-size="15" font-weight="700" fill="var(--warn-text)">Dedicated Groq project</text><text x="760" y="141" text-anchor="middle" font-size="12" fill="var(--warn-text)">fixed model + hard quota</text><text x="760" y="158" text-anchor="middle" font-size="12" fill="var(--warn-text)">validated CueCraft DTO back</text>
+            <rect x="430" y="220" width="180" height="55" rx="14" fill="var(--surface)" stroke="var(--line)"/>
+            <text x="520" y="242" text-anchor="middle" font-size="14" font-weight="700" fill="var(--ink)">Reserve guardian</text><text x="520" y="261" text-anchor="middle" font-size="12" fill="var(--muted)">leases bounded daily capacity</text>
+            <path d="M170 130 H212" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow1)"/>
+            <path d="M385 130 H427" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow1)"/>
+            <path d="M605 130 H657" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow1)"/>
+            <path d="M520 212 V178" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow1)"/>
+          </svg>
+          <figcaption>Illustrative direction, not a committed architecture spec: each layer blocks a different failure mode.</figcaption>
+        </figure>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Quota ledger and deployment topology</dd>
+          <dt>Basis</dt><dd><strong>direct:</strong> CueCraft can multiply one note action through sections, repairs, and retries, and has no shared requester ledger. <strong>external:</strong> Worker Rate Limiting is approximate; Durable Objects serialize exact session state; Groq project quotas provide a provider-level cap.</dd>
+          <dt>Rationale</dt><dd>This is the strongest anonymous design because it accounts in CueCraft operations rather than HTTP requests. Hiding the key is necessary but insufficient; admission, exact session spend, global reserve, and provider cap each constrain a different abuse path.</dd>
+          <dt>Downsides</dt><dd>Highest initial complexity. Reservation/refund semantics, global lease sizing, and failure recovery need careful definition; a global object must not sit on every request path.</dd>
+          <dt>Confidence</dt><dd>93%</dd>
+          <dt>Complexity</dt><dd>High</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-2">
+        <div class="idea-head"><span class="rank-number">2</span><div><h3>2. CueCraft Web Host with one live aperture</h3><div class="chips"><span class="chip">Confidence · 95%</span><span class="chip info">Complexity · Medium</span></div></div></div>
+        <p>Build an Obsidian-faithful browser host around CueCraft’s real browser-safe parser, Cornell model, cache logic, interaction state, and DOM renderers. Pre-generate the realistic vault and permit exactly one highlighted live operation—preferably regenerate one selected section—so the visitor sees source text become an active-recall cue without exposing full-note fan-out. Document which layers are shared CueCraft code and which are showcase adapters.</p>
+        <figure class="diagram">
+          <svg viewBox="0 0 900 235" role="img" aria-labelledby="d2-title d2-desc">
+            <title id="d2-title">CueCraft Web Host layer split</title>
+            <desc id="d2-desc">An Obsidian-faithful browser shell uses shared CueCraft parsing, models, state, and renderers. Web-specific adapters replace workspace, storage, markdown host services, and provider transport.</desc>
+            <rect x="70" y="24" width="760" height="52" rx="16" fill="var(--surface)" stroke="var(--line)"/>
+            <text x="450" y="55" text-anchor="middle" font-size="16" font-weight="700" fill="var(--ink)">Obsidian-faithful browser shell · vault, editor, commands, study interactions</text>
+            <rect x="70" y="92" width="760" height="62" rx="16" fill="var(--accent-soft)" stroke="var(--accent)"/>
+            <text x="450" y="119" text-anchor="middle" font-size="16" font-weight="700" fill="var(--accent-text)">Shared CueCraft core</text>
+            <text x="450" y="141" text-anchor="middle" font-size="12" fill="var(--accent-text)">parser · schemas · Cornell model · cache identity · state · DOM renderers</text>
+            <rect x="70" y="170" width="355" height="45" rx="14" fill="var(--info-soft)" stroke="var(--info-text)"/>
+            <text x="247" y="198" text-anchor="middle" font-size="13" font-weight="700" fill="var(--info-text)">Web host adapters · workspace · storage · markdown</text>
+            <rect x="475" y="170" width="355" height="45" rx="14" fill="var(--warn-soft)" stroke="var(--warn-text)"/>
+            <text x="652" y="198" text-anchor="middle" font-size="13" font-weight="700" fill="var(--warn-text)">Server provider adapter · one bounded live operation</text>
+          </svg>
+          <figcaption>Illustrative authenticity boundary: real CueCraft behavior inside a purpose-built web host, not a claim that stock Obsidian runs in the page.</figcaption>
+        </figure>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Browser showcase authenticity</dd>
+          <dt>Basis</dt><dd><strong>direct:</strong> <code>manifest.json</code> marks the plugin desktop-only and <code>esbuild.config.mjs</code> targets Node/CommonJS, while <code>src/cornell.ts</code> is explicitly pure and renderer tests already run against browser DOM.</dd>
+          <dt>Rationale</dt><dd>This preserves the product’s real learning behavior without spending effort on brittle desktop emulation. Limiting live scope to one section also turns the user-visible interaction into a predictable security and cost unit.</dd>
+          <dt>Downsides</dt><dd>The host must track shared core changes and can drift visually from Obsidian. The page must be candid that it is a web host for CueCraft rather than the Obsidian desktop runtime.</dd>
+          <dt>Confidence</dt><dd>95%</dd>
+          <dt>Complexity</dt><dd>Medium</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-3">
+        <div class="idea-head"><span class="rank-number">3</span><div><h3>3. CueCraft generation profile and model bake-off</h3><div class="chips"><span class="chip">Confidence · 94%</span><span class="chip info">Complexity · Medium</span></div></div></div>
+        <p>Treat CueCraft’s protected prompt, examples, schemas, validation, and repair policy as the note-taking specialization. Run a small repeatable bake-off across current Groq base models using realistic lecture, meeting, research, and technical notes; score source faithfulness, active-recall usefulness, schema success without repair, prompt-injection resistance, latency, and token use, then pin the winner server-side.</p>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>LLM contract and model fit</dd>
+          <dt>Basis</dt><dd><strong>direct:</strong> CueCraft already instructs models to create grounded active-recall questions and retains artifact count, JSON shape, source boundaries, validation, and repair. <strong>external:</strong> <a href="https://console.groq.com/docs/lora">Groq LoRA</a> is enterprise-only and Groq does not provide training.</dd>
+          <dt>Rationale</dt><dd>The valuable specialization is the pedagogical contract CueCraft can own and test, not a model label. Repair rate also feeds the quota envelope: a model that often violates schemas is more expensive even when its first-token latency looks good.</dd>
+          <dt>Downsides</dt><dd>Requires a curated evaluation corpus and judgment rubric. Model availability and behavior change, so the winner must be requalified rather than treated as permanent.</dd>
+          <dt>Confidence</dt><dd>94%</dd>
+          <dt>Complexity</dt><dd>Medium</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-4">
+        <div class="idea-head"><span class="rank-number">4</span><div><h3>4. Worker-only MVP with a hard provider backstop</h3><div class="chips"><span class="chip">Confidence · 84%</span><span class="chip rank">Complexity · Low</span></div></div></div>
+        <p>Start with one Worker holding the Groq secret and accepting only a narrow, fixed-model CueCraft operation. Add Turnstile-minted sessions, coarse session/IP burst limits, strict input/output caps, cache keys, a conservative application stop, and a dedicated Groq project quota. Explicitly describe anonymous limits as approximate and do not display exact remaining credits.</p>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Quota ledger and deployment topology</dd>
+          <dt>Basis</dt><dd><strong>external:</strong> Groq requires a trusted backend and Worker secrets satisfy key custody; Worker Rate Limiting supports cheap burst suppression; Groq project quotas bound provider exposure. <strong>reasoned:</strong> one anonymous live artifact can tolerate soft per-session fairness if the hard project blast radius is small.</dd>
+          <dt>Rationale</dt><dd>This is the smallest architecture that safely hides the key and makes the endpoint useless as a generic proxy. It is a sensible low-traffic proof before exact ledgers have earned their complexity.</dd>
+          <dt>Downsides</dt><dd>Not exact: cookie clearing, distributed IPs, multi-region races, and simultaneous duplicate requests can exceed application soft limits until the provider cap stops them. If accurate credits or one-in-flight guarantees matter, graduate to idea 1.</dd>
+          <dt>Confidence</dt><dd>84%</dd>
+          <dt>Complexity</dt><dd>Low</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-5">
+        <div class="idea-head"><span class="rank-number">5</span><div><h3>5. Truthful identity ladder</h3><div class="chips"><span class="chip">Confidence · 91%</span><span class="chip info">Complexity · Medium</span></div></div></div>
+        <p>Give a Turnstile-approved anonymous browser one small session allowance and call it exactly that. If the showcase later needs durable repeat usage, require a lightweight authenticated identity for the larger allowance and key exact credits by account ID. Use IP/subnet only as a secondary abuse signal, never as the definition of a person.</p>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Visitor identity and abuse resistance</dd>
+          <dt>Basis</dt><dd><strong>external:</strong> <a href="https://developers.cloudflare.com/turnstile/get-started/server-side-validation/">Turnstile tokens</a> are single-use, short-lived admission proofs; shared IPs, cookies, and browser storage do not establish durable human identity.</dd>
+          <dt>Rationale</dt><dd>This avoids both false security claims and premature signup friction. Identity becomes a progressive product tradeoff: anonymous proof of value first, authenticated continuity only when additional quota justifies it.</dd>
+          <dt>Downsides</dt><dd>Anonymous users can evade a session allowance by clearing state or changing networks. Authentication adds conversion friction, account operations, and privacy considerations.</dd>
+          <dt>Confidence</dt><dd>91%</dd>
+          <dt>Complexity</dt><dd>Medium</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-6">
+        <div class="idea-head"><span class="rank-number">6</span><div><h3>6. Zero-spend launch, graceful brownout always</h3><div class="chips"><span class="chip">Confidence · 90%</span><span class="chip rank">Complexity · Low</span></div></div></div>
+        <p>Launch with scheduled, validated real-LLM output and no visitor-triggered provider calls; publish the generation time, model, and profile version. Once the browser experience proves compelling, open one live aperture. At every stage, keep the full pre-generated vault usable and label each result as live, shared/cached, or replayed when the daily reserve is closed.</p>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Live generation scope</dd>
+          <dt>Basis</dt><dd><strong>direct:</strong> CueCraft’s Cornell and Study Mode interactions work locally, and provider failures are already isolated rather than crashing the note. <strong>reasoned:</strong> scheduled real output proves integration while creating zero public spend risk, and the same known-good artifacts form the brownout path later.</dd>
+          <dt>Rationale</dt><dd>This is the safest rollout and makes provider exhaustion a designed product state rather than an outage. The showcase remains persuasive even during launch spikes, attacks, or Groq 429s.</dd>
+          <dt>Downsides</dt><dd>The initial version is not visitor-interactive LLM generation, so provenance must be conspicuous enough to distinguish it from a static mock. Brownout copy and cache-version equivalence require care.</dd>
+          <dt>Confidence</dt><dd>90%</dd>
+          <dt>Complexity</dt><dd>Low</dd>
+        </dl>
+      </article>
+
+      <article class="idea-card" id="idea-7">
+        <div class="idea-head"><span class="rank-number">7</span><div><h3>7. Operations-rich AI Gateway layer</h3><div class="chips"><span class="chip">Confidence · 79%</span><span class="chip info">Complexity · Medium</span></div></div></div>
+        <p>Route the Worker’s validated Groq call through Cloudflare AI Gateway to add Groq BYOK, logs, exact-request caching, analytics, routing, and budget/count rules. Keep the browser outside both credentials, and keep session credits, idempotency, and request locks in the Worker/Durable Object path; Gateway is an operations layer, not the correctness boundary.</p>
+        <dl class="idea-fields">
+          <dt>Axis</dt><dd>Quota ledger and deployment topology</dd>
+          <dt>Basis</dt><dd><strong>external:</strong> <a href="https://developers.cloudflare.com/ai-gateway/configuration/bring-your-own-keys/">AI Gateway BYOK</a>, <a href="https://developers.cloudflare.com/ai-gateway/features/caching/">caching</a>, and routing/budget features are directly applicable, but authentication stays server-side and simultaneous duplicate requests can still reach the provider.</dd>
+          <dt>Rationale</dt><dd>It adds useful visibility and an additional budget layer without changing the public protocol. It is especially valuable once model qualification, latency, cache hits, and failure rates need real operational evidence.</dd>
+          <dt>Downsides</dt><dd>Additional platform configuration and another token/credential surface. It can tempt the design to duplicate controls or mistake observability/cache behavior for exact admission accounting.</dd>
+          <dt>Confidence</dt><dd>79%</dd>
+          <dt>Complexity</dt><dd>Medium</dd>
+        </dl>
+      </article>
+    </section>
+
+    <section id="rejection-summary">
+      <p class="eyebrow">What did not earn a separate direction</p>
+      <h2>Rejection Summary</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Idea</th><th>Reason rejected or merged</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Explicit authenticity contract</td><td>Merged into the Web Host direction as a required honesty boundary.</td></tr>
+            <tr><td>2</td><td>Museum exhibit with one live window</td><td>Merged into the Web Host and one-live-aperture direction.</td></tr>
+            <tr><td>3</td><td>Scheduled live vault of the day</td><td>Merged into the zero-spend rollout direction.</td></tr>
+            <tr><td>4</td><td>Remote real-Obsidian stream</td><td>Basis refuted on value: costly and brittle while bypassing reusable browser-safe seams.</td></tr>
+            <tr><td>5</td><td>One section, one live completion</td><td>Merged into the Web Host/live-aperture direction.</td></tr>
+            <tr><td>6</td><td>Live Note Brief only</td><td>Sound brainstorm variant, but too narrow as an independent architecture direction.</td></tr>
+            <tr><td>7</td><td>Artifact budget chooser</td><td>Merged into the bounded live operation and reservation designs.</td></tr>
+            <tr><td>8</td><td>Pre-generated 3–5-note vault</td><td>Merged; the specific note count was arbitrary rather than evidence-backed.</td></tr>
+            <tr><td>9</td><td>Canonical single-flight generation</td><td>Merged into the strict anonymous live lane.</td></tr>
+            <tr><td>10</td><td>CueCraft profile is the specialization</td><td>Merged with the bake-off into one stronger model direction.</td></tr>
+            <tr><td>11</td><td>Narrow CueCraft RPC/compiler</td><td>Merged into both backend survivors as a non-negotiable boundary.</td></tr>
+            <tr><td>12</td><td>Immutable server-owned samples</td><td>Merged into the narrow RPC boundary.</td></tr>
+            <tr><td>13</td><td>Model-qualification flywheel</td><td>Weak as a primary direction; existing metadata does not yet make public traffic reliable quality evidence.</td></tr>
+            <tr><td>14</td><td>Admission pass, not identity theater</td><td>Merged into the truthful identity ladder.</td></tr>
+            <tr><td>15</td><td>Multiple authentication methods</td><td>Scope overrun for the showcase; retain authentication as an escalation, not a menu of mechanisms.</td></tr>
+            <tr><td>16</td><td>One-time capability tickets alone</td><td>Weak: signatures do not provide one-time redemption without durable state.</td></tr>
+            <tr><td>17</td><td>Endpoint useless after admission bypass</td><td>Merged into the narrow server-owned CueCraft operation.</td></tr>
+            <tr><td>18</td><td>Visible exact anonymous credits</td><td>Merged into the brownout UX; exact counts depend on selecting the DO-backed ledger.</td></tr>
+            <tr><td>19</td><td>Reserve worst-case cost</td><td>Merged into the strict anonymous live lane.</td></tr>
+            <tr><td>20</td><td>Session DO leases</td><td>Merged into the strict anonymous live lane.</td></tr>
+            <tr><td>21</td><td>Three-layer quota governor</td><td>Merged into the strict anonymous live lane.</td></tr>
+            <tr><td>22</td><td>Load-shedding ladder</td><td>Merged into the zero-spend rollout and graceful brownout direction.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout"><p><strong>Coverage check:</strong> all five topic axes retain at least one ranked survivor.</p></div>
+    </section>
+
+    <footer class="composition-signal">Composed 2026-08-15T05:53:04-07:00 by ce-ideate from the user’s CueCraft showcase prompt, repository evidence, and current official Groq and Cloudflare documentation.</footer>
+  </main>
+</body>
+</html>
