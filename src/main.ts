@@ -180,7 +180,7 @@ const RETIRED_DEDICATED_VIEW_TYPE = "cuecraft-cornell";
 type StudyProjectionMode = "source" | "preview";
 
 export default class CueCraftPlugin extends Plugin {
-	settings: CueCraftSettings = DEFAULT_SETTINGS;
+	override settings: CueCraftSettings = DEFAULT_SETTINGS;
 
 	private statusBarEl: HTMLElement | null = null;
 	private ribbonEl: HTMLElement | null = null;
@@ -222,7 +222,7 @@ export default class CueCraftPlugin extends Plugin {
 		commitWidthPx: (widthPx) => this.commitEditorCueWidth(widthPx),
 	};
 
-	async onload(): Promise<void> {
+	override async onload(): Promise<void> {
 		this.credentialStore = createSecureCredentialStore({
 			secretStorage: this.app.secretStorage,
 		});
@@ -337,7 +337,7 @@ export default class CueCraftPlugin extends Plugin {
 		});
 	}
 
-	onunload(): void {
+	override onunload(): void {
 		this.endStudySession({ refresh: false, updateIdleStatus: false });
 		for (const action of this.studyHeaderActionElements) action.remove();
 		this.studyHeaderActionElements.clear();
@@ -2456,7 +2456,7 @@ class RegenerateSettingsModal extends Modal {
 		super(app);
 	}
 
-	onOpen(): void {
+	override onOpen(): void {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.createEl("h2", { text: "Regenerate Section cues with new settings?" });
@@ -2478,7 +2478,7 @@ class RegenerateSettingsModal extends Modal {
 		});
 	}
 
-	onClose(): void {
+	override onClose(): void {
 		this.contentEl.empty();
 	}
 }
