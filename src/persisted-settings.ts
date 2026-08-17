@@ -4,15 +4,8 @@ import {
 } from "./auto-generation-delay";
 import { normalizeCueCraftProviderSettings } from "./byok-cuecraft-adapter";
 import { isCueFontSize } from "./cornell-layout";
-import {
-	DEFAULT_QUESTION_TYPE,
-	isQuestionType,
-	resolveLegacyQuestionType,
-} from "./cue-generation";
-import {
-	DEFAULT_EDITOR_CUE_DISPLAY,
-	isEditorCueDisplay,
-} from "./editor-cue-display";
+import { isQuestionType } from "./cue-generation";
+import { isEditorCueDisplay } from "./editor-cue-display";
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
 import { DEFAULT_SETTINGS, type CueCraftSettings } from "./settings";
 import { loadStudyAreas } from "./study-area";
@@ -58,16 +51,9 @@ export function parsePersistedCueCraftSettings(
 	let changed = raw !== undefined && raw !== null && !isRecord(raw);
 
 	const rawQuestionType = record.questionType;
-	const hasLegacyQuestionSettings = [
-		"cuePreset",
-		"cueDensity",
-		"questionStyle",
-	].some((key) => hasOwn(record, key));
 	const questionType = isQuestionType(rawQuestionType)
 		? rawQuestionType
-		: hasLegacyQuestionSettings
-			? resolveLegacyQuestionType(record)
-			: DEFAULT_QUESTION_TYPE;
+		: DEFAULT_SETTINGS.questionType;
 	if (hasOwn(record, "questionType") && !isQuestionType(rawQuestionType)) {
 		changed = true;
 	}
@@ -88,7 +74,7 @@ export function parsePersistedCueCraftSettings(
 	const rawEditorCueDisplay = record.editorCueDisplay;
 	const editorCueDisplay = isEditorCueDisplay(rawEditorCueDisplay)
 		? rawEditorCueDisplay
-		: DEFAULT_EDITOR_CUE_DISPLAY;
+		: DEFAULT_SETTINGS.editorCueDisplay;
 	if (
 		hasOwn(record, "editorCueDisplay") &&
 		!isEditorCueDisplay(rawEditorCueDisplay)
@@ -186,22 +172,21 @@ export function parsePersistedCueCraftSettings(
 		),
 		showSummary: firstBoolean(
 			record,
-			["showSummary", "showRailSummary", "showSectionLens"],
+			["showSummary"],
 			DEFAULT_SETTINGS.showSummary
 		),
 		showQuestion: firstBoolean(
 			record,
-			["showQuestion", "showRailQuestions"],
+			["showQuestion"],
 			DEFAULT_SETTINGS.showQuestion
 		),
 		showTerms: firstBoolean(
 			record,
-			["showTerms", "showRailSupportTerms", "generateKeywords"],
+			["showTerms"],
 			DEFAULT_SETTINGS.showTerms
 		),
 	};
-	changed =
-		normalizeCueCraftProviderSettings(settings, DEFAULT_SETTINGS, raw) ||
-		changed;
+	normalizeCueCraftProviderSettings(settings, DEFAULT_SETTINGS, raw);
+	changed = !isJsonEqual(record, settings) || changed;
 	return { settings, changed };
 }

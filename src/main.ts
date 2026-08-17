@@ -36,7 +36,7 @@ import {
 	cueCraftSelectedProvider,
 	clearCueCraftStoredCloudCredential,
 	markCueCraftCloudCredentialSaved,
-	migrateCueCraftCloudCredentials,
+	secureCueCraftCloudCredentials,
 	listCueCraftProviderModelsFromStore,
 	makeCueCraftByokProviderFromStore,
 	type CueCraftByokRuntime,
@@ -90,8 +90,7 @@ import {
 } from "./study-session";
 import { isEditorCueDisplay } from "./editor-cue-display";
 import {
-	exportFilePaths,
-	resolveExportTarget,
+	exportFilePath,
 	selectExportableQuestions,
 	questionsAndTermsToAnki,
 	questionsAndTermsToMarkdown,
@@ -175,8 +174,6 @@ const STUDY_RIBBON_ICON = "book-open-check";
 const STUDY_READY_LABEL = "CueCraft: Study this note";
 const STUDY_ACTIVE_LABEL = "CueCraft: Exit Study";
 const STUDY_GENERATE_FIRST = "CueCraft: generate Section cues for this note first.";
-const RETIRED_DEDICATED_VIEW_TYPE = "cuecraft-cornell";
-
 type StudyProjectionMode = "source" | "preview";
 
 export default class CueCraftPlugin extends Plugin {
@@ -213,7 +210,7 @@ export default class CueCraftPlugin extends Plugin {
 	private visibility!: VisibilityStore;
 	private cueSectionCollapse!: CueSectionCollapseStore;
 	private credentialStore!: SecureCredentialStore;
-	private credentialMigrationWarnings: string[] = [];
+	private credentialStorageWarnings: string[] = [];
 	private readonly editorCueWidthController: EditorCueWidthController = {
 		getCommittedWidthPx: () => this.settings.editorCueCustomWidthPx,
 		previewWidthPx: (widthPx) => this.previewEditorCueWidth(widthPx),
@@ -332,7 +329,6 @@ export default class CueCraftPlugin extends Plugin {
 		// the restored editor's CodeMirror instance isn't ready yet, so an early
 		// renderCues would no-op and the cues would never appear on startup.
 		this.app.workspace.onLayoutReady(() => {
-			this.app.workspace.detachLeavesOfType(RETIRED_DEDICATED_VIEW_TYPE);
 			this.onActiveFile(this.app.workspace.getActiveFile());
 		});
 	}
@@ -361,46 +357,15 @@ export default class CueCraftPlugin extends Plugin {
 	private async loadPluginData(): Promise<void> {
 		const loaded: unknown = await this.loadData();
 		const loadedRecord = isRecord(loaded) ? loaded : {};
-		const rawSettings = loadedRecord.settings ?? loadedRecord;
-		const rawSettingsRecord = isRecord(rawSettings) ? rawSettings : {};
+		const rawSettings = loadedRecord.settings;
 		const parsedSettings = parsePersistedCueCraftSettings(rawSettings);
 		const settings = parsedSettings.settings;
-		let settingsChanged = parsedSettings.changed;
-		const credentialMigration = await migrateCueCraftCloudCredentials(
+		const credentialStorage = await secureCueCraftCloudCredentials(
 			settings,
-			this.credentialStore,
-			rawSettings
+			this.credentialStore
 		);
-		this.credentialMigrationWarnings = credentialMigration.warnings;
-		for (const key of [
-			"cuePreset",
-			"cueDensity",
-			"questionStyle",
-			"generateKeywords",
-			"cueInstructionsOverride",
-			"noteBriefInstructionsOverride",
-			"summaryInstructionsOverride",
-			"showSectionLens",
-			"showRailSummary",
-			"showRailQuestions",
-			"showRailSupportTerms",
-			"renderInReadingMode",
-			"autoSummary",
-			"cornellDisplayMode",
-			"cornellStyle",
-			"cueColumnWidth",
-			"cueAccent",
-			"showCueBorder",
-			"compactChips",
-			"foldCueColumnOnMobile",
-			"editorCueWidthPreset",
-			"editorHookCardStyle",
-			"readingModeDisplay",
-		] as const) {
-			if (Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)) {
-				settingsChanged = true;
-			}
-		}
+		this.credentialStorageWarnings = credentialStorage.warnings;
+		const settingsChanged = parsedSettings.changed;
 		const rawCaches = isRecord(loadedRecord.caches)
 			? loadedRecord.caches
 			: {};
@@ -417,7 +382,7 @@ export default class CueCraftPlugin extends Plugin {
 		this.data = { settings, caches, hidden, cueSectionCollapse };
 		this.settings = this.data.settings;
 		if (
-			credentialMigration.settingsChanged ||
+			credentialStorage.settingsChanged ||
 			cachesChanged ||
 			settingsChanged
 		) {
@@ -986,8 +951,8 @@ export default class CueCraftPlugin extends Plugin {
 		return this.credentialStore.availability();
 	}
 
-	secureCredentialMigrationWarnings(): string[] {
-		return [...this.credentialMigrationWarnings];
+	secureCredentialWarnings(): string[] {
+		return [...this.credentialStorageWarnings];
 	}
 
 	isProviderCredentialSaved(provider = cueCraftSelectedProvider(this.settings)): boolean {
@@ -1179,7 +1144,7 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const dir =
 			file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
-		const { preferred: outPath, legacy: legacyPath } = exportFilePaths(
+		const outPath = exportFilePath(
 			dir,
 			file.basename,
 			format
@@ -1188,17 +1153,7 @@ export default class CueCraftPlugin extends Plugin {
 			format === "markdown"
 				? questionsAndTermsToMarkdown(file.basename, questions)
 				: questionsAndTermsToAnki(questions);
-		const preferred = this.app.vault.getAbstractFileByPath(outPath);
-		const legacy = this.app.vault.getAbstractFileByPath(legacyPath);
-		const target = resolveExportTarget(
-			preferred instanceof TFile,
-			legacy instanceof TFile
-		);
-		let existing = preferred;
-		if (target === "migrate-legacy" && legacy instanceof TFile) {
-			await this.app.vault.rename(legacy, outPath);
-			existing = legacy;
-		}
+		const existing = this.app.vault.getAbstractFileByPath(outPath);
 		let out: TFile;
 		if (existing instanceof TFile) {
 			await this.app.vault.modify(existing, content);

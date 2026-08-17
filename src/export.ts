@@ -68,28 +68,13 @@ export function questionsAndTermsToAnki(questions: ExportQuestion[]): string {
 		.join("\n");
 }
 
-export function exportFilePaths(
+export function exportFilePath(
 	dir: string,
 	basename: string,
 	format: "markdown" | "anki"
-): { preferred: string; legacy: string } {
+): string {
 	const ext = format === "markdown" ? "md" : "txt";
-	const preferredTag =
+	const tag =
 		format === "markdown" ? "questions-and-terms" : "questions-and-terms.anki";
-	const legacyTag = format === "markdown" ? "cues" : "cues.anki";
-	return {
-		preferred: `${dir}${basename} (${preferredTag}).${ext}`,
-		legacy: `${dir}${basename} (${legacyTag}).${ext}`,
-	};
-}
-
-export type ExportTarget = "overwrite-preferred" | "migrate-legacy" | "create-preferred";
-
-export function resolveExportTarget(
-	preferredExists: boolean,
-	legacyExists: boolean
-): ExportTarget {
-	if (preferredExists) return "overwrite-preferred";
-	if (legacyExists) return "migrate-legacy";
-	return "create-preferred";
+	return `${dir}${basename} (${tag}).${ext}`;
 }

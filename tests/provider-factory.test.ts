@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { CueCraftSettings } from "../src/settings";
+import type {
+	ByokProviderId,
+	ByokProviderStoredSettings,
+} from "@swartzrock/byok-runtime";
+import { DEFAULT_SETTINGS, type CueCraftSettings } from "../src/settings";
 import {
 	makeCueCraftByokProvider,
 	cueCraftProviderConfigFromSettings,
@@ -7,30 +11,26 @@ import {
 } from "../src/byok-cuecraft-adapter";
 
 function settings(
-	overrides: Partial<CueCraftSettings> = {}
+	provider: ByokProviderId = "ollama",
+	overrides: Partial<ByokProviderStoredSettings> = {}
 ): CueCraftSettings {
-	return {
-		provider: "ollama",
-		ollamaHost: "http://localhost:11434",
-		ollamaModel: "llama3.1:8b",
-		anthropicApiKey: "sk-ant-test",
-		anthropicModel: "claude-sonnet-4-6",
-		openaiApiKey: "sk-openai-test",
-		openaiModel: "gpt-4o-mini",
-		googleApiKey: "AIza-test",
-		googleModel: "gemini-1.5-flash",
-		xaiApiKey: "xai-test",
-		xaiModel: "grok-2-latest",
-		openrouterApiKey: "sk-or-test",
-		openrouterModel: "anthropic/claude-sonnet-4",
-		lmStudioUrl: "http://localhost:1234/v1",
-		lmStudioModel: "local-model",
-		codexCliCommand: "codex",
-		codexCliModel: "gpt-5",
-		claudeCliCommand: "claude",
-		claudeCliModel: "sonnet",
+	const current = structuredClone(DEFAULT_SETTINGS);
+	current.byok.selectedProvider = provider;
+	current.byok.providers[provider] = {
+		credential: "",
+		credentialSaved: false,
+		credentialUpdatedAt: "",
+		credentialLength: 0,
+		model: "",
+		modelSelection: "",
+		availableModels: [],
+		modelOptions: [],
+		hasFetchedModels: false,
+		modelRefreshMessage: "",
+		...current.byok.providers[provider],
 		...overrides,
-	} as CueCraftSettings;
+	};
+	return current;
 }
 
 const http: CueCraftHttpClient = async () => ({ status: 200, text: "{}", json: {} });
@@ -40,10 +40,9 @@ describe("makeCueCraftByokProvider", () => {
 	it("maps CueCraft settings into BYOK provider config", () => {
 		expect(
 			cueCraftProviderConfigFromSettings(
-				settings({
-					provider: "openrouter",
-					openrouterApiKey: "sk-or-test",
-					openrouterModel: "anthropic/claude-sonnet-4",
+				settings("openrouter", {
+					credential: "sk-or-test",
+					model: "anthropic/claude-sonnet-4",
 				})
 			)
 		).toEqual({
@@ -53,10 +52,9 @@ describe("makeCueCraftByokProvider", () => {
 		});
 		expect(
 			cueCraftProviderConfigFromSettings(
-				settings({
-					provider: "codex-cli",
-					codexCliCommand: "codex",
-					codexCliModel: "",
+				settings("codex-cli", {
+					credential: "codex",
+					model: "",
 				})
 			)
 		).toEqual({
@@ -66,10 +64,9 @@ describe("makeCueCraftByokProvider", () => {
 		});
 		expect(
 			cueCraftProviderConfigFromSettings(
-				settings({
-					provider: "lm-studio",
-					lmStudioUrl: "http://localhost:1234/v1",
-					lmStudioModel: "qwen3-4b",
+				settings("lm-studio", {
+					credential: "http://localhost:1234/v1",
+					model: "qwen3-4b",
 				})
 			)
 		).toEqual({
@@ -88,14 +85,17 @@ describe("makeCueCraftByokProvider", () => {
 		["xai", "xai"],
 		["openrouter", "openrouter"],
 	] as const)("creates the existing %s provider", (provider, expectedId) => {
+		const stored = ["ollama", "lm-studio"].includes(provider)
+			? {}
+			: { credential: "test-key", model: "test-model" };
 		expect(
-			makeCueCraftByokProvider(settings({ provider }), { fetchImpl, http }).id
+			makeCueCraftByokProvider(settings(provider, stored), { fetchImpl, http }).id
 		).toBe(expectedId);
 	});
 
 	it("creates the Codex CLI provider without a sequential concurrency cap", () => {
 		const provider = makeCueCraftByokProvider(
-			settings({ provider: "codex-cli" }),
+			settings("codex-cli", { credential: "codex" }),
 			{ fetchImpl, http }
 		);
 		expect(provider.id).toBe("codex-cli");
@@ -108,7 +108,7 @@ describe("makeCueCraftByokProvider", () => {
 
 	it("creates the Claude CLI provider without a sequential concurrency cap", () => {
 		const provider = makeCueCraftByokProvider(
-			settings({ provider: "claude-cli" }),
+			settings("claude-cli", { credential: "claude" }),
 			{ fetchImpl, http }
 		);
 		expect(provider.id).toBe("claude-cli");

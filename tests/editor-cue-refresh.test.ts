@@ -26,7 +26,6 @@ function studyCache() {
 				},
 			],
 			summary: null,
-			learningObjective: null,
 			noteBrief: null,
 			canceled: false,
 		},
