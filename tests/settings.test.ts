@@ -12,10 +12,7 @@ import {
 	editorCueDisplayOption,
 	isEditorCueDisplay,
 } from "../src/editor-cue-display";
-import {
-	DEFAULT_SHOW_NOTE_BRIEF,
-	DEFAULT_SHOW_SUMMARY,
-} from "../src/review-surfaces";
+import { DEFAULT_SHOW_NOTE_BRIEF } from "../src/review-surfaces";
 import {
 	buildSectionCueInstructionsTemplate,
 } from "../src/cue-instructions";
@@ -535,8 +532,7 @@ describe("settings defaults", () => {
 		);
 	});
 
-	it("defaults generated review surfaces to visible", () => {
-		expect(DEFAULT_SHOW_SUMMARY).toBe(true);
+	it("defaults the Note Brief to visible", () => {
 		expect(DEFAULT_SHOW_NOTE_BRIEF).toBe(true);
 	});
 

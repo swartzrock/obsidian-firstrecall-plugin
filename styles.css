@@ -1063,7 +1063,6 @@
 
 .cuecraft-cue,
 .cuecraft-note-brief,
-.cuecraft-brief,
 .cuecraft-editor-hook,
 .cuecraft-cornell-cue {
 	--cc-card: var(--background-primary);
@@ -1309,16 +1308,6 @@
 	overflow: visible;
 }
 
-.cuecraft-editor-hook-heading {
-	margin-bottom: 0.35em;
-	overflow: hidden;
-	color: color-mix(in srgb, var(--text-normal) 76%, transparent);
-	font-size: var(--font-smallest);
-	font-weight: var(--font-semibold);
-	text-overflow: ellipsis;
-	white-space: nowrap;
-}
-
 .cuecraft-editor-hook-title {
 	position: relative;
 	z-index: 1;
@@ -1545,7 +1534,6 @@
 		line-height: 1.45;
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-heading,
 	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-keywords {
 		font-size: var(--font-smallest);
 	}

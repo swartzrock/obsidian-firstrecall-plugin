@@ -22,7 +22,6 @@ import {
 	cueFontSizeClass,
 	type CueFontSize,
 } from "./cornell-layout";
-import { EDITOR_CORNELL_STYLE_CLASS } from "./cornell-style";
 import { isCueEligibleSection, type Section } from "./parser";
 import type { NoteBriefOutput, SectionSummary } from "./schemas";
 import type { StudyProjection, StudySessionSnapshot } from "./study-session";
@@ -395,9 +394,7 @@ function renderCornellCueElement(
 	root.className = [
 		"cuecraft-editor-hook",
 		"cuecraft-editor-cornell-card",
-		"cuecraft-editor-cornell-card-classic",
 		"cuecraft-cornell",
-		EDITOR_CORNELL_STYLE_CLASS,
 	].join(" ");
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");

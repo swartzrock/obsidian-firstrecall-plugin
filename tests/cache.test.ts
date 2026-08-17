@@ -11,7 +11,6 @@ import {
 	reconcileCacheSections,
 	replaceSection,
 	sectionIdsNeedingGeneration,
-	staleSectionIds,
 	validateCache,
 	type NoteCache,
 } from "../src/cache";
@@ -427,35 +426,6 @@ describe("CacheStore", () => {
 		const store = new CacheStore({ "seed.md": cache }, async () => {});
 		expect(store.get("seed.md")).toEqual(cache);
 		expect(store.snapshot()).toEqual({ "seed.md": cache });
-	});
-});
-
-describe("staleSectionIds", () => {
-	it("is empty when nothing changed", () => {
-		const cache = build();
-		expect(staleSectionIds(cache, parseSections(NOTE))).toEqual([]);
-	});
-
-	it("lists only the edited section's id", () => {
-		const cache = build();
-		const edited = parseSections("# A\nalpha EDITED\n## B\nbeta");
-		const ids = staleSectionIds(cache, edited);
-		const aId = cache.sections[0].id;
-		expect(ids).toEqual([aId]);
-	});
-
-	it("includes sections that previously errored even if unchanged", () => {
-		const cache = build();
-		cache.sections[1] = { ...cache.sections[1], error: "boom" };
-		const ids = staleSectionIds(cache, parseSections(NOTE));
-		expect(ids).toEqual([cache.sections[1].id]);
-	});
-
-	it("ignores sections no longer present in the note", () => {
-		const cache = build();
-		const onlyA = parseSections("# A\nalpha");
-		// B is gone from the note, so it is not returned (full Generate handles removals).
-		expect(staleSectionIds(cache, onlyA)).toEqual([]);
 	});
 });
 

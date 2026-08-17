@@ -1,5 +1,6 @@
 import { z } from "zod/v3";
 import {
+	formatZodError,
 	noteBriefOutputSchema,
 	sectionSummarySchema,
 	type ValidationResult,
@@ -83,9 +84,7 @@ export function validateCache(raw: unknown): ValidationResult<NoteCache> {
 	if (!parsed.success) {
 		return {
 			ok: false,
-			error: parsed.error.issues
-				.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-				.join("; "),
+			error: formatZodError(parsed.error),
 		};
 	}
 	return { ok: true, value: parsed.data };
@@ -241,30 +240,6 @@ export function isStale(cache: NoteCache, currentSections: Section[]): boolean {
 		}
 	}
 	return false;
-}
-
-/**
- * Ids of cached sections that need regenerating: their content changed since the
- * cache was built (hash mismatch against the current parse) or they previously
- * errored. Matched by stable section id, so reordering alone doesn't count.
- * Newly added sections are intentionally not included here; use
- * `sectionIdsNeedingGeneration` for incremental generation paths that should
- * handle additions without a full-note run.
- */
-export function staleSectionIds(
-	cache: NoteCache,
-	currentSections: Section[]
-): string[] {
-	const current = new Map(cueEligibleSections(currentSections).map((s) => [s.id, s]));
-	const ids: string[] = [];
-	for (const cached of cache.sections) {
-		const live = current.get(cached.id);
-		if (!live) continue;
-		if (cached.error || cached.contentHash !== live.contentHash) {
-			ids.push(cached.id);
-		}
-	}
-	return ids;
 }
 
 /**

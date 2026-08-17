@@ -2018,7 +2018,6 @@ describe("cue editor placement", () => {
 			expect(el.classList.contains("cuecraft-editor-cornell-card")).toBe(true);
 			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(true);
 			expect(el.dataset.display).toBe("cornell");
-			expect(el.classList.contains("cuecraft-style-classic")).toBe(true);
 			expect(el.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
 			expect(el.querySelector(".cuecraft-cornell-q")?.textContent).toBe(
 				"What is A?"

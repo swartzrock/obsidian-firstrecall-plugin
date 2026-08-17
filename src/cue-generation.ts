@@ -62,10 +62,6 @@ export interface CueGenerationOptions {
 	questionType: QuestionType;
 }
 
-export const DEFAULT_CUE_GENERATION_OPTIONS: CueGenerationOptions = {
-	questionType: DEFAULT_QUESTION_TYPE,
-};
-
 interface LegacyQuestionSettings {
 	cuePreset?: unknown;
 	cueDensity?: unknown;
