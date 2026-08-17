@@ -159,13 +159,6 @@ export function isStudyAreaPath(
 	);
 }
 
-export function eligibleStudyAreaPaths(
-	area: Pick<StudyArea, "parentPath" | "excludedPaths">,
-	paths: readonly string[]
-): string[] {
-	return paths.filter((path) => isStudyAreaPath(area, path));
-}
-
 export function findMaintainedStudyAreaForPath(
 	areas: readonly StudyArea[],
 	path: string,

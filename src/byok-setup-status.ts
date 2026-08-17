@@ -3,14 +3,12 @@ import {
 	type ByokProviderId,
 	type ByokSetupStatus,
 	type ByokStoredSettings,
-	type ByokVerificationSnapshot,
 	type ByokVerificationSnapshotMap,
 } from "@swartzrock/byok-runtime";
 import { byokProviderDefinition } from "./byok-provider-metadata";
 
 export const CLI_DEFAULT_MODEL_SENTINEL = "__byok_cli_default__";
 
-export type ProviderConnectionSnapshot = ByokVerificationSnapshot;
 export type ProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 
 export interface ProviderSetupStatusSettings {

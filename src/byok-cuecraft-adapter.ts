@@ -66,8 +66,6 @@ export type CueCraftByokRuntime = CueCraftCueProviderRuntime;
 export type CueCraftHttpClient = ByokHttpClient;
 export type CueCraftProviderFactoryDeps = ByokProviderDeps;
 export type CueCraftProviderConnectionStatusMap = ByokVerificationSnapshotMap;
-export type CueCraftByokSettings = ByokStoredSettings;
-export type CueCraftByokProviderSettings = ByokProviderStoredSettings;
 export type { ByokProviderConfig, ByokProviderDeps } from "@swartzrock/byok-runtime";
 
 type CueCraftApiKeyProvider = Extract<

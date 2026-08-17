@@ -5,7 +5,6 @@ import {
 	DEFAULT_STUDY_AREAS,
 	ENTIRE_VAULT_STUDY_AREA_LABEL,
 	classifyStudyAreaNote,
-	eligibleStudyAreaPaths,
 	findMaintainedStudyAreaForPath,
 	formatStudyAreaReadinessCounts,
 	isEntireVaultStudyArea,
@@ -144,12 +143,7 @@ describe("study area path matching", () => {
 		});
 		expect(isExcludedPath("Courses/Biology/private.md", studyArea.excludedPaths)).toBe(true);
 		expect(isExcludedPath("Courses/Biology/Drafts/a.md", studyArea.excludedPaths)).toBe(true);
-		expect(eligibleStudyAreaPaths(studyArea, [
-			"Courses/Biology/private.md",
-			"Courses/Biology/Drafts/a.md",
-			"Courses/Biology/Public/a.md",
-			"Courses/Chemistry/a.md",
-		])).toEqual(["Courses/Biology/Public/a.md"]);
+		expect(isStudyAreaPath(studyArea, "Courses/Biology/Public/a.md")).toBe(true);
 	});
 });
 
