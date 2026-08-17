@@ -1088,11 +1088,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						this.refreshReviewSurfaces();
 					});
 			});
-		const parts = noteBriefCard.createDiv({ cls: "cuecraft-settings-artifact-parts" });
-		for (const label of ["Core idea", "Review first", "Self-test"]) {
-			parts.createSpan({ text: label, cls: "cuecraft-settings-artifact-part" });
-		}
-
 		const cueCard = this.createArtifactCard(
 			containerEl,
 			"Section cue",

@@ -639,6 +639,9 @@ describe("settings defaults", () => {
 		expect(text).toContain("Core idea");
 		expect(text).toContain("Review first");
 		expect(text).toContain("Self-test");
+		expect(
+			tab.containerEl.querySelectorAll(".cuecraft-settings-artifact-part")
+		).toHaveLength(0);
 	});
 
 	it("allows every generated component to be hidden without marking content dirty", async () => {
