@@ -1,9 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
-	selectExportableCues,
-	cuesToMarkdown,
-	cuesToAnki,
-	type ExportCue,
+	exportFilePaths,
+	resolveExportTarget,
+	selectExportableQuestions,
+	questionsAndTermsToAnki,
+	questionsAndTermsToMarkdown,
+	type ExportQuestion,
 } from "../src/export";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
@@ -45,11 +47,11 @@ function cacheFrom(
 	});
 }
 
-describe("selectExportableCues", () => {
-	it("keeps usable cues in document order", () => {
-		const cues = selectExportableCues(cacheFrom());
-		expect(cues.map((c) => c.heading)).toEqual(["A", "B", "C"]);
-		expect(cues[0]).toEqual({
+describe("selectExportableQuestions", () => {
+	it("keeps usable Questions in document order", () => {
+		const questions = selectExportableQuestions(cacheFrom());
+		expect(questions.map((question) => question.heading)).toEqual(["A", "B", "C"]);
+		expect(questions[0]).toEqual({
 			heading: "A",
 			question: "Q:A",
 			keywords: ["k1", "k2"],
@@ -62,47 +64,77 @@ describe("selectExportableCues", () => {
 			if (i === 2) return { question: null, keywords: null };
 			return {};
 		});
-		const cues = selectExportableCues(cache);
-		expect(cues.map((c) => c.heading)).toEqual(["A"]);
+		const questions = selectExportableQuestions(cache);
+		expect(questions.map((question) => question.heading)).toEqual(["A"]);
 	});
 });
 
-describe("cuesToMarkdown", () => {
-	it("renders a heading + question + keywords per cue", () => {
-		const md = cuesToMarkdown("My Note", selectExportableCues(cacheFrom()));
-		expect(md).toContain("# Study cues — My Note");
+describe("questionsAndTermsToMarkdown", () => {
+	it("renders a heading, Question, and Terms per section", () => {
+		const md = questionsAndTermsToMarkdown("My Note", selectExportableQuestions(cacheFrom()));
+		expect(md).toContain("# Questions and Terms — My Note");
 		expect(md).toContain("## A");
-		expect(md).toContain("**Q:** Q:A");
-		expect(md).toContain("_Keywords:_ k1 · k2");
+		expect(md).toContain("**Question:** Q:A");
+		expect(md).toContain("_Terms:_ k1 · k2");
 	});
 
 	it("notes when there is nothing to export", () => {
-		expect(cuesToMarkdown("Empty", [])).toContain(
-			"No generated cues to export"
+		expect(questionsAndTermsToMarkdown("Empty", [])).toContain(
+			"No generated Questions and Terms to export"
 		);
 	});
 });
 
-describe("cuesToAnki", () => {
-	it("emits question<TAB>answer rows, one per cue", () => {
-		const tsv = cuesToAnki(selectExportableCues(cacheFrom()));
+describe("questionsAndTermsToAnki", () => {
+	it("emits question<TAB>answer rows, one per Question", () => {
+		const tsv = questionsAndTermsToAnki(selectExportableQuestions(cacheFrom()));
 		const rows = tsv.split("\n");
 		expect(rows).toHaveLength(3);
 		expect(rows[0]).toBe("Q:A\tk1 · k2");
 		for (const row of rows) expect(row.split("\t")).toHaveLength(2);
 	});
 
-	it("falls back to the heading when a cue has no keywords", () => {
-		const cues: ExportCue[] = [{ heading: "Topic", question: "Why?", keywords: [] }];
-		expect(cuesToAnki(cues)).toBe("Why?\tTopic");
+	it("falls back to the heading when a Question has no Terms", () => {
+		const questions: ExportQuestion[] = [{ heading: "Topic", question: "Why?", keywords: [] }];
+		expect(questionsAndTermsToAnki(questions)).toBe("Why?\tTopic");
 	});
 
 	it("collapses tabs/newlines so fields stay on one row", () => {
-		const cues: ExportCue[] = [
+		const questions: ExportQuestion[] = [
 			{ heading: "H", question: "Line1\nLine2\tx", keywords: ["a\tb"] },
 		];
-		const row = cuesToAnki(cues);
+		const row = questionsAndTermsToAnki(questions);
 		expect(row).toBe("Line1 Line2 x\ta b");
 		expect(row.split("\t")).toHaveLength(2);
+	});
+});
+
+describe("exportFilePaths", () => {
+	it("returns preferred and legacy Markdown paths", () => {
+		expect(exportFilePaths("folder/", "Note", "markdown")).toEqual({
+			preferred: "folder/Note (questions-and-terms).md",
+			legacy: "folder/Note (cues).md",
+		});
+	});
+
+	it("returns preferred and legacy Anki paths", () => {
+		expect(exportFilePaths("", "Note", "anki")).toEqual({
+			preferred: "Note (questions-and-terms.anki).txt",
+			legacy: "Note (cues.anki).txt",
+		});
+	});
+});
+
+describe("resolveExportTarget", () => {
+	it("overwrites the preferred path when both preferred and legacy files exist", () => {
+		expect(resolveExportTarget(true, true)).toBe("overwrite-preferred");
+	});
+
+	it("migrates a legacy file when the preferred path is absent", () => {
+		expect(resolveExportTarget(false, true)).toBe("migrate-legacy");
+	});
+
+	it("creates the preferred path when no export exists", () => {
+		expect(resolveExportTarget(false, false)).toBe("create-preferred");
 	});
 });

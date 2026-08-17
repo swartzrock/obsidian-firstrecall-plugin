@@ -26,7 +26,7 @@ import type { StudySessionController } from "../src/study-session";
 
 const NOTE = "# Agents\nAgents use tools.";
 const OTHER_NOTE = "# Memory\nRetrieval strengthens memory.";
-const GENERATE_FIRST = "CueCraft: generate cues for this note first.";
+const GENERATE_FIRST = "CueCraft: generate Section cues for this note first.";
 
 function cacheFor(markdown: string): NoteCache {
 	const section = parseSections(markdown)[0];
@@ -41,7 +41,7 @@ function cacheFor(markdown: string): NoteCache {
 					contentHash: section.contentHash,
 					keywords: ["tools"],
 					question: `Question for ${section.heading}`,
-					sectionLens: null,
+					summary: null,
 					error: null,
 				},
 			],
@@ -319,6 +319,8 @@ beforeEach(() => {
 });
 
 describe("Study plugin orchestration", () => {
+	const retiredDedicatedViewCommand = ["open", "cornell", "view"].join("-");
+
 	it.each([
 		[
 			"active",
@@ -351,7 +353,7 @@ describe("Study plugin orchestration", () => {
 		harness.layoutReady();
 
 		expect(harness.registerView).not.toHaveBeenCalled();
-		expect(harness.commands.has("open-cornell-view")).toBe(false);
+		expect(harness.commands.has(retiredDedicatedViewCommand)).toBe(false);
 		expect(harness.detachLeavesOfType).toHaveBeenCalledOnce();
 		expect(harness.detachLeavesOfType).toHaveBeenCalledWith("cuecraft-cornell");
 		expect(harness.restoredLayout()).toEqual(
@@ -424,7 +426,7 @@ describe("Study plugin orchestration", () => {
 		await harness.commands.get("toggle-study-mode")?.callback();
 		expect(harness.controller().snapshot().revealedCount).toBe(0);
 
-		expect(harness.commands.has("open-cornell-view")).toBe(false);
+		expect(harness.commands.has(retiredDedicatedViewCommand)).toBe(false);
 		expect(harness.viewStates).toEqual([]);
 	});
 

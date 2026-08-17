@@ -5,13 +5,13 @@ export const NOTE_TITLE_PLACEHOLDER = "{{note_title}}";
 export const FULL_NOTE_SOURCE_PLACEHOLDER = "{{full_note_source}}";
 export const SECTION_CUE_SOURCE_PLACEHOLDER = "{{successful_section_cues}}";
 
-export const SECTION_LENS_PROMPT =
-	`Also include "sectionLens": an object with ` +
+export const SUMMARY_PROMPT =
+	`Also include "summary": an object with ` +
 	`"takeaway" (one short sentence summarizing the section's most important idea), ` +
 	`"keyPhrase" (the most important phrase or term to notice), and ` +
 	`"explanation" (one short sentence explaining why that phrase matters for recall).`;
 
-export const SECTION_LENS_JSON_SCHEMA = {
+export const SUMMARY_JSON_SCHEMA = {
 	type: "object",
 	properties: {
 		takeaway: { type: "string" },

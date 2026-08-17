@@ -1234,7 +1234,7 @@
 }
 
 .cuecraft-cue-term,
-.cuecraft-cornell-support-term {
+.cuecraft-cornell-term {
 	display: inline-flex;
 	align-items: center;
 	max-width: 100%;
@@ -1248,7 +1248,7 @@
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-section-lens {
+.cuecraft-summary {
 	margin-top: 0.4em;
 	padding-top: 0.35em;
 	border-top: 1px solid var(--cc-border);
@@ -1258,12 +1258,12 @@
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-section-lens-phrase {
+.cuecraft-summary-phrase {
 	color: var(--text-normal);
 	font-weight: var(--font-semibold);
 }
 
-.cuecraft-section-lens-explanation {
+.cuecraft-summary-explanation {
 	margin-top: 0.2em;
 	color: var(--cc-muted);
 }
@@ -1548,7 +1548,7 @@
 	overflow: hidden;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-content>.cuecraft-section-lens {
+.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-content>.cuecraft-summary {
 	margin-top: 0;
 	padding-top: 0;
 	border-top: 0;
@@ -1598,7 +1598,7 @@
 }
 
 .cuecraft-editor-hook-sectioned .cuecraft-cue-term,
-.cuecraft-editor-hook-sectioned .cuecraft-cornell-support-term {
+.cuecraft-editor-hook-sectioned .cuecraft-cornell-term {
 	min-height: 1.65em;
 	padding: 0 0.42rem;
 	color: color-mix(in srgb, var(--cc-muted) 82%, transparent);
@@ -1606,21 +1606,21 @@
 	line-height: 1.65;
 }
 
-.cuecraft-editor-hook .cuecraft-section-lens {
+.cuecraft-editor-hook .cuecraft-summary {
 	position: relative;
 	z-index: 1;
 	color: var(--cc-muted);
 	font-weight: var(--font-medium);
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-section-lens {
+.cuecraft-editor-hook-sectioned .cuecraft-summary {
 	color: var(--text-normal);
 	font-size: inherit;
 	font-weight: var(--font-normal, 400);
 	line-height: 1.45;
 }
 
-.cuecraft-editor-hook[data-question-visible="false"] .cuecraft-section-lens {
+.cuecraft-editor-hook[data-question-visible="false"] .cuecraft-summary {
 	margin-top: 0;
 	padding-top: 0;
 	border-top: 0;
@@ -1664,7 +1664,7 @@
 
 .cuecraft-editor-hook-collapsed-tabs .cuecraft-editor-hook-heading,
 .cuecraft-editor-hook-collapsed-tabs .cuecraft-editor-hook-keywords,
-.cuecraft-editor-hook-collapsed-tabs .cuecraft-section-lens,
+.cuecraft-editor-hook-collapsed-tabs .cuecraft-summary,
 .cuecraft-editor-hook-collapsed-tabs .cuecraft-editor-hook-status {
 	display: none;
 }
@@ -1772,7 +1772,7 @@
 
 .cuecraft-editor-hook-active-section-composer[data-state="upcoming"] .cuecraft-editor-hook-heading,
 .cuecraft-editor-hook-active-section-composer[data-state="upcoming"] .cuecraft-editor-hook-keywords,
-.cuecraft-editor-hook-active-section-composer[data-state="upcoming"] .cuecraft-section-lens {
+.cuecraft-editor-hook-active-section-composer[data-state="upcoming"] .cuecraft-summary {
 	display: none;
 }
 
@@ -1862,7 +1862,7 @@
 		transform 120ms ease;
 }
 
-.cuecraft-editor-hook-hook-minimap .cuecraft-section-lens {
+.cuecraft-editor-hook-hook-minimap .cuecraft-summary {
 	position: absolute;
 	z-index: 2;
 	inset-block-start: 3.15rem;
@@ -1890,9 +1890,9 @@
 .cuecraft-editor-hook-hook-minimap[data-state="current"] .cuecraft-editor-hook-title,
 .cuecraft-editor-hook-hook-minimap:hover .cuecraft-editor-hook-title,
 .cuecraft-editor-hook-hook-minimap:focus-visible .cuecraft-editor-hook-title,
-.cuecraft-editor-hook-hook-minimap[data-state="current"] .cuecraft-section-lens,
-.cuecraft-editor-hook-hook-minimap:hover .cuecraft-section-lens,
-.cuecraft-editor-hook-hook-minimap:focus-visible .cuecraft-section-lens {
+.cuecraft-editor-hook-hook-minimap[data-state="current"] .cuecraft-summary,
+.cuecraft-editor-hook-hook-minimap:hover .cuecraft-summary,
+.cuecraft-editor-hook-hook-minimap:focus-visible .cuecraft-summary {
 	opacity: 1;
 	pointer-events: auto;
 	transform: translateX(0);
@@ -2198,7 +2198,7 @@ html.cuecraft-editor-cue-width-resizing * {
 }
 
 .markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-medium .cuecraft-editor-hook-title,
-.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-medium .cuecraft-section-lens {
+.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-hook-minimap.cuecraft-cuewidth-medium .cuecraft-summary {
 	width: min(18rem, calc(100vw - 9rem));
 }
 

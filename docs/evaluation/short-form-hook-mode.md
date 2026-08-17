@@ -7,7 +7,7 @@ source_plan: docs/plans/2026-06-19-001-feat-short-form-hook-mode-plan.md
 
 # Short-Form Hook Mode Evaluation Checklist
 
-Use this checklist after Hook Mode is available in the Cornell view. It is a manual, repeatable evaluation artifact only: do not change provider prompts, schemas, cache shape, migrations, or production generation behavior while running it.
+Use this checklist after Hook Mode is available in the Cornell card display. It is a manual, repeatable evaluation artifact only: do not change provider instructions, schemas, cache shape, migrations, or production generation behavior while running it.
 
 ## Evaluation Goal
 
@@ -22,16 +22,16 @@ Run the checklist on at least five notes before making a decision:
 | N1 | Short conceptual note, 3-5 headings |
 | N2 | Long dense note, 8+ headings |
 | N3 | Note with nested headings |
-| N4 | Note with at least one failed or missing cue |
+| N4 | Note with at least one failed or missing Section cue |
 | N5 | Note from a real recurring use case |
 
-Optional extra samples are encouraged when a misleading hook appears. Do not edit the production note or cached cue data to make a sample pass.
+Optional extra samples are encouraged when a misleading hook appears. Do not edit the production note or cached Section cue data to make a sample pass.
 
 ## Setup
 
 1. Install the current Hook Mode branch in Obsidian.
-2. Generate or refresh cues for each sample note.
-3. Confirm the Cornell display mode defaults to Cornell unless Hook rail was intentionally saved as the preference.
+2. Generate or refresh Section cues for each sample note.
+3. Confirm Cue display defaults to Cornell unless Hook rail was intentionally saved as the preference.
 4. Test in light theme, dark theme, and one community theme.
 5. If reduced motion is available in the OS, enable it for one pass and confirm Hook Mode remains usable.
 
@@ -46,13 +46,13 @@ Copy this table once per note.
 | Summary synthesis | The bottom synthesis card reads as a whole-note takeaway, not as another section cue. |  |  |
 | Theme safety | Hook cards, focus states, failed cards, and summary text remain readable in all tested themes. |  |  |
 | Readability | Long hook titles wrap inside cards without clipping, horizontal scrolling, or losing the section relationship. |  |  |
-| Scan speed | The evaluator can find a target section at least as fast in Hook rail as in Cornell mode. |  |  |
+| Scan speed | The evaluator can find a target section at least as fast in Hook rail as in the Cornell card display. |  |  |
 | Fidelity | Hook title preserves the original question's answer intent. |  |  |
 | Misleading-copy incidents | Any distorted, vague, or over-broad hook title is captured below. |  |  |
 
 ## Timing Pass
 
-Use the same target section in Cornell mode and Hook rail mode.
+Use the same target section in the Cornell card display and Hook rail.
 
 | Note | Target section | Cornell time | Hook rail time | Faster/clearer? | Notes |
 | --- | --- | --- | --- | --- | --- |

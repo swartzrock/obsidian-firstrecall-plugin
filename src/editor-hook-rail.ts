@@ -1,6 +1,6 @@
 import type { CueLineData } from "./cue-extension";
 import type { EditorCueDisplay } from "./editor-cue-display";
-import type { SectionLens } from "./schemas";
+import type { SectionSummary } from "./schemas";
 
 export type EditorHookCardKind = "hook" | "failed";
 export type EditorHookCardState = "current" | "upcoming";
@@ -9,7 +9,7 @@ export type EditorHookTone = "warm" | "cool";
 export interface EditorHookCardOptions {
 	showSummary?: boolean;
 	showQuestion?: boolean;
-	showSupportTerms?: boolean;
+	showTerms?: boolean;
 }
 
 export interface EditorHookCard {
@@ -20,7 +20,7 @@ export interface EditorHookCard {
 	hookTitle: string;
 	originalQuestion: string;
 	keywords: string[];
-	sectionLens: SectionLens | null;
+	summary: SectionSummary | null;
 	error: string | null;
 	titleDensity: "standard" | "long" | "dense";
 	state: EditorHookCardState;
@@ -28,7 +28,7 @@ export interface EditorHookCard {
 	gradientIndex: number;
 	showSummary: boolean;
 	showQuestion: boolean;
-	showSupportTerms: boolean;
+	showTerms: boolean;
 }
 
 export function buildEditorHookCard(
@@ -42,7 +42,7 @@ export function buildEditorHookCard(
 	const hookTitle = editorHookTitle(cue);
 	const showSummary = options.showSummary ?? true;
 	const showQuestion = options.showQuestion ?? true;
-	const showSupportTerms = options.showSupportTerms ?? true;
+	const showTerms = options.showTerms ?? true;
 	return {
 		kind: failed ? "failed" : "hook",
 		display,
@@ -51,7 +51,7 @@ export function buildEditorHookCard(
 		hookTitle,
 		originalQuestion: cue.question,
 		keywords: cue.keywords,
-		sectionLens: cue.sectionLens,
+		summary: cue.summary,
 		error: cue.error,
 		titleDensity: editorHookTitleDensity(hookTitle),
 		state,
@@ -59,13 +59,13 @@ export function buildEditorHookCard(
 		gradientIndex: index % 3,
 		showSummary,
 		showQuestion,
-		showSupportTerms,
+		showTerms,
 	};
 }
 
 function editorHookTitle(cue: CueLineData): string {
 	return cue.error
-		? "Cue unavailable"
+		? "Section cue unavailable"
 		: buildEditorHookTitle(cue.question) ?? cue.heading;
 }
 

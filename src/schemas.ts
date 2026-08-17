@@ -2,12 +2,12 @@ import { z } from "zod/v3";
 
 /**
  * Validation for CueCraft provider output. The app accepts a little model
- * variation at the boundary, then normalizes to the Cue and Note Brief contracts.
+ * variation at the boundary, then normalizes to the Section cue and Note Brief contracts.
  */
-export const sectionLensSchema = z.object({
-	takeaway: z.string().trim().min(1, "sectionLens.takeaway is required"),
-	keyPhrase: z.string().trim().min(1, "sectionLens.keyPhrase is required"),
-	explanation: z.string().trim().min(1, "sectionLens.explanation is required"),
+export const sectionSummarySchema = z.object({
+	takeaway: z.string().trim().min(1, "summary.takeaway is required"),
+	keyPhrase: z.string().trim().min(1, "summary.keyPhrase is required"),
+	explanation: z.string().trim().min(1, "summary.explanation is required"),
 });
 
 /** Drop blanks, trim, dedupe case-insensitively, and cap at 5 keywords. */
@@ -31,9 +31,9 @@ function coerceKeywords(value: unknown): unknown {
 export const cueOutputSchema = z.object({
 	question: z.string().trim().min(1, "question is required"),
 	keywords: z.preprocess(coerceKeywords, z.array(z.string().min(1)).min(2).max(5)),
-	sectionLens: z.preprocess(
+	summary: z.preprocess(
 		(value) => (value === null ? undefined : value),
-		sectionLensSchema.optional()
+		sectionSummarySchema.optional()
 	),
 });
 
@@ -53,8 +53,8 @@ export const cueGenerationSchema = z.object({
 	question: z.string().describe("A single active-recall question for the section."),
 	keywords: z
 		.array(z.string())
-		.describe("2 to 5 short keyword hints that help recall the answer."),
-	sectionLens: z
+		.describe("2 to 5 short Terms that help recall the answer."),
+	summary: z
 		.object({
 			takeaway: z
 				.string()
@@ -66,7 +66,7 @@ export const cueGenerationSchema = z.object({
 				.string()
 				.describe("One short sentence explaining why the phrase matters for recall."),
 		})
-		.describe("A compact AI-native review lens for this section."),
+		.describe("A compact Summary for this section."),
 });
 
 const noteBriefCardGenerationSchema = z.object({
@@ -90,7 +90,7 @@ export const noteBriefGenerationSchema = z.object({
 });
 
 export type CueOutput = z.infer<typeof cueOutputSchema>;
-export type SectionLens = z.infer<typeof sectionLensSchema>;
+export type SectionSummary = z.infer<typeof sectionSummarySchema>;
 export type NoteBriefOutput = z.infer<typeof noteBriefOutputSchema>;
 
 export interface CueBatchValidationItem {
@@ -216,13 +216,13 @@ export function validateCueBatch(
 			? record.cues
 			: null;
 	if (!cues) {
-		return { ok: false, error: "response did not include a cues array" };
+		return { ok: false, error: 'response did not include a "cues" array of Section cues' };
 	}
 	const items: CueBatchValidationItem[] = [];
 	for (let i = 0; i < expectedCount; i++) {
 		const value = cues[i];
 		if (value === undefined) {
-			items.push({ value: null, error: `missing cue for section ${i + 1}` });
+			items.push({ value: null, error: `missing Section cue for section ${i + 1}` });
 			continue;
 		}
 		const parsed = cueOutputSchema.safeParse(value);

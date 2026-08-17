@@ -49,7 +49,7 @@ describe("local CLI cue batch prompt", () => {
 
 	it("uses the shared batch template for initial and repair requests", async () => {
 		const calls: ByokTextGenerationInput[] = [];
-		const systemPromptLog = vi
+		const instructionLog = vi
 			.spyOn(console, "info")
 			.mockImplementation(() => undefined);
 		const runtime: ByokProviderRuntime = {
@@ -69,7 +69,7 @@ describe("local CLI cue batch prompt", () => {
 								{
 									question: "What makes a stack LIFO?",
 									keywords: ["stack", "LIFO"],
-									sectionLens: {
+									summary: {
 										takeaway: "Stacks remove the newest item first.",
 										keyPhrase: "last-in-first-out",
 										explanation: "The phrase defines stack order.",
@@ -78,7 +78,7 @@ describe("local CLI cue batch prompt", () => {
 								{
 									question: "What makes a queue FIFO?",
 									keywords: ["queue", "FIFO"],
-									sectionLens: {
+									summary: {
 										takeaway: "Queues remove the oldest item first.",
 										keyPhrase: "first-in-first-out",
 										explanation: "The phrase defines queue order.",
@@ -121,7 +121,7 @@ describe("local CLI cue batch prompt", () => {
 			for (const field of [
 				"question",
 				"keywords",
-				"sectionLens",
+				"summary",
 				"takeaway",
 				"keyPhrase",
 				"explanation",
@@ -139,15 +139,15 @@ describe("local CLI cue batch prompt", () => {
 		expect(calls[1].prompt).toContain(
 			"Reply again with ONLY the corrected JSON object."
 		);
-		expect(systemPromptLog).toHaveBeenCalledOnce();
+		expect(instructionLog).toHaveBeenCalledOnce();
 		const inspectedTemplate = buildSectionCueInstructionsTemplate(
 			"exam-practice",
 			"batch"
 		);
-		expect(systemPromptLog).toHaveBeenCalledWith(
-			`[CueCraft BYOK] Cue Batch system prompt\n${inspectedTemplate}`
+		expect(instructionLog).toHaveBeenCalledWith(
+			`[CueCraft BYOK] Section cue batch instructions\n${inspectedTemplate}`
 		);
-		expect(systemPromptLog.mock.calls[0]?.[0]).not.toContain(
+		expect(instructionLog.mock.calls[0]?.[0]).not.toContain(
 			"A stack removes the newest item first."
 		);
 	});
@@ -188,7 +188,7 @@ describe("local CLI cue batch prompt", () => {
 		const validCue = {
 			question: "What makes a queue FIFO?",
 			keywords: ["queue", "FIFO"],
-			sectionLens: {
+			summary: {
 				takeaway: "Queues remove the oldest item first.",
 				keyPhrase: "first-in-first-out",
 				explanation: "The phrase defines queue order.",
@@ -239,7 +239,7 @@ describe("local CLI cue batch prompt", () => {
 
 		expect(prompt).toContain('"question"');
 		expect(prompt).toContain('"keywords"');
-		expect(prompt).toContain('"sectionLens"');
+		expect(prompt).toContain('"summary"');
 		expect(prompt).not.toContain('"category"');
 		expect(prompt).not.toContain("sequences");
 		expect(prompt).not.toContain("linkedlists");
@@ -253,7 +253,7 @@ describe("local CLI cue batch prompt", () => {
 		expect(schema.properties.cues.items.required).toEqual([
 			"question",
 			"keywords",
-			"sectionLens",
+			"summary",
 		]);
 	});
 

@@ -1,5 +1,5 @@
 /**
- * Reading-mode (preview) cue support. Obsidian renders reading view through
+ * Reading-mode (preview) Section cue display. Obsidian renders reading view through
  * Markdown post-processors that hand us one rendered block at a time, so we
  * resolve the cached cues to current document lines (reusing the same
  * {@link buildCueLineData} logic as the editor) and key them by heading line.
@@ -269,7 +269,7 @@ export function syncReadingStudyControls(
 		helpTitle.textContent = "Show or hide sections";
 		const helpDetail = doc.createElement("span");
 		helpDetail.className = "cuecraft-study-help-detail";
-		helpDetail.textContent = "Click the eye icon on any cue card.";
+		helpDetail.textContent = "Click the eye icon on any Section cue card.";
 		helpCopy.append(helpTitle, helpDetail);
 		help.append(helpCopy);
 

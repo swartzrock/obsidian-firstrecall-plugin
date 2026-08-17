@@ -72,14 +72,14 @@ interface LegacyQuestionSettings {
 	questionStyle?: unknown;
 }
 
-const LEGACY_CUE_PRESETS: ReadonlySet<unknown> = new Set([
+const RETIRED_QUESTION_TYPE_PROFILES: ReadonlySet<unknown> = new Set([
 	"conceptual",
 	"exam-prep",
 	"vocabulary",
 	"minimal",
 ]);
-const LEGACY_CUE_DENSITIES: ReadonlySet<unknown> = new Set([1, 2, 3]);
-const LEGACY_QUESTION_STYLES: ReadonlySet<unknown> = new Set([
+const RETIRED_QUESTION_TYPE_LEVELS: ReadonlySet<unknown> = new Set([1, 2, 3]);
+const RETIRED_QUESTION_TYPE_MODES: ReadonlySet<unknown> = new Set([
 	"recall",
 	"socratic",
 	"exam",
@@ -96,7 +96,7 @@ export function resolveLegacyQuestionType(
 	const candidates = new Set<QuestionType>();
 
 	if (Object.prototype.hasOwnProperty.call(legacy, "cuePreset")) {
-		if (!LEGACY_CUE_PRESETS.has(legacy.cuePreset)) {
+		if (!RETIRED_QUESTION_TYPE_PROFILES.has(legacy.cuePreset)) {
 			return DEFAULT_QUESTION_TYPE;
 		}
 		switch (legacy.cuePreset) {
@@ -112,14 +112,14 @@ export function resolveLegacyQuestionType(
 	}
 
 	if (Object.prototype.hasOwnProperty.call(legacy, "cueDensity")) {
-		if (!LEGACY_CUE_DENSITIES.has(legacy.cueDensity)) {
+		if (!RETIRED_QUESTION_TYPE_LEVELS.has(legacy.cueDensity)) {
 			return DEFAULT_QUESTION_TYPE;
 		}
 		if (legacy.cueDensity === 1) candidates.add("direct-recall");
 	}
 
 	if (Object.prototype.hasOwnProperty.call(legacy, "questionStyle")) {
-		if (!LEGACY_QUESTION_STYLES.has(legacy.questionStyle)) {
+		if (!RETIRED_QUESTION_TYPE_MODES.has(legacy.questionStyle)) {
 			return DEFAULT_QUESTION_TYPE;
 		}
 		if (legacy.questionStyle === "exam") candidates.add("exam-practice");

@@ -1,10 +1,10 @@
 /**
- * Per-note cue visibility (v1.0 epic G: enable/hide per note).
+ * Per-note generated-study-material visibility (v1.0 epic G: enable/hide per note).
  *
  * Notes are shown by default; only hidden notes are persisted, so the stored
- * map stays small and an absent entry means "shown". Hiding suppresses the cue
- * layer for a note without deleting its cache, so re-enabling restores the
- * already-generated cues without regenerating.
+ * map stays small and an absent entry means "shown". Hiding suppresses generated
+ * study material for a note without deleting its cache, so re-enabling restores
+ * that material without regenerating.
  */
 export type PersistFn = (map: Record<string, true>) => Promise<void>;
 
@@ -14,7 +14,7 @@ export type PillAction = "open-settings" | "toggle-visibility" | "none";
 /**
  * Decide the click behavior of the status pill from its current status:
  * unconfigured opens settings; mid-generation / study mode is inert; an idle
- * note (ready/stale/hidden) toggles its cue visibility.
+ * note (ready/stale/hidden) toggles its generated study material.
  */
 export function pillAction(status: string): PillAction {
 	if (status === "setup") return "open-settings";
@@ -25,8 +25,8 @@ export function pillAction(status: string): PillAction {
 /** Context-menu label reflecting the note's current visibility. */
 export function visibilityMenuLabel(isHidden: boolean): string {
 	return isHidden
-		? "CueCraft: Enable cues for this note"
-		: "CueCraft: Hide cues for this note";
+		? "CueCraft: Enable generated study material for this note"
+		: "CueCraft: Hide generated study material for this note";
 }
 
 /** Coerce arbitrary stored data into a hidden-paths map (defensive on load). */
@@ -40,7 +40,7 @@ export function loadHiddenMap(raw: unknown): Record<string, true> {
 }
 
 /**
- * Tracks which notes have their cues hidden. Holds an in-memory map and
+ * Tracks which notes have their generated study material hidden. Holds an in-memory map and
  * persists via an injected callback, so it's unit-testable without Obsidian.
  */
 export class VisibilityStore {
@@ -56,14 +56,14 @@ export class VisibilityStore {
 		return this.hidden[path] === true;
 	}
 
-	/** Hide a note's cues. No-op (and no write) if already hidden. */
+	/** Hide a note's generated study material. No-op (and no write) if already hidden. */
 	async hide(path: string): Promise<void> {
 		if (this.hidden[path]) return;
 		this.hidden[path] = true;
 		await this.persist(this.hidden);
 	}
 
-	/** Show (re-enable) a note's cues. No-op (and no write) if already shown. */
+	/** Show a note's generated study material. No-op (and no write) if already shown. */
 	async show(path: string): Promise<void> {
 		if (!this.hidden[path]) return;
 		delete this.hidden[path];

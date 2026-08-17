@@ -6,7 +6,7 @@ import {
 	NOTE_BRIEF_PROMPT,
 	NOTE_TITLE_PLACEHOLDER,
 	SECTION_CUE_SOURCE_PLACEHOLDER,
-} from "../src/review-artifact-prompts";
+} from "../src/study-material-instructions";
 
 describe("note brief prompt", () => {
 	it("keeps the overview, three-card contract, cues, and note source in the app-owned prompt", () => {

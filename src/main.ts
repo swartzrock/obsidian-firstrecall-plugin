@@ -65,7 +65,7 @@ import {
 } from "./cache";
 import {
 	applyEditorCueWidthPreview,
-	appendSectionLens,
+	appendSummary,
 	buildCueLineData,
 	cueEditorExtension,
 	railLayoutAppliesToDisplay,
@@ -96,9 +96,11 @@ import {
 	isEditorCueDisplay,
 } from "./editor-cue-display";
 import {
-	selectExportableCues,
-	cuesToMarkdown,
-	cuesToAnki,
+	exportFilePaths,
+	resolveExportTarget,
+	selectExportableQuestions,
+	questionsAndTermsToAnki,
+	questionsAndTermsToMarkdown,
 } from "./export";
 import {
 	VisibilityStore,
@@ -151,8 +153,8 @@ const RIBBON_ICON = "graduation-cap";
 const STUDY_RIBBON_ICON = "book-open-check";
 const STUDY_READY_LABEL = "CueCraft: Study this note";
 const STUDY_ACTIVE_LABEL = "CueCraft: Exit Study";
-const STUDY_GENERATE_FIRST = "CueCraft: generate cues for this note first.";
-const LEGACY_CORNELL_VIEW_TYPE = "cuecraft-cornell";
+const STUDY_GENERATE_FIRST = "CueCraft: generate Section cues for this note first.";
+const RETIRED_DEDICATED_VIEW_TYPE = "cuecraft-cornell";
 
 type StudyProjectionMode = "source" | "preview";
 
@@ -309,7 +311,7 @@ export default class CueCraftPlugin extends Plugin {
 		// the restored editor's CodeMirror instance isn't ready yet, so an early
 		// renderCues would no-op and the cues would never appear on startup.
 		this.app.workspace.onLayoutReady(() => {
-			this.app.workspace.detachLeavesOfType(LEGACY_CORNELL_VIEW_TYPE);
+			this.app.workspace.detachLeavesOfType(RETIRED_DEDICATED_VIEW_TYPE);
 			this.onActiveFile(this.app.workspace.getActiveFile());
 		});
 	}
@@ -502,7 +504,7 @@ export default class CueCraftPlugin extends Plugin {
 	/** Keep the ribbon tooltip describing what a click will do. */
 	private updateRibbonLabel(): void {
 		const generateLabel = this.isConfigured()
-			? "CueCraft: Generate cues for this note"
+			? "CueCraft: Generate study material for this note"
 			: "CueCraft: Set up \u2014 open settings";
 		this.ribbonEl?.setAttribute("aria-label", generateLabel);
 		this.refreshStudyEntryStates();
@@ -1137,7 +1139,7 @@ export default class CueCraftPlugin extends Plugin {
 				.setIcon(RIBBON_ICON)
 				.onClick(() => void this.setNoteVisibility(hidden, file))
 		);
-		// "Review" is only meaningful once a note has usable cues to study.
+		// "Review" is only meaningful once a note has usable Section cues to study.
 		if (this.hasUsableCueCache(file.path)) {
 			menu.addItem((item) =>
 				item
@@ -1151,22 +1153,22 @@ export default class CueCraftPlugin extends Plugin {
 	private registerCommands(): void {
 		this.addCommand({
 			id: "generate-cues",
-			name: "Generate Cues for This Note",
+			name: "Generate Study Material for This Note",
 			callback: () => this.generateCues(),
 		});
 		this.addCommand({
 			id: "regenerate-section",
-			name: "Regenerate Section\u2026",
+			name: "Regenerate Section cue and Note Brief\u2026",
 			callback: () => this.pickAndRegenerateSection(),
 		});
 		this.addCommand({
 			id: "regenerate-stale-sections",
-			name: "Regenerate Stale Sections",
+			name: "Regenerate Stale Study Material",
 			callback: () => void this.regenerateStaleSections(),
 		});
 		this.addCommand({
 			id: "run-study-area-backfill",
-			name: "Generate Study Area Cues...",
+			name: "Generate Study Material for Study Area...",
 			callback: () => this.pickStudyAreaAndRun("backfill"),
 		});
 		this.addCommand({
@@ -1196,7 +1198,7 @@ export default class CueCraftPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "clear-cues",
-			name: "Clear Generated Cues",
+			name: "Clear Generated Study Material",
 			callback: () => this.clearCues(),
 		});
 		this.addCommand({
@@ -1206,42 +1208,54 @@ export default class CueCraftPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "export-cues-markdown",
-			name: "Export Cues to Markdown",
+			name: "Export Questions and Terms to Markdown",
 			callback: () => void this.exportCues("markdown"),
 		});
 		this.addCommand({
 			id: "export-cues-anki",
-			name: "Export Cues to Anki (TSV)",
+			name: "Export Questions and Terms to Anki (TSV)",
 			callback: () => void this.exportCues("anki"),
 		});
 	}
 
 	/**
-	 * Export the active note's usable cues to a sibling file: a Markdown study
+	 * Export the active note's usable Questions and Terms to a sibling file: a Markdown study
 	 * sheet or Anki-importable TSV. Never touches the source note.
 	 */
 	private async exportCues(format: "markdown" | "anki"): Promise<void> {
 		const file = this.app.workspace.getActiveFile();
 		if (!file) {
-			new Notice("CueCraft: open a note to export its cues.");
+			new Notice("CueCraft: open a note to export its Questions and Terms.");
 			return;
 		}
 		const cache = this.cacheStore.get(file.path);
-		const cues = cache ? selectExportableCues(cache) : [];
-		if (cues.length === 0) {
-			new Notice("CueCraft: no usable cues to export \u2014 generate first.");
+		const questions = cache ? selectExportableQuestions(cache) : [];
+		if (questions.length === 0) {
+			new Notice("CueCraft: no usable Questions and Terms to export \u2014 generate first.");
 			return;
 		}
 		const dir =
 			file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
-		const ext = format === "markdown" ? "md" : "txt";
-		const tag = format === "markdown" ? "cues" : "cues.anki";
-		const outPath = `${dir}${file.basename} (${tag}).${ext}`;
+		const { preferred: outPath, legacy: legacyPath } = exportFilePaths(
+			dir,
+			file.basename,
+			format
+		);
 		const content =
 			format === "markdown"
-				? cuesToMarkdown(file.basename, cues)
-				: cuesToAnki(cues);
-		const existing = this.app.vault.getAbstractFileByPath(outPath);
+				? questionsAndTermsToMarkdown(file.basename, questions)
+				: questionsAndTermsToAnki(questions);
+		const preferred = this.app.vault.getAbstractFileByPath(outPath);
+		const legacy = this.app.vault.getAbstractFileByPath(legacyPath);
+		const target = resolveExportTarget(
+			preferred instanceof TFile,
+			legacy instanceof TFile
+		);
+		let existing = preferred;
+		if (target === "migrate-legacy" && legacy instanceof TFile) {
+			await this.app.vault.rename(legacy, outPath);
+			existing = legacy;
+		}
 		let out: TFile;
 		if (existing instanceof TFile) {
 			await this.app.vault.modify(existing, content);
@@ -1249,7 +1263,10 @@ export default class CueCraftPlugin extends Plugin {
 		} else {
 			out = await this.app.vault.create(outPath, content);
 		}
-		new Notice(`CueCraft: exported ${cues.length} cue(s) to ${outPath}`);
+		const questionCount = `${questions.length} ${
+			questions.length === 1 ? "Question" : "Questions"
+		}`;
+		new Notice(`CueCraft: exported ${questionCount} and Terms to ${outPath}`);
 		if (format === "markdown") {
 			await this.app.workspace.getLeaf(true).openFile(out);
 		}
@@ -1547,7 +1564,7 @@ export default class CueCraftPlugin extends Plugin {
 			});
 			return root;
 		}
-		appendSectionLens(root, cue.sectionLens);
+		appendSummary(root, cue.summary);
 		if (visibility.showQuestion) {
 			root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
 		}
@@ -1743,7 +1760,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		if (!this.cacheStore.has(file.path)) {
-			new Notice("CueCraft: generate cues for this note first.");
+			new Notice("CueCraft: generate Section cues for this note first.");
 			return;
 		}
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -1798,7 +1815,7 @@ export default class CueCraftPlugin extends Plugin {
 				noteContext: markdown,
 				signal: controller.signal,
 			});
-			if (!result) throw new Error("Provider returned no cue for this section.");
+			if (!result) throw new Error("Provider returned no Section cue for this section.");
 
 			let updated = replaceSection(cache, toCachedSection(result));
 			if (!controller.signal.aborted) {
@@ -1816,7 +1833,7 @@ export default class CueCraftPlugin extends Plugin {
 			if (result.error) {
 				new Notice(`CueCraft: regeneration failed \u2014 ${result.error}`);
 			} else {
-				new Notice(`CueCraft: regenerated cue for "${section.heading}".`);
+				new Notice(`CueCraft: regenerated Section cue for "${section.heading}".`);
 			}
 		} catch (e) {
 			console.error("CueCraft section regen failed", e);
@@ -2384,7 +2401,7 @@ export default class CueCraftPlugin extends Plugin {
 				noteModifiedAt: file.stat.mtime,
 			});
 			await this.cacheStore.set(file.path, cache);
-			// Generating for a note implies you want to see its cues.
+			// Generating for a note implies you want to see its Section cues.
 			await this.visibility.show(file.path);
 
 			const ok = result.sections.filter((s) => !s.error).length;
@@ -2392,8 +2409,9 @@ export default class CueCraftPlugin extends Plugin {
 			if (result.canceled) {
 				new Notice(`CueCraft: cancelled - kept ${ok} section(s).`);
 			} else if (!opts.automatic) {
+				const sectionCueCount = `${ok} Section ${ok === 1 ? "cue" : "cues"}`;
 				new Notice(
-					`CueCraft: generated ${ok} cue(s)` +
+					`CueCraft: generated ${sectionCueCount}` +
 						(failed ? `, ${failed} failed` : "") +
 						(result.noteBrief ? " + Note Brief." : ".")
 				);
@@ -2420,12 +2438,12 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		if (!this.cacheStore.has(file.path)) {
-			new Notice("CueCraft: no generated cues to clear for this note.");
+			new Notice("CueCraft: no generated study material to clear for this note.");
 			return;
 		}
 		this.endStudyForPath(file.path);
 		await this.cacheStore.delete(file.path);
-		new Notice("CueCraft: cleared generated cues for this note.");
+		new Notice("CueCraft: cleared generated study material for this note.");
 		await this.updateStatusForFile(file);
 		this.renderCues(file);
 	}
@@ -2442,10 +2460,10 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		if (visible) {
 			await this.visibility.show(file.path);
-			new Notice("CueCraft: cues enabled for this note.");
+			new Notice("CueCraft: generated study material enabled for this note.");
 		} else {
 			await this.visibility.hide(file.path);
-			new Notice("CueCraft: cues hidden for this note.");
+			new Notice("CueCraft: generated study material hidden for this note.");
 		}
 		const active = this.app.workspace.getActiveFile();
 		await this.updateStatusForFile(active);
@@ -2467,7 +2485,7 @@ function toCachedSection(result: SectionResult): CachedSection {
 		contentHash: result.contentHash,
 		keywords: result.keywords,
 		question: result.question,
-		sectionLens: result.sectionLens,
+		summary: result.summary,
 		error: result.error,
 	};
 }
@@ -2484,9 +2502,9 @@ class RegenerateSettingsModal extends Modal {
 	onOpen(): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.createEl("h2", { text: "Regenerate cues with new settings?" });
+		contentEl.createEl("h2", { text: "Regenerate Section cues with new settings?" });
 		contentEl.createEl("p", {
-			text: `CueCraft settings that affect generated cue content changed. Regenerate cached cues for "${this.noteName}" now?`,
+			text: `CueCraft settings that affect generated Questions changed. Regenerate cached Section cues for "${this.noteName}" now?`,
 		});
 		const actions = contentEl.createEl("div", {
 			cls: "cuecraft-modal-actions",

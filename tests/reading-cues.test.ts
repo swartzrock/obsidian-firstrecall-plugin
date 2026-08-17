@@ -16,7 +16,7 @@ import CueCraftPlugin from "../src/main";
 import { DEFAULT_SETTINGS } from "../src/settings";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
-const SECTION_LENS = {
+const SECTION_SUMMARY = {
 	keyPhrase: "agent autonomy",
 	takeaway: "Agents use tools to complete multi-step work.",
 	explanation: "The section contrasts one-shot chat with tool-using agents.",
@@ -36,7 +36,7 @@ function cacheFrom(
 		contentHash: s.contentHash,
 		keywords: ["k1", "k2"],
 		question: `Q:${s.heading}`,
-		sectionLens: SECTION_LENS,
+		summary: SECTION_SUMMARY,
 		error: null as string | null,
 		...overrides(s, i),
 	}));
@@ -96,17 +96,17 @@ describe("buildReadingCueMap", () => {
 		expect(map.get(1)?.keywords).toEqual([]);
 	});
 
-	it("can omit Section Lens from mapped reading cues", () => {
+	it("can omit Summary from mapped reading Section cues", () => {
 		const map = buildReadingCueMap(cacheFrom(), NOTE, {
 			showSummary: false,
 		});
 		expect(map.get(1)?.question).toBe("Q:A");
-		expect(map.get(1)?.sectionLens).toBeNull();
+		expect(map.get(1)?.summary).toBeNull();
 	});
 
-	it("includes Section Lens by default", () => {
+	it("includes Summary by default", () => {
 		const map = buildReadingCueMap(cacheFrom(), NOTE);
-		expect(map.get(1)?.sectionLens?.keyPhrase).toBe("agent autonomy");
+		expect(map.get(1)?.summary?.keyPhrase).toBe("agent autonomy");
 	});
 
 	it("re-resolves lines after content shifts headings down", () => {
@@ -394,7 +394,7 @@ describe("syncReadingStudyControls", () => {
 			"Show or hide sections"
 		);
 		expect(help.querySelector(".cuecraft-study-help-detail")?.textContent).toBe(
-			"Click the eye icon on any cue card."
+			"Click the eye icon on any Section cue card."
 		);
 		expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
 			2
@@ -621,14 +621,14 @@ describe("Reading postprocessor Study plumbing", () => {
 		plugin.settings.showSummary = true;
 		render();
 		expect(block.querySelectorAll(".cuecraft-cue-reading")).toHaveLength(3);
-		expect(block.querySelector(".cuecraft-section-lens")).not.toBeNull();
+		expect(block.querySelector(".cuecraft-summary")).not.toBeNull();
 		expect(block.querySelector(".cuecraft-cue-question")).toBeNull();
 		expect(block.querySelector(".cuecraft-cue-keywords")).toBeNull();
 
 		plugin.settings.showSummary = false;
 		plugin.settings.showTerms = true;
 		render();
-		expect(block.querySelector(".cuecraft-section-lens")).toBeNull();
+		expect(block.querySelector(".cuecraft-summary")).toBeNull();
 		expect(block.querySelector(".cuecraft-cue-question")).toBeNull();
 		expect(block.querySelector(".cuecraft-cue-keywords")?.textContent).toContain(
 			"k1"

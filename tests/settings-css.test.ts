@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const styles = readFileSync("styles.css", "utf8");
+const retiredDedicatedViewSelector = [".cuecraft", "cornell", "view"].join("-");
 
 function ruleFor(selector: string): string {
 	const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -137,7 +138,7 @@ describe("settings CSS", () => {
 	});
 
 	it("removes dedicated Cornell pane selectors while retaining editor card selectors", () => {
-		expect(styles).not.toContain(".cuecraft-cornell-view");
+		expect(styles).not.toContain(retiredDedicatedViewSelector);
 		expect(styles).not.toContain(".cuecraft-cornell-toolbar");
 		expect(styles).not.toContain(".cuecraft-cornell-grid");
 		expect(styles).not.toContain(".cuecraft-hook-mode");
@@ -146,7 +147,7 @@ describe("settings CSS", () => {
 		expect(styles).toContain(".cuecraft-cornell-cue");
 		expect(styles).toContain(".cuecraft-cornell-q");
 		expect(styles).toContain(".cuecraft-cornell-kw");
-		expect(styles).toContain(".cuecraft-cornell-support-term");
+		expect(styles).toContain(".cuecraft-cornell-term");
 	});
 
 	it("keeps Note Brief insight columns flat", () => {
@@ -180,7 +181,7 @@ describe("settings CSS", () => {
 	});
 
 	it("styles cue terms as quiet secondary chips", () => {
-		const termRule = ruleFor(".cuecraft-cue-term,\n.cuecraft-cornell-support-term");
+		const termRule = ruleFor(".cuecraft-cue-term,\n.cuecraft-cornell-term");
 		expect(termRule).toContain("padding: 0 0.5rem");
 		expect(termRule).toContain(
 			"border: 1px solid color-mix(in srgb, var(--cc-border) 70%, transparent)"
@@ -371,7 +372,7 @@ describe("settings CSS", () => {
 		expect(denseTitleRule).toContain("line-height: 1.45");
 
 		const summaryRule = ruleFor(
-			".cuecraft-editor-hook-sectioned .cuecraft-section-lens"
+			".cuecraft-editor-hook-sectioned .cuecraft-summary"
 		);
 		expect(summaryRule).toContain("color: var(--text-normal)");
 		expect(summaryRule).toContain("font-size: inherit");
@@ -379,7 +380,7 @@ describe("settings CSS", () => {
 		expect(summaryRule).toContain("line-height: 1.45");
 
 		const termRule = ruleFor(
-			".cuecraft-editor-hook-sectioned .cuecraft-cue-term,\n.cuecraft-editor-hook-sectioned .cuecraft-cornell-support-term"
+			".cuecraft-editor-hook-sectioned .cuecraft-cue-term,\n.cuecraft-editor-hook-sectioned .cuecraft-cornell-term"
 		);
 		expect(termRule).toContain("font-size: 0.84em");
 		expect(termRule).toContain("line-height: 1.65");
@@ -462,7 +463,7 @@ describe("settings CSS", () => {
 			"html.cuecraft-editor-cue-width-resizing *"
 		);
 		expect(styles).not.toMatch(
-			/\.cuecraft-cornell-view[^\n{]*cuecraft-editor-cue-width-custom/
+			new RegExp(`${retiredDedicatedViewSelector}[^\\n{]*cuecraft-editor-cue-width-custom`)
 		);
 		expect(styles).not.toMatch(
 			/\.cuecraft-cue[^\n{]*cuecraft-editor-cue-width-custom/

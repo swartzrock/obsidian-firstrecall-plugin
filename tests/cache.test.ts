@@ -29,7 +29,7 @@ function sampleResult(): NoteGenerationResult {
 		contentHash: s.contentHash,
 		keywords: ["k1", "k2"],
 		question: `Q:${s.heading}`,
-		sectionLens: null,
+		summary: null,
 		error: null,
 	}));
 	return {
@@ -125,14 +125,14 @@ describe("buildNoteCache + validateCache", () => {
 		expect(cache.sections[0]).not.toHaveProperty("category");
 		expect(cache.sections[0]).not.toHaveProperty("confidence");
 		expect(cache.sections[0]).not.toHaveProperty("rationale");
-		expect(cache.sections[0].sectionLens).toBeNull();
+		expect(cache.sections[0].summary).toBeNull();
 		expect(cache.noteBrief).toBeNull();
 		expect(validateCache(cache).ok).toBe(true);
 	});
 
-	it("persists generated Section Lens and Note Brief artifacts", () => {
+	it("persists generated Summary and Note Brief data", () => {
 		const result = sampleResult();
-		result.sections[0].sectionLens = {
+		result.sections[0].summary = {
 			takeaway: "Focus on A.",
 			keyPhrase: "A",
 			explanation: "A frames the rest of the note.",
@@ -152,7 +152,7 @@ describe("buildNoteCache + validateCache", () => {
 			noteModifiedAt: 1000,
 		});
 
-		expect(cache.sections[0].sectionLens?.keyPhrase).toBe("A");
+		expect(cache.sections[0].summary?.keyPhrase).toBe("A");
 		expect(cache.sections[0]).not.toHaveProperty("category");
 		expect(cache.noteBrief?.reviewFirst.title).toBe("A");
 		expect(validateCache(cache).ok).toBe(true);
@@ -194,7 +194,7 @@ describe("isStale", () => {
 			contentHash: s.contentHash,
 			keywords: ["prefix"],
 			question: "What does Prefix Sum explain?",
-			sectionLens: null,
+			summary: null,
 			error: null,
 		}));
 		const cache = buildNoteCache({
@@ -215,6 +215,32 @@ describe("isStale", () => {
 });
 
 describe("migrateCache", () => {
+	it("renames a v7 sectionLens field to Summary", () => {
+		const current = build();
+		const legacy = {
+			...current,
+			schemaVersion: 7,
+			sections: current.sections.map((section, index) => ({
+				...section,
+				summary: undefined,
+				sectionLens:
+					index === 0
+						? {
+							takeaway: "Focus on A.",
+							keyPhrase: "A",
+							explanation: "A frames the rest of the note.",
+						}
+						: null,
+			})),
+		};
+
+		const migrated = migrateCache(legacy);
+
+		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
+		expect(migrated?.sections[0].summary?.keyPhrase).toBe("A");
+		expect(migrated?.sections[0]).not.toHaveProperty("sectionLens");
+	});
+
 	it("upgrades a rich v6 cache by discarding only retired review metadata", () => {
 		const v6 = richV6Cache();
 
@@ -238,7 +264,7 @@ describe("migrateCache", () => {
 					contentHash: "abc123",
 					keywords: ["retrieval", "testing effect"],
 					question: "Why does retrieval practice strengthen memory?",
-					sectionLens: {
+					summary: {
 						takeaway: "Practice recalling an idea instead of rereading it.",
 						keyPhrase: "retrieval practice",
 						explanation: "Active recall makes the memory easier to access later.",
@@ -253,7 +279,7 @@ describe("migrateCache", () => {
 					contentHash: "def456",
 					keywords: null,
 					question: null,
-					sectionLens: null,
+					summary: null,
 					error: "question is required",
 				},
 			],
@@ -292,15 +318,15 @@ describe("migrateCache", () => {
 		expect(migrated?.sections[0]).not.toHaveProperty("category");
 		expect(migrated?.sections[0]).not.toHaveProperty("confidence");
 		expect(migrated?.sections[0]).not.toHaveProperty("rationale");
-		expect(migrated?.sections[0].sectionLens).toBeNull();
+		expect(migrated?.sections[0].summary).toBeNull();
 		expect(migrated?.noteBrief).toBeNull();
 		expect(validateCache(migrated).ok).toBe(true);
 	});
 
-	it.each([2, 3, 4, 5])("upgrades a valid v%i cache to stable v7", (version) => {
+	it.each([2, 3, 4, 5])("upgrades a valid v%i cache to stable v8", (version) => {
 		const legacy = richV6Cache();
 		const migrated = migrateCache({ ...legacy, schemaVersion: version });
-		expect(migrated?.schemaVersion).toBe(7);
+		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
 		expect(migrated?.outline).toEqual({ keyThemes: ["retrieval", "memory"] });
 		expect(migrated).not.toHaveProperty("summary");
 		expect(migrated?.sections[0]).not.toHaveProperty("confidence");
@@ -334,7 +360,7 @@ describe("normalizeCacheMap", () => {
 		});
 	});
 
-	it("reports when persisted caches were normalized to v7", () => {
+	it("reports when persisted caches were normalized to v8", () => {
 		const v6 = richV6Cache();
 
 		const normalized = normalizeCacheMap({ "notes/retrieval.md": v6 });
@@ -492,7 +518,7 @@ describe("reconcileCacheSections", () => {
 			contentHash: sectionC.contentHash,
 			keywords: ["gamma"],
 			question: "Q:C",
-			sectionLens: null,
+			summary: null,
 			error: null,
 		};
 

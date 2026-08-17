@@ -14,12 +14,12 @@ import {
 } from "../src/editor-cue-display";
 import {
 	DEFAULT_SHOW_NOTE_BRIEF,
-	DEFAULT_SHOW_SECTION_LENS,
+	DEFAULT_SHOW_SUMMARY,
 } from "../src/review-surfaces";
 import {
 	buildSectionCueInstructionsTemplate,
 } from "../src/cue-instructions";
-import { buildNoteBriefInstructionsTemplate } from "../src/review-artifact-prompts";
+import { buildNoteBriefInstructionsTemplate } from "../src/study-material-instructions";
 import { QUESTION_TYPES } from "../src/cue-generation";
 
 function createObsidianMock() {
@@ -572,15 +572,15 @@ describe("settings defaults", () => {
 		expect(DEFAULT_SETTINGS.showTerms).toBe(true);
 	});
 
-	it("defaults editor cue display to inline cues", () => {
+	it("defaults editor Cue display to inline Section cues", () => {
 		expect(DEFAULT_EDITOR_CUE_DISPLAY).toBe("inline-cues");
 		expect(editorCueDisplayOption(DEFAULT_EDITOR_CUE_DISPLAY).label).toBe(
-			"Inline cues"
+			"Inline Section cues"
 		);
 	});
 
 	it("defaults generated review surfaces to visible", () => {
-		expect(DEFAULT_SHOW_SECTION_LENS).toBe(true);
+		expect(DEFAULT_SHOW_SUMMARY).toBe(true);
 		expect(DEFAULT_SHOW_NOTE_BRIEF).toBe(true);
 	});
 
@@ -773,7 +773,7 @@ describe("settings defaults", () => {
 			"newly generated or regenerated Questions only"
 		);
 		expect(settingText(tab.containerEl)).toContain(
-			"Cues will change after regeneration."
+			"Questions will change after regeneration."
 		);
 		expect(
 			tab.containerEl.querySelector<HTMLTextAreaElement>(

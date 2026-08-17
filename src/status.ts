@@ -12,7 +12,7 @@ export function statusLabel(status: CueStatus): string {
 		case "ready":
 			return "up to date";
 		case "stale":
-			return "cues need updating";
+			return "Section cues need updating";
 		case "setup":
 			return "setup needed";
 		default:

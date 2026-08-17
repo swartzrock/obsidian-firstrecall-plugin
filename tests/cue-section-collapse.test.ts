@@ -23,7 +23,7 @@ function cacheFor(markdown: string) {
 			contentHash: section.contentHash,
 			keywords: ["retrieval"],
 			question: "Why does retrieval help?",
-			sectionLens: null,
+			summary: null,
 			error: null,
 		})),
 		summary: null,
