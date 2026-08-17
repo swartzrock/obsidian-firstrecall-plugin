@@ -1,9 +1,4 @@
-export type EditorCueDisplay =
-	| "cornell"
-	| "inline-cues"
-	| "collapsed-tabs"
-	| "active-section-composer"
-	| "hook-minimap";
+export type EditorCueDisplay = "cornell" | "inline-cues";
 
 export interface EditorCueDisplayOption {
 	id: EditorCueDisplay;
@@ -23,21 +18,6 @@ export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
 		id: "inline-cues",
 		label: "Inline Section cues",
 		description: "Show cached Section cues beneath their headings in the editor.",
-	},
-	{
-		id: "collapsed-tabs",
-		label: "Collapsed color tabs",
-		description: "Show compact Section cue tabs with one expanded hook peek.",
-	},
-	{
-		id: "active-section-composer",
-		label: "Active-section composer",
-		description: "Emphasize the current section's hook while keeping others nearby.",
-	},
-	{
-		id: "hook-minimap",
-		label: "Hook minimap",
-		description: "Show a compact section overview with a focused hook popout.",
 	},
 ];
 

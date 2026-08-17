@@ -86,6 +86,34 @@ function unavailableCredentialStore(): SecureCredentialStore {
 }
 
 describe("plugin data cache migration", () => {
+	it.each([
+		"collapsed-tabs",
+		"active-section-composer",
+		"hook-minimap",
+		"not-a-display",
+	])("replaces invalid editor display %s with inline cues", async (display) => {
+		const saveData = vi.fn(async () => {});
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: { editorCueDisplay: display },
+			})),
+			saveData,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.editorCueDisplay).toBe("inline-cues");
+		expect(saveData).toHaveBeenCalledTimes(1);
+		const persisted = saveData.mock.calls[0]?.[0] as {
+			settings: Record<string, unknown>;
+		};
+		expect(persisted.settings.editorCueDisplay).toBe("inline-cues");
+	});
+
 	it("strips obsolete settings, preserves editor settings, and saves once", async () => {
 		const saveData = vi.fn(async () => {});
 		const plugin = new CueCraftPlugin({} as never, {} as never);

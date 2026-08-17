@@ -361,8 +361,6 @@ describe("Editing View Study projection", () => {
 			const revealedCue = renderCueElement(
 				cue(),
 				"inline-cues",
-				0,
-				"upcoming",
 				{
 					study: {
 						sectionId: "section-terms",
@@ -806,14 +804,12 @@ describe("renderCueElement", () => {
 			const editor = document.createElement("div");
 			editor.className = "cm-editor";
 			editor.append(
-				renderCueElement(cue(), "cornell", 0, "upcoming", {
+				renderCueElement(cue(), "cornell", {
 					editorCueWidthController: controller,
 				}),
 				renderCueElement(
 					cue({ line: 3, sectionId: "peer" }),
 					"cornell",
-					0,
-					"upcoming",
 					{ editorCueWidthController: controller }
 				)
 			);
@@ -838,7 +834,7 @@ describe("renderCueElement", () => {
 		withDocument(() => {
 			const widthController = createEditorCueWidthController();
 			for (const display of ["cornell"] as const) {
-				const card = renderCueElement(cue(), display, 0, "upcoming", {
+				const card = renderCueElement(cue(), display, {
 					editorCueWidthController: widthController,
 				});
 				const grip = card.querySelector<HTMLElement>(
@@ -863,13 +859,8 @@ describe("renderCueElement", () => {
 				).toBe(true);
 			}
 
-			for (const display of [
-				"inline-cues",
-				"active-section-composer",
-				"collapsed-tabs",
-				"hook-minimap",
-			] as const) {
-				const card = renderCueElement(cue(), display, 0, "upcoming", {
+			for (const display of ["inline-cues"] as const) {
+				const card = renderCueElement(cue(), display, {
 					editorCueWidthController: widthController,
 				});
 				expect(
@@ -892,8 +883,6 @@ describe("renderCueElement", () => {
 				const card = renderCueElement(
 					cue({ sectionId }),
 					"cornell",
-					0,
-					"upcoming",
 					{ editorCueWidthController: controller }
 				);
 				card.getBoundingClientRect = () =>
@@ -930,15 +919,11 @@ describe("renderCueElement", () => {
 			const source = renderCueElement(
 				cue(),
 				"cornell",
-				0,
-				"upcoming",
 				{ editorCueWidthController: controller }
 			);
 			const peer = renderCueElement(
 				cue({ line: 3, sectionId: "peer" }),
 				"cornell",
-				0,
-				"upcoming",
 				{ editorCueWidthController: controller }
 			);
 			let sourceHeight = 480;
@@ -1003,8 +988,6 @@ describe("renderCueElement", () => {
 			const card = renderCueElement(
 				cue(),
 				"cornell",
-				0,
-				"upcoming",
 				{ editorCueWidthController: controller }
 			);
 			card.getBoundingClientRect = () =>
@@ -1102,8 +1085,6 @@ describe("renderCueElement", () => {
 			const card = renderCueElement(
 				cue(),
 				"cornell",
-				0,
-				"upcoming",
 				{ editorCueWidthController: controller }
 			);
 			card.getBoundingClientRect = () =>
@@ -1153,8 +1134,6 @@ describe("renderCueElement", () => {
 			const card = renderCueElement(
 				cue(),
 				"cornell",
-				0,
-				"upcoming",
 				{ editorCueWidthController: controller }
 			);
 			card.getBoundingClientRect = () =>
@@ -1664,7 +1643,7 @@ describe("renderCueElement", () => {
 				showQuestion: false,
 				showTerms: false,
 			};
-			const inline = renderCueElement(cue, "inline-cues", 0, "upcoming", options);
+			const inline = renderCueElement(cue, "inline-cues", options);
 			expect(inline.dataset.questionVisible).toBe("false");
 			expect(inline.dataset.termsVisible).toBe("false");
 			expect(inline.querySelector(".cuecraft-cue-question")).toBeNull();
@@ -1679,8 +1658,6 @@ describe("renderCueElement", () => {
 			const cornell = renderCueElement(
 				cue,
 				"cornell",
-				0,
-				"upcoming",
 				options
 			);
 			expect(cornell.dataset.questionVisible).toBe("false");
@@ -1705,8 +1682,6 @@ describe("renderCueElement", () => {
 				const element = renderCueElement(
 					cue(),
 					display,
-					0,
-					"upcoming",
 					options
 				);
 				expect(element.dataset.summaryVisible).toBe("false");
@@ -1743,8 +1718,6 @@ describe("renderCueElement", () => {
 					const element = renderCueElement(
 						scenario.cue,
 						display,
-						0,
-						"upcoming",
 						scenario.options
 					);
 					expect(element.dataset.questionVisible).toBe("false");
@@ -1756,146 +1729,6 @@ describe("renderCueElement", () => {
 		});
 	});
 
-	it("renders collapsed tab hook DOM", () => {
-		withDocument(() => {
-			const el = renderCueElement(
-				{
-					line: 3,
-					sectionId: "who-it-is-for",
-					heading: "Who It Is For",
-					question: "Who is this workflow designed for?",
-					keywords: [],
-					summary: SECTION_SUMMARY,
-					error: null,
-				},
-				"collapsed-tabs"
-			);
-			expect(el.classList.contains("cuecraft-editor-hook-collapsed-tabs")).toBe(
-				true
-			);
-			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(false);
-			expect(el.querySelector(".cuecraft-editor-rail-card-toggle")).toBeNull();
-			expect(el.dataset.display).toBe("collapsed-tabs");
-			expect(el.dataset.state).toBe("upcoming");
-			expect(el.hasAttribute("data-confidence")).toBe(false);
-			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
-			expect(el.querySelector(".cuecraft-editor-hook-section-label")).toBeNull();
-			expect(
-				el.querySelector(".cuecraft-editor-hook-title")?.textContent
-			).toBe("Who is this workflow designed for");
-			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
-		});
-	});
-
-	it("renders active-section composer hook DOM", () => {
-		withDocument(() => {
-			const el = renderCueElement(
-				{
-					line: 7,
-					sectionId: "who-it-is-for",
-					heading: "Who It Is For",
-					question: "Who should use this workflow?",
-					keywords: ["students", "researchers"],
-					summary: SECTION_SUMMARY,
-					error: null,
-				},
-				"active-section-composer"
-			);
-			expect(
-				el.classList.contains("cuecraft-editor-hook-active-section-composer")
-			).toBe(true);
-			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(false);
-			expect(el.querySelector(".cuecraft-editor-rail-card-toggle")).toBeNull();
-			expect(el.dataset.display).toBe("active-section-composer");
-			expect(el.dataset.state).toBe("upcoming");
-			expect(el.getAttribute("role")).toBe("note");
-			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
-			expect(
-				el.querySelector(".cuecraft-editor-hook-title")?.textContent
-			).toBe("Who should use this workflow");
-		});
-	});
-
-	it("renders current active-section composer with the full question", () => {
-		withDocument(() => {
-			const question =
-				"How does tailoring AI with organizational knowledge upskill employees, and why does encoding that expertise into reusable plugins or agents make them faster and smarter?";
-			const el = renderCueElement(
-				{
-					line: 7,
-					sectionId: "upskill-employees",
-					heading: "How To Upskill Employees",
-					question,
-					keywords: ["org knowledge"],
-					summary: SECTION_SUMMARY,
-					error: null,
-				},
-				"active-section-composer",
-				0,
-				"current"
-			);
-			expect(el.dataset.state).toBe("current");
-			expect(el.querySelector(".cuecraft-editor-hook-title")?.textContent).toBe(
-				question
-			);
-		});
-	});
-
-	it("renders hook minimap DOM", () => {
-		withDocument(() => {
-			const question =
-				"What should the reader remember about tailoring AI to local workflows?";
-			const el = renderCueElement(
-				{
-					line: 9,
-					sectionId: "study-takeaway",
-					heading: "Study Takeaway",
-					question,
-					keywords: ["takeaway"],
-					summary: SECTION_SUMMARY,
-					error: null,
-				},
-				"hook-minimap"
-			);
-			expect(el.classList.contains("cuecraft-editor-hook-hook-minimap")).toBe(
-				true
-			);
-			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(false);
-			expect(el.querySelector(".cuecraft-editor-rail-card-toggle")).toBeNull();
-			expect(el.dataset.display).toBe("hook-minimap");
-			expect(el.dataset.line).toBe("9");
-			expect(el.dataset.state).toBe("upcoming");
-			expect(el.querySelector(".cuecraft-editor-hook-heading")).toBeNull();
-			expect(
-				el.querySelector(".cuecraft-editor-hook-title")?.textContent
-			).toBe(question);
-		});
-	});
-
-	it("renders failed hook state without keywords", () => {
-		withDocument(() => {
-			const el = renderCueElement(
-				{
-					line: 3,
-					sectionId: "terms",
-					heading: "Terms",
-					question: "",
-					keywords: [],
-					summary: null,
-					error: "boom",
-				},
-				"collapsed-tabs"
-			);
-			expect(el.classList.contains("cuecraft-editor-hook-failed")).toBe(true);
-			expect(el.querySelector(".cuecraft-editor-hook-title")?.textContent).toBe(
-				"Section cue unavailable"
-			);
-			expect(el.querySelector(".cuecraft-editor-hook-status")?.textContent).toBe(
-				"Generation failed - regenerate"
-			);
-			expect(el.querySelector(".cuecraft-editor-hook-keywords")).toBeNull();
-		});
-	});
 });
 
 describe("renderNoteBriefElement", () => {
@@ -1996,22 +1829,6 @@ describe("cue editor placement", () => {
 		});
 	});
 
-	it("keeps hook displays on heading lines", () => {
-		const state = EditorState.create({ doc: NOTE });
-		const markers = buildCueGutterMarkers(state, {
-			cues,
-			display: "active-section-composer",
-		});
-		const positions: number[] = [];
-		markers.between(0, state.doc.length, (from) => {
-			positions.push(from);
-		});
-		expect(positions).toEqual([
-			state.doc.line(1).from,
-			state.doc.line(3).from,
-		]);
-	});
-
 	it("keeps hook gutter markers attached when edits move headings down", () => {
 		let state = EditorState.create({
 			doc: NOTE,
@@ -2041,44 +1858,6 @@ describe("cue editor placement", () => {
 		]);
 	});
 
-	it("marks the active composer card current for the cursor section", () => {
-		withDocument(() => {
-			const state = EditorState.create({
-				doc: NOTE,
-				selection: { anchor: NOTE.indexOf("beta") },
-			});
-			const markers = buildCueGutterMarkers(state, {
-				cues,
-				display: "active-section-composer",
-			});
-			const states: Array<string | undefined> = [];
-			markers.between(0, state.doc.length, (_from, _to, marker) => {
-				const element = marker.toDOM(null as never) as HTMLElement;
-				states.push(element.dataset.state);
-			});
-			expect(states).toEqual(["upcoming", "current"]);
-		});
-	});
-
-	it("keeps collapsed tabs upcoming even when the cursor is in a section", () => {
-		withDocument(() => {
-			const state = EditorState.create({
-				doc: NOTE,
-				selection: { anchor: NOTE.indexOf("beta") },
-			});
-			const markers = buildCueGutterMarkers(state, {
-				cues,
-				display: "collapsed-tabs",
-			});
-			const states: Array<string | undefined> = [];
-			markers.between(0, state.doc.length, (_from, _to, marker) => {
-				const element = marker.toDOM(null as never) as HTMLElement;
-				states.push(element.dataset.state);
-			});
-			expect(states).toEqual(["upcoming", "upcoming"]);
-		});
-	});
-
 	it("keeps inline cues out of the left gutter", () => {
 		const state = EditorState.create({ doc: NOTE });
 		const markers = buildCueGutterMarkers(state, {
@@ -2087,19 +1866,6 @@ describe("cue editor placement", () => {
 		});
 		const positions: number[] = [];
 		markers.between(0, state.doc.length, (from) => {
-			positions.push(from);
-		});
-		expect(positions).toEqual([]);
-	});
-
-	it("does not render hook displays as body block widgets", () => {
-		const state = EditorState.create({ doc: NOTE });
-		const widgets = buildCueWidgetDecorations(state, {
-			cues,
-			display: "collapsed-tabs",
-		});
-		const positions: number[] = [];
-		widgets.between(0, state.doc.length, (from) => {
 			positions.push(from);
 		});
 		expect(positions).toEqual([]);
@@ -2300,7 +2066,7 @@ describe("cue editor placement", () => {
 	it("applies the fixed width class and cue font settings to every editor cue display", () => {
 		withDocument(() => {
 			for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
-				const element = renderCueElement(cues[0], option.id, 0, "current", {
+				const element = renderCueElement(cues[0], option.id, {
 					cueFontSize: "large",
 				});
 				expect(element.classList.contains("cuecraft-cuewidth-medium")).toBe(true);

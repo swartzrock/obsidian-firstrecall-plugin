@@ -544,15 +544,9 @@ describe("settings defaults", () => {
 		expect(EDITOR_CUE_DISPLAY_OPTIONS.map((option) => option.id)).toEqual([
 			"cornell",
 			"inline-cues",
-			"collapsed-tabs",
-			"active-section-composer",
-			"hook-minimap",
 		]);
 		expect(isEditorCueDisplay("cornell")).toBe(true);
 		expect(isEditorCueDisplay("inline-cues")).toBe(true);
-		expect(isEditorCueDisplay("collapsed-tabs")).toBe(true);
-		expect(isEditorCueDisplay("active-section-composer")).toBe(true);
-		expect(isEditorCueDisplay("hook-minimap")).toBe(true);
 		for (const bad of [
 			"",
 			"hook",
@@ -561,6 +555,9 @@ describe("settings defaults", () => {
 			"cornell-minimal",
 			"anchored-card-rail",
 			"threaded-margin-notes",
+			"collapsed-tabs",
+			"active-section-composer",
+			"hook-minimap",
 			null,
 			undefined,
 			1,
