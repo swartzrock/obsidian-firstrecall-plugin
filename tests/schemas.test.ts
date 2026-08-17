@@ -26,8 +26,8 @@ describe("extractJson", () => {
 			question: "What does the product promise?",
 			keywords: ["promise", "study"],
 			sectionLens: {
-				takeaway: "CueCraft turns notes into study cues.",
-				keyPhrase: "study cues",
+				takeaway: "CueCraft turns notes into Section cues.",
+				keyPhrase: "Section cues",
 				explanation: "The phrase names the review output.",
 			},
 		};
@@ -106,7 +106,7 @@ describe("validateCue", () => {
 		}
 	);
 
-	it("accepts an optional Section Lens", () => {
+	it("accepts an optional Summary payload", () => {
 		const r = validateCue(
 			JSON.stringify({
 				question: "Q",
@@ -124,7 +124,7 @@ describe("validateCue", () => {
 		}
 	});
 
-	it("rejects a malformed Section Lens when present", () => {
+	it("rejects a malformed Summary payload when present", () => {
 		const r = validateCue(
 			JSON.stringify({
 				question: "Q",
@@ -188,7 +188,7 @@ describe("validateCueBatch", () => {
 		if (r.ok) {
 			expect(r.value[0].value?.question).toBe("Q1?");
 			expect(r.value[1].error).toMatch(/question/);
-			expect(r.value[2].error).toMatch(/missing cue/i);
+			expect(r.value[2].error).toMatch(/missing Section cue/i);
 		}
 	});
 });

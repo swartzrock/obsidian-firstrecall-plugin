@@ -117,14 +117,14 @@ const CUE_JSON_SCHEMA = JSON.stringify({
 
 const NOTE_BRIEF_SCHEMA = JSON.stringify(NOTE_BRIEF_JSON_SCHEMA);
 
-type InstructionArtifact = "Cue" | "Cue Batch" | "Note Brief";
+type InstructionArtifact = "Section cue" | "Section cue batch" | "Note Brief";
 
-function logSystemPrompt(
+function logInstructionTemplate(
 	artifact: InstructionArtifact,
 	instructions: string
 ): void {
 	// eslint-disable-next-line obsidianmd/rule-custom-message -- User-requested prompt diagnostics in Obsidian DevTools.
-	console.info(`[CueCraft BYOK] ${artifact} system prompt\n${instructions}`);
+	console.info(`[CueCraft BYOK] ${artifact} instructions\n${instructions}`);
 }
 
 function cueCraftProviderError(message: string): ByokProviderError {
@@ -412,8 +412,8 @@ export function wrapCueCraftByokRuntime(
 		testConnection: () => runtime.testConnection(),
 		listModels: () => runtime.listModels(),
 		generateCue: (input, signal) => {
-			logSystemPrompt(
-				"Cue",
+			logInstructionTemplate(
+				"Section cue",
 				buildSectionCueInstructionsTemplate(input.options.questionType, "single")
 			);
 			return generateFromObject
@@ -421,7 +421,7 @@ export function wrapCueCraftByokRuntime(
 				: generateCueFromTextProvider(runtime, input, signal);
 		},
 		generateNoteBrief: (input, signal) => {
-			logSystemPrompt("Note Brief", buildNoteBriefInstructionsTemplate());
+			logInstructionTemplate("Note Brief", buildNoteBriefInstructionsTemplate());
 			return generateFromObject
 				? generateNoteBriefFromObjectProvider(runtime, input, signal)
 				: generateNoteBriefFromTextProvider(runtime, input, signal);
@@ -429,8 +429,8 @@ export function wrapCueCraftByokRuntime(
 	};
 	if (runtime.id === "codex-cli" || runtime.id === "claude-cli") {
 		cueRuntime.generateCues = (inputs, signal) => {
-			logSystemPrompt(
-				"Cue Batch",
+			logInstructionTemplate(
+				"Section cue batch",
 				buildSectionCueInstructionsTemplate(
 					inputs[0]?.options.questionType ?? DEFAULT_QUESTION_TYPE,
 					"batch"

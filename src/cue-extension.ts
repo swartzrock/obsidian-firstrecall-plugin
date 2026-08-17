@@ -454,12 +454,12 @@ function renderCornellCueElement(
 	root.dataset.line = String(cue.line);
 	root.dataset.state = state;
 	const showSummary = options.showSummary ?? true;
-	const showSupportTerms = options.showSupportTerms ?? true;
-	const supports = buildCornellSupportTerms(cue.keywords);
+	const showTerms = options.showTerms ?? true;
+	const termValues = buildCornellTerms(cue.keywords);
 	const showQuestion = options.showQuestion ?? true;
 	root.dataset.summaryVisible = String(showSummary);
 	root.dataset.questionVisible = String(showQuestion);
-	root.dataset.supportTermsVisible = String(showSupportTerms);
+	root.dataset.supportTermsVisible = String(showTerms);
 	applyCueLayoutClasses(root, options);
 
 	const card = doc.createElement("div");
@@ -505,14 +505,14 @@ function renderCornellCueElement(
 		);
 	}
 
-	if (showSupportTerms && supports.length) {
+	if (showTerms && termValues.length) {
 		const kw = doc.createElement("div");
 		kw.className = "cuecraft-cornell-kw";
-		appendCueTerms(kw, supports, "cuecraft-cornell-support-term");
+		appendCueTerms(kw, termValues, "cuecraft-cornell-support-term");
 		appendEditorHookDisclosure(
 			card,
 			"terms",
-			supports.join(", "),
+			termValues.join(", "),
 			kw,
 			options.collapse
 		);
@@ -529,11 +529,11 @@ function renderInlineCueElement(
 	root.className = "cuecraft-cue cuecraft-editor-hook-sectioned";
 	root.setAttribute("role", "note");
 	const showSummary = options.showSummary ?? true;
-	const showSupportTerms = options.showSupportTerms ?? true;
+	const showTerms = options.showTerms ?? true;
 	const showQuestion = options.showQuestion ?? true;
 	root.dataset.summaryVisible = String(showSummary);
 	root.dataset.questionVisible = String(showQuestion);
-	root.dataset.supportTermsVisible = String(showSupportTerms);
+	root.dataset.supportTermsVisible = String(showTerms);
 	applyCueLayoutClasses(root, options);
 
 	if (cue.error) {
@@ -574,7 +574,7 @@ function renderInlineCueElement(
 		);
 	}
 
-	if (showSupportTerms && cue.keywords.length) {
+	if (showTerms && cue.keywords.length) {
 		const kw = cueDocument().createElement("div");
 		kw.className = "cuecraft-cue-keywords cuecraft-editor-hook-keywords";
 		appendCueTerms(kw, cue.keywords);
@@ -609,7 +609,7 @@ function renderEditorHookElement(
 	root.dataset.gradient = String(card.gradientIndex);
 	root.dataset.summaryVisible = String(card.showSummary);
 	root.dataset.questionVisible = String(card.showQuestion);
-	root.dataset.supportTermsVisible = String(card.showSupportTerms);
+	root.dataset.supportTermsVisible = String(card.showTerms);
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
 	let hasContent = false;
@@ -668,7 +668,7 @@ function renderEditorHookElement(
 		hasContent = true;
 	}
 
-	if (card.showSupportTerms && card.keywords.length) {
+	if (card.showTerms && card.keywords.length) {
 		const keywords = cueDocument().createElement("div");
 		keywords.className = "cuecraft-editor-hook-keywords";
 		appendCueTerms(keywords, card.keywords);
@@ -727,9 +727,9 @@ function appendCueTerms(
 	}
 }
 
-const MAX_CORNELL_SUPPORT_TERMS = 3;
+const MAX_CORNELL_TERMS = 3;
 
-export function buildCornellSupportTerms(keywords: string[]): string[] {
+export function buildCornellTerms(keywords: string[]): string[] {
 	const seen = new Set<string>();
 	const terms: string[] = [];
 	for (const keyword of keywords) {
@@ -739,7 +739,7 @@ export function buildCornellSupportTerms(keywords: string[]): string[] {
 		if (seen.has(key)) continue;
 		seen.add(key);
 		terms.push(term);
-		if (terms.length === MAX_CORNELL_SUPPORT_TERMS) break;
+		if (terms.length === MAX_CORNELL_TERMS) break;
 	}
 	return terms;
 }
@@ -775,7 +775,7 @@ function finalizeRailCard(
 	const gripLabel = root.ownerDocument.createElement("span");
 	gripLabel.id = `${root.id}-width-grip-label`;
 	gripLabel.className = "cuecraft-editor-cue-width-grip-label";
-	gripLabel.textContent = `${editorCueDisplayLabel(display)} cue rail width`;
+	gripLabel.textContent = `${editorCueDisplayLabel(display)} Section cue rail width`;
 	grip.appendChild(gripLabel);
 	grip.setAttribute("aria-labelledby", gripLabel.id);
 	grip.setAttribute("aria-valuemin", String(EDITOR_CUE_WIDTH_MIN_PX));
@@ -1327,7 +1327,7 @@ function appendEditorHookDisclosure(
 				)
 				.catch((error: unknown) => {
 					console.error(
-						"CueCraft cue section collapse persistence failed",
+						"CueCraft Section cue collapse persistence failed",
 						error
 					);
 				});
@@ -1380,7 +1380,7 @@ export function renderNoteBriefElement(
 	const label = doc.createElement("div");
 	label.className = "cuecraft-note-brief-label";
 	appendLabelIcon(label, "sparkles");
-	appendLabelText(label, "Note brief");
+	appendLabelText(label, "Note Brief");
 	root.appendChild(label);
 
 	const overview = doc.createElement("p");
@@ -1618,7 +1618,7 @@ function editorCueRenderOptionsFromPayload(
 	return {
 		showSummary: payload.showSummary ?? true,
 		showQuestion: payload.showQuestion ?? true,
-		showSupportTerms: payload.showTerms ?? true,
+		showTerms: payload.showTerms ?? true,
 		cueFontSize: payload.cueFontSize,
 		editorCueWidthController: payload.editorCueWidthController,
 	};
@@ -1628,7 +1628,7 @@ function editorHookCardOptionsKey(options: CueRenderOptions): string {
 	return [
 		options.showSummary ?? true,
 		options.showQuestion ?? true,
-		options.showSupportTerms ?? true,
+		options.showTerms ?? true,
 		options.cueFontSize ?? "",
 		options.collapse?.notePath ?? "",
 		options.collapse?.sectionId ?? "",
@@ -2121,7 +2121,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			helpTitle.textContent = "Show or hide sections";
 			const helpDetail = doc.createElement("span");
 			helpDetail.className = "cuecraft-study-help-detail";
-			helpDetail.textContent = "Click the eye icon on any cue card.";
+			helpDetail.textContent = "Click the eye icon on any Section cue card.";
 			helpCopy.append(helpTitle, helpDetail);
 			help.append(helpCopy);
 

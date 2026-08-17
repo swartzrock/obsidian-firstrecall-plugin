@@ -145,7 +145,7 @@ describe("local CLI cue batch prompt", () => {
 			"batch"
 		);
 		expect(systemPromptLog).toHaveBeenCalledWith(
-			`[CueCraft BYOK] Cue Batch system prompt\n${inspectedTemplate}`
+			`[CueCraft BYOK] Section cue batch instructions\n${inspectedTemplate}`
 		);
 		expect(systemPromptLog.mock.calls[0]?.[0]).not.toContain(
 			"A stack removes the newest item first."

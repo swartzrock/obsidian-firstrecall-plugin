@@ -9,7 +9,7 @@ export type EditorHookTone = "warm" | "cool";
 export interface EditorHookCardOptions {
 	showSummary?: boolean;
 	showQuestion?: boolean;
-	showSupportTerms?: boolean;
+	showTerms?: boolean;
 }
 
 export interface EditorHookCard {
@@ -28,7 +28,7 @@ export interface EditorHookCard {
 	gradientIndex: number;
 	showSummary: boolean;
 	showQuestion: boolean;
-	showSupportTerms: boolean;
+	showTerms: boolean;
 }
 
 export function buildEditorHookCard(
@@ -42,7 +42,7 @@ export function buildEditorHookCard(
 	const hookTitle = editorHookTitle(cue);
 	const showSummary = options.showSummary ?? true;
 	const showQuestion = options.showQuestion ?? true;
-	const showSupportTerms = options.showSupportTerms ?? true;
+	const showTerms = options.showTerms ?? true;
 	return {
 		kind: failed ? "failed" : "hook",
 		display,
@@ -59,13 +59,13 @@ export function buildEditorHookCard(
 		gradientIndex: index % 3,
 		showSummary,
 		showQuestion,
-		showSupportTerms,
+		showTerms,
 	};
 }
 
 function editorHookTitle(cue: CueLineData): string {
 	return cue.error
-		? "Cue unavailable"
+		? "Section cue unavailable"
 		: buildEditorHookTitle(cue.question) ?? cue.heading;
 }
 

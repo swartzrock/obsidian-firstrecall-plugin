@@ -96,8 +96,8 @@ export function validateCache(raw: unknown): ValidationResult<NoteCache> {
  * NoteCache or null if the input is unrecognizable / unmigratable.
  *
  * v1 -> v2: v1 lacked `level`, `outline`, `generationMode`, and `preset`.
- * v2 -> v3: v2 lacked per-cue `rationale`.
- * v3 -> v4: v3 lacked generated Section Lens and Note Brief artifacts.
+ * v2 -> v3: v2 lacked per-Section-cue `rationale`.
+ * v3 -> v4: v3 lacked generated Summary and Note Brief data.
  * v4 -> v5: v4 lacked per-cue semantic category tags.
  * v5 -> v6: v5 included per-cue category tags that are no longer used.
  * v6 -> v7: remove confidence/rationale, Summary, and Learning Objective.

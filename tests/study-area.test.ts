@@ -45,7 +45,7 @@ describe("study area labels", () => {
 					cueSectionCount: 25,
 				}
 			)
-		).toBe("4 notes ready · 3 notes (25 sections) need cues");
+		).toBe("4 notes ready · 3 notes (25 sections) need Section cues");
 		expect(
 			formatStudyAreaReadinessCounts({
 				ready: 0,
@@ -54,7 +54,7 @@ describe("study area labels", () => {
 				failed: 0,
 				skipped: 1,
 			})
-		).toBe("3 notes need cues");
+		).toBe("3 notes need Section cues");
 		expect(
 			formatStudyAreaReadinessCounts({
 				ready: 0,

@@ -130,7 +130,7 @@ describe("buildNoteCache + validateCache", () => {
 		expect(validateCache(cache).ok).toBe(true);
 	});
 
-	it("persists generated Section Lens and Note Brief artifacts", () => {
+	it("persists generated Summary and Note Brief data", () => {
 		const result = sampleResult();
 		result.sections[0].sectionLens = {
 			takeaway: "Focus on A.",

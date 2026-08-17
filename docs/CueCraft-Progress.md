@@ -11,18 +11,18 @@ _Last updated: 2026-08-15. The current product contract is summarized below. The
 
 ## Current product state — 2026-08-15
 
-- Cue generation now produces section questions, keyword supports, and Section Lens, plus an
-  optional Note Brief when the selected provider supports it.
+- CueCraft now produces one Section cue with Summary, Question, and Terms for each eligible
+  section, plus an optional Note Brief when the selected provider supports it.
 - Study has one destination: the active note in Editing or Reading view. CueCraft no longer opens
   or configures a dedicated Cornell pane.
-- Editing View still offers **Cornell** as a fixed cue-card display option alongside Inline cues.
-  This presentation is part of the editor and retains Section Lens, question/support visibility,
-  failure states, Study reveal controls, cue font size, and custom width behavior.
-- Model-reported confidence and rationale, low-confidence warnings, the retired whole-note Summary,
-  and its Learning Objective are no longer generated, displayed, or persisted. Hiding Note Brief
-  changes only its display; it does not activate a legacy fallback.
-- Existing cache data is upgraded in place: current cues, Section Lens, Note Brief, errors, and
-  generation metadata remain usable while retired fields are removed.
+- Editing View still offers **Cornell** as a fixed Section cue display option alongside Inline
+  Section cues. This presentation is part of the editor and retains Summary, Question, and Terms
+  visibility, failure states, Study reveal controls, Cue font size, and custom width behavior.
+- Model-reported confidence and rationale, low-confidence warnings, the legacy note-level
+  `summary` field, and its Learning Objective are no longer generated, displayed, or persisted.
+  Hiding Note Brief changes only its display; it does not activate a legacy fallback.
+- Existing cache data is upgraded in place: current Section cues, Note Brief, errors, and generation
+  metadata remain usable while retired fields are removed.
 
 The completed-work entries below record what shipped at the time; later current-state entries may
 supersede their product behavior without rewriting that history.
@@ -139,7 +139,7 @@ Each item links to the PR that delivered it.
   `hint`, `evidence`, or `answerCheck` are intentionally deferred until there is a clearer need for
   a cache/schema migration.
 - **Export** — "Export Cues to Markdown" (study sheet) and "Export Cues to Anki (TSV)" commands
-  write a sibling file next to the note; pure `export.ts` formatters (`cuesToMarkdown`/`cuesToAnki`,
+  write a sibling file next to the note; pure `export.ts` formatters (`questionsAndTermsToMarkdown`/`questionsAndTermsToAnki`,
   TSV-safe) with unit tests. Never modifies the source note (#32).
 - **"Review this note"** — command + context-menu entry that enables the note's cues (if hidden),
   opens it in the **Cornell view**, and turns on that view's Study Mode (questions shown, note-side

@@ -572,10 +572,10 @@ describe("settings defaults", () => {
 		expect(DEFAULT_SETTINGS.showTerms).toBe(true);
 	});
 
-	it("defaults editor cue display to inline cues", () => {
+	it("defaults editor Cue display to inline Section cues", () => {
 		expect(DEFAULT_EDITOR_CUE_DISPLAY).toBe("inline-cues");
 		expect(editorCueDisplayOption(DEFAULT_EDITOR_CUE_DISPLAY).label).toBe(
-			"Inline cues"
+			"Inline Section cues"
 		);
 	});
 
@@ -773,7 +773,7 @@ describe("settings defaults", () => {
 			"newly generated or regenerated Questions only"
 		);
 		expect(settingText(tab.containerEl)).toContain(
-			"Cues will change after regeneration."
+			"Questions will change after regeneration."
 		);
 		expect(
 			tab.containerEl.querySelector<HTMLTextAreaElement>(

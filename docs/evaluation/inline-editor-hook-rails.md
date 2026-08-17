@@ -1,22 +1,22 @@
 # Inline Editor Hook Rails Evaluation
 
-Use this checklist to compare CueCraft's normal-editor cue displays in an Obsidian light note page. The same cached note should be checked in each display mode so differences are visual and behavioral, not content-driven.
+Use this checklist to compare CueCraft's normal-editor Section cue displays in an Obsidian light note page. Check the same cached note in each display mode so differences are visual and behavioral, not content-driven.
 
 ## Test Note Shape
 
 Use a note with at least five eligible sections:
 
-- A short section with a high-confidence cue and 2-4 supports.
+- A short section with a high-confidence Question and 2-4 Terms.
 - A section with a long generated question.
-- A section with no support terms when `Generate cue supports` is off.
-- A section whose cached cue failed generation.
+- A section with no Terms when `Show Terms` is off.
+- A section whose cached Section cue failed generation.
 - A later section far enough down the note to require scrolling.
 
 ## Display Modes
 
-Check these settings under Editing View -> Editor cue display:
+Check these settings under Cue Generation -> Cue display:
 
-- Inline cues
+- Inline Section cues
 - Anchored card rail
 - Collapsed color tabs
 - Threaded margin notes
@@ -25,11 +25,11 @@ Check these settings under Editing View -> Editor cue display:
 
 ## Required Checks
 
-- Default upgrade: Inline cues remain selected when the new setting is absent.
+- Default upgrade: Inline Section cues remain selected when the new setting is absent.
 - Settings persistence: Changing the dropdown rerenders the active editor and survives plugin reload.
 - Markdown safety: Switching modes does not change the note's Markdown source.
-- Keyword visibility: Turning `Generate cue supports` off hides supports in every display mode.
-- Failed cues: Failed sections remain visible as failed states in every hook display.
+- Terms visibility: Turning `Show Terms` off hides Terms in every display mode.
+- Failed Section cues: Failed sections remain visible as failed states in every display mode.
 - Long questions: Long hook text remains readable without overlapping note text.
 - Light theme: Hook text, borders, and backgrounds meet normal Obsidian light-theme contrast.
 - Dark theme: Hook text, borders, and backgrounds remain legible without hard-coded light colors.
@@ -46,4 +46,4 @@ Check these settings under Editing View -> Editor cue display:
 
 ## Known Manual Gap
 
-Automated tests cover setting options, model output, DOM classes, hidden supports, failed states, and TypeScript safety. Visual overlap, theme contrast, and real CodeMirror gutter interaction still need manual review inside Obsidian because they depend on editor pane width and active community theme CSS.
+Automated tests cover setting options, model output, DOM classes, hidden Terms, failed states, and TypeScript safety. Visual overlap, theme contrast, and real CodeMirror gutter interaction still need manual review inside Obsidian because they depend on editor pane width and active community theme CSS.

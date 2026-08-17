@@ -489,7 +489,7 @@ describe("Editing View Study projection", () => {
 				).toBe("Show or hide sections");
 				expect(
 					help.querySelector(".cuecraft-study-help-detail")?.textContent
-				).toBe("Click the eye icon on any cue card.");
+				).toBe("Click the eye icon on any Section cue card.");
 				expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
 					2
 				);
@@ -707,7 +707,7 @@ describe("buildCueLineData", () => {
 		expect(cues.every((c) => c.keywords.length === 0)).toBe(true);
 	});
 
-	it("can hide Section Lens data while keeping questions visible", () => {
+	it("can hide Summary data while keeping Questions visible", () => {
 		const cache = cacheFrom();
 		const cues = buildCueLineData(cache, parseSections(NOTE), {
 			showSummary: false,
@@ -1282,7 +1282,7 @@ describe("renderCueElement", () => {
 		}
 	);
 
-	it("keeps support terms when rendering a migrated v5 cue", () => {
+	it("keeps Terms when rendering a migrated v5 Section cue", () => {
 		withDocument(() => {
 			const current = cacheFrom();
 			const migrated = migrateCache({
@@ -1686,7 +1686,7 @@ describe("renderCueElement", () => {
 			await Promise.resolve();
 
 			expect(consoleError).toHaveBeenCalledWith(
-				"CueCraft cue section collapse persistence failed",
+				"CueCraft Section cue collapse persistence failed",
 				error
 			);
 			expect(summary?.getAttribute("aria-expanded")).toBe("true");
@@ -1742,7 +1742,7 @@ describe("renderCueElement", () => {
 		});
 	});
 
-	it("hides inline and Cornell cue questions and support terms when display settings are off", () => {
+	it("hides inline and Cornell Questions and Terms when display settings are off", () => {
 		withDocument(() => {
 			const cue = {
 				line: 3,
@@ -1755,7 +1755,7 @@ describe("renderCueElement", () => {
 			};
 			const options = {
 				showQuestion: false,
-				showSupportTerms: false,
+				showTerms: false,
 			};
 			const inline = renderCueElement(cue, "inline-cues", 0, "upcoming", options);
 			expect(inline.dataset.questionVisible).toBe("false");
@@ -1792,7 +1792,7 @@ describe("renderCueElement", () => {
 			const options = {
 				showSummary: false,
 				showQuestion: true,
-				showSupportTerms: true,
+				showTerms: true,
 			};
 			for (const display of ["inline-cues", "cornell"] as const) {
 				const element = renderCueElement(
@@ -1819,7 +1819,7 @@ describe("renderCueElement", () => {
 					options: {
 						showSummary: false,
 						showQuestion: false,
-						showSupportTerms: true,
+						showTerms: true,
 					},
 				},
 				{
@@ -1827,7 +1827,7 @@ describe("renderCueElement", () => {
 					options: {
 						showSummary: true,
 						showQuestion: false,
-						showSupportTerms: false,
+						showTerms: false,
 					},
 				},
 			];
@@ -1981,7 +1981,7 @@ describe("renderCueElement", () => {
 			);
 			expect(el.classList.contains("cuecraft-editor-hook-failed")).toBe(true);
 			expect(el.querySelector(".cuecraft-editor-hook-title")?.textContent).toBe(
-				"Cue unavailable"
+				"Section cue unavailable"
 			);
 			expect(el.querySelector(".cuecraft-editor-hook-status")?.textContent).toBe(
 				"Generation failed - regenerate"
@@ -1998,7 +1998,7 @@ describe("renderNoteBriefElement", () => {
 			expect(el.classList.contains("cuecraft-note-brief")).toBe(true);
 			expect(el.classList.contains("cuecraft-note-brief-editor")).toBe(true);
 			expect(el.querySelector(".cuecraft-note-brief-label")?.textContent).toBe(
-				"Note brief"
+				"Note Brief"
 			);
 			expect(
 				el.querySelector(".cuecraft-note-brief-label .cuecraft-label-icon")

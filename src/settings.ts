@@ -245,13 +245,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderSubpageHeader(
 					containerEl,
 					"Study Areas",
-					"Generate cues for your vault or specific folders. CueCraft keeps cues up-to-date for notes in these areas."
+					"Generate Section cues for your vault or specific folders. CueCraft keeps Section cues up to date for notes in these areas."
 				);
 				this.renderStudyAreasSection(containerEl, false);
 				break;
 			default:
 				containerEl.createEl("p", {
-					text: "CueCraft generates study cues using a local Ollama model, a frontier model (Claude, ChatGPT, Gemini, Grok), or any model via OpenRouter. Your Markdown files are never modified.",
+					text: "CueCraft generates Section cues and Note Briefs using a local Ollama model, a frontier model (Claude, ChatGPT, Gemini, Grok), or any model via OpenRouter. Your Markdown files are never modified.",
 					cls: "cuecraft-settings-intro",
 				});
 				this.renderSettingsHome(containerEl);
@@ -277,7 +277,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		this.renderSettingsNavCard(navEl, {
 			title: "Study Areas",
-			description: "Generate cues for your vault or specific folders.",
+			description: "Generate Section cues for your vault or specific folders.",
 			summary: this.studyAreasSummary(),
 			onOpen: () => this.openSubpage("study-areas"),
 		});
@@ -463,7 +463,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			providerFlowEl,
 			"Provider",
-			"Pick where CueCraft should generate cues."
+			"Pick where CueCraft should generate Section cues and Note Briefs."
 		);
 
 		this.renderProviderPicker(providerFlowEl);
@@ -480,7 +480,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			performanceFlowEl,
 			"Performance",
-			"Tune how quickly CueCraft generates cues."
+			"Tune how quickly CueCraft generates Section cues."
 		);
 		this.renderParallelRequestsSetting(performanceFlowEl);
 	}
@@ -609,7 +609,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				? `Last checked ${new Date(status.testedAt).toLocaleString()}.`
 				: status.connection === "stale"
 					? "Saved check no longer matches these settings."
-					: "Run a quick provider check before generating cues.";
+					: "Run a quick provider check before generating Section cues.";
 		const statusSetting = new Setting(containerEl)
 			.setName("Connection")
 			.setDesc(description);
@@ -696,12 +696,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		showHeading: boolean
 	): void {
 		if (showHeading) {
-			new Setting(containerEl).setName("Cue generation").setHeading();
+			new Setting(containerEl).setName("Cue Generation").setHeading();
 		}
 
 		const questionTypeDescription = (): string => {
 			const selected = questionTypeInfo(this.plugin.settings.questionType);
-			return `${selected.description} Cues will change after regeneration.`;
+			return `${selected.description} Questions will change after regeneration.`;
 		};
 		const questionTypeSetting = new Setting(containerEl)
 			.setName("Question type")
@@ -726,7 +726,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName("Auto-generate on save")
-			.setDesc("Generate Section cues and Note Brief automatically after a note is saved.")
+			.setDesc("Generate Section cues and a Note Brief automatically after a note is saved.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.autoGenerateOnSave)
@@ -739,7 +739,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Auto-generation delay")
 			.setDesc(
-				"Wait this long after you stop typing before CueCraft generates Section cues and Note Brief. Longer delays reduce repeated provider requests."
+				"Wait this long after you stop typing before CueCraft generates Section cues and a Note Brief. Longer delays reduce repeated provider requests."
 			)
 			.addDropdown((dropdown) => {
 				for (const seconds of AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS) {
@@ -954,7 +954,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			cls: "cuecraft-study-area-help",
 			text:
 				area.maintenanceMode === "maintain-on-save"
-					? "Cues update automatically when notes in this area are saved."
+					? "Section cues update automatically when notes in this area are saved."
 					: "Saved notes in this area will not update automatically.",
 		});
 
@@ -976,7 +976,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		);
 
 		const backfillBtn = setting.controlEl.createEl("button", {
-			text: "Generate missing cues",
+			text: "Generate missing Section cues",
 			attr: { type: "button" },
 		});
 		backfillBtn.addClass("mod-cta");
@@ -1009,7 +1009,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			upToDateEl.hidden = true;
 			backfillBtn.disabled = true;
 			backfillBtn.textContent = "Generating...";
-			countsEl.setText("Generating cues...");
+			countsEl.setText("Generating Section cues...");
 			await this.plugin.runStudyArea(area.id, "backfill");
 			this.display();
 		});
@@ -1020,7 +1020,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.plugin.registerDomEvent(removeBtn, "click", () => {
 			new StudyAreaConfirmModal(this.app, {
 				title: "Remove study area?",
-				message: `Remove study area "${area.name}"? Generated cues stay cached.`,
+				message: `Remove study area "${area.name}"? Generated Section cues stay cached.`,
 				confirmText: "Remove",
 				onConfirm: async () => {
 					await this.plugin.removeStudyArea(area.id);
@@ -1041,7 +1041,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			countsEl.setText("Study area no longer exists.");
 			upToDateEl.hidden = true;
 			backfillBtn.disabled = true;
-			backfillBtn.textContent = "Generate missing cues";
+			backfillBtn.textContent = "Generate missing Section cues";
 			retryBtn.disabled = true;
 			retryBtn.hidden = true;
 			retryBtn.addClass("cuecraft-study-area-hidden");
@@ -1060,7 +1060,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		upToDateEl.hidden =
 			hasMissingCueWork || hasFailedWork || plan.counts.ready === 0;
 		backfillBtn.disabled = !hasMissingCueWork;
-		backfillBtn.textContent = "Generate missing cues";
+		backfillBtn.textContent = "Generate missing Section cues";
 		retryBtn.disabled = !hasFailedWork;
 		retryBtn.hidden = !hasFailedWork;
 		retryBtn.toggleClass("cuecraft-study-area-hidden", !hasFailedWork);
@@ -1173,7 +1173,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		const editorFontDesc = (): string =>
 			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
-				?.description ?? "Font size of cue text.";
+				?.description ?? "Font size of Section cue text.";
 		this.renderAppearanceThumbnailSetting<CueFontSize>(containerEl, {
 			name: "Cue font size",
 			description: () => `${editorFontDesc()} Applies in Editing and Reading.`,

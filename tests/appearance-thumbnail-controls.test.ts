@@ -233,7 +233,7 @@ describe("Editing View thumbnail option recipes", () => {
 		expect(inline?.textContent).toContain("QUESTION");
 		expect(inline?.textContent).toContain("TERMS");
 		expect(root.textContent).toContain("Cornell");
-		expect(root.textContent).toContain("Inline cues");
+		expect(root.textContent).toContain("Inline Section cues");
 		expect(root.textContent).not.toContain("Cornell Exam Prep");
 		expect(root.textContent).not.toContain("Cornell Minimal");
 		expect(root.textContent).not.toContain("Anchored card rail");

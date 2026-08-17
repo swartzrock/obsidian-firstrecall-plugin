@@ -1,14 +1,14 @@
 # CueCraft
 
-> AI-powered active-recall study cues for [Obsidian](https://obsidian.md).
+> AI-powered active-recall Section cues for [Obsidian](https://obsidian.md).
 
 CueCraft turns ordinary notes into interactive study sessions. It reads the current note,
-generates section questions, keyword supports, Section Lens notes, and an optional Note Brief,
-and shows them as a **non-destructive** study layer in Editing and Reading views — your
-Markdown file is never modified.
+generates a Section cue with Summary, Question, and Terms for each eligible section, plus an
+optional Note Brief, and shows them as a **non-destructive** study layer in Editing and Reading
+views — your Markdown file is never modified.
 
-The goal is retention, not prettier prose: see a question, try to recall the answer,
-reveal the source, then use Section Lens and the optional Note Brief to check the big picture.
+The goal is retention, not prettier prose: see a Question, try to recall the answer, reveal the
+source, then use the Summary and optional Note Brief to check the big picture.
 
 ## Status
 
@@ -22,49 +22,49 @@ the [progress log](./docs/CueCraft-Progress.md).
 ## v1.0 at a glance
 
 - **Providers:** Ollama (local, free), direct cloud providers — Anthropic (Claude), OpenAI (ChatGPT), Google (Gemini), and xAI (Grok) — OpenRouter for one-key access to many hosted models, or local Codex / Claude CLI commands. Choose one in Settings; cloud providers and OpenRouter need an API key (stored locally in the vault's plugin data), while CLI providers use your existing local CLI login.
-- **Editor-mode** cue questions + keywords per section, plus AI-native review surfaces:
-  Section Lens per section and an optional Note Brief.
-- **Editing and Reading surfaces** — cached review artifacts stay attached to the active note.
+- **Section cues** — each eligible section gets a Summary, Question, and Terms, plus an optional
+  whole-note Note Brief.
+- **Editing and Reading surfaces** — cached Section cues and Note Brief stay attached to the
+  active note.
 - **In-note Study Mode** — start or exit Study from the active note in Editing or Reading view,
   then reveal section answers without navigating to another pane.
-- **Editor cue displays** — choose Inline cues or the retained Cornell card presentation in
+- **Section cue displays** — choose Inline Section cues or the retained Cornell card presentation in
   Editing View. Cornell is a card layout option, not a separate view.
-- **Study areas** — preview and generate cues across managed vault or folder scopes, with
+- **Study areas** — preview and generate Section cues across managed vault or folder scopes, with
   pause, cancel, retry, and optional maintain-on-save behavior.
 - **Per-note** enable / hide / clear.
 - **JSON cache** with stale detection; strict typed validation of model output.
 - **Desktop-only** (`isDesktopOnly: true`).
 
-## Review surfaces
+## Generated study material
 
-Section Lens adds a compact key phrase, takeaway, and explanation to each generated cue.
-Note Brief adds a whole-note overview with three review cards: what matters, review first,
-and say it back. Section Lens is generated with each cue; Note Brief is generated when the
-selected provider supports it. Both are stored in CueCraft's cache even when their displays
-are turned off.
+Summary captures the most important idea in each Section cue. Note Brief adds a whole-note
+Overview with Core idea, Review first, and Self-test cards. Summary is generated with each
+Section cue; Note Brief is generated when the selected provider supports it. Both are stored in
+CueCraft's cache even when their displays are turned off.
 
-Use **Settings → CueCraft → Note format** to control whether Section Lens and Note Brief are
-shown. Turning a display off only hides cached review content; it does not delete cached data
-or stop future cue generation from creating it.
+Use **Settings → CueCraft → Study aids** to control whether Summary, Question, Terms, and Note
+Brief are shown. Turning a display off only hides cached study material; it does not delete
+cached data or stop future generation from creating it.
 
-Manual verification checklist for review-surface changes:
+Manual verification checklist for generated-study-material changes:
 
-1. Turn both review-surface displays on, generate cues for a note with at least two headings,
-   and confirm
-   the editor shows one Note Brief near the top plus Section Lens content attached to each
-   cue. Switch to Reading mode and confirm the same cached review content appears without
+1. Turn all study-aid displays on, generate Section cues for a note with at least two headings,
+   and confirm the editor shows one Note Brief near the top plus Summary, Question, and Terms
+   content attached to each Section cue. Switch to Reading mode and confirm the same cached
+   study material appears without
    changing the Markdown file. In Editing View, select the Cornell card display and confirm
    it presents those same artifacts beside their sections.
-2. Turn the Section Lens display off, clear or regenerate cues for a test note, and confirm
-   cues still generate but Section Lens blocks are hidden. Turn it back on and confirm the
-   cached Section Lens appears without regenerating the note.
-3. Turn **Show Note Brief** off, clear or regenerate cues, and confirm no note-level brief
+2. Turn **Show Summary** off, clear or regenerate Section cues for a test note, and confirm
+   Section cues still generate but Summary blocks are hidden. Turn it back on and confirm the
+   cached Summary appears without regenerating the note.
+3. Turn **Show Note Brief** off, clear or regenerate Section cues, and confirm no Note Brief
    appears in Editing or Reading view. Turn it back on and confirm the
    cached Note Brief appears without regenerating the note.
-4. Add a new heading with body text to a note that already has generated cues, then run
+4. Add a new heading with body text to a note that already has generated Section cues, then run
    **Refresh stale**. Confirm CueCraft regenerates only the new or changed section, keeps
-   existing Section Lens content for unchanged sections, refreshes the Note Brief, and keeps
-   cue/Section Lens placement aligned after typing or inserting blank lines above headings.
+   existing Summary content for unchanged sections, refreshes the Note Brief, and keeps
+   Section cue placement aligned after typing or inserting blank lines above headings.
 
 ## Studying a note
 
@@ -97,7 +97,7 @@ CueCraft can call installed desktop CLI tools instead of storing another API key
 
 CueCraft does not install the CLIs, log in for you, or manage CLI tokens. Run the relevant login/setup command in your terminal first (`codex login` or `claude login`), then use CueCraft's connection check.
 
-Local CLI providers are desktop-only local process integrations, not local models. Note text is still sent through the selected CLI's own account/service path. To avoid interactive prompts and file access during cue generation, CueCraft runs the CLIs non-interactively, disables/denies tools where the CLI supports it, and limits CLI-backed section generation to one request at a time.
+Local CLI providers are desktop-only local process integrations, not local models. Note text is still sent through the selected CLI's own account/service path. To avoid interactive prompts and file access during Section cue generation, CueCraft runs the CLIs non-interactively, disables/denies tools where the CLI supports it, and limits CLI-backed section generation to one request at a time.
 
 Not included in this first CLI provider slice: interactive coding-agent sessions, TTY handoff, long-lived session resume, SDK bundling, mobile support, or CLI-managed install/login flows.
 

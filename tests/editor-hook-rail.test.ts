@@ -38,7 +38,7 @@ describe("buildEditorHookCard", () => {
 			gradientIndex: 0,
 			showSummary: true,
 			showQuestion: true,
-			showSupportTerms: true,
+			showTerms: true,
 		});
 		expect(card).not.toHaveProperty("category");
 	});
@@ -55,11 +55,11 @@ describe("buildEditorHookCard", () => {
 		const card = buildEditorHookCard(cue(), "collapsed-tabs", 4, "upcoming", {
 			showSummary: false,
 			showQuestion: false,
-			showSupportTerms: false,
+			showTerms: false,
 		});
 		expect(card.showSummary).toBe(false);
 		expect(card.showQuestion).toBe(false);
-		expect(card.showSupportTerms).toBe(false);
+		expect(card.showTerms).toBe(false);
 		expect(card.gradientIndex).toBe(1);
 	});
 
@@ -91,7 +91,7 @@ describe("buildEditorHookCard", () => {
 		);
 		expect(card).toMatchObject({
 			kind: "failed",
-			hookTitle: "Cue unavailable",
+			hookTitle: "Section cue unavailable",
 			error: "boom",
 			keywords: [],
 		});

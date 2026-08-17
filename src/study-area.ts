@@ -119,7 +119,7 @@ export function formatStudyAreaReadinessCounts(
 		parts.push(
 			`${noteLabel(notesNeedingCues)}${sectionCount} ${
 				notesNeedingCues === 1 ? "needs" : "need"
-			} cues`
+			} Section cues`
 		);
 	}
 	if (counts.failed) parts.push(`${noteLabel(counts.failed)} failed`);

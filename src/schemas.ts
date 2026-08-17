@@ -53,7 +53,7 @@ export const cueGenerationSchema = z.object({
 	question: z.string().describe("A single active-recall question for the section."),
 	keywords: z
 		.array(z.string())
-		.describe("2 to 5 short keyword hints that help recall the answer."),
+		.describe("2 to 5 short Terms that help recall the answer."),
 	sectionLens: z
 		.object({
 			takeaway: z
@@ -216,13 +216,13 @@ export function validateCueBatch(
 			? record.cues
 			: null;
 	if (!cues) {
-		return { ok: false, error: "response did not include a cues array" };
+		return { ok: false, error: 'response did not include a "cues" array of Section cues' };
 	}
 	const items: CueBatchValidationItem[] = [];
 	for (let i = 0; i < expectedCount; i++) {
 		const value = cues[i];
 		if (value === undefined) {
-			items.push({ value: null, error: `missing cue for section ${i + 1}` });
+			items.push({ value: null, error: `missing Section cue for section ${i + 1}` });
 			continue;
 		}
 		const parsed = cueOutputSchema.safeParse(value);

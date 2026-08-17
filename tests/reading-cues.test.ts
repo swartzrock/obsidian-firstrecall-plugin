@@ -96,7 +96,7 @@ describe("buildReadingCueMap", () => {
 		expect(map.get(1)?.keywords).toEqual([]);
 	});
 
-	it("can omit Section Lens from mapped reading cues", () => {
+	it("can omit Summary from mapped reading Section cues", () => {
 		const map = buildReadingCueMap(cacheFrom(), NOTE, {
 			showSummary: false,
 		});
@@ -104,7 +104,7 @@ describe("buildReadingCueMap", () => {
 		expect(map.get(1)?.sectionLens).toBeNull();
 	});
 
-	it("includes Section Lens by default", () => {
+	it("includes Summary by default", () => {
 		const map = buildReadingCueMap(cacheFrom(), NOTE);
 		expect(map.get(1)?.sectionLens?.keyPhrase).toBe("agent autonomy");
 	});
@@ -394,7 +394,7 @@ describe("syncReadingStudyControls", () => {
 			"Show or hide sections"
 		);
 		expect(help.querySelector(".cuecraft-study-help-detail")?.textContent).toBe(
-			"Click the eye icon on any cue card."
+			"Click the eye icon on any Section cue card."
 		);
 		expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
 			2

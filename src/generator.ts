@@ -141,7 +141,7 @@ function applyCueResult(
 	item: CueCraftCueBatchResult | undefined
 ): void {
 	if (!item) {
-		result.error = "Provider returned no cue for this section.";
+		result.error = "Provider returned no Section cue for this section.";
 		return;
 	}
 	if (item.error) {
@@ -149,7 +149,7 @@ function applyCueResult(
 		return;
 	}
 	if (!item.cue) {
-		result.error = "Provider returned no cue for this section.";
+		result.error = "Provider returned no Section cue for this section.";
 		return;
 	}
 	result.keywords = item.cue.keywords;

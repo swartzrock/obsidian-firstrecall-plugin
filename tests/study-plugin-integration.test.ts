@@ -26,7 +26,7 @@ import type { StudySessionController } from "../src/study-session";
 
 const NOTE = "# Agents\nAgents use tools.";
 const OTHER_NOTE = "# Memory\nRetrieval strengthens memory.";
-const GENERATE_FIRST = "CueCraft: generate cues for this note first.";
+const GENERATE_FIRST = "CueCraft: generate Section cues for this note first.";
 
 function cacheFor(markdown: string): NoteCache {
 	const section = parseSections(markdown)[0];

@@ -640,10 +640,10 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		const calls: Array<{ url: string; body?: string }> = [];
 		const cue = {
 			question: "What does CueCraft turn notes into?",
-			keywords: ["notes", "study cues"],
+			keywords: ["notes", "Section cues"],
 			sectionLens: {
-				takeaway: "CueCraft turns notes into study cues.",
-				keyPhrase: "study cues",
+				takeaway: "CueCraft turns notes into Section cues.",
+				keyPhrase: "Section cues",
 				explanation: "The phrase names the product's review output.",
 			},
 		};
@@ -666,7 +666,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		await expect(
 			provider.generateCue({
 				heading: "Product Promise",
-				content: "CueCraft turns notes into study cues.",
+				content: "CueCraft turns notes into Section cues.",
 				options: { questionType: "conceptual" },
 			})
 		).resolves.toMatchObject({
@@ -682,10 +682,10 @@ describe("cueCraftProviderConfigFromSettings", () => {
 	it("recovers Ollama thinking output when the adapter only receives response text", async () => {
 		const cue = {
 			question: "What does CueCraft turn notes into?",
-			keywords: ["notes", "study cues"],
+			keywords: ["notes", "Section cues"],
 			sectionLens: {
-				takeaway: "CueCraft turns notes into study cues.",
-				keyPhrase: "study cues",
+				takeaway: "CueCraft turns notes into Section cues.",
+				keyPhrase: "Section cues",
 				explanation: "The phrase names the product's review output.",
 			},
 		};
@@ -705,7 +705,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		await expect(
 			provider.generateCue({
 				heading: "Product Promise",
-				content: "CueCraft turns notes into study cues.",
+				content: "CueCraft turns notes into Section cues.",
 				options: { questionType: "conceptual" },
 			})
 		).resolves.toMatchObject({
@@ -718,10 +718,10 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		const calls: Array<{ url: string; body?: string }> = [];
 		const cue = {
 			question: "What does CueCraft turn notes into?",
-			keywords: ["notes", "study cues"],
+			keywords: ["notes", "Section cues"],
 			sectionLens: {
-				takeaway: "CueCraft turns notes into study cues.",
-				keyPhrase: "study cues",
+				takeaway: "CueCraft turns notes into Section cues.",
+				keyPhrase: "Section cues",
 				explanation: "The phrase names the product's review output.",
 			},
 		};
@@ -745,7 +745,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		await expect(
 			provider.generateCue({
 				heading: "Product Promise",
-				content: "CueCraft turns notes into study cues.",
+				content: "CueCraft turns notes into Section cues.",
 				options: { questionType: "conceptual" },
 			})
 		).resolves.toMatchObject({
