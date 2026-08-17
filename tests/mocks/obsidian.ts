@@ -120,7 +120,11 @@ export class Setting {
 }
 
 class MockToggle {
-	constructor(private input: HTMLInputElement) {}
+	readonly toggleEl: HTMLInputElement;
+
+	constructor(private input: HTMLInputElement) {
+		this.toggleEl = input;
+	}
 
 	setValue(value: boolean): this {
 		this.input.checked = value;

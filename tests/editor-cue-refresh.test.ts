@@ -127,7 +127,12 @@ describe("Editing View cue refresh", () => {
 		const inactiveView = makeView("inactive", inactiveDispatch);
 		const cache = studyCache();
 		const plugin = new CueCraftPlugin({} as never, {} as never);
-		plugin.settings = structuredClone(DEFAULT_SETTINGS);
+		plugin.settings = {
+			...structuredClone(DEFAULT_SETTINGS),
+			showSummary: false,
+			showQuestion: false,
+			showTerms: false,
+		};
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			app: {
 				workspace: {
@@ -164,7 +169,55 @@ describe("Editing View cue refresh", () => {
 			path: file.path,
 			total: 1,
 		});
+		expect(activePayload).toMatchObject({
+			showSummary: false,
+			showQuestion: false,
+			showTerms: false,
+		});
 		expect(inactivePayload.cues).toEqual([]);
 		expect(inactivePayload.study).toBeUndefined();
+	});
+
+	it("rerenders every open Reading leaf and skips Editing leaves", () => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const firstRerender = vi.fn();
+		const secondRerender = vi.fn();
+		const editingRerender = vi.fn();
+		const leaves = [
+			{
+				view: {
+					getViewType: () => "markdown",
+					getMode: () => "preview",
+					previewMode: { rerender: firstRerender },
+				},
+			},
+			{
+				view: {
+					getViewType: () => "markdown",
+					getMode: () => "preview",
+					previewMode: { rerender: secondRerender },
+				},
+			},
+			{
+				view: {
+					getViewType: () => "markdown",
+					getMode: () => "source",
+					previewMode: { rerender: editingRerender },
+				},
+			},
+		];
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			app: {
+				workspace: {
+					getLeavesOfType: () => leaves,
+				},
+			},
+		});
+
+		plugin.refreshReadingModeSurface();
+
+		expect(firstRerender).toHaveBeenCalledWith(true);
+		expect(secondRerender).toHaveBeenCalledWith(true);
+		expect(editingRerender).not.toHaveBeenCalled();
 	});
 });

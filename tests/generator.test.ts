@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import {
 	generateNote,
 	generateSectionCue,
+	generateSectionCueBatch,
 	clampText,
 	DEFAULT_MAX_CONTEXT_CHARS,
 	DEFAULT_SECTION_CONCURRENCY,
@@ -131,7 +132,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: NOTE,
 			provider,
-			preset: "conceptual",
 			onProgress: (d, t) => progress.push([d, t]),
 		});
 
@@ -170,7 +170,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: SIX_SECTION_NOTE,
 			provider,
-			preset: "conceptual",
 			sectionConcurrency: 5,
 		});
 		expect(result.sections.map((s) => s.heading)).toEqual([
@@ -202,7 +201,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: SIX_SECTION_NOTE,
 			provider,
-			preset: "conceptual",
 			sectionConcurrency: 5,
 		});
 		expect(result.sections).toHaveLength(6);
@@ -216,7 +214,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: SIX_SECTION_NOTE,
 			provider,
-			preset: "conceptual",
 			sectionConcurrency: 3,
 		});
 
@@ -250,7 +247,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: NOTE,
 			provider,
-			preset: "conceptual",
 			sectionConcurrency: 3,
 			onProgress: (done, total) => progress.push([done, total]),
 		});
@@ -265,7 +261,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: NOTE,
 			provider,
-			preset: "conceptual",
 			sectionConcurrency: 3,
 		});
 
@@ -287,7 +282,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: NOTE,
 			provider,
-			preset: "conceptual",
 		});
 		const b = result.sections.find((s) => s.heading === "B");
 		expect(b?.error).toMatch(/boom/);
@@ -306,7 +300,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: SIX_SECTION_NOTE,
 			provider,
-			preset: "conceptual",
 			sectionConcurrency: 2,
 			signal: controller.signal,
 			onProgress: (done) => {
@@ -325,7 +318,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: "plain note text",
 			provider,
-			preset: "conceptual",
 		});
 		expect(provider.cueInputs).toEqual([]);
 		expect(provider.noteBriefCalls).toBe(0);
@@ -339,7 +331,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: "# Empty parent\n## Prefix Sum\nactual notes",
 			provider,
-			preset: "conceptual",
 			onProgress: (done, total) => progress.push([done, total]),
 		});
 		expect(provider.cueInputs.map((input) => input.heading)).toEqual(["Prefix Sum"]);
@@ -353,7 +344,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: "# Empty parent\n## Empty child\n",
 			provider,
-			preset: "conceptual",
 		});
 		expect(provider.cueInputs).toEqual([]);
 		expect(provider.noteBriefCalls).toBe(0);
@@ -367,7 +357,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: big,
 			provider,
-			preset: "conceptual",
 			useWholeNoteContext: true,
 			maxContextChars: 1000,
 		});
@@ -384,27 +373,25 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: NOTE,
 			provider,
-			preset: "conceptual",
 		});
 		expect(provider.cueInputs.every((i) => i.noteContext === undefined)).toBe(true);
 	});
 
-	it("passes generation options to cue calls", async () => {
+	it("passes the resolved Question type to cue calls", async () => {
 		const provider = mockProvider();
 		await generateNote({
 			noteTitle: "T",
 			markdown: NOTE,
 			provider,
-			preset: "conceptual",
 			options: {
-				cueDensity: 3,
-				questionStyle: "socratic",
-				generateKeywords: false,
+				questionType: "socratic-reasoning",
 			},
 		});
-		expect(provider.cueInputs.every((i) => i.options?.cueDensity === 3)).toBe(true);
-		expect(provider.cueInputs.every((i) => i.options?.questionStyle === "socratic")).toBe(true);
-		expect(provider.cueInputs.every((i) => i.options?.generateKeywords === false)).toBe(true);
+		expect(
+			provider.cueInputs.every(
+				(input) => input.options.questionType === "socratic-reasoning"
+			)
+		).toBe(true);
 	});
 
 	it("keeps section results valid when Note Brief is unsupported", async () => {
@@ -415,7 +402,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: NOTE,
 			provider,
-			preset: "conceptual",
 			onProgress: (done, total) => progress.push([done, total]),
 		});
 		expect(result.sections).toHaveLength(3);
@@ -430,7 +416,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: NOTE,
 			provider,
-			preset: "conceptual",
 			onProgress: (done, total) => progress.push([done, total]),
 		});
 
@@ -452,7 +437,6 @@ describe("generateNote", () => {
 			noteTitle: "T",
 			markdown: NOTE,
 			provider,
-			preset: "conceptual",
 			onProgress: (done, total) => progress.push([done, total]),
 		});
 
@@ -478,7 +462,6 @@ describe("generateSectionCue", () => {
 		const result = await generateSectionCue({
 			section,
 			provider,
-			preset: "conceptual",
 		});
 		expect(result.id).toBe("terms");
 		expect(result.question).toBe("Q:Terms");
@@ -489,32 +472,24 @@ describe("generateSectionCue", () => {
 		expect(result).not.toHaveProperty("category");
 	});
 
-	it("forwards the preset (tone override) to the provider", async () => {
+	it("forwards the resolved Question type to the provider", async () => {
 		const provider = mockProvider();
 		await generateSectionCue({
 			section,
 			provider,
-			preset: "simpler",
+			options: { questionType: "direct-recall" },
 		});
-		expect(provider.cueInputs[0].preset).toBe("simpler");
+		expect(provider.cueInputs[0].options.questionType).toBe("direct-recall");
 	});
 
-	it("forwards resolved generation options to the provider", async () => {
+	it("defaults an omitted Question type to Conceptual question", async () => {
 		const provider = mockProvider();
 		await generateSectionCue({
 			section,
 			provider,
-			preset: "conceptual",
-			options: {
-				cueDensity: 1,
-				questionStyle: "exam",
-				generateKeywords: false,
-			},
 		});
-		expect(provider.cueInputs[0].options).toMatchObject({
-			cueDensity: 1,
-			questionStyle: "exam",
-			generateKeywords: false,
+		expect(provider.cueInputs[0].options).toEqual({
+			questionType: "conceptual",
 		});
 	});
 
@@ -523,7 +498,6 @@ describe("generateSectionCue", () => {
 		const result = await generateSectionCue({
 			section,
 			provider,
-			preset: "conceptual",
 		});
 		expect(result.error).toMatch(/boom/);
 		expect(result.question).toBeNull();
@@ -535,7 +509,6 @@ describe("generateSectionCue", () => {
 		await generateSectionCue({
 			section,
 			provider,
-			preset: "conceptual",
 			noteContext: "full note text",
 		});
 		expect(provider.cueInputs[0].noteContext).toBe("full note text");
@@ -547,7 +520,6 @@ describe("generateSectionCue", () => {
 		await generateSectionCue({
 			section: big,
 			provider,
-			preset: "conceptual",
 			maxContextChars: 500,
 		});
 		expect(provider.cueInputs[0].content.length).toBeLessThanOrEqual(600);
@@ -555,12 +527,40 @@ describe("generateSectionCue", () => {
 	});
 });
 
+describe("generateSectionCueBatch", () => {
+	it("uses a CLI-style batch provider for a single section", async () => {
+		const provider = mockProvider({ batch: true });
+		const section = {
+			id: "queues",
+			heading: "Queues",
+			level: 2,
+			lineNumber: 3,
+			content: "Queues are first-in-first-out.",
+			contentHash: "queue123",
+		};
+
+		const result = await generateSectionCueBatch({
+			sections: [section],
+			provider,
+			options: { questionType: "vocabulary-check" },
+		});
+
+		expect(provider.batchInputs).toHaveLength(1);
+		expect(provider.batchInputs[0]).toHaveLength(1);
+		expect(provider.batchInputs[0][0].options.questionType).toBe(
+			"vocabulary-check"
+		);
+		expect(result[0].question).toBe("Q:Queues");
+	});
+});
+
 describe("resolveGenerationOptions", () => {
 	it("fills unspecified values from defaults", () => {
-		expect(resolveGenerationOptions({ cueDensity: 3 })).toEqual({
-			cueDensity: 3,
-			questionStyle: "recall",
-			generateKeywords: true,
+		expect(resolveGenerationOptions()).toEqual({
+			questionType: "conceptual",
+		});
+		expect(resolveGenerationOptions({ questionType: "exam-practice" })).toEqual({
+			questionType: "exam-practice",
 		});
 	});
 });

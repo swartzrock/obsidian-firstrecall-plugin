@@ -26,6 +26,8 @@ export interface ReadingCueDisplayState {
 	showInlineCues: boolean;
 }
 
+export type ReadingCueVisibility = Required<CueLineDataOptions>;
+
 export interface ReadingNoteBriefDisplayState {
 	showNoteBrief: boolean;
 }
@@ -61,15 +63,20 @@ export function buildReadingCueMap(
 }
 
 export function readingCueDisplayState(opts: {
-	renderInReadingMode: boolean;
 	hasCache: boolean;
 	isHidden: boolean;
 	studyActive: boolean;
+	hasErrors: boolean;
+	visibility: ReadingCueVisibility;
 }): ReadingCueDisplayState {
+	const hasVisibleComponent =
+		opts.visibility.showSummary ||
+		opts.visibility.showQuestion ||
+		opts.visibility.showTerms;
 	return {
 		showInlineCues:
 			opts.hasCache &&
-			(opts.studyActive || (opts.renderInReadingMode && !opts.isHidden)),
+			(opts.studyActive || (!opts.isHidden && (hasVisibleComponent || opts.hasErrors))),
 	};
 }
 
@@ -375,7 +382,6 @@ export function syncReadingStudyControls(
 }
 
 export function readingNoteBriefDisplayState(opts: {
-	renderInReadingMode: boolean;
 	showNoteBrief: boolean;
 	hasCache: boolean;
 	hasNoteBrief: boolean;
@@ -383,7 +389,6 @@ export function readingNoteBriefDisplayState(opts: {
 }): ReadingNoteBriefDisplayState {
 	return {
 		showNoteBrief:
-			opts.renderInReadingMode &&
 			opts.showNoteBrief &&
 			opts.hasCache &&
 			opts.hasNoteBrief &&

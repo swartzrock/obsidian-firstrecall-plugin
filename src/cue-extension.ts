@@ -79,8 +79,9 @@ export interface CueLineData {
 }
 
 export interface CueLineDataOptions {
-	showKeywords?: boolean;
-	showSectionLens?: boolean;
+	showSummary?: boolean;
+	showQuestion?: boolean;
+	showTerms?: boolean;
 }
 
 export interface CueEditorRenderState {
@@ -90,9 +91,9 @@ export interface CueEditorRenderState {
 	notePath?: string;
 	collapseController?: CueSectionCollapseController;
 	noteBrief?: NoteBriefOutput | null;
-	showRailSummary?: boolean;
-	showRailQuestions?: boolean;
-	showRailSupportTerms?: boolean;
+	showSummary?: boolean;
+	showQuestion?: boolean;
+	showTerms?: boolean;
 	cueFontSize?: CueFontSize;
 	editorCueWidthController?: EditorCueWidthController;
 }
@@ -150,8 +151,9 @@ export function buildCueLineData(
 	currentSections: Section[],
 	options: CueLineDataOptions = {}
 ): CueLineData[] {
-	const showKeywords = options.showKeywords ?? true;
-	const showSectionLens = options.showSectionLens ?? true;
+	const showTerms = options.showTerms ?? true;
+	const showSummary = options.showSummary ?? true;
+	const showQuestion = options.showQuestion ?? true;
 	const byId = new Map<string, Section>();
 	for (const s of currentSections) byId.set(s.id, s);
 
@@ -162,15 +164,23 @@ export function buildCueLineData(
 		if (current && !isCueEligibleSection(current)) continue;
 		const line = current ? current.lineNumber : sec.lineNumber;
 		const failed = Boolean(sec.error) || !sec.question;
-		out.push({
+		const cue = {
 			line,
 			sectionId: sec.id,
 			heading: sec.heading,
 			question: failed ? "" : (sec.question ?? ""),
-			keywords: failed || !showKeywords ? [] : sec.keywords ?? [],
-			sectionLens: failed || !showSectionLens ? null : sec.sectionLens ?? null,
+			keywords: failed || !showTerms ? [] : sec.keywords ?? [],
+			sectionLens: failed || !showSummary ? null : sec.sectionLens ?? null,
 			error: failed ? sec.error ?? "Generation failed" : null,
-		});
+		};
+		if (
+			cue.error ||
+			(showQuestion && cue.question.trim().length > 0) ||
+			cue.sectionLens ||
+			cue.keywords.length > 0
+		) {
+			out.push(cue);
+		}
 	}
 	// Render top-to-bottom.
 	out.sort((a, b) => a.line - b.line);
@@ -446,11 +456,7 @@ function renderCornellCueElement(
 	const showSummary = options.showSummary ?? true;
 	const showSupportTerms = options.showSupportTerms ?? true;
 	const supports = buildCornellSupportTerms(cue.keywords);
-	const showQuestion =
-		(options.showQuestion ?? true) ||
-		(!cue.error &&
-			!(showSummary && cue.sectionLens) &&
-			!(showSupportTerms && supports.length));
+	const showQuestion = options.showQuestion ?? true;
 	root.dataset.summaryVisible = String(showSummary);
 	root.dataset.questionVisible = String(showQuestion);
 	root.dataset.supportTermsVisible = String(showSupportTerms);
@@ -524,11 +530,7 @@ function renderInlineCueElement(
 	root.setAttribute("role", "note");
 	const showSummary = options.showSummary ?? true;
 	const showSupportTerms = options.showSupportTerms ?? true;
-	const showQuestion =
-		(options.showQuestion ?? true) ||
-		(!cue.error &&
-			!(showSummary && cue.sectionLens) &&
-			!(showSupportTerms && cue.keywords.length));
+	const showQuestion = options.showQuestion ?? true;
 	root.dataset.summaryVisible = String(showSummary);
 	root.dataset.questionVisible = String(showQuestion);
 	root.dataset.supportTermsVisible = String(showSupportTerms);
@@ -1536,11 +1538,13 @@ export function buildCueWidgetDecorations(
 
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
+		const studyOptions = cueStudyRenderOptions(payload, cue);
+		if (!shouldRenderEditorCue(payload, cue, studyOptions)) continue;
 		const headingLine = doc.line(cue.line);
 		const cueOptions = {
 			...options,
 			...cueCollapseRenderOptions(payload, cue),
-			...cueStudyRenderOptions(payload, cue),
+			...studyOptions,
 		};
 		// Block widget rendered on its own line just after the heading.
 		ranges.push(
@@ -1567,12 +1571,14 @@ export function buildCueGutterMarkers(
 	const options = editorCueRenderOptionsFromPayload(payload);
 	for (const [index, cue] of payload.cues.entries()) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
+		const studyOptions = cueStudyRenderOptions(payload, cue);
+		if (!shouldRenderEditorCue(payload, cue, studyOptions)) continue;
 		const markerLine = doc.line(cue.line);
 		const cardState = cue.line === currentCueLine ? "current" : "upcoming";
 		const markerOptions = {
 			...options,
 			...cueCollapseRenderOptions(payload, cue),
-			...cueStudyRenderOptions(payload, cue),
+			...studyOptions,
 		};
 		builder.add(
 			markerLine.from,
@@ -1610,9 +1616,9 @@ function editorCueRenderOptionsFromPayload(
 	payload: CueEditorRenderState
 ): CueRenderOptions {
 	return {
-		showSummary: payload.showRailSummary ?? true,
-		showQuestion: payload.showRailQuestions ?? true,
-		showSupportTerms: payload.showRailSupportTerms ?? true,
+		showSummary: payload.showSummary ?? true,
+		showQuestion: payload.showQuestion ?? true,
+		showSupportTerms: payload.showTerms ?? true,
 		cueFontSize: payload.cueFontSize,
 		editorCueWidthController: payload.editorCueWidthController,
 	};
@@ -1637,7 +1643,7 @@ function editorHookCardOptionsKey(options: CueRenderOptions): string {
 function cueStudyRenderOptions(
 	payload: CueEditorRenderState,
 	cue: CueLineData
-): Pick<CueRenderOptions, "study"> {
+): Pick<CueRenderOptions, "showQuestion" | "study"> {
 	const projection = payload.study;
 	if (!projection?.snapshot.active || cue.error || cue.question.trim().length === 0) {
 		return {};
@@ -1647,12 +1653,28 @@ function cueStudyRenderOptions(
 	);
 	if (!section) return {};
 	return {
+		showQuestion: true,
 		study: {
 			sectionId: section.sectionId,
 			revealed: section.revealed,
 			toggleSection: projection.toggleSection,
 		},
 	};
+}
+
+function shouldRenderEditorCue(
+	payload: CueEditorRenderState,
+	cue: CueLineData,
+	studyOptions: Pick<CueRenderOptions, "showQuestion" | "study">
+): boolean {
+	if (cue.error) return true;
+	const inStudy = Boolean(studyOptions.study);
+	return Boolean(
+		((inStudy || (payload.showQuestion ?? true)) &&
+			cue.question.trim().length > 0) ||
+			((payload.showSummary ?? true) && cue.sectionLens) ||
+			((payload.showTerms ?? true) && cue.keywords.length > 0)
+	);
 }
 
 function cueCollapseRenderOptions(

@@ -141,34 +141,18 @@ describe("plugin data cache migration", () => {
 		});
 	});
 
-	it.each([
-		{
-			name: "legacy key only",
-			stored: { summaryInstructionsOverride: "  Legacy policy.  " },
-			expected: "  Legacy policy.  ",
-			saves: 1,
-		},
-		{
-			name: "new key only",
-			stored: { noteBriefInstructionsOverride: "  Current policy.  " },
-			expected: "  Current policy.  ",
-			saves: 0,
-		},
-		{
-			name: "both keys",
-			stored: {
-				summaryInstructionsOverride: "Legacy policy.",
-				noteBriefInstructionsOverride: "Current policy.",
-			},
-			expected: "Current policy.",
-			saves: 1,
-		},
-	])("uses the expected Note Brief prompt for $name", async ({ stored, expected, saves }) => {
+	it("discards every custom instruction override", async () => {
 		const saveData = vi.fn(async () => {});
 		const plugin = new CueCraftPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
-			loadData: vi.fn(async () => ({ settings: stored })),
+			loadData: vi.fn(async () => ({
+				settings: {
+					cueInstructionsOverride: "Custom cue policy.",
+					noteBriefInstructionsOverride: "Custom Note Brief policy.",
+					summaryInstructionsOverride: "Legacy Summary policy.",
+				},
+			})),
 			saveData,
 		});
 
@@ -176,17 +160,17 @@ describe("plugin data cache migration", () => {
 			plugin as unknown as { loadPluginData(): Promise<void> }
 		).loadPluginData();
 
-		expect(plugin.settings.noteBriefInstructionsOverride).toBe(expected);
-		expect(plugin.settings).not.toHaveProperty("summaryInstructionsOverride");
-		expect(saveData).toHaveBeenCalledTimes(saves);
-		if (saves) {
-			const persisted = saveData.mock.calls[0]?.[0] as {
-				settings: Record<string, unknown>;
-			};
-			expect(persisted.settings.noteBriefInstructionsOverride).toBe(expected);
-			expect(persisted.settings).not.toHaveProperty(
-				"summaryInstructionsOverride"
-			);
+		expect(saveData).toHaveBeenCalledTimes(1);
+		const persisted = saveData.mock.calls[0]?.[0] as {
+			settings: Record<string, unknown>;
+		};
+		for (const key of [
+			"cueInstructionsOverride",
+			"noteBriefInstructionsOverride",
+			"summaryInstructionsOverride",
+		]) {
+			expect(plugin.settings).not.toHaveProperty(key);
+			expect(persisted.settings).not.toHaveProperty(key);
 		}
 	});
 
@@ -219,15 +203,20 @@ describe("plugin data cache migration", () => {
 				};
 			}
 		).data;
-		expect(data.settings.showRailQuestions).toBe(false);
-		expect(data.settings.showRailSummary).toBe(true);
+		expect(data.settings.showQuestion).toBe(false);
+		expect(data.settings.showSummary).toBe(true);
 		expect(data.caches).toEqual({});
 		expect(data.hidden).toEqual(loaded.hidden);
 		expect(data.cueSectionCollapse).toEqual({});
-		expect(saveData).not.toHaveBeenCalled();
+		expect(saveData).toHaveBeenCalledTimes(1);
+		const persisted = saveData.mock.calls[0]?.[0] as {
+			settings: Record<string, unknown>;
+		};
+		expect(persisted.settings.showQuestion).toBe(false);
+		expect(persisted.settings).not.toHaveProperty("showRailQuestions");
 	});
 
-	it("repairs Editing View cue sections when persisted data hides all three", async () => {
+	it("preserves all-off component visibility", async () => {
 		const plugin = new CueCraftPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
@@ -245,9 +234,116 @@ describe("plugin data cache migration", () => {
 			plugin as unknown as { loadPluginData(): Promise<void> }
 		).loadPluginData();
 
-		expect(plugin.settings.showRailSummary).toBe(true);
-		expect(plugin.settings.showRailQuestions).toBe(false);
-		expect(plugin.settings.showRailSupportTerms).toBe(false);
+		expect(plugin.settings.showSummary).toBe(false);
+		expect(plugin.settings.showQuestion).toBe(false);
+		expect(plugin.settings.showTerms).toBe(false);
+	});
+
+	it.each([
+		[{ cuePreset: "conceptual", cueDensity: 2, questionStyle: "recall" }, "conceptual"],
+		[{ cuePreset: "exam-prep", questionStyle: "exam" }, "exam-practice"],
+		[{ cuePreset: "vocabulary" }, "vocabulary-check"],
+		[{ cuePreset: "minimal", cueDensity: 1 }, "direct-recall"],
+		[{ questionStyle: "socratic" }, "socratic-reasoning"],
+		[{ cuePreset: "vocabulary", questionStyle: "exam" }, "conceptual"],
+		[{ cuePreset: "unrecognized" }, "conceptual"],
+	] as const)("normalizes legacy Question settings %#", async (stored, expected) => {
+		const saveData = vi.fn(async () => {});
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({ settings: stored })),
+			saveData,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.questionType).toBe(expected);
+		expect(saveData).toHaveBeenCalledTimes(1);
+		const persisted = saveData.mock.calls[0]?.[0] as {
+			settings: Record<string, unknown>;
+		};
+		expect(persisted.settings.questionType).toBe(expected);
+		for (const key of ["cuePreset", "cueDensity", "questionStyle"]) {
+			expect(persisted.settings).not.toHaveProperty(key);
+		}
+	});
+
+	it("uses component-specific visibility precedence and removes every legacy key", async () => {
+		const saveData = vi.fn(async () => {});
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: {
+					showRailSummary: false,
+					showSectionLens: true,
+					showRailQuestions: false,
+					showRailSupportTerms: "invalid",
+					generateKeywords: false,
+					showNoteBrief: false,
+					renderInReadingMode: false,
+				},
+			})),
+			saveData,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings).toMatchObject({
+			showSummary: false,
+			showQuestion: false,
+			showTerms: false,
+			showNoteBrief: false,
+		});
+		expect(saveData).toHaveBeenCalledTimes(1);
+		const persisted = saveData.mock.calls[0]?.[0] as {
+			settings: Record<string, unknown>;
+		};
+		for (const key of [
+			"showRailSummary",
+			"showRailQuestions",
+			"showRailSupportTerms",
+			"showSectionLens",
+			"generateKeywords",
+			"renderInReadingMode",
+		]) {
+			expect(persisted.settings).not.toHaveProperty(key);
+		}
+	});
+
+	it("falls back only to each component's documented source", async () => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: {
+					showRailSummary: "invalid",
+					showSectionLens: false,
+					showRailQuestions: "invalid",
+					showRailSupportTerms: null,
+					generateKeywords: false,
+					showNoteBrief: "invalid",
+					renderInReadingMode: false,
+				},
+			})),
+			saveData: vi.fn(async () => {}),
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings).toMatchObject({
+			showSummary: false,
+			showQuestion: true,
+			showTerms: false,
+			showNoteBrief: true,
+		});
 	});
 
 	it("persists a canonical v7 cache without discarding an invalid cache entry", async () => {

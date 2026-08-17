@@ -1,6 +1,6 @@
 import { cueEligibleSections, parseSections } from "./parser";
 import {
-	DEFAULT_CUE_GENERATION_OPTIONS,
+	questionTypeInfo,
 	type CueGenerationOptions,
 } from "./cue-generation";
 import type {
@@ -39,7 +39,6 @@ export interface GenerateSectionParams {
 		contentHash: string;
 	};
 	provider: CueCraftCueProviderRuntime;
-	preset: string;
 	options?: Partial<CueGenerationOptions>;
 	noteContext?: string;
 	maxContextChars?: number;
@@ -49,7 +48,6 @@ export interface GenerateSectionParams {
 export interface GenerateSectionBatchParams {
 	sections: GenerateSectionParams["section"][];
 	provider: CueCraftCueProviderRuntime;
-	preset: string;
 	options?: Partial<CueGenerationOptions>;
 	noteContext?: string;
 	maxContextChars?: number;
@@ -60,7 +58,6 @@ export interface GenerateNoteParams {
 	noteTitle: string;
 	markdown: string;
 	provider: CueCraftCueProviderRuntime;
-	preset: string;
 	options?: Partial<CueGenerationOptions>;
 	useWholeNoteContext?: boolean;
 	/** Cap (in chars) on note text injected into prompts; keeps requests within model context limits. */
@@ -100,7 +97,9 @@ export function clampText(text: string, maxChars: number): string {
 export function resolveGenerationOptions(
 	options?: Partial<CueGenerationOptions>
 ): CueGenerationOptions {
-	return { ...DEFAULT_CUE_GENERATION_OPTIONS, ...options };
+	return {
+		questionType: questionTypeInfo(options?.questionType).id,
+	};
 }
 
 export function resolveSectionConcurrency(value: unknown): number {
@@ -166,7 +165,7 @@ function applyCueResult(
 export async function generateSectionCue(
 	params: GenerateSectionParams
 ): Promise<SectionResult> {
-	const { section, provider, preset, signal } = params;
+	const { section, provider, signal } = params;
 	const options = resolveGenerationOptions(params.options);
 	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	const result = emptySectionResult(section);
@@ -178,7 +177,6 @@ export async function generateSectionCue(
 				noteContext: params.noteContext
 					? clampText(params.noteContext, maxCtx)
 					: undefined,
-				preset,
 				options,
 			},
 			signal
@@ -193,7 +191,7 @@ export async function generateSectionCue(
 export async function generateSectionCueBatch(
 	params: GenerateSectionBatchParams
 ): Promise<SectionResult[]> {
-	const { sections, provider, preset, signal } = params;
+	const { sections, provider, signal } = params;
 	const generateCues = provider.generateCues?.bind(provider);
 	if (!generateCues) {
 		return Promise.all(
@@ -201,7 +199,6 @@ export async function generateSectionCueBatch(
 				generateSectionCue({
 					section,
 					provider,
-					preset,
 					options: params.options,
 					noteContext: params.noteContext,
 					maxContextChars: params.maxContextChars,
@@ -221,7 +218,6 @@ export async function generateSectionCueBatch(
 				noteContext: params.noteContext
 					? clampText(params.noteContext, maxCtx)
 					: undefined,
-				preset,
 				options,
 			})),
 			signal
@@ -281,7 +277,7 @@ export async function generateNoteBriefForSections(
 export async function generateNote(
 	params: GenerateNoteParams
 ): Promise<NoteGenerationResult> {
-	const { provider, markdown, preset, noteTitle, signal, onProgress } = params;
+	const { provider, markdown, noteTitle, signal, onProgress } = params;
 	const options = resolveGenerationOptions(params.options);
 	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	const sectionConcurrency = resolveEffectiveSectionConcurrency(
@@ -310,7 +306,6 @@ export async function generateNote(
 			const batchResults = await generateSectionCueBatch({
 				sections: batch,
 				provider,
-				preset,
 				options,
 				noteContext: wholeNoteContext,
 				maxContextChars,
@@ -332,7 +327,6 @@ export async function generateNote(
 					const result = await generateSectionCue({
 						section: s,
 						provider,
-						preset,
 						options,
 						noteContext: wholeNoteContext,
 						maxContextChars,

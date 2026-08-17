@@ -16,9 +16,11 @@ import {
 	DEFAULT_SHOW_NOTE_BRIEF,
 	DEFAULT_SHOW_SECTION_LENS,
 } from "../src/review-surfaces";
-import { DEFAULT_CUE_INSTRUCTIONS } from "../src/cue-instructions";
-import { editingViewSettingsSummary } from "../src/settings-summaries";
-import { DEFAULT_NOTE_BRIEF_INSTRUCTIONS } from "../src/note-brief-instructions";
+import {
+	buildSectionCueInstructionsTemplate,
+} from "../src/cue-instructions";
+import { buildNoteBriefInstructionsTemplate } from "../src/review-artifact-prompts";
+import { QUESTION_TYPES } from "../src/cue-generation";
 
 function createObsidianMock() {
 	class MockPluginSettingTab {
@@ -123,7 +125,11 @@ function createObsidianMock() {
 	}
 
 	class MockToggle {
-		constructor(private input: HTMLInputElement) {}
+		readonly toggleEl: HTMLInputElement;
+
+		constructor(private input: HTMLInputElement) {
+			this.toggleEl = input;
+		}
 
 		setValue(value: boolean): this {
 			this.input.checked = value;
@@ -390,22 +396,7 @@ async function changeToggle(
 	await toggle.__onChange(value);
 }
 
-async function changeCueSection(
-	containerEl: HTMLElement,
-	section: "summary" | "question" | "terms",
-	value: boolean
-): Promise<void> {
-	const input = containerEl.querySelector<HTMLInputElement>(
-		`[data-cue-section="${section}"]`
-	);
-	if (!input) throw new Error(`Missing cue section checkbox: ${section}`);
-	input.checked = value;
-	input.dispatchEvent(new window.Event("change", { bubbles: true }));
-	await Promise.resolve();
-	await Promise.resolve();
-}
-
-async function changeTextArea(
+async function changeDropdown(
 	containerEl: HTMLElement,
 	name: string,
 	value: string
@@ -414,30 +405,14 @@ async function changeTextArea(
 		`[data-setting-name="${name}"]`
 	);
 	if (!setting) throw new Error(`Missing setting: ${name}`);
-	const textArea = setting.querySelector<HTMLTextAreaElement>(
-		"[data-control='textarea']"
-	) as HTMLTextAreaElement & {
+	const dropdown = setting.querySelector<HTMLSelectElement>(
+		"[data-control='dropdown']"
+	) as HTMLSelectElement & {
 		__onChange?: (value: string) => void | Promise<void>;
 	};
-	if (!textArea.__onChange) throw new Error(`Missing text area callback: ${name}`);
-	textArea.value = value;
-	await textArea.__onChange(value);
-}
-
-async function clickSettingButton(
-	containerEl: HTMLElement,
-	name: string,
-	label: string
-): Promise<void> {
-	const setting = containerEl.querySelector<HTMLElement>(
-		`[data-setting-name="${name}"]`
-	);
-	if (!setting) throw new Error(`Missing setting: ${name}`);
-	const button = [...setting.querySelectorAll<HTMLButtonElement>("button")].find(
-		(candidate) => candidate.textContent === label
-	) as HTMLButtonElement & { __onClick?: () => void | Promise<void> };
-	if (!button?.__onClick) throw new Error(`Missing button callback: ${name} ${label}`);
-	await button.__onClick();
+	if (!dropdown.__onChange) throw new Error(`Missing dropdown callback: ${name}`);
+	dropdown.value = value;
+	await dropdown.__onChange(value);
 }
 
 async function clickThumbnail(
@@ -470,18 +445,35 @@ describe("settings defaults", () => {
 		});
 	});
 
-	it("stores blank overrides until the user customizes either instruction policy", async () => {
+	it("uses one Question type and canonical artifact visibility defaults", async () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
-		expect(DEFAULT_SETTINGS.cueInstructionsOverride).toBe("");
-		expect(DEFAULT_SETTINGS.noteBriefInstructionsOverride).toBe("");
-		expect(DEFAULT_SETTINGS).not.toHaveProperty("summaryInstructionsOverride");
-		expect(DEFAULT_SETTINGS).not.toHaveProperty("autoSummary");
+		expect(DEFAULT_SETTINGS).toMatchObject({
+			questionType: "conceptual",
+			showNoteBrief: true,
+			showSummary: true,
+			showQuestion: true,
+			showTerms: true,
+		});
+		for (const key of [
+			"cuePreset",
+			"cueDensity",
+			"questionStyle",
+			"generateKeywords",
+			"cueInstructionsOverride",
+			"noteBriefInstructionsOverride",
+			"showSectionLens",
+			"showRailSummary",
+			"showRailQuestions",
+			"showRailSupportTerms",
+			"renderInReadingMode",
+		]) {
+			expect(DEFAULT_SETTINGS).not.toHaveProperty(key);
+		}
 	});
 
-	it("normalizes an invalid Cue override and migrates a legacy Summary override", async () => {
+	it("discards legacy custom instruction overrides", async () => {
 		const { default: CueCraftPlugin } = await import("../src/main");
-		const legacySummaryOverride = "  Preserve this legacy Summary policy.  ";
 		const saveData = vi.fn(async () => {});
 		const missing = async () => ({
 			ok: false as const,
@@ -498,8 +490,9 @@ describe("settings defaults", () => {
 			},
 			loadData: vi.fn(async () => ({
 				settings: {
-					cueInstructionsOverride: ["invalid"],
-					summaryInstructionsOverride: legacySummaryOverride,
+					cueInstructionsOverride: "Custom Cue policy.",
+					noteBriefInstructionsOverride: "Custom Note Brief policy.",
+					summaryInstructionsOverride: "Legacy Summary policy.",
 				},
 			})),
 			saveData,
@@ -509,10 +502,8 @@ describe("settings defaults", () => {
 			plugin as unknown as { loadPluginData(): Promise<void> }
 		).loadPluginData();
 
-		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.noteBriefInstructionsOverride).toBe(
-			legacySummaryOverride
-		);
+		expect(plugin.settings).not.toHaveProperty("cueInstructionsOverride");
+		expect(plugin.settings).not.toHaveProperty("noteBriefInstructionsOverride");
 		expect(plugin.settings).not.toHaveProperty("summaryInstructionsOverride");
 		expect(saveData).toHaveBeenCalledTimes(1);
 	});
@@ -573,12 +564,12 @@ describe("settings defaults", () => {
 		}
 	});
 
-	it("shows every Editing View cue section by default", async () => {
+	it("shows every Section cue component by default", async () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
-		expect(DEFAULT_SETTINGS.showRailSummary).toBe(true);
-		expect(DEFAULT_SETTINGS.showRailQuestions).toBe(true);
-		expect(DEFAULT_SETTINGS.showRailSupportTerms).toBe(true);
+		expect(DEFAULT_SETTINGS.showSummary).toBe(true);
+		expect(DEFAULT_SETTINGS.showQuestion).toBe(true);
+		expect(DEFAULT_SETTINGS.showTerms).toBe(true);
 	});
 
 	it("defaults editor cue display to inline cues", () => {
@@ -622,336 +613,175 @@ describe("settings defaults", () => {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}
 	});
-	it("summarizes Editing View settings", () => {
-		const settings = {
-			cueFontSize: "large",
-			editorCueDisplay: "hook-minimap",
-			showRailSummary: false,
-			showRailQuestions: false,
-			showRailSupportTerms: true,
-		} as const;
-
-		expect(editingViewSettingsSummary(settings)).toBe(
-			"Hook minimap · large text · Terms"
-		);
-		expect(editingViewSettingsSummary(settings)).not.toContain("Legal Pad");
-		expect(editingViewSettingsSummary(settings)).not.toContain("width");
-	});
-
-	it("renders Editing View without a dedicated Cornell View destination", async () => {
+	it("maps main-page controls to visible Note Brief and Section cue components", async () => {
 		const { tab } = await setupSettingsTab();
-
 		tab.display();
 
 		const text = settingText(tab.containerEl);
-		expect(text).not.toContain("Cornell View");
-		expect(text).toContain("Editing View");
-		expect(text).not.toContain("Appearance");
+		expect(text).toContain("Study aids");
+		expect(text).not.toContain("Generated components");
+		expect(text).toContain("Appearance");
+		expect(text).not.toContain("Editing View");
+		expect(text).not.toContain("Note format");
+		for (const groupName of ["Note Brief", "Section cue"]) {
+			expect(
+				tab.containerEl.querySelector(`[role="group"][aria-label="${groupName}"]`)
+			).not.toBeNull();
+		}
+		for (const label of [
+			"Show Note Brief",
+			"Show Summary",
+			"Show Question",
+			"Show Terms",
+		]) {
+			expect(tab.containerEl.querySelector(`[aria-label="${label}"]`)).not.toBeNull();
+		}
+		expect(text).toContain("Core idea");
+		expect(text).toContain("Review first");
+		expect(text).toContain("Self-test");
+		expect(
+			tab.containerEl.querySelectorAll(".cuecraft-settings-artifact-part")
+		).toHaveLength(0);
 	});
 
-	it("renders independent Cue and Note Brief policies without persisting defaults", async () => {
+	it("allows every generated component to be hidden without marking content dirty", async () => {
 		const { tab, plugin } = await setupSettingsTab();
-
 		tab.display();
-		openSettingsCard(tab, "Cue generation");
 
-		const cueSetting = tab.containerEl.querySelector<HTMLElement>(
-			'[data-setting-name="Cue system prompt"]'
-		);
-		const reviewSetting = tab.containerEl.querySelector<HTMLElement>(
-			'[data-setting-name="Note Brief system prompt"]'
-		);
-		expect(cueSetting?.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe(
-			DEFAULT_CUE_INSTRUCTIONS
-		);
-		expect(
-			reviewSetting?.querySelector<HTMLTextAreaElement>("textarea")?.value
-		).toBe(DEFAULT_NOTE_BRIEF_INSTRUCTIONS);
-		expect(cueSetting?.textContent).toContain(
-			"Controls the content, emphasis, tone, wording, and teaching style of section cues."
-		);
-		expect(cueSetting?.textContent).toContain(
-			"CueCraft still requires valid Cue and Section Lens fields."
-		);
-		expect(reviewSetting?.textContent).toContain(
-			"Controls the content, emphasis, tone, wording, and teaching style of Note Brief."
-		);
-		expect(reviewSetting?.textContent).toContain(
-			"CueCraft still requires valid Note Brief fields."
-		);
-		expect(
-			cueSetting?.querySelector<HTMLTextAreaElement>(
-				'textarea[aria-label="Cue system prompt"]'
-			)
-		).not.toBeNull();
-		expect(
-			reviewSetting?.querySelector<HTMLTextAreaElement>(
-				'textarea[aria-label="Note Brief system prompt"]'
-			)
-		).not.toBeNull();
-		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.noteBriefInstructionsOverride).toBe("");
-		expect(plugin.saveSettings).not.toHaveBeenCalled();
-	});
+		for (const label of [
+			"Show Note Brief",
+			"Show Summary",
+			"Show Question",
+			"Show Terms",
+		]) {
+			await changeToggle(tab.containerEl, label, false);
+		}
 
-	it("shows an existing Note Brief customization under its current label", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		const customization = "  Preserve this Note Brief policy.  ";
-		plugin.settings.noteBriefInstructionsOverride = customization;
-
-		tab.display();
-		openSettingsCard(tab, "Cue generation");
-
-		const setting = tab.containerEl.querySelector<HTMLElement>(
-			'[data-setting-name="Note Brief system prompt"]'
-		);
-		expect(setting?.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe(
-			customization
-		);
-		expect(plugin.saveSettings).not.toHaveBeenCalled();
-	});
-
-	it("stores and resets Cue and Study review customizations independently", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		const cueCustomization = "  Emphasize mechanisms.\nKeep spacing.  ";
-		const reviewCustomization = "  Compare sections.\nKeep spacing.  ";
-
-		tab.display();
-		openSettingsCard(tab, "Cue generation");
-
-		await changeTextArea(
-			tab.containerEl,
-			"Cue system prompt",
-			cueCustomization
-		);
-		await changeTextArea(
-			tab.containerEl,
-			"Note Brief system prompt",
-			reviewCustomization
-		);
-		expect(plugin.settings.cueInstructionsOverride).toBe(cueCustomization);
-		expect(plugin.settings.noteBriefInstructionsOverride).toBe(reviewCustomization);
-
-		await clickSettingButton(
-			tab.containerEl,
-			"Cue system prompt",
-			"Reset to default"
-		);
-		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.noteBriefInstructionsOverride).toBe(reviewCustomization);
-
-		await clickSettingButton(
-			tab.containerEl,
-			"Note Brief system prompt",
-			"Reset to default"
-		);
-		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.noteBriefInstructionsOverride).toBe("");
+		expect(plugin.settings).toMatchObject({
+			showNoteBrief: false,
+			showSummary: false,
+			showQuestion: false,
+			showTerms: false,
+		});
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(4);
-		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(4);
+		for (const call of plugin.saveSettings.mock.calls) {
+			expect(call).toEqual([{ refreshReviewSurfaces: false }]);
+		}
+		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(4);
+		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledTimes(4);
+		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
 	});
 
-	it("clears each override when its input is blank or restored to its built-in policy", async () => {
+	it("keeps Cue display Editing-only and cue font size shared", async () => {
 		const { tab, plugin } = await setupSettingsTab();
-
 		tab.display();
-		openSettingsCard(tab, "Cue generation");
 
-		await changeTextArea(
-			tab.containerEl,
-			"Cue system prompt",
-			"Emphasize mechanisms."
-		);
-		await changeTextArea(
-			tab.containerEl,
-			"Cue system prompt",
-			DEFAULT_CUE_INSTRUCTIONS
-		);
-		await changeTextArea(
-			tab.containerEl,
-			"Note Brief system prompt",
-			"   \n   "
-		);
+		expect(settingText(tab.containerEl)).toContain("Changes Section cue layout in Editing only; Reading remains inline.");
+		expect(settingText(tab.containerEl)).toContain("Applies in Editing and Reading.");
+		await clickThumbnail(tab.containerEl, "Cue display", "cornell");
+		expect(plugin.saveSettings).toHaveBeenLastCalledWith({
+			refreshReviewSurfaces: false,
+		});
+		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
+		expect(plugin.refreshReadingModeSurface).not.toHaveBeenCalled();
 
-		expect(plugin.settings.cueInstructionsOverride).toBe("");
-		expect(plugin.settings.noteBriefInstructionsOverride).toBe("");
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(3);
-		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(3);
+		await clickThumbnail(tab.containerEl, "Cue font size", "large");
+		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
+		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledTimes(1);
+		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
 	});
 
-	it("serializes a cross-control reset and marks it dirty before persistence", async () => {
+	it("shows one Question type control and exact read-only Advanced templates", async () => {
 		const { tab, plugin } = await setupSettingsTab();
-		let finishFirstSave: (() => void) | undefined;
-		plugin.settings.noteBriefInstructionsOverride = "Compare sections.";
-		plugin.saveSettings.mockImplementationOnce(
-			() =>
-				new Promise<void>((resolve) => {
-					finishFirstSave = resolve;
-				})
-		);
-
 		tab.display();
-		openSettingsCard(tab, "Cue generation");
+		openSettingsCard(tab, "Cue Generation");
 
-		const change = changeTextArea(
-			tab.containerEl,
-			"Cue system prompt",
-			"Emphasize mechanisms."
+		const text = settingText(tab.containerEl);
+		expect(text).toContain("Question type");
+		expect(text).toContain("Auto-generate on save");
+		expect(text).not.toContain("Cue preset");
+		expect(text).not.toContain("Cue density");
+		expect(text).not.toContain("Question style");
+		expect(text).not.toContain("Generate cue supports");
+		expect(text).not.toContain("system prompt");
+		const select = tab.containerEl.querySelector<HTMLSelectElement>(
+			'[data-setting-name="Question type"] select'
 		);
-		await vi.waitFor(() => expect(plugin.saveSettings).toHaveBeenCalledTimes(1));
-
-		const reviewReset = clickSettingButton(
-			tab.containerEl,
-			"Note Brief system prompt",
-			"Reset to default"
+		expect([...select!.options].map((option) => option.textContent)).toEqual(
+			QUESTION_TYPES.map((type) => type.label)
 		);
-		await Promise.resolve();
-		expect(plugin.settings.noteBriefInstructionsOverride).toBe("");
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(2);
 
-		finishFirstSave?.();
-		await change;
-		await reviewReset;
-
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
+		const advanced = tab.containerEl.querySelector<HTMLDetailsElement>(
+			".cuecraft-generation-advanced"
+		)!;
+		const disclosure = advanced.querySelector("summary")!;
+		expect(advanced.open).toBe(false);
+		expect(disclosure.getAttribute("aria-expanded")).toBe("false");
+		expect(disclosure.getAttribute("aria-controls")).toBe(
+			"cuecraft-generation-instructions"
+		);
+		const section = advanced.querySelector<HTMLTextAreaElement>(
+			'textarea[aria-label="Section cue instructions"]'
+		)!;
+		const brief = advanced.querySelector<HTMLTextAreaElement>(
+			'textarea[aria-label="Note Brief instructions"]'
+		)!;
+		expect(section.readOnly).toBe(true);
+		expect(brief.readOnly).toBe(true);
+		expect(section.value).toBe(
+			buildSectionCueInstructionsTemplate(plugin.settings.questionType, "single")
+		);
+		expect(brief.value).toBe(buildNoteBriefInstructionsTemplate());
+		expect(section.value).toContain("{{section_content}}");
+		expect(brief.value).toContain("{{full_note_source}}");
+		advanced.open = true;
+		advanced.dispatchEvent(new window.Event("toggle"));
+		expect(disclosure.getAttribute("aria-expanded")).toBe("true");
+		expect(plugin.saveSettings).not.toHaveBeenCalled();
+		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
 	});
 
-	it("marks instruction changes before an unresolved save so close can hand off regeneration", async () => {
+	it("uses the selected provider route in Section cue instructions", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.byok.selectedProvider = "codex-cli";
+		tab.display();
+		openSettingsCard(tab, "Cue Generation");
+
+		const section = tab.containerEl.querySelector<HTMLTextAreaElement>(
+			'textarea[aria-label="Section cue instructions"]'
+		)!;
+		expect(section.value).toBe(
+			buildSectionCueInstructionsTemplate(plugin.settings.questionType, "batch")
+		);
+		expect(section.value).toContain("{{section_list}}");
+	});
+
+	it("updates Question type explanation and template before save completes", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		let finishSave: (() => void) | undefined;
 		plugin.saveSettings.mockImplementationOnce(
-			() =>
-				new Promise<void>((resolve) => {
-					finishSave = resolve;
-				})
+			() => new Promise<void>((resolve) => { finishSave = resolve; })
 		);
-
 		tab.display();
-		openSettingsCard(tab, "Cue generation");
-		const change = changeTextArea(
-			tab.containerEl,
-			"Cue system prompt",
-			"Emphasize mechanisms."
-		);
-		await vi.waitFor(() => expect(plugin.saveSettings).toHaveBeenCalledTimes(1));
+		openSettingsCard(tab, "Cue Generation");
 
+		const change = changeDropdown(tab.containerEl, "Question type", "exam-practice");
+		await vi.waitFor(() => expect(plugin.saveSettings).toHaveBeenCalledTimes(1));
 		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
-		tab.hide();
-		expect(plugin.promptForCueSettingsRegeneration).toHaveBeenCalledTimes(1);
+		expect(settingText(tab.containerEl)).toContain("Uses precise wording similar to an exam prompt.");
+		expect(settingText(tab.containerEl)).not.toContain(
+			"newly generated or regenerated Questions only"
+		);
+		expect(settingText(tab.containerEl)).toContain(
+			"Cues will change after regeneration."
+		);
+		expect(
+			tab.containerEl.querySelector<HTMLTextAreaElement>(
+				'textarea[aria-label="Section cue instructions"]'
+			)?.value
+		).toBe(buildSectionCueInstructionsTemplate("exam-practice", "single"));
 
 		finishSave?.();
 		await change;
-	});
-
-	it("shows Editing View controls for the current editor cue display", async () => {
-		const { tab } = await setupSettingsTab();
-
-		tab.display();
-		openSettingsCard(tab, "Editing View");
-
-		const text = settingText(tab.containerEl);
-		expect(text).toContain("Editor cue display");
-		expect(text).not.toContain("Rail card background");
-		expect(text).not.toContain("Cue column width");
-		expect(text).toContain("Cue font size");
-		expect(text).toContain("Cue sections");
-		expect(text).toContain("Summary");
-		expect(text).toContain("Question");
-		expect(text).toContain("Terms");
-		expect(text).toContain("At least one is required");
-		expect(text).not.toContain("Show cue questions");
-		expect(text).not.toContain("Show support terms");
-		expect(text).not.toContain("Cornell display mode");
-		expect(text).not.toContain("Cornell view style");
-		expect(text).not.toContain("Cue accent color");
-	});
-
-	it("keeps cross-view review controls in Note format", async () => {
-		const { tab } = await setupSettingsTab();
-
-		tab.display();
-
-		const text = settingText(tab.containerEl);
-		expect(text).toContain("Note format");
-		expect(text).toContain("Show CueCraft in Reading mode");
-		expect(text).not.toContain("Reading mode display");
-		expect(text).toContain("Show summaries in Reading mode");
-		expect(text).toContain("Show Note Brief");
-		expect(text).not.toContain("Show cue questions");
-		expect(text).not.toContain("Show support terms");
-	});
-
-	it("marks cue content dirty when enabling Note Brief", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.showNoteBrief = false;
-
-		tab.display();
-		await changeToggle(tab.containerEl, "Show Note Brief", true);
-
-		expect(plugin.settings.showNoteBrief).toBe(true);
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledTimes(1);
-	});
-
-	it("keeps at least one compact Editing View cue section selected", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-
-		tab.display();
-		openSettingsCard(tab, "Editing View");
-		const group = tab.containerEl.querySelector<HTMLElement>(
-			'[data-setting-name="Cue sections"] .setting-item-control'
-		);
-		expect(group?.getAttribute("role")).toBe("group");
-		expect(group?.getAttribute("aria-label")).toBe("Cue sections");
-
-		await changeCueSection(tab.containerEl, "summary", false);
-		await changeCueSection(tab.containerEl, "question", false);
-
-		expect(plugin.settings.showRailSummary).toBe(false);
-		expect(plugin.settings.showRailQuestions).toBe(false);
-		expect(plugin.settings.showRailSupportTerms).toBe(true);
-		const terms = tab.containerEl.querySelector<HTMLInputElement>(
-			'[data-cue-section="terms"]'
-		);
-		expect(terms?.checked).toBe(true);
-		expect(terms?.disabled).toBe(true);
-		expect(terms?.title).toBe("At least one cue section is required.");
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(2);
-		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
-	});
-
-	it("refreshes editor cues for Editing View display thumbnails", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.editorCueDisplay = "inline-cues";
-
-		tab.display();
-		openSettingsCard(tab, "Editing View");
-		await clickThumbnail(
-			tab.containerEl,
-			"Editor cue display",
-			"cornell"
-		);
-
-		expect(plugin.settings.editorCueDisplay).toBe("cornell");
-		expect(settingText(tab.containerEl)).not.toContain("Rail card background");
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
-	});
-
-	it("keeps a dragged width when the Editing View font changes", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.editorCueCustomWidthPx = 240;
-
-		tab.display();
-		openSettingsCard(tab, "Editing View");
-		await clickThumbnail(tab.containerEl, "Cue font size", "large");
-
-		expect(plugin.settings.editorCueCustomWidthPx).toBe(240);
-		expect(plugin.settings.cueFontSize).toBe("large");
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
 	});
 });

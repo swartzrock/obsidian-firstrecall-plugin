@@ -14,13 +14,10 @@ import {
 	type CueFontSize,
 } from "./cornell-layout";
 import {
-	CUE_DENSITIES,
-	DEFAULT_CUE_DENSITY,
-	DEFAULT_QUESTION_STYLE,
-	QUESTION_STYLES,
-	cueDensityLabel,
-	type CueDensity,
-	type QuestionStyle,
+	DEFAULT_QUESTION_TYPE,
+	QUESTION_TYPES,
+	questionTypeInfo,
+	type QuestionType,
 } from "./cue-generation";
 import {
 	cueFontSizeThumbnailOptions,
@@ -34,7 +31,6 @@ import {
 	editorCueDisplayOption,
 	type EditorCueDisplay,
 } from "./editor-cue-display";
-import { editingViewSettingsSummary } from "./settings-summaries";
 import {
 	ByokProvider,
 	isByokProviderId,
@@ -105,20 +101,11 @@ import {
 	normalizeAutoGenerationSettleDelaySeconds,
 	type AutoGenerationSettleDelaySeconds,
 } from "./auto-generation-delay";
+import { DEFAULT_SHOW_NOTE_BRIEF } from "./review-surfaces";
 import {
-	DEFAULT_SHOW_NOTE_BRIEF,
-	DEFAULT_SHOW_SECTION_LENS,
-} from "./review-surfaces";
-import {
-	DEFAULT_CUE_INSTRUCTIONS,
-	normalizeCueInstructionsOverride,
-	resolveCueInstructions,
+	buildSectionCueInstructionsTemplate,
 } from "./cue-instructions";
-import {
-	DEFAULT_NOTE_BRIEF_INSTRUCTIONS,
-	normalizeNoteBriefInstructionsOverride,
-	resolveNoteBriefInstructions,
-} from "./note-brief-instructions";
+import { buildNoteBriefInstructionsTemplate } from "./review-artifact-prompts";
 
 /**
  * CueCraft supports a local provider (Ollama), local CLI providers, and several
@@ -126,13 +113,11 @@ import {
  * cloud provider keeps its own API key + model id; only the selected provider's
  * fields are surfaced.
  */
-export type CuePreset = "conceptual" | "exam-prep" | "vocabulary" | "minimal";
 export type StudyHideMode = "blur" | "collapse";
 type SettingsSubpage =
 	| "home"
 	| "ai-model"
-	| "cue-generation"
-	| "editing-view";
+	| "cue-generation";
 type CueCraftSettingsSubpage =
 	| SettingsSubpage
 	| "study-areas";
@@ -152,7 +137,7 @@ const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 
 export interface CueCraftSettings {
 	byok: ByokStoredSettings;
-	cuePreset: CuePreset;
+	questionType: QuestionType;
 	studyHideMode: StudyHideMode;
 	editorCueDisplay: EditorCueDisplay;
 	editorCueCustomWidthPx: number | null;
@@ -161,17 +146,10 @@ export interface CueCraftSettings {
 	autoGenerationSettleDelaySeconds: AutoGenerationSettleDelaySeconds;
 	studyAreas: StudyArea[];
 	sectionConcurrency: number;
-	cueDensity: CueDensity;
-	questionStyle: QuestionStyle;
-	generateKeywords: boolean;
-	cueInstructionsOverride: string;
-	noteBriefInstructionsOverride: string;
-	showSectionLens: boolean;
 	showNoteBrief: boolean;
-	showRailSummary: boolean;
-	showRailQuestions: boolean;
-	showRailSupportTerms: boolean;
-	renderInReadingMode: boolean;
+	showSummary: boolean;
+	showQuestion: boolean;
+	showTerms: boolean;
 }
 
 export const DEFAULT_SETTINGS: CueCraftSettings = {
@@ -217,7 +195,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 		},
 		verification: {},
 	},
-	cuePreset: "conceptual",
+	questionType: DEFAULT_QUESTION_TYPE,
 	studyHideMode: "blur",
 	editorCueDisplay: DEFAULT_EDITOR_CUE_DISPLAY,
 	editorCueCustomWidthPx: null,
@@ -227,36 +205,19 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 		DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
 	studyAreas: DEFAULT_STUDY_AREAS,
 	sectionConcurrency: 5,
-	cueDensity: DEFAULT_CUE_DENSITY,
-	questionStyle: DEFAULT_QUESTION_STYLE,
-	generateKeywords: true,
-	cueInstructionsOverride: "",
-	noteBriefInstructionsOverride: "",
-	showSectionLens: DEFAULT_SHOW_SECTION_LENS,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
-	showRailSummary: true,
-	showRailQuestions: true,
-	showRailSupportTerms: true,
-	renderInReadingMode: true,
+	showSummary: true,
+	showQuestion: true,
+	showTerms: true,
 };
 
 export class CueCraftSettingTab extends PluginSettingTab {
 	private plugin: CueCraftPlugin;
 	private currentSubpage: CueCraftSettingsSubpage = "home";
-	private instructionPersistenceQueue: Promise<void> = Promise.resolve();
 
 	constructor(app: App, plugin: CueCraftPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
-	}
-
-	private persistInstructions(): Promise<void> {
-		this.plugin.noteCueSettingsChanged();
-		const save = this.instructionPersistenceQueue.then(() =>
-			this.plugin.saveSettings()
-		);
-		this.instructionPersistenceQueue = save.catch(() => undefined);
-		return save;
 	}
 
 	display(): void {
@@ -276,17 +237,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderSubpageHeader(
 					containerEl,
 					"Cue Generation",
-					"Question style, density, prompts, and auto-generation behavior."
+					"Choose how Questions are written and when CueCraft creates Section cues and Note Brief."
 				);
 				this.renderCueGenerationSection(containerEl, false);
-				break;
-			case "editing-view":
-				this.renderSubpageHeader(
-					containerEl,
-					"Editing View",
-					"Tune the editor cue rail as CueCraft's likely main review surface."
-				);
-				this.renderEditingViewSection(containerEl, false);
 				break;
 			case "study-areas":
 				this.renderSubpageHeader(
@@ -329,19 +282,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			onOpen: () => this.openSubpage("study-areas"),
 		});
 		this.renderSettingsNavCard(navEl, {
-			title: "Cue generation",
-			description: "Control cue style, density, keywords, summaries, and save-time generation.",
+			title: "Cue Generation",
+			description: "Choose the Question type and automatic generation behavior.",
 			summary: this.cueGenerationSummary(),
 			onOpen: () => this.openSubpage("cue-generation"),
 		});
-		this.renderSettingsNavCard(navEl, {
-			title: "Editing View",
-			description: "Tune the editor cue rail and card details for the main study surface.",
-			summary: this.editingViewSummary(),
-			onOpen: () => this.openSubpage("editing-view"),
-		});
 
-		this.renderNoteFormatSection(containerEl, true);
+		this.renderArtifactVisibilitySection(containerEl);
+		this.renderAppearanceSection(containerEl);
 		this.renderStudySection(containerEl, true);
 	}
 
@@ -445,13 +393,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private cueGenerationSummary(): string {
-		return `${this.plugin.settings.cuePreset} preset · ${cueDensityLabel(
-			this.plugin.settings.cueDensity
-		)} density · ${this.plugin.settings.questionStyle} questions`;
-	}
-
-	private editingViewSummary(): string {
-		return editingViewSettingsSummary(this.plugin.settings);
+		return `${questionTypeInfo(this.plugin.settings.questionType).label} · ${
+			this.plugin.settings.autoGenerateOnSave
+				? "automatic generation on"
+				: "automatic generation off"
+		}`;
 	}
 
 	private studyAreasSummary(): string {
@@ -753,144 +699,34 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			new Setting(containerEl).setName("Cue generation").setHeading();
 		}
 
-		new Setting(containerEl)
-			.setName("Cue preset")
-			.setDesc("Controls the style of generated questions.")
-			.addDropdown((dd) =>
-				dd
-					.addOption("conceptual", "Conceptual")
-					.addOption("exam-prep", "Exam prep")
-					.addOption("vocabulary", "Vocabulary-heavy")
-					.addOption("minimal", "Minimal")
-					.setValue(this.plugin.settings.cuePreset)
-					.onChange(async (value) => {
-						this.plugin.settings.cuePreset = value as CuePreset;
-						await this.plugin.saveSettings();
-						this.plugin.noteCueSettingsChanged();
-					})
-			);
-
-		const densityDesc = (): string =>
-			`How detailed each section's recall cue should be \u2014 ${cueDensityLabel(
-				this.plugin.settings.cueDensity
-			)}.`;
-		const densitySetting = new Setting(containerEl)
-			.setName("Cue density")
-			.addSlider((sl) =>
-				sl
-					.setLimits(
-						CUE_DENSITIES[0].value,
-						CUE_DENSITIES[CUE_DENSITIES.length - 1].value,
-						1
-					)
-					.setValue(this.plugin.settings.cueDensity)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						this.plugin.settings.cueDensity = value as CueDensity;
-						await this.plugin.saveSettings();
-						densitySetting.setDesc(densityDesc());
-						this.plugin.noteCueSettingsChanged();
-					})
-			);
-		densitySetting.setDesc(densityDesc());
-
-		new Setting(containerEl)
-			.setName("Question style")
-			.setDesc("Tone of the generated questions.")
-			.addDropdown((dd) => {
-				for (const q of QUESTION_STYLES) dd.addOption(q.id, q.label);
-				dd.setValue(this.plugin.settings.questionStyle).onChange(
-					async (value) => {
-						this.plugin.settings.questionStyle =
-							value as QuestionStyle;
-						await this.plugin.saveSettings();
-						this.plugin.noteCueSettingsChanged();
+		const questionTypeDescription = (): string => {
+			const selected = questionTypeInfo(this.plugin.settings.questionType);
+			return `${selected.description} Cues will change after regeneration.`;
+		};
+		const questionTypeSetting = new Setting(containerEl)
+			.setName("Question type")
+			.setDesc(questionTypeDescription());
+		let sectionInstructions: HTMLTextAreaElement | undefined;
+		questionTypeSetting.addDropdown((dropdown) => {
+			for (const option of QUESTION_TYPES) {
+				dropdown.addOption(option.id, option.label);
+			}
+			dropdown
+				.setValue(this.plugin.settings.questionType)
+				.onChange(async (value) => {
+					this.plugin.settings.questionType = value as QuestionType;
+					questionTypeSetting.setDesc(questionTypeDescription());
+					if (sectionInstructions) {
+						sectionInstructions.value = this.sectionCueInstructionsTemplate();
 					}
-				);
-			});
-
-		new Setting(containerEl)
-			.setName("Generate cue supports")
-			.setDesc("Add short evidence terms beneath each cue question.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.generateKeywords)
-					.onChange(async (value) => {
-						this.plugin.settings.generateKeywords = value;
-						await this.plugin.saveSettings();
-						this.plugin.noteCueSettingsChanged();
-					})
-			);
-
-		const cueInstructionsSetting = new Setting(containerEl)
-			.setName("Cue system prompt")
-			.setDesc(
-				"Controls the content, emphasis, tone, wording, and teaching style of section cues. CueCraft still requires valid Cue and Section Lens fields. Reset to follow future default improvements."
-			);
-		cueInstructionsSetting.addTextArea((textArea) => {
-			textArea
-				.setValue(
-					resolveCueInstructions(
-						this.plugin.settings.cueInstructionsOverride
-					)
-				)
-				.onChange(async (value) => {
-					this.plugin.settings.cueInstructionsOverride =
-						normalizeCueInstructionsOverride(value);
-					await this.persistInstructions();
+					this.plugin.noteCueSettingsChanged();
+					await this.plugin.saveSettings();
 				});
-			textArea.inputEl.rows = 8;
-			textArea.inputEl.addClass("cuecraft-instructions-input");
-			textArea.inputEl.setAttr("aria-label", "Cue system prompt");
-
-			cueInstructionsSetting.addButton((button) =>
-				button.setButtonText("Reset to default").onClick(async () => {
-					this.plugin.settings.cueInstructionsOverride = "";
-					textArea.setValue(DEFAULT_CUE_INSTRUCTIONS);
-					await this.persistInstructions();
-				})
-			);
 		});
-		cueInstructionsSetting.settingEl.addClass(
-			"cuecraft-instructions-setting"
-		);
-
-		const noteBriefInstructionsSetting = new Setting(containerEl)
-			.setName("Note Brief system prompt")
-			.setDesc(
-				"Controls the content, emphasis, tone, wording, and teaching style of Note Brief. CueCraft still requires valid Note Brief fields. Reset to follow future default improvements."
-			);
-		noteBriefInstructionsSetting.addTextArea((textArea) => {
-			textArea
-				.setValue(
-					resolveNoteBriefInstructions(
-						this.plugin.settings.noteBriefInstructionsOverride
-					)
-				)
-				.onChange(async (value) => {
-					this.plugin.settings.noteBriefInstructionsOverride =
-						normalizeNoteBriefInstructionsOverride(value);
-					await this.persistInstructions();
-				});
-			textArea.inputEl.rows = 8;
-			textArea.inputEl.addClass("cuecraft-instructions-input");
-			textArea.inputEl.setAttr("aria-label", "Note Brief system prompt");
-
-			noteBriefInstructionsSetting.addButton((button) =>
-				button.setButtonText("Reset to default").onClick(async () => {
-					this.plugin.settings.noteBriefInstructionsOverride = "";
-					textArea.setValue(DEFAULT_NOTE_BRIEF_INSTRUCTIONS);
-					await this.persistInstructions();
-				})
-			);
-		});
-		noteBriefInstructionsSetting.settingEl.addClass(
-			"cuecraft-instructions-setting"
-		);
 
 		new Setting(containerEl)
 			.setName("Auto-generate on save")
-			.setDesc("Draft cues and review artifacts automatically whenever a note is saved.")
+			.setDesc("Generate Section cues and Note Brief automatically after a note is saved.")
 			.addToggle((tg) =>
 				tg
 					.setValue(this.plugin.settings.autoGenerateOnSave)
@@ -903,7 +739,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Auto-generation delay")
 			.setDesc(
-				"Wait this long after you stop typing before CueCraft auto-generates cues. Longer delays reduce repeated API calls."
+				"Wait this long after you stop typing before CueCraft generates Section cues and Note Brief. Longer delays reduce repeated provider requests."
 			)
 			.addDropdown((dropdown) => {
 				for (const seconds of AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS) {
@@ -922,6 +758,58 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
+
+		const advanced = containerEl.createEl("details", {
+			cls: "cuecraft-generation-advanced",
+		});
+		const summary = advanced.createEl("summary", { text: "Advanced" });
+		summary.setAttr("aria-controls", "cuecraft-generation-instructions");
+		summary.setAttr("aria-expanded", "false");
+		const content = advanced.createDiv({
+			cls: "cuecraft-generation-instructions",
+			attr: { id: "cuecraft-generation-instructions" },
+		});
+		this.plugin.registerDomEvent(advanced, "toggle", () => {
+			summary.setAttr("aria-expanded", String(advanced.open));
+		});
+
+		sectionInstructions = this.renderInstructionTemplate(
+			content,
+			"Section cue instructions",
+			this.sectionCueInstructionsTemplate()
+		);
+		this.renderInstructionTemplate(
+			content,
+			"Note Brief instructions",
+			buildNoteBriefInstructionsTemplate()
+		);
+	}
+
+	private sectionCueInstructionsTemplate(): string {
+		const provider = cueCraftSelectedProvider(this.plugin.settings);
+		return buildSectionCueInstructionsTemplate(
+			this.plugin.settings.questionType,
+			isCueCraftLocalCliProvider(provider) ? "batch" : "single"
+		);
+	}
+
+	private renderInstructionTemplate(
+		containerEl: HTMLElement,
+		title: string,
+		value: string
+	): HTMLTextAreaElement {
+		const setting = new Setting(containerEl).setName(title);
+		setting.settingEl.addClass("cuecraft-instructions-setting");
+		let input!: HTMLTextAreaElement;
+		setting.addTextArea((textArea) => {
+			textArea.setValue(value);
+			input = textArea.inputEl;
+			input.readOnly = true;
+			input.rows = 12;
+			input.addClass("cuecraft-instructions-input");
+			input.setAttr("aria-label", title);
+		});
+		return input;
 	}
 
 	// ── Study areas ───────────────────────────────────────────────────────
@@ -1179,54 +1067,84 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	// ── Note format ───────────────────────────────────────────────────────
-	private renderNoteFormatSection(
-		containerEl: HTMLElement,
-		showHeading: boolean
-	): void {
-		if (showHeading) {
-			new Setting(containerEl).setName("Note format").setHeading();
-		}
+	private renderArtifactVisibilitySection(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Study aids").setHeading();
+		const noteBriefCard = this.createArtifactCard(
+			containerEl,
+			"Note Brief",
+			"A whole-note overview with fixed Core idea, Review first, and Self-test cards."
+		);
 
-		new Setting(containerEl)
-			.setName("Show CueCraft in Reading mode")
-			.setDesc("Show a lightweight study surface when viewing notes in Reading mode.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.renderInReadingMode)
-					.onChange(async (value) => {
-						this.plugin.settings.renderInReadingMode = value;
-						await this.plugin.saveSettings();
-						this.plugin.refreshReadingModeSurface();
-					})
-			);
-
-		new Setting(containerEl)
-			.setName("Show summaries in Reading mode")
-			.setDesc("Show each section's generated summary in Reading mode.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.showSectionLens)
-					.onChange(async (value) => {
-						this.plugin.settings.showSectionLens = value;
-						await this.plugin.saveSettings();
-						this.plugin.refreshReadingModeSurface();
-					})
-			);
-
-		new Setting(containerEl)
+		new Setting(noteBriefCard)
 			.setName("Show Note Brief")
-			.setDesc("Show the generated whole-note brief when review surfaces support it.")
-			.addToggle((tg) =>
-				tg
+			.setDesc("Show the whole-note Note Brief in Editing and Reading.")
+			.addToggle((tg) => {
+				tg.toggleEl.setAttribute("aria-label", "Show Note Brief");
+				return tg
 					.setValue(this.plugin.settings.showNoteBrief)
 					.onChange(async (value) => {
 						this.plugin.settings.showNoteBrief = value;
-						await this.plugin.saveSettings();
-						if (value) this.plugin.noteCueSettingsChanged();
+						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
-					})
-			);
+					});
+			});
+		const cueCard = this.createArtifactCard(
+			containerEl,
+			"Section cue",
+			"Choose which parts of each Section cue appear in Editing and Reading."
+		);
 
+		new Setting(cueCard)
+			.setName("Show Summary")
+			.addToggle((tg) => {
+				tg.toggleEl.setAttribute("aria-label", "Show Summary");
+				return tg
+					.setValue(this.plugin.settings.showSummary)
+					.onChange(async (value) => {
+						this.plugin.settings.showSummary = value;
+						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
+						this.refreshReviewSurfaces();
+					});
+			});
+
+		new Setting(cueCard)
+			.setName("Show Question")
+			.addToggle((tg) => {
+				tg.toggleEl.setAttribute("aria-label", "Show Question");
+				return tg
+					.setValue(this.plugin.settings.showQuestion)
+					.onChange(async (value) => {
+						this.plugin.settings.showQuestion = value;
+						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
+						this.refreshReviewSurfaces();
+					});
+			});
+		new Setting(cueCard)
+			.setName("Show Terms")
+			.addToggle((tg) => {
+				tg.toggleEl.setAttribute("aria-label", "Show Terms");
+				return tg
+					.setValue(this.plugin.settings.showTerms)
+					.onChange(async (value) => {
+						this.plugin.settings.showTerms = value;
+						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
+						this.refreshReviewSurfaces();
+					});
+			});
+	}
+
+	private createArtifactCard(
+		containerEl: HTMLElement,
+		title: string,
+		description: string
+	): HTMLElement {
+		const card = containerEl.createDiv({
+			cls: "cuecraft-settings-artifact-card",
+			attr: { role: "group", "aria-label": title },
+		});
+		card.createDiv({ cls: "cuecraft-settings-artifact-title", text: title });
+		card.createDiv({ cls: "cuecraft-settings-artifact-preview", text: description });
+		return card;
 	}
 
 	private refreshReviewSurfaces(): void {
@@ -1234,20 +1152,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.plugin.refreshReadingModeSurface();
 	}
 
-	// ── Editing View ──────────────────────────────────────────────────────
-	private renderEditingViewSection(
-		containerEl: HTMLElement,
-		showHeading: boolean
-	): void {
-		if (showHeading) {
-			new Setting(containerEl).setName("Editing View").setHeading();
-		}
+	// ── Appearance ──────────────────────────────────────────────────────
+	private renderAppearanceSection(containerEl: HTMLElement): void {
+		new Setting(containerEl).setName("Appearance").setHeading();
 
 		const editorDisplayDesc = (): string =>
 			editorCueDisplayOption(this.plugin.settings.editorCueDisplay).description;
-		this.renderEditingViewThumbnailSetting<EditorCueDisplay>(containerEl, {
-			name: "Editor cue display",
-			description: editorDisplayDesc,
+		this.renderAppearanceThumbnailSetting<EditorCueDisplay>(containerEl, {
+			name: "Cue display",
+			description: () => `${editorDisplayDesc()} Changes Section cue layout in Editing only; Reading remains inline.`,
 			options: editorCueDisplayThumbnailOptions(),
 			value: () => this.plugin.settings.editorCueDisplay,
 			setValue: (value) => {
@@ -1255,86 +1168,26 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			},
 			afterSave: () => this.display(),
 			className: "cuecraft-thumbnail-group-editor-display",
+			refreshReading: false,
 		});
 
 		const editorFontDesc = (): string =>
 			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
-				?.description ?? "Font size of editor cue text.";
-		this.renderEditingViewThumbnailSetting<CueFontSize>(containerEl, {
+				?.description ?? "Font size of cue text.";
+		this.renderAppearanceThumbnailSetting<CueFontSize>(containerEl, {
 			name: "Cue font size",
-			description: editorFontDesc,
+			description: () => `${editorFontDesc()} Applies in Editing and Reading.`,
 			options: cueFontSizeThumbnailOptions(),
 			value: () => this.plugin.settings.cueFontSize,
 			setValue: (value) => {
 				this.plugin.settings.cueFontSize = value;
 			},
 			className: "cuecraft-thumbnail-group-cue-font",
+			refreshReading: true,
 		});
-
-		this.renderEditingCueSectionsSetting(containerEl);
 	}
 
-	private renderEditingCueSectionsSetting(containerEl: HTMLElement): void {
-		const setting = new Setting(containerEl)
-			.setName("Cue sections")
-			.setDesc(
-				"Choose what appears in Editing View cues. At least one is required."
-			);
-		setting.settingEl.addClass("cuecraft-cue-sections-setting");
-		setting.controlEl.setAttribute("role", "group");
-		setting.controlEl.setAttribute("aria-label", "Cue sections");
-
-		const options = [
-			{ id: "summary", label: "Summary", key: "showRailSummary" },
-			{ id: "question", label: "Question", key: "showRailQuestions" },
-			{ id: "terms", label: "Terms", key: "showRailSupportTerms" },
-		] as const;
-		const inputs = new Map<(typeof options)[number]["id"], HTMLInputElement>();
-
-		const syncRequiredState = (): void => {
-			const selected = options.filter(
-				(option) => inputs.get(option.id)?.checked
-			);
-			const requiredId = selected.length === 1 ? selected[0]?.id : undefined;
-			for (const option of options) {
-				const input = inputs.get(option.id);
-				if (!input) continue;
-				const isRequired = option.id === requiredId;
-				input.disabled = isRequired;
-				input.title = isRequired
-					? "At least one cue section is required."
-					: "";
-				input.parentElement?.classList.toggle("is-required", isRequired);
-			}
-		};
-
-		for (const option of options) {
-			const label = setting.controlEl.createEl("label", {
-				cls: "cuecraft-cue-section-option",
-			});
-			const input = label.createEl("input", {
-				attr: { type: "checkbox" },
-			}) as HTMLInputElement;
-			input.dataset.cueSection = option.id;
-			input.checked = this.plugin.settings[option.key];
-			label.createSpan({ text: option.label });
-			inputs.set(option.id, input);
-			this.plugin.registerDomEvent(input, "change", async () => {
-				this.plugin.settings[option.key] = input.checked;
-				syncRequiredState();
-				await this.saveEditingViewChange();
-			});
-		}
-		syncRequiredState();
-	}
-
-	private async saveEditingViewChange(afterSave?: () => void): Promise<void> {
-		await this.plugin.saveSettings();
-		this.plugin.refreshEditorCues();
-		afterSave?.();
-	}
-
-	private renderEditingViewThumbnailSetting<T extends string>(
+	private renderAppearanceThumbnailSetting<T extends string>(
 		containerEl: HTMLElement,
 		config: {
 			name: string;
@@ -1344,11 +1197,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			setValue: (value: T) => void;
 			afterSave?: () => void;
 			className?: string;
+			refreshReading: boolean;
 		}
 	): void {
-		this.renderCueThumbnailSetting(containerEl, config, (afterSave) =>
-			this.saveEditingViewChange(afterSave)
-		);
+		this.renderCueThumbnailSetting(containerEl, config, async (afterSave) => {
+			await this.plugin.saveSettings({ refreshReviewSurfaces: false });
+			this.plugin.refreshEditorCues();
+			if (config.refreshReading) this.plugin.refreshReadingModeSurface();
+			afterSave?.();
+		});
 	}
 
 	private renderCueThumbnailSetting<T extends string>(

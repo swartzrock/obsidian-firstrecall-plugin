@@ -13,8 +13,7 @@ export interface CueCraftCueInput {
 	heading: string;
 	content: string;
 	noteContext?: string;
-	preset: string;
-	options?: Partial<CueGenerationOptions>;
+	options: CueGenerationOptions;
 }
 
 export interface CueCraftCueBatchResult {

@@ -17,6 +17,7 @@ import {
 	DEFAULT_SETTINGS,
 } from "./settings";
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
+import { cueFontSizeClass } from "./cornell-layout";
 import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import {
 	normalizeAutoGenerationSettleDelaySeconds,
@@ -27,7 +28,7 @@ import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
 	generateNote,
 	generateNoteBriefForSections,
-	generateSectionCue,
+	generateSectionCueBatch,
 	type SectionResult,
 } from "./generator";
 import {
@@ -81,6 +82,7 @@ import {
 	removeReadingStudyControls,
 	restoreReadingStudyBlock,
 	syncReadingStudyControls,
+	type ReadingCueVisibility,
 } from "./reading-cues";
 import {
 	resolveStudySections,
@@ -109,8 +111,12 @@ import {
 	loadCueSectionCollapseMap,
 	type CueSectionCollapseMap,
 } from "./cue-section-collapse";
-import type { CueGenerationOptions } from "./cue-generation";
-import { normalizeNoteBriefInstructionsOverride } from "./note-brief-instructions";
+import {
+	DEFAULT_QUESTION_TYPE,
+	isQuestionType,
+	resolveLegacyQuestionType,
+	type CueGenerationOptions,
+} from "./cue-generation";
 import { statusLabel, type CueStatus } from "./status";
 import { formatCueCraftNotice } from "./notice";
 import {
@@ -133,7 +139,6 @@ import {
 	type StudyAreaQueueItem,
 	type StudyAreaRunSummary,
 } from "./study-area";
-import { normalizeCueInstructionsOverride } from "./cue-instructions";
 
 interface PluginData {
 	settings: CueCraftSettings;
@@ -350,53 +355,71 @@ export default class CueCraftPlugin extends Plugin {
 				(settings as { autoGenerationSettleDelaySeconds?: unknown })
 					.autoGenerationSettleDelaySeconds
 			);
-		settings.cueInstructionsOverride = normalizeCueInstructionsOverride(
-			(settings as { cueInstructionsOverride?: unknown })
-				.cueInstructionsOverride
-		);
-		const hasCurrentNoteBriefOverride = Object.prototype.hasOwnProperty.call(
-			rawSettingsRecord,
-			"noteBriefInstructionsOverride"
-		);
-		const noteBriefOverrideSource = hasCurrentNoteBriefOverride
-			? rawSettingsRecord.noteBriefInstructionsOverride
-			: rawSettingsRecord.summaryInstructionsOverride;
-		settings.noteBriefInstructionsOverride =
-			normalizeNoteBriefInstructionsOverride(noteBriefOverrideSource);
-		if (
-			Object.prototype.hasOwnProperty.call(
-				rawSettingsRecord,
-				"summaryInstructionsOverride"
-			) ||
-			(hasCurrentNoteBriefOverride &&
-				settings.noteBriefInstructionsOverride !== noteBriefOverrideSource)
-		) {
-			settingsChanged = true;
+		const rawQuestionType = rawSettingsRecord.questionType;
+		if (isQuestionType(rawQuestionType)) {
+			settings.questionType = rawQuestionType;
+		} else {
+			const hasLegacyQuestionSettings = [
+				"cuePreset",
+				"cueDensity",
+				"questionStyle",
+			].some((key) =>
+				Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)
+			);
+			settings.questionType = hasLegacyQuestionSettings
+				? resolveLegacyQuestionType(rawSettingsRecord)
+				: DEFAULT_QUESTION_TYPE;
+			if (
+				Object.prototype.hasOwnProperty.call(rawSettingsRecord, "questionType")
+			) {
+				settingsChanged = true;
+			}
 		}
 		settings.editorCueCustomWidthPx = normalizeEditorCueCustomWidthPx(
 			(rawSettings as { editorCueCustomWidthPx?: unknown })
 				.editorCueCustomWidthPx
 		);
-		for (const key of [
-			"showSectionLens",
-			"showNoteBrief",
-			"showRailSummary",
-			"showRailQuestions",
-			"showRailSupportTerms",
-		] as const) {
-			if (
-				typeof (settings as unknown as Record<string, unknown>)[key] !==
-				"boolean"
-			) {
-				settings[key] = DEFAULT_SETTINGS[key];
+		const firstBoolean = (
+			keys: readonly string[],
+			fallback: boolean
+		): boolean => {
+			for (const key of keys) {
+				const value = rawSettingsRecord[key];
+				if (typeof value === "boolean") return value;
 			}
-		}
-		if (
-			!settings.showRailSummary &&
-			!settings.showRailQuestions &&
-			!settings.showRailSupportTerms
-		) {
-			settings.showRailSummary = true;
+			return fallback;
+		};
+		settings.showSummary = firstBoolean(
+			["showSummary", "showRailSummary", "showSectionLens"],
+			DEFAULT_SETTINGS.showSummary
+		);
+		settings.showQuestion = firstBoolean(
+			["showQuestion", "showRailQuestions"],
+			DEFAULT_SETTINGS.showQuestion
+		);
+		settings.showTerms = firstBoolean(
+			["showTerms", "showRailSupportTerms", "generateKeywords"],
+			DEFAULT_SETTINGS.showTerms
+		);
+		settings.showNoteBrief = firstBoolean(
+			["showNoteBrief"],
+			DEFAULT_SETTINGS.showNoteBrief
+		);
+		for (const key of [
+			"questionType",
+			"showSummary",
+			"showQuestion",
+			"showTerms",
+			"showNoteBrief",
+		] as const) {
+			if (!Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)) {
+				continue;
+			}
+			const isValid =
+				key === "questionType"
+					? isQuestionType(rawSettingsRecord[key])
+					: typeof rawSettingsRecord[key] === "boolean";
+			if (!isValid) settingsChanged = true;
 		}
 		if (
 			!isEditorCueDisplay(
@@ -406,7 +429,18 @@ export default class CueCraftPlugin extends Plugin {
 			settings.editorCueDisplay = DEFAULT_EDITOR_CUE_DISPLAY;
 		}
 		for (const key of [
+			"cuePreset",
+			"cueDensity",
+			"questionStyle",
+			"generateKeywords",
+			"cueInstructionsOverride",
+			"noteBriefInstructionsOverride",
 			"summaryInstructionsOverride",
+			"showSectionLens",
+			"showRailSummary",
+			"showRailQuestions",
+			"showRailSupportTerms",
+			"renderInReadingMode",
 			"autoSummary",
 			"cornellDisplayMode",
 			"cornellStyle",
@@ -457,11 +491,11 @@ export default class CueCraftPlugin extends Plugin {
 		await write;
 	}
 
-	async saveSettings(): Promise<void> {
+	async saveSettings(options: { refreshReviewSurfaces?: boolean } = {}): Promise<void> {
 		this.data.settings = this.settings;
 		await this.persistPluginData();
 		this.updateRibbonLabel();
-		this.refreshStudyProjections();
+		if (options.refreshReviewSurfaces !== false) this.refreshStudyProjections();
 		void this.updateStatusForFile(this.app.workspace.getActiveFile());
 	}
 
@@ -562,7 +596,9 @@ export default class CueCraftPlugin extends Plugin {
 		const cues =
 			cache && (!this.visibility.isHidden(file.path) || Boolean(study))
 				? buildCueLineData(cache, parseSections(view.editor.getValue()), {
-						showKeywords: this.settings.generateKeywords,
+						showSummary: this.settings.showSummary,
+						showQuestion: this.settings.showQuestion || Boolean(study),
+						showTerms: this.settings.showTerms,
 					})
 				: [];
 		cm.dom.dataset.cuecraftEditorDisplay = this.settings.editorCueDisplay;
@@ -585,9 +621,9 @@ export default class CueCraftPlugin extends Plugin {
 				...(study ? { study } : {}),
 				notePath: file.path,
 				collapseController: this.cueSectionCollapse,
-				showRailSummary: this.settings.showRailSummary,
-				showRailQuestions: this.settings.showRailQuestions,
-				showRailSupportTerms: this.settings.showRailSupportTerms,
+				showSummary: this.settings.showSummary,
+				showQuestion: this.settings.showQuestion,
+				showTerms: this.settings.showTerms,
 				cueFontSize: this.settings.cueFontSize,
 				editorCueWidthController: this.editorCueWidthController,
 				noteBrief:
@@ -963,11 +999,14 @@ export default class CueCraftPlugin extends Plugin {
 		});
 	}
 
-	/** Force the active Reading view to rerender its post-processed cue surface. */
+	/** Force every open Reading view to rerender its post-processed cue surface. */
 	refreshReadingModeSurface(): void {
 		this.readingCueMemo = null;
-		const active = this.app.workspace.getActiveFile();
-		if (active) this.refreshActiveReadingView(active);
+		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
+			const view = leaf.view as MarkdownView;
+			if (view.getMode() !== "preview") continue;
+			view.previewMode.rerender(true);
+		}
 	}
 
 	private refreshActiveReadingView(file: TFile): void {
@@ -1272,11 +1311,9 @@ export default class CueCraftPlugin extends Plugin {
 	 * resolved line->cue map for the current (path, source-text) to avoid
 	 * re-parsing for every heading element.
 	 */
-	private readingCueMemo: {
+	private readingCueMemo: ReadingCueVisibility & {
 		path: string;
 		text: string;
-		showKeywords: boolean;
-		showSectionLens: boolean;
 		map: Map<number, CueLineData>;
 	} | null = null;
 
@@ -1310,14 +1347,19 @@ export default class CueCraftPlugin extends Plugin {
 		const study = cache
 			? this.readingStudyProjection(path, firstInfo?.text, cache)
 			: null;
+		const cueVisibility = {
+			showSummary: this.settings.showSummary,
+			showQuestion: this.settings.showQuestion || Boolean(study?.snapshot.active),
+			showTerms: this.settings.showTerms,
+		};
 		const displayState = readingCueDisplayState({
-			renderInReadingMode: this.settings.renderInReadingMode,
 			hasCache: Boolean(cache),
 			isHidden,
 			studyActive: Boolean(study?.snapshot.active),
+			hasErrors: Boolean(cache?.sections.some((section) => section.error)),
+			visibility: cueVisibility,
 		});
 		const noteBriefState = readingNoteBriefDisplayState({
-			renderInReadingMode: this.settings.renderInReadingMode,
 			showNoteBrief: this.settings.showNoteBrief,
 			hasCache: Boolean(cache),
 			hasNoteBrief: Boolean(cache?.noteBrief),
@@ -1326,6 +1368,11 @@ export default class CueCraftPlugin extends Plugin {
 		if (!displayState.showInlineCues) {
 			for (const cue of el.querySelectorAll(".cuecraft-cue-reading")) {
 				cue.remove();
+			}
+		}
+		if (!noteBriefState.showNoteBrief) {
+			for (const noteBrief of el.querySelectorAll(".cuecraft-note-brief")) {
+				noteBrief.remove();
 			}
 		}
 		const readingContainer = this.activeReadingContainer(path, el);
@@ -1341,27 +1388,42 @@ export default class CueCraftPlugin extends Plugin {
 		if (!cache || (!displayState.showInlineCues && !noteBriefState.showNoteBrief)) {
 			return;
 		}
+		const noteBriefAnchorLine = noteBriefState.showNoteBrief
+			? buildReadingCueMap(cache, firstInfo?.text ?? "").keys().next().value
+			: undefined;
 
 		for (const heading of headings) {
 			const info = ctx.getSectionInfo(heading);
 			if (!info) continue;
-			const map = this.readingMapFor(path, info.text, cache);
+			const map = this.readingMapFor(path, info.text, cache, cueVisibility);
 			if (noteBriefState.showNoteBrief) {
-				this.maybeInsertReadingNoteBriefEl(cache, map, info, heading);
+				this.maybeInsertReadingNoteBriefEl(
+					cache,
+					noteBriefAnchorLine,
+					info,
+					heading
+				);
 			}
 			if (!displayState.showInlineCues) {
 				continue;
 			}
 			const cue = map.get(info.lineStart + 1);
-			if (!cue) continue;
 			const next = heading.nextElementSibling;
+			if (!cue) {
+				if (next?.hasClass("cuecraft-cue-reading")) next.remove();
+				continue;
+			}
 			if (
 				next?.hasClass("cuecraft-cue-reading") &&
 				(next as HTMLElement).dataset.cuecraftSectionId === cue.sectionId
 			) {
+				next.replaceWith(this.buildReadingCueEl(cue, cueVisibility));
 				continue;
 			}
-			heading.insertAdjacentElement("afterend", this.buildReadingCueEl(cue));
+			heading.insertAdjacentElement(
+				"afterend",
+				this.buildReadingCueEl(cue, cueVisibility)
+			);
 		}
 
 		projectReadingStudyBlock(
@@ -1423,26 +1485,26 @@ export default class CueCraftPlugin extends Plugin {
 	private readingMapFor(
 		path: string,
 		text: string,
-		cache: NoteCache
+		cache: NoteCache,
+		visibility: ReadingCueVisibility
 	): Map<number, CueLineData> {
 		if (
 			this.readingCueMemo &&
 			this.readingCueMemo.path === path &&
 			this.readingCueMemo.text === text &&
-			this.readingCueMemo.showKeywords === this.settings.generateKeywords &&
-			this.readingCueMemo.showSectionLens === this.settings.showSectionLens
+			this.readingCueMemo.showSummary === visibility.showSummary &&
+			this.readingCueMemo.showQuestion === visibility.showQuestion &&
+			this.readingCueMemo.showTerms === visibility.showTerms
 		) {
 			return this.readingCueMemo.map;
 		}
 		const map = buildReadingCueMap(cache, text, {
-			showKeywords: this.settings.generateKeywords,
-			showSectionLens: this.settings.showSectionLens,
+			...visibility,
 		});
 		this.readingCueMemo = {
 			path,
 			text,
-			showKeywords: this.settings.generateKeywords,
-			showSectionLens: this.settings.showSectionLens,
+			...visibility,
 			map,
 		};
 		return map;
@@ -1450,12 +1512,11 @@ export default class CueCraftPlugin extends Plugin {
 
 	private maybeInsertReadingNoteBriefEl(
 		cache: NoteCache,
-		map: Map<number, CueLineData>,
+		firstCueLine: number | undefined,
 		info: ReturnType<MarkdownPostProcessorContext["getSectionInfo"]>,
 		heading: HTMLElement
 	): boolean {
 		if (!info || !this.settings.showNoteBrief || !cache.noteBrief) return false;
-		const firstCueLine = [...map.keys()].sort((a, b) => a - b)[0];
 		if (firstCueLine !== info.lineStart + 1) return false;
 		const previous = heading.previousElementSibling;
 		if (previous && previous.hasClass("cuecraft-note-brief")) return false;
@@ -1469,8 +1530,12 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/** Build the reading-view cue element (mirrors the editor cue widget DOM). */
-	private buildReadingCueEl(cue: CueLineData): HTMLElement {
+	private buildReadingCueEl(
+		cue: CueLineData,
+		visibility: ReadingCueVisibility
+	): HTMLElement {
 		const root = createDiv({ cls: "cuecraft-cue cuecraft-cue-reading" });
+		root.addClass(cueFontSizeClass(this.settings.cueFontSize));
 		root.dataset.cuecraftSectionId = cue.sectionId;
 		root.setAttr("role", "note");
 		if (cue.error) {
@@ -1482,8 +1547,10 @@ export default class CueCraftPlugin extends Plugin {
 			});
 			return root;
 		}
-		root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
 		appendSectionLens(root, cue.sectionLens);
+		if (visibility.showQuestion) {
+			root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
+		}
 		if (cue.keywords.length) {
 			root.createDiv({
 				cls: "cuecraft-cue-keywords",
@@ -1597,11 +1664,8 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private generationOptions(): CueGenerationOptions {
-		const s = this.settings;
 		return {
-			cueDensity: s.cueDensity,
-			questionStyle: s.questionStyle,
-			generateKeywords: s.generateKeywords,
+			questionType: this.settings.questionType,
 		};
 	}
 
@@ -1690,20 +1754,15 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		new SectionSuggestModal(this.app, sections, this.cacheStore.get(file.path), (s) => {
-			new ToneSuggestModal(this.app, (tone) =>
-				void this.regenerateSection(file, s.id, tone)
-			).open();
+			void this.regenerateSection(file, s.id);
 		}).open();
 	}
 
 	/**
 	 * Regenerate the cue for a single section (by id) and merge it back into the
 	 * cache. Public so callers can target an explicit note and section.
-	 * When `toneOverride` is supplied it replaces the global cue preset for this
-	 * single regeneration, so users can ask for a different question style without
-	 * changing their default setting.
 	 */
-	async regenerateSection(file: TFile, sectionId: string, toneOverride?: string): Promise<void> {
+	async regenerateSection(file: TFile, sectionId: string): Promise<void> {
 		if (this.currentRun) {
 			new Notice("CueCraft: generation already in progress.");
 			return;
@@ -1732,14 +1791,14 @@ export default class CueCraftPlugin extends Plugin {
 		this.setStatus("generating", { done: 0, total: 1 });
 
 		try {
-			const result = await generateSectionCue({
-				section,
+			const [result] = await generateSectionCueBatch({
+				sections: [section],
 				provider,
-				preset: toneOverride ?? this.settings.cuePreset,
 				options: this.generationOptions(),
 				noteContext: markdown,
 				signal: controller.signal,
 			});
+			if (!result) throw new Error("Provider returned no cue for this section.");
 
 			let updated = replaceSection(cache, toCachedSection(result));
 			if (!controller.signal.aborted) {
@@ -1836,24 +1895,18 @@ export default class CueCraftPlugin extends Plugin {
 					.map((id) => byId.get(id))
 					.filter((s): s is Section => Boolean(s));
 				this.setStatus("generating", { done, total: sectionIds.length });
-				const results = await Promise.all(
-					batch.map(async (section) => {
-						const result = await generateSectionCue({
-							section,
-							provider,
-							preset: this.settings.cuePreset,
-							options: this.generationOptions(),
-							noteContext: markdown,
-							signal: controller.signal,
-						});
-						done++;
-						this.setStatus("generating", { done, total: sectionIds.length });
-						return result;
-					})
-				);
+				const results = await generateSectionCueBatch({
+					sections: batch,
+					provider,
+					options: this.generationOptions(),
+					noteContext: markdown,
+					signal: controller.signal,
+				});
 				for (const result of results) {
 					generated.push(toCachedSection(result));
 					if (result.error) failed++;
+					done++;
+					this.setStatus("generating", { done, total: sectionIds.length });
 				}
 				const working = reconcileCacheSections(cache, sections, generated, {
 					noteModifiedAt: file.stat.mtime,
@@ -2131,7 +2184,6 @@ export default class CueCraftPlugin extends Plugin {
 				noteTitle: file.basename,
 				markdown,
 				provider,
-				preset: this.settings.cuePreset,
 				options: this.generationOptions(),
 				sectionConcurrency: this.settings.sectionConcurrency,
 				useWholeNoteContext: true,
@@ -2148,7 +2200,7 @@ export default class CueCraftPlugin extends Plugin {
 						result,
 						provider: provider.id,
 						model: this.selectedModelName(),
-						preset: this.settings.cuePreset,
+						preset: this.settings.questionType,
 						generationMode: "whole-note-context",
 						noteModifiedAt: file.stat.mtime,
 					})
@@ -2204,18 +2256,13 @@ export default class CueCraftPlugin extends Plugin {
 				.slice(start, start + concurrency)
 				.map((id) => byId.get(id))
 				.filter((section): section is Section => Boolean(section));
-			const results = await Promise.all(
-				batch.map((section) =>
-					generateSectionCue({
-						section,
-						provider,
-						preset: this.settings.cuePreset,
-						options: this.generationOptions(),
-						noteContext: markdown,
-						signal: controller.signal,
-					})
-				)
-			);
+			const results = await generateSectionCueBatch({
+				sections: batch,
+				provider,
+				options: this.generationOptions(),
+				noteContext: markdown,
+				signal: controller.signal,
+			});
 			for (const result of results) {
 				generated.push(toCachedSection(result));
 				if (result.error) failed++;
@@ -2320,7 +2367,6 @@ export default class CueCraftPlugin extends Plugin {
 				noteTitle: file.basename,
 				markdown,
 				provider,
-				preset: this.settings.cuePreset,
 				options: this.generationOptions(),
 				sectionConcurrency: this.settings.sectionConcurrency,
 				useWholeNoteContext: true,
@@ -2333,7 +2379,7 @@ export default class CueCraftPlugin extends Plugin {
 				result,
 				provider: provider.id,
 				model: this.selectedModelName(),
-				preset: this.settings.cuePreset,
+				preset: this.settings.questionType,
 				generationMode: "whole-note-context",
 				noteModifiedAt: file.stat.mtime,
 			});
@@ -2424,37 +2470,6 @@ function toCachedSection(result: SectionResult): CachedSection {
 		sectionLens: result.sectionLens,
 		error: result.error,
 	};
-}
-
-/** Tone variant options shown when regenerating a single section's cue. */
-export const TONE_OPTIONS: Array<{ id: string; label: string }> = [
-	{ id: "conceptual", label: "More conceptual" },
-	{ id: "exam-prep", label: "Exam prep" },
-	{ id: "simpler", label: "Simpler" },
-	{ id: "vocabulary", label: "Vocabulary" },
-];
-
-/** Fuzzy picker that presents the four tone variants for per-section regeneration. */
-class ToneSuggestModal extends FuzzySuggestModal<{ id: string; label: string }> {
-	constructor(
-		app: InstanceType<typeof Plugin>["app"],
-		private readonly onChoose: (toneId: string) => void
-	) {
-		super(app);
-		this.setPlaceholder("Choose a tone for this cue…");
-	}
-
-	getItems(): Array<{ id: string; label: string }> {
-		return TONE_OPTIONS;
-	}
-
-	getItemText(item: { id: string; label: string }): string {
-		return item.label;
-	}
-
-	onChooseItem(item: { id: string; label: string }): void {
-		this.onChoose(item.id);
-	}
 }
 
 class RegenerateSettingsModal extends Modal {
