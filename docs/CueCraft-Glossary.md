@@ -1,6 +1,6 @@
 # CueCraft Glossary
 
-This glossary defines the language CueCraft should use in the interface, help text, and product documentation. It describes the settings redesign captured in the [artifact-matched settings plan](plans/2026-08-16-1343-feat-artifact-matched-cue-settings-plan.md); the current released interface may still contain some retired terms until that work ships.
+This glossary defines the language CueCraft uses in the interface, help text, and product documentation.
 
 ## The basic model
 
@@ -53,7 +53,7 @@ The **Note Brief** belongs to the whole note and appears near the top. A **Secti
 | **Exam practice** | A Question type phrased like a likely test or assessment prompt. |
 | **Vocabulary check** | A Question type centered on the meaning or use of an important term. |
 | **Socratic reasoning** | A Question type that leads the reader to explain assumptions, implications, or reasoning. |
-| **Auto-generation** | Whether CueCraft generates study material automatically after a note change or save. |
+| **Auto-generate on save** | Whether CueCraft generates study material automatically after a note change or save. |
 | **Auto-generation delay** | How long CueCraft waits after the triggering change before starting automatic generation. |
 | **Cue display** | The presentation layout used for Section cues while editing. It changes placement or visual form, not generated content; Reading remains inline. |
 | **Cue font size** | The global text size used in generated study components. It does not affect model output. |
@@ -109,14 +109,8 @@ Use the preferred replacement in new interface copy and user-facing documentatio
 | **Cue supports** or **support terms** | **Terms** | Terms is the title users see in the generated card. |
 | **Keywords** | **Terms** | Keywords is an implementation field name, not the user-facing component name. |
 | **Section Lens** | **Summary** | Summary is the title users see. Section Lens is an internal or legacy name. |
-| **Review artifact** | **Note Brief** | Note Brief is the title users see. |
-| **Whole-note summary** | **Note Brief** or **Note Brief Overview**, depending on scope | “Summary” should remain specific to one section. |
-| **Cue focus** | **Question type** | The setting changes Question only, not every part of the Section cue or Note Brief. |
 | **Cue preset**, **Cue density**, or **Question style** | **Question type** | These overlapping controls are replaced by one coherent choice. |
-| **Generate cue supports** | **Show Terms** | Terms are always generated; the remaining user choice is whether to show them. |
-| **System prompt** in the interface | **Section cue instructions** or **Note Brief instructions** | The exact artifact-specific name makes scope and authority clear and does not imply an editable override. |
 | **Editing View** as a settings category | **Main settings** for appearance; **Cue Generation** for generation | Shared visibility and font choices apply in both note modes, while Cue display controls the Editing layout. Editing View remains valid only when naming Obsidian's actual note mode. |
-| **Cornell View** | Name the current visible artifact or note mode directly | The dedicated Cornell View has been retired. |
 
 ## Capitalization
 
