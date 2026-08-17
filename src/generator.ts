@@ -312,6 +312,7 @@ export async function generateNote(
 				signal,
 			});
 			batchResults.forEach((result, offset) => {
+				if (signal?.aborted && result.error) return;
 				const label = result.heading.trim() || "intro";
 				console.debug(
 					`CueCraft section "${label}" ${result.error ? "failed" : "done"} (${((Date.now() - t0) / 1000).toFixed(1)}s)`
@@ -320,6 +321,10 @@ export async function generateNote(
 				done++;
 				onProgress?.(done, total);
 			});
+			if (signal?.aborted) {
+				canceled = true;
+				break;
+			}
 		} else {
 			await Promise.all(
 				batch.map(async (s, offset) => {
@@ -332,6 +337,7 @@ export async function generateNote(
 						maxContextChars,
 						signal,
 					});
+					if (signal?.aborted && result.error) return;
 					const label = s.heading.trim() || "intro";
 					console.debug(
 						`CueCraft section "${label}" ${result.error ? "failed" : "done"} (${((Date.now() - t0) / 1000).toFixed(1)}s)`

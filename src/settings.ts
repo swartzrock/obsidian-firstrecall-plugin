@@ -222,7 +222,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	display(): void {
+	override display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
 
@@ -263,7 +263,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 	}
 
-	hide(): void {
+	override hide(): void {
 		super.hide();
 		this.currentSubpage = "home";
 		this.plugin.promptForCueSettingsRegeneration();
@@ -1991,7 +1991,7 @@ class StudyAreaConfirmModal extends Modal {
 		super(app);
 	}
 
-	onOpen(): void {
+	override onOpen(): void {
 		const { contentEl } = this;
 		contentEl.empty();
 		contentEl.createEl("h2", { text: this.opts.title });
