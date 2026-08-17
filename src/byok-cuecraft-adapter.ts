@@ -12,11 +12,11 @@ import {
 	type ByokProviderStoredSettings,
 	type ByokSetupStatus,
 	type ByokStoredSettings,
+	type ByokVerificationSnapshot,
 	type ByokVerificationSnapshotMap,
 } from "@swartzrock/byok-runtime";
 import { createByokNodeProvider } from "@swartzrock/byok-runtime/node";
-import type { ModelInfo } from "@anthropic-ai/sdk/resources/models";
-import { normalizeAnthropicModelSelection } from "./anthropic-model-options";
+import { ANTHROPIC_CUSTOM_MODEL_ID } from "./anthropic-model-options";
 import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
 	deriveProviderSetupStatus,
@@ -462,97 +462,28 @@ type ProviderSettingsDefaults = Pick<
 	"byok"
 >;
 
-type LegacyCueCraftProviderSettings = Partial<{
-	provider: unknown;
-	ollamaHost: string;
-	ollamaModel: string;
-	ollamaAvailableModels: string[];
-	ollamaHasFetchedModels: boolean;
-	ollamaModelRefreshMessage: string;
-	anthropicApiKey: string;
-	anthropicModel: string;
-	anthropicModelSelection: string;
-	anthropicAvailableModels: ModelInfo[];
-	anthropicAvailableModelIds: string[];
-	anthropicHasFetchedModels: boolean;
-	anthropicModelRefreshMessage: string;
-	openaiApiKey: string;
-	openaiModel: string;
-	openaiAvailableModels: string[];
-	openaiHasFetchedModels: boolean;
-	openaiModelRefreshMessage: string;
-	googleApiKey: string;
-	googleModel: string;
-	googleAvailableModels: string[];
-	googleHasFetchedModels: boolean;
-	googleModelRefreshMessage: string;
-	xaiApiKey: string;
-	xaiModel: string;
-	xaiAvailableModels: string[];
-	xaiHasFetchedModels: boolean;
-	xaiModelRefreshMessage: string;
-	openrouterApiKey: string;
-	openrouterModel: string;
-	openrouterAvailableModels: string[];
-	openrouterModelOptions: ByokModelOption[];
-	openrouterHasFetchedModels: boolean;
-	openrouterModelRefreshMessage: string;
-	lmStudioUrl: string;
-	lmStudioModel: string;
-	lmStudioAvailableModels: string[];
-	lmStudioHasFetchedModels: boolean;
-	lmStudioModelRefreshMessage: string;
-	codexCliCommand: string;
-	codexCliModel: string;
-	claudeCliCommand: string;
-	claudeCliModel: string;
-	providerConnectionStatus: CueCraftProviderConnectionStatusMap;
-}>;
+type LegacyCueCraftProviderSettings = Record<string, unknown>;
 
 export function normalizeCueCraftProviderSettings(
 	settings: CueCraftSettings,
 	defaults: ProviderSettingsDefaults,
 	rawSettings: unknown = settings
-): void {
-	normalizeCueCraftAnthropicSettings(settings);
+): boolean {
+	const rawRecord = isRecord(rawSettings) ? rawSettings : {};
 	const defaultByok =
-		defaults.byok ?? cueCraftByokSettingsFromCueCraftSettings(defaults as CueCraftSettings);
+		defaults.byok ??
+		cueCraftByokSettingsFromCueCraftSettings(defaults as CueCraftSettings);
 	settings.byok = normalizeCueCraftByokSettings(
-		settings,
+		rawRecord,
 		defaultByok,
 		rawSettings
 	);
-}
-
-function normalizeCueCraftAnthropicSettings(settings: CueCraftSettings): void {
-	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
-	const legacyAvailableModelIds = legacy.anthropicAvailableModelIds;
-	const hasAvailableModels = Boolean(
-		legacy.anthropicAvailableModels
-	);
-	if (Array.isArray(legacyAvailableModelIds) && !hasAvailableModels) {
-		legacy.anthropicAvailableModels = legacyAvailableModelIds.map((id) => ({
-			id,
-			display_name: id,
-			type: "model",
-			created_at: new Date(0).toISOString(),
-			max_input_tokens: null,
-			max_tokens: null,
-			capabilities: null,
-		} as ModelInfo));
+	if (!("byok" in rawRecord)) return "provider" in rawRecord;
+	try {
+		return JSON.stringify(rawRecord.byok) !== JSON.stringify(settings.byok);
+	} catch {
+		return true;
 	}
-	if (
-		!("anthropicHasFetchedModels" in legacy) &&
-		Array.isArray(legacy.anthropicAvailableModels)
-	) {
-		legacy.anthropicHasFetchedModels =
-			(legacy.anthropicAvailableModels?.length ?? 0) > 0;
-	}
-	normalizeAnthropicModelSelection(legacy as {
-		anthropicModel: string;
-		anthropicModelSelection?: string;
-		anthropicAvailableModels?: ModelInfo[];
-	});
 }
 
 function emptyStoredProviderSettings(): ByokProviderStoredSettings {
@@ -585,31 +516,49 @@ function legacyString(value: unknown): string {
 }
 
 function legacyProviderCredential(
-	settings: CueCraftSettings,
+	legacy: LegacyCueCraftProviderSettings,
 	provider: ByokProviderId
 ): string {
-	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
 	switch (provider) {
 		case "ollama":
-			return legacy.ollamaHost ?? "";
+			return legacyString(legacy.ollamaHost);
 		case "anthropic":
-			return legacy.anthropicApiKey ?? "";
+			return legacyString(legacy.anthropicApiKey);
 		case "openai":
-			return legacy.openaiApiKey ?? "";
+			return legacyString(legacy.openaiApiKey);
 		case "google":
-			return legacy.googleApiKey ?? "";
+			return legacyString(legacy.googleApiKey);
 		case "xai":
-			return legacy.xaiApiKey ?? "";
+			return legacyString(legacy.xaiApiKey);
 		case "openrouter":
-			return legacy.openrouterApiKey ?? "";
+			return legacyString(legacy.openrouterApiKey);
 		case "lm-studio":
-			return legacy.lmStudioUrl ?? "";
+			return legacyString(legacy.lmStudioUrl);
 		case "codex-cli":
-			return legacy.codexCliCommand ?? "";
+			return legacyString(legacy.codexCliCommand);
 		case "claude-cli":
-			return legacy.claudeCliCommand ?? "";
+			return legacyString(legacy.claudeCliCommand);
 	}
 	return "";
+}
+
+function legacyCloudCredentialKey(
+	provider: CueCraftCloudCredentialProvider
+): string | null {
+	switch (provider) {
+		case "anthropic":
+			return "anthropicApiKey";
+		case "openai":
+			return "openaiApiKey";
+		case "google":
+			return "googleApiKey";
+		case "xai":
+			return "xaiApiKey";
+		case "openrouter":
+			return "openrouterApiKey";
+		default:
+			return null;
+	}
 }
 
 function deleteLegacyCloudProviderCredential(
@@ -643,41 +592,60 @@ function deleteLegacyCloudProviderCredential(
 }
 
 function legacyProviderModel(
-	settings: CueCraftSettings,
+	legacy: LegacyCueCraftProviderSettings,
 	provider: ByokProviderId
 ): string {
-	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
 	switch (provider) {
 		case "ollama":
-			return legacy.ollamaModel ?? "";
+			return legacyString(legacy.ollamaModel);
 		case "anthropic":
-			return legacy.anthropicModel ?? "";
+			return legacyString(legacy.anthropicModel);
 		case "openai":
-			return legacy.openaiModel ?? "";
+			return legacyString(legacy.openaiModel);
 		case "google":
-			return legacy.googleModel ?? "";
+			return legacyString(legacy.googleModel);
 		case "xai":
-			return legacy.xaiModel ?? "";
+			return legacyString(legacy.xaiModel);
 		case "openrouter":
-			return legacy.openrouterModel ?? "";
+			return legacyString(legacy.openrouterModel);
 		case "lm-studio":
-			return legacy.lmStudioModel ?? "";
+			return legacyString(legacy.lmStudioModel);
 		case "codex-cli":
-			return legacy.codexCliModel ?? "";
+			return legacyString(legacy.codexCliModel);
 		case "claude-cli":
-			return legacy.claudeCliModel ?? "";
+			return legacyString(legacy.claudeCliModel);
 	}
 	return "";
 }
 
-function storedProviderSettingsFromCueCraftSettings(
-	settings: CueCraftSettings,
+function normalizeModelOptions(value: unknown): ByokModelOption[] {
+	if (!Array.isArray(value)) return [];
+	return value.flatMap((item): ByokModelOption[] => {
+		if (!isRecord(item)) return [];
+		return typeof item.id === "string" && typeof item.label === "string"
+			? [{ id: item.id, label: item.label }]
+			: [];
+	});
+}
+
+function legacyAnthropicModelIds(legacy: LegacyCueCraftProviderSettings): string[] {
+	const fromModels = Array.isArray(legacy.anthropicAvailableModels)
+		? legacy.anthropicAvailableModels.flatMap((item): string[] =>
+				isRecord(item) && typeof item.id === "string" ? [item.id] : []
+			)
+		: [];
+	return fromModels.length
+		? fromModels
+		: legacyStringArray(legacy.anthropicAvailableModelIds);
+}
+
+function storedProviderSettingsFromLegacySettings(
+	legacy: LegacyCueCraftProviderSettings,
 	provider: ByokProviderId
 ): ByokProviderStoredSettings {
-	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
 	const stored = emptyStoredProviderSettings();
-	stored.credential = legacyProviderCredential(settings, provider);
-	stored.model = legacyProviderModel(settings, provider);
+	stored.credential = legacyProviderCredential(legacy, provider);
+	stored.model = legacyProviderModel(legacy, provider);
 	switch (provider) {
 		case "ollama":
 			stored.availableModels = legacyStringArray(legacy.ollamaAvailableModels);
@@ -685,11 +653,16 @@ function storedProviderSettingsFromCueCraftSettings(
 			stored.modelRefreshMessage = legacyString(legacy.ollamaModelRefreshMessage);
 			break;
 		case "anthropic":
-			stored.availableModels = (legacy.anthropicAvailableModels ?? []).map(
-				(model) => model.id
-			);
-			stored.modelSelection = legacyString(legacy.anthropicModelSelection);
-			stored.hasFetchedModels = legacyBoolean(legacy.anthropicHasFetchedModels);
+			stored.availableModels = legacyAnthropicModelIds(legacy);
+			stored.modelSelection =
+				legacyString(legacy.anthropicModelSelection) ||
+				(stored.availableModels.includes(stored.model)
+					? stored.model
+					: ANTHROPIC_CUSTOM_MODEL_ID);
+			stored.hasFetchedModels =
+				typeof legacy.anthropicHasFetchedModels === "boolean"
+					? legacy.anthropicHasFetchedModels
+					: stored.availableModels.length > 0;
 			stored.modelRefreshMessage = legacyString(legacy.anthropicModelRefreshMessage);
 			break;
 		case "openai":
@@ -709,9 +682,7 @@ function storedProviderSettingsFromCueCraftSettings(
 			break;
 		case "openrouter":
 			stored.availableModels = legacyStringArray(legacy.openrouterAvailableModels);
-			stored.modelOptions = Array.isArray(legacy.openrouterModelOptions)
-				? [...legacy.openrouterModelOptions]
-				: [];
+			stored.modelOptions = normalizeModelOptions(legacy.openrouterModelOptions);
 			stored.hasFetchedModels = legacyBoolean(legacy.openrouterHasFetchedModels);
 			stored.modelRefreshMessage = legacyString(legacy.openrouterModelRefreshMessage);
 			break;
@@ -727,100 +698,120 @@ function storedProviderSettingsFromCueCraftSettings(
 	return stored;
 }
 
-export function cueCraftByokSettingsFromCueCraftSettings(
-	settings: CueCraftSettings
+function cueCraftByokSettingsFromLegacySettings(
+	legacy: LegacyCueCraftProviderSettings
 ): ByokStoredSettings {
-	const legacy = settings as unknown as LegacyCueCraftProviderSettings;
 	const providers: ByokStoredSettings["providers"] = {};
 	for (const provider of BYOK_PROVIDER_IDS) {
-		providers[provider] = storedProviderSettingsFromCueCraftSettings(
-			settings,
+		providers[provider] = storedProviderSettingsFromLegacySettings(
+			legacy,
 			provider
 		);
 	}
 	return {
 		selectedProvider: normalizeProviderId(legacy.provider),
 		providers,
-		verification: { ...(legacy.providerConnectionStatus ?? {}) },
+		verification: normalizeVerificationMap(legacy.providerConnectionStatus),
 	};
+}
+
+export function cueCraftByokSettingsFromCueCraftSettings(
+	settings: CueCraftSettings
+): ByokStoredSettings {
+	return cueCraftByokSettingsFromLegacySettings(
+		settings as unknown as LegacyCueCraftProviderSettings
+	);
 }
 
 function normalizeStoredProviderSettings(
 	value: unknown
 ): ByokProviderStoredSettings {
-	const stored = {
-		...emptyStoredProviderSettings(),
-		...((value && typeof value === "object")
-			? (value as Partial<ByokProviderStoredSettings>)
-			: {}),
+	const record = isRecord(value) ? value : {};
+	const rawCredentialLength = record.credentialLength;
+	const credentialLength =
+		typeof rawCredentialLength === "number" &&
+		Number.isFinite(rawCredentialLength) &&
+		rawCredentialLength >= 0
+			? Math.floor(rawCredentialLength)
+			: 0;
+	return {
+		credential: legacyString(record.credential),
+		credentialSaved: legacyBoolean(record.credentialSaved),
+		credentialUpdatedAt: legacyString(record.credentialUpdatedAt),
+		credentialLength,
+		model: legacyString(record.model),
+		modelSelection: legacyString(record.modelSelection),
+		availableModels: legacyStringArray(record.availableModels),
+		modelOptions: normalizeModelOptions(record.modelOptions),
+		hasFetchedModels: legacyBoolean(record.hasFetchedModels),
+		modelRefreshMessage: legacyString(record.modelRefreshMessage),
 	};
-	if (typeof stored.credential !== "string") stored.credential = "";
-	if (typeof stored.credentialSaved !== "boolean") {
-		stored.credentialSaved = false;
+}
+
+function normalizeVerificationMap(value: unknown): ByokVerificationSnapshotMap {
+	if (!isRecord(value)) return {};
+	const verification: ByokVerificationSnapshotMap = {};
+	for (const provider of BYOK_PROVIDER_IDS) {
+		const candidate = value[provider];
+		if (
+			!isRecord(candidate) ||
+			typeof candidate.credentialFingerprint !== "string" ||
+			typeof candidate.modelId !== "string" ||
+			typeof candidate.testedAt !== "string" ||
+			(candidate.credentialToken !== undefined &&
+				typeof candidate.credentialToken !== "string")
+		) {
+			continue;
+		}
+		const snapshot: ByokVerificationSnapshot = {
+			credentialFingerprint: candidate.credentialFingerprint,
+			modelId: candidate.modelId,
+			testedAt: candidate.testedAt,
+		};
+		if (typeof candidate.credentialToken === "string") {
+			snapshot.credentialToken = candidate.credentialToken;
+		}
+		verification[provider] = snapshot;
 	}
-	if (typeof stored.credentialUpdatedAt !== "string") {
-		stored.credentialUpdatedAt = "";
-	}
-	if (
-		typeof stored.credentialLength !== "number" ||
-		!Number.isFinite(stored.credentialLength) ||
-		stored.credentialLength < 0
-	) {
-		stored.credentialLength = 0;
-	} else {
-		stored.credentialLength = Math.floor(stored.credentialLength);
-	}
-	if (typeof stored.model !== "string") stored.model = "";
-	if (typeof stored.modelSelection !== "string") stored.modelSelection = "";
-	if (!Array.isArray(stored.availableModels)) stored.availableModels = [];
-	if (!Array.isArray(stored.modelOptions)) stored.modelOptions = [];
-	if (typeof stored.hasFetchedModels !== "boolean") {
-		stored.hasFetchedModels = false;
-	}
-	if (typeof stored.modelRefreshMessage !== "string") {
-		stored.modelRefreshMessage = "";
-	}
-	return stored;
+	return verification;
 }
 
 function normalizeCueCraftByokSettings(
-	settings: CueCraftSettings,
+	legacySettings: LegacyCueCraftProviderSettings,
 	defaults: ByokStoredSettings,
 	rawSettings: unknown
 ): ByokStoredSettings {
-	const rawByok = (rawSettings as { byok?: unknown } | null | undefined)?.byok;
-	const hasRawByok = Boolean(
-		rawByok &&
-			typeof rawByok === "object" &&
-			"providers" in rawByok
-	);
-	const existing = hasRawByok ? (rawByok as Partial<ByokStoredSettings>) : {};
-	const legacy = cueCraftByokSettingsFromCueCraftSettings(settings);
+	const rawRecord = isRecord(rawSettings) ? rawSettings : {};
+	const rawByok = isRecord(rawRecord.byok) ? rawRecord.byok : {};
+	const providersRecord = isRecord(rawByok.providers) ? rawByok.providers : {};
+	const hasRawByok = isRecord(rawRecord.byok) && isRecord(rawByok.providers);
+	const legacy = cueCraftByokSettingsFromLegacySettings(legacySettings);
 	const providers: ByokStoredSettings["providers"] = {};
 	for (const provider of BYOK_PROVIDER_IDS) {
 		const source = hasRawByok
-			? existing.providers?.[provider] ?? legacy.providers[provider]
+			? providersRecord[provider] ?? legacy.providers[provider]
 			: legacy.providers[provider] ?? defaults.providers[provider];
 		const stored = normalizeStoredProviderSettings(source);
-		if (
-			!hasRawByok &&
-			byokProviderDefinition(provider).credentialKind === "command"
-		) {
+		if (!hasRawByok) {
 			const fallback = normalizeStoredProviderSettings(defaults.providers[provider]);
-			if (!stored.credential) stored.credential = fallback.credential;
+			if (
+				!stored.credential &&
+				!isCueCraftCloudCredentialProvider(provider)
+			) {
+				stored.credential = fallback.credential;
+			}
 			if (!stored.model) stored.model = fallback.model;
 		}
 		providers[provider] = stored;
 	}
 	return {
 		selectedProvider: normalizeProviderId(
-			existing.selectedProvider ?? legacy.selectedProvider ?? defaults.selectedProvider
+			rawByok.selectedProvider ?? legacy.selectedProvider ?? defaults.selectedProvider
 		),
 		providers,
-		verification: {
-			...(hasRawByok ? {} : legacy.verification),
-			...(existing.verification ?? {}),
-		},
+		verification: hasRawByok
+			? normalizeVerificationMap(rawByok.verification)
+			: legacy.verification,
 	};
 }
 
@@ -1117,8 +1108,10 @@ export function cueCraftProviderCredentialLength(
 
 export async function migrateCueCraftCloudCredentials(
 	settings: CueCraftSettings,
-	credentialStore: SecureCredentialStore
+	credentialStore: SecureCredentialStore,
+	legacySettings: unknown = settings
 ): Promise<CueCraftCredentialMigrationResult> {
+	const legacy = isRecord(legacySettings) ? legacySettings : {};
 	const result: CueCraftCredentialMigrationResult = {
 		settingsChanged: false,
 		warnings: [],
@@ -1127,8 +1120,19 @@ export async function migrateCueCraftCloudCredentials(
 	for (const provider of BYOK_PROVIDER_IDS) {
 		if (!isCueCraftCloudCredentialProvider(provider)) continue;
 		const stored = cueCraftProviderSettings(settings, provider);
-		const plaintext = stored.credential.trim();
+		const legacyCredentialKey = legacyCloudCredentialKey(provider);
+		const hasLegacyCredential =
+			legacyCredentialKey !== null &&
+			Object.prototype.hasOwnProperty.call(legacy, legacyCredentialKey);
+		if (hasLegacyCredential) result.settingsChanged = true;
+		const plaintext =
+			stored.credential.trim() ||
+			(!stored.credentialSaved
+				? legacyProviderCredential(legacy, provider).trim()
+				: "");
 		if (plaintext) {
+			// Keep a failed legacy migration recoverable in the canonical BYOK shape.
+			stored.credential = plaintext;
 			const saved = await credentialStore.save(provider, plaintext);
 			if (!saved.ok || !saved.metadata) {
 				result.warnings.push(

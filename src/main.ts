@@ -9,6 +9,7 @@ import {
 	requestUrl,
 	type MarkdownFileInfo,
 	type MarkdownPostProcessorContext,
+	type RequestUrlParam,
 } from "obsidian";
 import type { EditorView } from "@codemirror/view";
 import {
@@ -19,10 +20,7 @@ import {
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
 import { cueFontSizeClass } from "./cornell-layout";
 import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
-import {
-	normalizeAutoGenerationSettleDelaySeconds,
-	scheduleAutoGenerationTimer,
-} from "./auto-generation-delay";
+import { scheduleAutoGenerationTimer } from "./auto-generation-delay";
 import { type ByokHttpClient } from "@swartzrock/byok-runtime";
 import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
@@ -39,7 +37,6 @@ import {
 	clearCueCraftStoredCloudCredential,
 	markCueCraftCloudCredentialSaved,
 	migrateCueCraftCloudCredentials,
-	normalizeCueCraftProviderSettings,
 	listCueCraftProviderModelsFromStore,
 	makeCueCraftByokProviderFromStore,
 	type CueCraftByokRuntime,
@@ -91,10 +88,7 @@ import {
 	type StudySectionDescriptor,
 	type StudySessionSnapshot,
 } from "./study-session";
-import {
-	DEFAULT_EDITOR_CUE_DISPLAY,
-	isEditorCueDisplay,
-} from "./editor-cue-display";
+import { isEditorCueDisplay } from "./editor-cue-display";
 import {
 	exportFilePaths,
 	resolveExportTarget,
@@ -113,14 +107,10 @@ import {
 	loadCueSectionCollapseMap,
 	type CueSectionCollapseMap,
 } from "./cue-section-collapse";
-import {
-	DEFAULT_QUESTION_TYPE,
-	isQuestionType,
-	resolveLegacyQuestionType,
-	type CueGenerationOptions,
-} from "./cue-generation";
+import { type CueGenerationOptions } from "./cue-generation";
 import { statusLabel, type CueStatus } from "./status";
 import { formatCueCraftNotice } from "./notice";
+import { parsePersistedCueCraftSettings } from "./persisted-settings";
 import {
 	EditorHookLayoutController,
 	leftDockIsOpen,
@@ -129,7 +119,6 @@ import {
 	findMaintainedStudyAreaForPath,
 	isDescendantPath,
 	isEntireVaultStudyArea,
-	loadStudyAreas,
 	normalizeVaultPath,
 	planStudyAreaGeneration,
 	studyAreaNameForParentPath,
@@ -147,6 +136,38 @@ interface PluginData {
 	caches: Record<string, NoteCache>;
 	hidden: Record<string, true>;
 	cueSectionCollapse: CueSectionCollapseMap;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function abortReason(signal: AbortSignal): Error {
+	if (signal.reason instanceof Error) return signal.reason;
+	const message =
+		signal.reason === undefined
+			? "The operation was aborted."
+			: String(signal.reason);
+	return new DOMException(message, "AbortError");
+}
+
+async function withAbortSignal<T>(
+	operation: () => Promise<T>,
+	signal: AbortSignal
+): Promise<T> {
+	if (signal.aborted) throw abortReason(signal);
+	const promise = operation();
+	let removeAbortListener = (): void => {};
+	const aborted = new Promise<never>((_resolve, reject) => {
+		const onAbort = (): void => reject(abortReason(signal));
+		signal.addEventListener("abort", onAbort, { once: true });
+		removeAbortListener = () => signal.removeEventListener("abort", onAbort);
+	});
+	try {
+		return await Promise.race([promise, aborted]);
+	} finally {
+		removeAbortListener();
+	}
 }
 
 const RIBBON_ICON = "graduation-cap";
@@ -338,99 +359,19 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private async loadPluginData(): Promise<void> {
-		const loaded = (await this.loadData()) as Partial<PluginData> | null;
-		const rawSettings = loaded?.settings ?? loaded ?? {};
-		const rawSettingsRecord = rawSettings as Record<string, unknown>;
-		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
-		let settingsChanged = false;
-		normalizeCueCraftProviderSettings(settings, DEFAULT_SETTINGS, rawSettings);
+		const loaded: unknown = await this.loadData();
+		const loadedRecord = isRecord(loaded) ? loaded : {};
+		const rawSettings = loadedRecord.settings ?? loadedRecord;
+		const rawSettingsRecord = isRecord(rawSettings) ? rawSettings : {};
+		const parsedSettings = parsePersistedCueCraftSettings(rawSettings);
+		const settings = parsedSettings.settings;
+		let settingsChanged = parsedSettings.changed;
 		const credentialMigration = await migrateCueCraftCloudCredentials(
 			settings,
-			this.credentialStore
+			this.credentialStore,
+			rawSettings
 		);
 		this.credentialMigrationWarnings = credentialMigration.warnings;
-		settings.studyAreas = loadStudyAreas(
-			(settings as { studyAreas?: unknown }).studyAreas
-		);
-		settings.autoGenerationSettleDelaySeconds =
-			normalizeAutoGenerationSettleDelaySeconds(
-				(settings as { autoGenerationSettleDelaySeconds?: unknown })
-					.autoGenerationSettleDelaySeconds
-			);
-		const rawQuestionType = rawSettingsRecord.questionType;
-		if (isQuestionType(rawQuestionType)) {
-			settings.questionType = rawQuestionType;
-		} else {
-			const hasLegacyQuestionSettings = [
-				"cuePreset",
-				"cueDensity",
-				"questionStyle",
-			].some((key) =>
-				Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)
-			);
-			settings.questionType = hasLegacyQuestionSettings
-				? resolveLegacyQuestionType(rawSettingsRecord)
-				: DEFAULT_QUESTION_TYPE;
-			if (
-				Object.prototype.hasOwnProperty.call(rawSettingsRecord, "questionType")
-			) {
-				settingsChanged = true;
-			}
-		}
-		settings.editorCueCustomWidthPx = normalizeEditorCueCustomWidthPx(
-			(rawSettings as { editorCueCustomWidthPx?: unknown })
-				.editorCueCustomWidthPx
-		);
-		const firstBoolean = (
-			keys: readonly string[],
-			fallback: boolean
-		): boolean => {
-			for (const key of keys) {
-				const value = rawSettingsRecord[key];
-				if (typeof value === "boolean") return value;
-			}
-			return fallback;
-		};
-		settings.showSummary = firstBoolean(
-			["showSummary", "showRailSummary", "showSectionLens"],
-			DEFAULT_SETTINGS.showSummary
-		);
-		settings.showQuestion = firstBoolean(
-			["showQuestion", "showRailQuestions"],
-			DEFAULT_SETTINGS.showQuestion
-		);
-		settings.showTerms = firstBoolean(
-			["showTerms", "showRailSupportTerms", "generateKeywords"],
-			DEFAULT_SETTINGS.showTerms
-		);
-		settings.showNoteBrief = firstBoolean(
-			["showNoteBrief"],
-			DEFAULT_SETTINGS.showNoteBrief
-		);
-		for (const key of [
-			"questionType",
-			"showSummary",
-			"showQuestion",
-			"showTerms",
-			"showNoteBrief",
-		] as const) {
-			if (!Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)) {
-				continue;
-			}
-			const isValid =
-				key === "questionType"
-					? isQuestionType(rawSettingsRecord[key])
-					: typeof rawSettingsRecord[key] === "boolean";
-			if (!isValid) settingsChanged = true;
-		}
-		if (
-			!isEditorCueDisplay(
-				(settings as { editorCueDisplay?: unknown }).editorCueDisplay
-			)
-		) {
-			settings.editorCueDisplay = DEFAULT_EDITOR_CUE_DISPLAY;
-			settingsChanged = true;
-		}
 		for (const key of [
 			"cuePreset",
 			"cueDensity",
@@ -459,17 +400,18 @@ export default class CueCraftPlugin extends Plugin {
 			if (Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)) {
 				settingsChanged = true;
 			}
-			delete (settings as unknown as Record<string, unknown>)[key];
 		}
-		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
+		const rawCaches = isRecord(loadedRecord.caches)
+			? loadedRecord.caches
+			: {};
 		const {
 			caches,
 			retainedCaches,
 			changed: cachesChanged,
 		} = normalizeCacheMap(rawCaches);
-		const hidden = loadHiddenMap(loaded?.hidden);
+		const hidden = loadHiddenMap(loadedRecord.hidden);
 		const cueSectionCollapse = loadCueSectionCollapseMap(
-			loaded?.cueSectionCollapse
+			loadedRecord.cueSectionCollapse
 		);
 		this.retainedCaches = retainedCaches;
 		this.data = { settings, caches, hidden, cueSectionCollapse };
@@ -1621,29 +1563,38 @@ export default class CueCraftPlugin extends Plugin {
 	 * through it (avoids CORS in Electron; no proxy needed).
 	 */
 	private makeFetch(): typeof fetch {
-		return (async (input: RequestInfo | URL, init?: RequestInit) => {
-			const url =
-				typeof input === "string"
-					? input
-					: input instanceof URL
-						? input.toString()
-						: input.url;
+		const fetchImpl: typeof fetch = async (input, init) => {
+			const request = new Request(input, init);
 			const headers: Record<string, string> = {};
-			new Headers(init?.headers).forEach((value, key) => {
+			request.headers.forEach((value, key) => {
 				headers[key] = value;
 			});
-			const res = await requestUrl({
-				url,
-				method: init?.method ?? "GET",
-				body: (init?.body as string | ArrayBuffer | undefined) ?? undefined,
+			// Request has already serialized every standard BodyInit. Obsidian accepts
+			// the resulting bytes, including empty bodies, but not a live stream.
+			const body =
+				request.body === null
+					? undefined
+					: await withAbortSignal(
+							() => request.arrayBuffer(),
+							request.signal
+						);
+			const requestParams: RequestUrlParam = {
+				url: request.url,
+				method: request.method,
+				body,
 				headers,
 				throw: false,
-			});
+			};
+			const res = await withAbortSignal(
+				() => requestUrl(requestParams),
+				request.signal
+			);
 			return new Response(res.arrayBuffer, {
 				status: res.status,
 				headers: res.headers,
 			});
-		}) as typeof fetch;
+		};
+		return fetchImpl;
 	}
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
@@ -1817,6 +1768,7 @@ export default class CueCraftPlugin extends Plugin {
 				signal: controller.signal,
 			});
 			if (!result) throw new Error("Provider returned no Section cue for this section.");
+			if (controller.signal.aborted && result.error) return;
 
 			let updated = replaceSection(cache, toCachedSection(result));
 			if (!controller.signal.aborted) {
@@ -1921,6 +1873,7 @@ export default class CueCraftPlugin extends Plugin {
 					signal: controller.signal,
 				});
 				for (const result of results) {
+					if (controller.signal.aborted && result.error) continue;
 					generated.push(toCachedSection(result));
 					if (result.error) failed++;
 					done++;
@@ -1930,6 +1883,7 @@ export default class CueCraftPlugin extends Plugin {
 					noteModifiedAt: file.stat.mtime,
 				});
 				await this.cacheStore.set(file.path, working);
+				if (controller.signal.aborted) break;
 			}
 			if (!controller.signal.aborted) {
 				const working = reconcileCacheSections(cache, sections, generated, {
@@ -2282,6 +2236,7 @@ export default class CueCraftPlugin extends Plugin {
 				signal: controller.signal,
 			});
 			for (const result of results) {
+				if (controller.signal.aborted && result.error) continue;
 				generated.push(toCachedSection(result));
 				if (result.error) failed++;
 				else completed++;
@@ -2291,6 +2246,7 @@ export default class CueCraftPlugin extends Plugin {
 				noteModifiedAt: file.stat.mtime,
 			});
 			await this.cacheStore.set(file.path, working);
+			if (controller.signal.aborted) break;
 		}
 		if (!controller.signal.aborted) {
 			const working = reconcileCacheSections(cache, sections, generated, {
