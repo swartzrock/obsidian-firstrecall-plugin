@@ -188,7 +188,7 @@ class CueWidget extends WidgetType {
 		super();
 	}
 
-	eq(other: CueWidget): boolean {
+	override eq(other: CueWidget): boolean {
 		return (
 			editorHookCardOptionsKey(other.options) ===
 				editorHookCardOptionsKey(this.options) &&
@@ -226,7 +226,7 @@ class CueWidget extends WidgetType {
 		return wrapper;
 	}
 
-	ignoreEvent(event: Event): boolean {
+	override ignoreEvent(event: Event): boolean {
 		const target = event.target as
 			| { closest?: (selector: string) => Element | null }
 			| null;
@@ -236,7 +236,7 @@ class CueWidget extends WidgetType {
 		);
 	}
 
-	destroy(dom: Node): void {
+	override destroy(dom: Node): void {
 		cleanupEditorStudyCueInteractions(dom);
 	}
 }
@@ -246,7 +246,7 @@ class NoteBriefWidget extends WidgetType {
 		super();
 	}
 
-	eq(other: NoteBriefWidget): boolean {
+	override eq(other: NoteBriefWidget): boolean {
 		return noteBriefKey(other.noteBrief) === noteBriefKey(this.noteBrief);
 	}
 
@@ -260,7 +260,7 @@ class RailSpacerWidget extends WidgetType {
 		super();
 	}
 
-	eq(other: RailSpacerWidget): boolean {
+	override eq(other: RailSpacerWidget): boolean {
 		return other.height === this.height;
 	}
 
@@ -272,7 +272,7 @@ class RailSpacerWidget extends WidgetType {
 		return element;
 	}
 
-	ignoreEvent(): boolean {
+	override ignoreEvent(): boolean {
 		return true;
 	}
 }
@@ -285,7 +285,7 @@ class CueGutterMarker extends GutterMarker {
 		super();
 	}
 
-	eq(other: GutterMarker): boolean {
+	override eq(other: GutterMarker): boolean {
 		return (
 			other instanceof CueGutterMarker &&
 			editorHookCardOptionsKey(other.options) ===
@@ -302,7 +302,7 @@ class CueGutterMarker extends GutterMarker {
 		);
 	}
 
-	toDOM(): HTMLElement {
+	override toDOM(): HTMLElement {
 		const collapse = this.options.collapse;
 		const options = collapse
 			? {
@@ -320,7 +320,7 @@ class CueGutterMarker extends GutterMarker {
 		return renderCueElement(this.cue, "cornell", options);
 	}
 
-	destroy(dom: Node): void {
+	override destroy(dom: Node): void {
 		if (dom.nodeType === dom.ELEMENT_NODE) {
 			editorCueWidthInteractionCleanup.get(dom as HTMLElement)?.();
 		}
