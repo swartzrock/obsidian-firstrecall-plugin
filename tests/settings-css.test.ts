@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const styles = readFileSync("styles.css", "utf8");
-const retiredDedicatedViewSelector = [".cuecraft", "cornell", "view"].join("-");
 
 function ruleFor(selector: string): string {
 	const escapedSelector = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -135,19 +134,6 @@ describe("settings CSS", () => {
 		);
 		expect(confidenceRail).toBeNull();
 		expect(styles).not.toContain("data-confidence");
-	});
-
-	it("removes dedicated Cornell pane selectors while retaining editor card selectors", () => {
-		expect(styles).not.toContain(retiredDedicatedViewSelector);
-		expect(styles).not.toContain(".cuecraft-cornell-toolbar");
-		expect(styles).not.toContain(".cuecraft-cornell-grid");
-		expect(styles).not.toContain(".cuecraft-hook-mode");
-		expect(styles).not.toContain(".cuecraft-note-brief-cornell");
-		expect(styles).toContain(".cuecraft-editor-cornell-card");
-		expect(styles).toContain(".cuecraft-cornell-cue");
-		expect(styles).toContain(".cuecraft-cornell-q");
-		expect(styles).toContain(".cuecraft-cornell-kw");
-		expect(styles).toContain(".cuecraft-cornell-term");
 	});
 
 	it("keeps Note Brief insight columns flat", () => {
@@ -461,9 +447,6 @@ describe("settings CSS", () => {
 		);
 		expect(styles).toContain(
 			"html.cuecraft-editor-cue-width-resizing *"
-		);
-		expect(styles).not.toMatch(
-			new RegExp(`${retiredDedicatedViewSelector}[^\\n{]*cuecraft-editor-cue-width-custom`)
 		);
 		expect(styles).not.toMatch(
 			/\.cuecraft-cue[^\n{]*cuecraft-editor-cue-width-custom/

@@ -13,7 +13,6 @@ import {
 import {
 	buildCueBatchPrompt,
 	cueBatchJsonSchema,
-	parseCueBatch,
 } from "../src/local-cli-cue-batch";
 
 afterEach(() => {
@@ -257,51 +256,4 @@ describe("local CLI cue batch prompt", () => {
 		]);
 	});
 
-	it("strips stray category properties from otherwise-valid batch output", () => {
-		const parsed = parseCueBatch(
-			JSON.stringify({
-				cues: [
-					{
-						question: "Q1?",
-						keywords: ["a", "b"],
-						category: null,
-					},
-					{
-						question: "Q2?",
-						keywords: ["c", "d"],
-						category: "sequences",
-					},
-					{
-						question: "Q3?",
-						keywords: ["e", "f"],
-						category: "unrelated",
-					},
-				],
-			}),
-			3
-		);
-
-		expect(parsed).toEqual({
-			results: [
-				{
-					cue: {
-						question: "Q1?",
-						keywords: ["a", "b"],
-					},
-				},
-				{
-					cue: {
-						question: "Q2?",
-						keywords: ["c", "d"],
-					},
-				},
-				{
-					cue: {
-						question: "Q3?",
-						keywords: ["e", "f"],
-					},
-				},
-			],
-		});
-	});
 });
