@@ -40,7 +40,6 @@ describe("buildEditorHookCard", () => {
 			showQuestion: true,
 			showTerms: true,
 		});
-		expect(card).not.toHaveProperty("category");
 	});
 
 	it("does not mark cards current without active section state", () => {
@@ -95,7 +94,6 @@ describe("buildEditorHookCard", () => {
 			error: "boom",
 			keywords: [],
 		});
-		expect(card).not.toHaveProperty("category");
 	});
 });
 

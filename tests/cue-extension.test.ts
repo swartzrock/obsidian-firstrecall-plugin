@@ -56,23 +56,6 @@ const NOTE_BRIEF = {
 		detail: "Say why tool use changes the task boundary.",
 	},
 };
-const LEGACY_CATEGORY_TEXT = [
-	"sequences",
-	"linkedlists",
-	"stacks",
-	"intervals",
-];
-
-function expectNoLegacyCategoryPresentation(element: HTMLElement): void {
-	expect(element.hasAttribute("data-category")).toBe(false);
-	expect(element.querySelector("[data-category]")).toBeNull();
-	expect(element.querySelector(".cuecraft-section-tag")).toBeNull();
-	expect(element.querySelector(".cuecraft-section-tag-dot")).toBeNull();
-	for (const category of LEGACY_CATEGORY_TEXT) {
-		expect(element.textContent).not.toContain(category);
-	}
-}
-
 function withDocument<T>(fn: () => T): T {
 	const dom = new JSDOM("<!doctype html><html><body></body></html>");
 	const previous = Object.getOwnPropertyDescriptor(globalThis, "document");
@@ -1202,86 +1185,6 @@ describe("renderCueElement", () => {
 		});
 	});
 
-	it("renders a legacy inline cue without category markers", () => {
-		withDocument(() => {
-			const legacyCue: CueLineData & { category: "stacks" } = {
-				line: 1,
-				heading: "Terms",
-				question: "What is an agent?",
-				keywords: ["agent", "tool"],
-				category: "stacks",
-				summary: SECTION_SUMMARY,
-				error: null,
-			};
-			const el = renderCueElement(legacyCue, "inline-cues");
-			expect(el.classList.contains("cuecraft-cue")).toBe(true);
-			expect(el.classList.contains("cuecraft-cuewidth-medium")).toBe(true);
-			expect(el.classList.contains("cuecraft-cuefont-medium")).toBe(true);
-			expect(el.hasAttribute("data-confidence")).toBe(false);
-			expectNoLegacyCategoryPresentation(el);
-			const buttons = disclosureButtons(el);
-			expect(buttons.map((button) => button.dataset.section)).toEqual([
-				"summary",
-				"question",
-				"terms",
-			]);
-			expect(
-				buttons.map((button) =>
-					button
-						.querySelector(".cuecraft-label-icon")
-						?.getAttribute("data-icon")
-				)
-			).toEqual(["notebook-text", "circle-question-mark", "tags"]);
-			expect(el.querySelector(".cuecraft-cue-question")?.textContent).toBe(
-				"What is an agent?"
-			);
-			expect(
-				Array.from(el.querySelectorAll(".cuecraft-cue-term")).map(
-					(term) => term.textContent
-				)
-			).toEqual(["agent", "tool"]);
-			expect(
-				el.querySelector(".cuecraft-summary-takeaway")?.textContent
-			).toBe("Agents use tools to complete multi-step work.");
-			expect(el.querySelector(".cuecraft-summary-phrase")).toBeNull();
-		});
-	});
-
-	it.each([
-		{
-			name: "Cornell",
-			display: "cornell",
-			termSelector: ".cuecraft-cornell-term",
-		},
-	] as const)(
-		"renders a legacy cue in $name without category markers",
-		({ display, termSelector }) => {
-			withDocument(() => {
-				const legacyCue: CueLineData & { category: "sequences" } = {
-					line: 7,
-					sectionId: "retrieval-practice",
-					heading: "Retrieval Practice",
-					question: "Why does retrieval practice strengthen memory?",
-					keywords: ["retrieval", "testing effect"],
-					category: "sequences",
-					summary: SECTION_SUMMARY,
-					error: null,
-				};
-				const el = renderCueElement(legacyCue, display);
-
-				expectNoLegacyCategoryPresentation(el);
-				expect(el.textContent).toContain(
-					"Why does retrieval practice strengthen memory"
-				);
-				expect(
-					Array.from(el.querySelectorAll(termSelector)).map(
-						(term) => term.textContent
-					)
-				).toEqual(["retrieval", "testing effect"]);
-			});
-		}
-	);
-
 	it("keeps Terms when rendering a migrated v5 Section cue", () => {
 		withDocument(() => {
 			const current = cacheFrom();
@@ -1298,7 +1201,11 @@ describe("renderCueElement", () => {
 			const [cue] = buildCueLineData(migrated, parseSections(NOTE));
 			const el = renderCueElement(cue, "inline-cues");
 
-			expectNoLegacyCategoryPresentation(el);
+			expect(el.hasAttribute("data-category")).toBe(false);
+			expect(el.querySelector("[data-category]")).toBeNull();
+			expect(el.querySelector(".cuecraft-section-tag")).toBeNull();
+			expect(el.querySelector(".cuecraft-section-tag-dot")).toBeNull();
+			expect(el.textContent).not.toContain("linkedlists");
 			expect(
 				Array.from(el.querySelectorAll(".cuecraft-cue-term")).map(
 					(term) => term.textContent

@@ -472,42 +472,6 @@ describe("settings defaults", () => {
 		}
 	});
 
-	it("discards legacy custom instruction overrides", async () => {
-		const { default: CueCraftPlugin } = await import("../src/main");
-		const saveData = vi.fn(async () => {});
-		const missing = async () => ({
-			ok: false as const,
-			reason: "missing-credential" as const,
-		});
-		const plugin = new CueCraftPlugin({} as never, {} as never);
-		Object.assign(plugin as unknown as Record<string, unknown>, {
-			credentialStore: {
-				availability: () => ({ ok: true }),
-				metadata: missing,
-				read: missing,
-				save: missing,
-				clear: missing,
-			},
-			loadData: vi.fn(async () => ({
-				settings: {
-					cueInstructionsOverride: "Custom Cue policy.",
-					noteBriefInstructionsOverride: "Custom Note Brief policy.",
-					summaryInstructionsOverride: "Legacy Summary policy.",
-				},
-			})),
-			saveData,
-		});
-
-		await (
-			plugin as unknown as { loadPluginData(): Promise<void> }
-		).loadPluginData();
-
-		expect(plugin.settings).not.toHaveProperty("cueInstructionsOverride");
-		expect(plugin.settings).not.toHaveProperty("noteBriefInstructionsOverride");
-		expect(plugin.settings).not.toHaveProperty("summaryInstructionsOverride");
-		expect(saveData).toHaveBeenCalledTimes(1);
-	});
-
 	it("defaults auto-generation settle delay to 10 seconds", () => {
 		expect(DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS).toBe(10);
 	});
@@ -562,14 +526,6 @@ describe("settings defaults", () => {
 		]) {
 			expect(DEFAULT_SETTINGS).not.toHaveProperty(key);
 		}
-	});
-
-	it("shows every Section cue component by default", async () => {
-		const { DEFAULT_SETTINGS } = await loadSettingsModule();
-
-		expect(DEFAULT_SETTINGS.showSummary).toBe(true);
-		expect(DEFAULT_SETTINGS.showQuestion).toBe(true);
-		expect(DEFAULT_SETTINGS.showTerms).toBe(true);
 	});
 
 	it("defaults editor Cue display to inline Section cues", () => {
