@@ -701,7 +701,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		const questionTypeDescription = (): string => {
 			const selected = questionTypeInfo(this.plugin.settings.questionType);
-			return `${selected.description} Guides newly generated or regenerated Questions only. It does not directly guide Summary, Terms, or Note Brief. Cached Questions change only after regeneration.`;
+			return `${selected.description} Cues will change after regeneration.`;
 		};
 		const questionTypeSetting = new Setting(containerEl)
 			.setName("Question type")
@@ -1068,7 +1068,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	// ── Note format ───────────────────────────────────────────────────────
 	private renderArtifactVisibilitySection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Generated components").setHeading();
+		new Setting(containerEl).setName("Study aids").setHeading();
 		const noteBriefCard = this.createArtifactCard(
 			containerEl,
 			"Note Brief",
@@ -1078,74 +1078,59 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		new Setting(noteBriefCard)
 			.setName("Show Note Brief")
 			.setDesc("Show the whole-note Note Brief in Editing and Reading.")
-			.addToggle((tg) =>
-				tg
+			.addToggle((tg) => {
+				tg.toggleEl.setAttribute("aria-label", "Show Note Brief");
+				return tg
 					.setValue(this.plugin.settings.showNoteBrief)
 					.onChange(async (value) => {
 						this.plugin.settings.showNoteBrief = value;
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
-					})
-			);
-		const parts = noteBriefCard.createDiv({ cls: "cuecraft-settings-artifact-parts" });
-		for (const label of ["Core idea", "Review first", "Self-test"]) {
-			parts.createSpan({ text: label, cls: "cuecraft-settings-artifact-part" });
-		}
-
+					});
+			});
 		const cueCard = this.createArtifactCard(
 			containerEl,
 			"Section cue",
-			"Choose which generated components appear in Editing and Reading."
+			"Choose which parts of each Section cue appear in Editing and Reading."
 		);
 
 		new Setting(cueCard)
 			.setName("Show Summary")
-			.addToggle((tg) =>
-				tg
+			.addToggle((tg) => {
+				tg.toggleEl.setAttribute("aria-label", "Show Summary");
+				return tg
 					.setValue(this.plugin.settings.showSummary)
 					.onChange(async (value) => {
 						this.plugin.settings.showSummary = value;
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
-					})
-			);
+					});
+			});
 
 		new Setting(cueCard)
 			.setName("Show Question")
-			.addToggle((tg) =>
-				tg
+			.addToggle((tg) => {
+				tg.toggleEl.setAttribute("aria-label", "Show Question");
+				return tg
 					.setValue(this.plugin.settings.showQuestion)
 					.onChange(async (value) => {
 						this.plugin.settings.showQuestion = value;
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
-					})
-			);
+					});
+			});
 		new Setting(cueCard)
 			.setName("Show Terms")
-			.addToggle((tg) =>
-				tg
+			.addToggle((tg) => {
+				tg.toggleEl.setAttribute("aria-label", "Show Terms");
+				return tg
 					.setValue(this.plugin.settings.showTerms)
 					.onChange(async (value) => {
 						this.plugin.settings.showTerms = value;
-						await this.plugin.saveSettings();
+						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
-					})
-			);
-		this.labelArtifactControls(noteBriefCard);
-		this.labelArtifactControls(cueCard);
-
-	}
-
-	private labelArtifactControls(card: HTMLElement): void {
-		for (const setting of card.querySelectorAll<HTMLElement>(".setting-item")) {
-			const label = setting.querySelector<HTMLElement>(".setting-item-name")
-				?.textContent?.trim();
-			if (!label) continue;
-			setting
-				.querySelector<HTMLElement>(".setting-item-control input, .setting-item-control button")
-				?.setAttribute("aria-label", label);
-		}
+					});
+			});
 	}
 
 	private createArtifactCard(
@@ -1216,7 +1201,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 	): void {
 		this.renderCueThumbnailSetting(containerEl, config, async (afterSave) => {
-			await this.plugin.saveSettings();
+			await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 			this.plugin.refreshEditorCues();
 			if (config.refreshReading) this.plugin.refreshReadingModeSurface();
 			afterSave?.();

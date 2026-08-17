@@ -17,9 +17,6 @@ describe("settings CSS", () => {
 		expect(cardRule).toContain("border: 1px solid");
 		expect(cardRule).not.toMatch(/\n\twidth:/);
 
-		const partsRule = ruleFor(".cuecraft-settings-artifact-parts");
-		expect(partsRule).toContain("display: flex");
-		expect(partsRule).toContain("flex-wrap: wrap");
 	});
 
 	it("uses shared read-only instruction-control hooks for both templates", () => {

@@ -125,7 +125,11 @@ function createObsidianMock() {
 	}
 
 	class MockToggle {
-		constructor(private input: HTMLInputElement) {}
+		readonly toggleEl: HTMLInputElement;
+
+		constructor(private input: HTMLInputElement) {
+			this.toggleEl = input;
+		}
 
 		setValue(value: boolean): this {
 			this.input.checked = value;
@@ -614,7 +618,8 @@ describe("settings defaults", () => {
 		tab.display();
 
 		const text = settingText(tab.containerEl);
-		expect(text).toContain("Generated components");
+		expect(text).toContain("Study aids");
+		expect(text).not.toContain("Generated components");
 		expect(text).toContain("Appearance");
 		expect(text).not.toContain("Editing View");
 		expect(text).not.toContain("Note format");
@@ -634,6 +639,9 @@ describe("settings defaults", () => {
 		expect(text).toContain("Core idea");
 		expect(text).toContain("Review first");
 		expect(text).toContain("Self-test");
+		expect(
+			tab.containerEl.querySelectorAll(".cuecraft-settings-artifact-part")
+		).toHaveLength(0);
 	});
 
 	it("allows every generated component to be hidden without marking content dirty", async () => {
@@ -656,6 +664,9 @@ describe("settings defaults", () => {
 			showTerms: false,
 		});
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(4);
+		for (const call of plugin.saveSettings.mock.calls) {
+			expect(call).toEqual([{ refreshReviewSurfaces: false }]);
+		}
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(4);
 		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledTimes(4);
 		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
@@ -668,6 +679,9 @@ describe("settings defaults", () => {
 		expect(settingText(tab.containerEl)).toContain("Changes Section cue layout in Editing only; Reading remains inline.");
 		expect(settingText(tab.containerEl)).toContain("Applies in Editing and Reading.");
 		await clickThumbnail(tab.containerEl, "Cue display", "cornell");
+		expect(plugin.saveSettings).toHaveBeenLastCalledWith({
+			refreshReviewSurfaces: false,
+		});
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshReadingModeSurface).not.toHaveBeenCalled();
 
@@ -755,9 +769,12 @@ describe("settings defaults", () => {
 		await vi.waitFor(() => expect(plugin.saveSettings).toHaveBeenCalledTimes(1));
 		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
 		expect(settingText(tab.containerEl)).toContain("Uses precise wording similar to an exam prompt.");
-		expect(settingText(tab.containerEl)).toContain("newly generated or regenerated Questions only");
-		expect(settingText(tab.containerEl)).toContain("does not directly guide Summary, Terms, or Note Brief");
-		expect(settingText(tab.containerEl)).toContain("Cached Questions change only after regeneration");
+		expect(settingText(tab.containerEl)).not.toContain(
+			"newly generated or regenerated Questions only"
+		);
+		expect(settingText(tab.containerEl)).toContain(
+			"Cues will change after regeneration."
+		);
 		expect(
 			tab.containerEl.querySelector<HTMLTextAreaElement>(
 				'textarea[aria-label="Section cue instructions"]'

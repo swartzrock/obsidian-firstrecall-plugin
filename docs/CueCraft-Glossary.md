@@ -43,7 +43,7 @@ The **Note Brief** belongs to the whole note and appears near the top. A **Secti
 | Preferred term | Meaning |
 | --- | --- |
 | **Main settings** | The home for global appearance and visibility controls. Its miniature Note Brief and Section cue cards show which visible component each control affects. |
-| **Appearance setting** | A control that changes which generated components are shown or how they look. It does not change model instructions or trigger generation. |
+| **Appearance setting** | A control that changes which study aids are shown or how they look. It does not change model instructions or trigger generation. |
 | **Visibility** | Whether a generated component is shown in the note. Hidden content remains generated and cached. |
 | **Cue Generation** | The settings area for what CueCraft asks the model to create and when generation runs. It is not an appearance section. |
 | **Generation setting** | A control that changes model instructions or when generation runs. A content-changing generation setting can require regeneration. |
