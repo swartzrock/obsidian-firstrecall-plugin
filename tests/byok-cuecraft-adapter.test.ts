@@ -608,6 +608,19 @@ describe("cueCraftProviderConfigFromSettings", () => {
 });
 
 describe("CueCraft provider settings normalization", () => {
+	it.each([
+		["codex", "codex-cli"],
+		["claude", "claude-cli"],
+	] as const)("migrates the legacy %s provider alias", (legacy, expected) => {
+		const raw = settings({ selectedProvider: "openai" });
+		(raw.byok as { selectedProvider: unknown }).selectedProvider = legacy;
+		const normalized = structuredClone(DEFAULT_SETTINGS);
+
+		normalizeCueCraftProviderSettings(normalized, DEFAULT_SETTINGS, raw);
+
+		expect(normalized.byok.selectedProvider).toBe(expected);
+	});
+
 	it("normalizes partial current provider data", () => {
 		const s = settings({
 			selectedProvider: "claude-cli",

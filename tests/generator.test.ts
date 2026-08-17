@@ -481,14 +481,14 @@ describe("generateSectionCue", () => {
 		expect(provider.cueInputs[0].options.questionType).toBe("direct-recall");
 	});
 
-	it("defaults an omitted Question type to Conceptual question", async () => {
+	it("defaults an omitted Question type to Exam practice", async () => {
 		const provider = mockProvider();
 		await generateSectionCue({
 			section,
 			provider,
 		});
 		expect(provider.cueInputs[0].options).toEqual({
-			questionType: "conceptual",
+			questionType: "exam-practice",
 		});
 	});
 
@@ -555,7 +555,7 @@ describe("generateSectionCueBatch", () => {
 describe("resolveGenerationOptions", () => {
 	it("fills unspecified values from defaults", () => {
 		expect(resolveGenerationOptions()).toEqual({
-			questionType: "conceptual",
+			questionType: "exam-practice",
 		});
 		expect(resolveGenerationOptions({ questionType: "exam-practice" })).toEqual({
 			questionType: "exam-practice",

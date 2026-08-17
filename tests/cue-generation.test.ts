@@ -21,8 +21,8 @@ describe("cue-generation: Question type", () => {
 		}
 	});
 
-	it("defaults invalid values to Conceptual question", () => {
-		expect(DEFAULT_QUESTION_TYPE).toBe("conceptual");
+	it("defaults invalid values to Exam practice", () => {
+		expect(DEFAULT_QUESTION_TYPE).toBe("exam-practice");
 		expect(questionTypeInfo("not-a-type")).toBe(
 			questionTypeInfo(DEFAULT_QUESTION_TYPE)
 		);

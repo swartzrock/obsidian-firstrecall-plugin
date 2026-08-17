@@ -136,7 +136,9 @@ const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 ]);
 
 export interface CueCraftSettings {
-	byok: ByokStoredSettings;
+	byok: Omit<ByokStoredSettings, "selectedProvider"> & {
+		selectedProvider: ByokProviderId | null;
+	};
 	questionType: QuestionType;
 	studyHideMode: StudyHideMode;
 	editorCueDisplay: EditorCueDisplay;
@@ -154,7 +156,7 @@ export interface CueCraftSettings {
 
 export const DEFAULT_SETTINGS: CueCraftSettings = {
 	byok: {
-		selectedProvider: "ollama",
+		selectedProvider: null,
 		providers: {
 			ollama: {
 				credential: "http://localhost:11434",
@@ -229,7 +231,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderSubpageHeader(
 					containerEl,
 					"AI model",
-					"Provider setup, connection checks, model selection, and speed tuning."
+					cueCraftSelectedProvider(this.plugin.settings)
+						? "Provider setup, connection checks, model selection, and speed tuning."
+						: "Select an AI provider to generate cues"
 				);
 				this.renderAiModelSection(containerEl, false);
 				break;
@@ -378,10 +382,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private aiModelSummary(): string {
+		const provider = cueCraftSelectedProvider(this.plugin.settings);
+		if (!provider) return "Select an AI provider to generate cues";
 		const setup = deriveCueCraftProviderSetupStatus(this.plugin.settings);
-		const providerLabel = this.providerDisplayName(
-			cueCraftSelectedProvider(this.plugin.settings)
-		);
+		const providerLabel = this.providerDisplayName(provider);
 		const modelLabel = this.selectedModelLabel() || "No model selected";
 		const connectionLabel =
 			setup.connection === "verified"
@@ -431,7 +435,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private selectedModelLabel(): string {
 		const settings = this.plugin.settings;
 		const provider = cueCraftSelectedProvider(settings);
-		const modelId = cueCraftProviderModel(settings).trim();
+		if (!provider) return "";
+		const modelId = cueCraftProviderModel(settings, provider).trim();
 		if (provider === "anthropic") {
 			if (!modelId) return "";
 			const stored = cueCraftProviderSettings(settings, "anthropic");
@@ -468,8 +473,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		this.renderProviderPicker(providerFlowEl);
 
-		this.renderProviderSetupPanel(providerFlowEl);
+		if (!cueCraftSelectedProvider(this.plugin.settings)) return;
 
+		this.renderProviderSetupPanel(providerFlowEl);
 		this.renderAiModelPerformanceSection(containerEl);
 	}
 
@@ -505,9 +511,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private renderProviderSetupPanel(containerEl: HTMLElement): void {
-		const definition = byokProviderDefinition(
-			cueCraftSelectedProvider(this.plugin.settings)
-		);
+		const provider = cueCraftSelectedProvider(this.plugin.settings);
+		if (!provider) return;
+		const definition = byokProviderDefinition(provider);
 		const panelEl = containerEl.createDiv({
 			cls: "cuecraft-active-provider-panel",
 		});
@@ -597,10 +603,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private renderProviderSetupStatus(containerEl: HTMLElement): void {
+		const provider = cueCraftSelectedProvider(this.plugin.settings);
+		if (!provider) return;
 		const status = deriveCueCraftProviderSetupStatus(this.plugin.settings);
-		const isCli = isCueCraftLocalCliProvider(
-			cueCraftSelectedProvider(this.plugin.settings)
-		);
+		const isCli = isCueCraftLocalCliProvider(provider);
 		const cliModelLabel = this.selectedModelLabel() === "CLI default"
 			? "CLI default"
 			: "Model override";
@@ -789,7 +795,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const provider = cueCraftSelectedProvider(this.plugin.settings);
 		return buildSectionCueInstructionsTemplate(
 			this.plugin.settings.questionType,
-			isCueCraftLocalCliProvider(provider) ? "batch" : "single"
+			provider && isCueCraftLocalCliProvider(provider) ? "batch" : "single"
 		);
 	}
 
@@ -1480,6 +1486,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private renderProviderCredentialSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		const provider = cueCraftSelectedProvider(s);
+		if (!provider) return;
 		const definition = byokProviderDefinition(provider);
 		if (provider === "anthropic") {
 			this.renderAnthropicCredentialSettings(containerEl);
@@ -1524,6 +1531,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private renderProviderModelSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		const provider = cueCraftSelectedProvider(s);
+		if (!provider) return;
 		if (provider === "anthropic") {
 			this.renderAnthropicModelSettings(containerEl);
 			return;
@@ -1830,6 +1838,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	/** Verify the selected provider is reachable and reports a readable result. */
 	private async testConnection(): Promise<void> {
 		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		if (!selectedProvider) return;
 		const definition = byokProviderDefinition(selectedProvider);
 		if (definition.credentialKind === "command") {
 			await this.testLocalCliProvider();
@@ -1843,11 +1852,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private async testLocalCliProvider(): Promise<void> {
-		const command = cueCraftProviderCredential(this.plugin.settings);
+		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		if (!selectedProvider) return;
+		const command = cueCraftProviderCredential(
+			this.plugin.settings,
+			selectedProvider
+		);
 		if (!command.trim()) {
-			const providerName = cueCraftProviderLabel(
-				cueCraftSelectedProvider(this.plugin.settings)
-			);
+			const providerName = cueCraftProviderLabel(selectedProvider);
 			new Notice(`CueCraft: enter your ${providerName} command first.`);
 			return;
 		}
@@ -1863,6 +1875,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private async testUrlProvider(): Promise<void> {
 		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		if (!selectedProvider) return;
 		const definition = byokProviderDefinition(selectedProvider);
 		const url = cueCraftProviderCredential(this.plugin.settings, selectedProvider);
 		if (!url.trim()) {
@@ -1887,6 +1900,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private async testCloudProvider(): Promise<void> {
 		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		if (!selectedProvider) return;
 		if (!this.plugin.isProviderCredentialSaved(selectedProvider)) {
 			const providerName = cueCraftProviderLabel(selectedProvider);
 			new Notice(`CueCraft: enter your ${providerName} API key first.`);

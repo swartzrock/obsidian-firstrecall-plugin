@@ -37,6 +37,12 @@ const http: CueCraftHttpClient = async () => ({ status: 200, text: "{}", json: {
 const fetchImpl = (async () => new Response("{}")) as typeof fetch;
 
 describe("makeCueCraftByokProvider", () => {
+	it("requires the user to select a provider", () => {
+		expect(() =>
+			cueCraftProviderConfigFromSettings(structuredClone(DEFAULT_SETTINGS))
+		).toThrow("Choose an AI provider in Settings.");
+	});
+
 	it("maps CueCraft settings into BYOK provider config", () => {
 		expect(
 			cueCraftProviderConfigFromSettings(

@@ -6,7 +6,7 @@ export interface EditorCueDisplayOption {
 	description: string;
 }
 
-export const DEFAULT_EDITOR_CUE_DISPLAY: EditorCueDisplay = "inline-cues";
+export const DEFAULT_EDITOR_CUE_DISPLAY: EditorCueDisplay = "cornell";
 
 export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
 	{

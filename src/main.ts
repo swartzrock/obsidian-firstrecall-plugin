@@ -23,7 +23,10 @@ import {
 	normalizeAutoGenerationSettleDelaySeconds,
 	scheduleAutoGenerationTimer,
 } from "./auto-generation-delay";
-import { type ByokHttpClient } from "@swartzrock/byok-runtime";
+import {
+	type ByokHttpClient,
+	type ByokProviderId,
+} from "@swartzrock/byok-runtime";
 import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
 	generateNote,
@@ -955,9 +958,9 @@ export default class CueCraftPlugin extends Plugin {
 
 	/** True once the selected provider has its required fields set. */
 	private isConfigured(): boolean {
-		const definition = byokProviderDefinition(
-			cueCraftSelectedProvider(this.settings)
-		);
+		const provider = cueCraftSelectedProvider(this.settings);
+		if (!provider) return false;
+		const definition = byokProviderDefinition(provider);
 		const hasCredential =
 			definition.credentialKind === "api-key"
 				? this.credentialStore.availability().ok &&
@@ -982,7 +985,9 @@ export default class CueCraftPlugin extends Plugin {
 		return [...this.credentialStorageWarnings];
 	}
 
-	isProviderCredentialSaved(provider = cueCraftSelectedProvider(this.settings)): boolean {
+	isProviderCredentialSaved(provider?: ByokProviderId): boolean {
+		provider ??= cueCraftSelectedProvider(this.settings) ?? undefined;
+		if (!provider) return false;
 		return cueCraftProviderCredentialSaved(this.settings, provider);
 	}
 
@@ -1612,10 +1617,10 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private selectedModelName(): string {
-		const model = cueCraftProviderModel(this.settings).trim();
-		return byokProviderDefinition(
-			cueCraftSelectedProvider(this.settings)
-		).modelBehavior === "optional"
+		const provider = cueCraftSelectedProvider(this.settings);
+		if (!provider) return "";
+		const model = cueCraftProviderModel(this.settings, provider).trim();
+		return byokProviderDefinition(provider).modelBehavior === "optional"
 			? model || "CLI default"
 			: model;
 	}
