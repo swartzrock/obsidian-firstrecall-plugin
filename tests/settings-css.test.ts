@@ -123,9 +123,6 @@ describe("settings CSS", () => {
 			".cuecraft-cue-error,\n.cuecraft-cornell-cue-error"
 		);
 		expect(failedCueRule).toContain("border-left-color: var(--text-error)");
-
-		const failedHookRule = ruleFor(".cuecraft-editor-hook-failed");
-		expect(failedHookRule).toContain("var(--color-red)");
 	});
 
 	it("does not paint cue rails from confidence", () => {
@@ -334,9 +331,6 @@ describe("settings CSS", () => {
 		expect(styles).not.toContain('data-overflowing="true"');
 		expect(styles).not.toContain('data-expanded="false"');
 
-		const emptyRule = ruleFor(".cuecraft-editor-hook-empty");
-		expect(emptyRule).toContain("display: none");
-
 		const titleRule = ruleFor(
 			".cuecraft-editor-hook-sectioned .cuecraft-editor-hook-title"
 		);
@@ -344,18 +338,6 @@ describe("settings CSS", () => {
 		expect(titleRule).toContain("font-size: inherit");
 		expect(titleRule).toContain("font-weight: var(--font-normal, 400)");
 		expect(titleRule).toContain("line-height: 1.45");
-
-		const longTitleRule = ruleFor(
-			'.cuecraft-editor-hook-sectioned[data-title-density="long"] .cuecraft-editor-hook-title'
-		);
-		expect(longTitleRule).toContain("font-size: inherit");
-		expect(longTitleRule).toContain("line-height: 1.45");
-
-		const denseTitleRule = ruleFor(
-			'.cuecraft-editor-hook-sectioned[data-title-density="dense"] .cuecraft-editor-hook-title'
-		);
-		expect(denseTitleRule).toContain("font-size: inherit");
-		expect(denseTitleRule).toContain("line-height: 1.45");
 
 		const summaryRule = ruleFor(
 			".cuecraft-editor-hook-sectioned .cuecraft-summary"
@@ -386,8 +368,6 @@ describe("settings CSS", () => {
 			".markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-large"
 		);
 		expect(responsiveLargeRule).toContain("font-size: var(--font-ui-medium)");
-
-		expect(styles).toContain("width: min(16rem, 28vw)");
 	});
 
 	it("styles the Editing View resize grip and scopes Custom width to rail cards", () => {

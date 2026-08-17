@@ -157,16 +157,9 @@ describe("renderAppearanceThumbnailGroup", () => {
 });
 
 describe("Editing View thumbnail option recipes", () => {
-	const displayedEditorCueDisplayOptions = EDITOR_CUE_DISPLAY_OPTIONS.filter(
-		(option) =>
-			!["collapsed-tabs", "active-section-composer", "hook-minimap"].includes(
-				option.id
-			)
-	);
-
 	it("covers every currently offered Editing View option with a preview recipe", () => {
 		expect(editorCueDisplayThumbnailOptions().map((option) => option.id)).toEqual(
-			displayedEditorCueDisplayOptions.map((option) => option.id)
+			EDITOR_CUE_DISPLAY_OPTIONS.map((option) => option.id)
 		);
 	});
 
@@ -185,22 +178,13 @@ describe("Editing View thumbnail option recipes", () => {
 			onSelect: vi.fn(),
 		});
 
-		for (const option of displayedEditorCueDisplayOptions) {
+		for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
 			expect(
 				root.querySelector(`.cuecraft-preview-editor-display-${option.id}`)
 			).not.toBeNull();
 		}
-		for (const optionId of [
-			"collapsed-tabs",
-			"active-section-composer",
-			"hook-minimap",
-		]) {
-			expect(
-				root.querySelector(`.cuecraft-preview-editor-display-${optionId}`)
-			).toBeNull();
-		}
 		expect(root.querySelectorAll(".cuecraft-preview-editor-scene")).toHaveLength(
-			displayedEditorCueDisplayOptions.length
+			EDITOR_CUE_DISPLAY_OPTIONS.length
 		);
 		const cornell = root.querySelector<HTMLElement>(
 			"[data-option-id='cornell']"
@@ -238,9 +222,6 @@ describe("Editing View thumbnail option recipes", () => {
 		expect(root.textContent).not.toContain("Cornell Minimal");
 		expect(root.textContent).not.toContain("Anchored card rail");
 		expect(root.textContent).not.toContain("Threaded margin notes");
-		expect(root.textContent).not.toContain("Collapsed color tabs");
-		expect(root.textContent).not.toContain("Active-section composer");
-		expect(root.textContent).not.toContain("Hook minimap");
 	});
 
 	it("uses polished question text in key editor-truth previews", () => {

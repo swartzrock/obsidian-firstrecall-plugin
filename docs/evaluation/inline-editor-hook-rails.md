@@ -1,6 +1,6 @@
-# Inline Editor Hook Rails Evaluation
+# Editor Cue Displays Evaluation
 
-Use this checklist to compare CueCraft's normal-editor Section cue displays in an Obsidian light note page. Check the same cached note in each display mode so differences are visual and behavioral, not content-driven.
+Use this checklist to compare CueCraft's normal-editor Section cue displays in an Obsidian note page. Check the same cached note in each display mode so differences are visual and behavioral, not content-driven.
 
 ## Test Note Shape
 
@@ -17,33 +17,23 @@ Use a note with at least five eligible sections:
 Check these settings under Cue Generation -> Cue display:
 
 - Inline Section cues
-- Anchored card rail
-- Collapsed color tabs
-- Threaded margin notes
-- Active-section composer
-- Hook minimap
+- Cornell
 
 ## Required Checks
 
 - Default upgrade: Inline Section cues remain selected when the new setting is absent.
-- Settings persistence: Changing the dropdown rerenders the active editor and survives plugin reload.
+- Settings persistence: Changing the display rerenders the active editor and survives plugin reload.
 - Markdown safety: Switching modes does not change the note's Markdown source.
-- Terms visibility: Turning `Show Terms` off hides Terms in every display mode.
-- Failed Section cues: Failed sections remain visible as failed states in every display mode.
-- Long questions: Long hook text remains readable without overlapping note text.
-- Light theme: Hook text, borders, and backgrounds meet normal Obsidian light-theme contrast.
-- Dark theme: Hook text, borders, and backgrounds remain legible without hard-coded light colors.
-- Narrow pane: Each mode degrades into in-flow blocks or compact tabs without covering editor text.
-- Reduced motion: Collapsed tabs and minimap popouts remain understandable when motion is reduced.
-
-## Mode-Specific Notes
-
-- Anchored card rail should feel closest to the colorful Hook Rail review surface while staying attached to normal editor sections.
-- Collapsed color tabs should keep most sections compact, with the current or focused section exposing a readable peek.
-- Threaded margin notes should be calmer than cards and preserve a visible section-to-hook relationship.
-- Active-section composer should emphasize the current hook without suggesting live generation while typing.
-- Hook minimap should read as a compact section overview with readable popouts, not a replacement editor.
+- Placement: Inline cues appear beneath their headings; Cornell cards appear in the editor gutter beside their sections.
+- Terms visibility: Turning `Show Terms` off hides Terms in both display modes.
+- Failed Section cues: Failed sections remain visible as failed states in both display modes.
+- Long questions: Long question text remains readable without overlapping note text.
+- Light theme: Cue text, borders, and backgrounds meet normal Obsidian light-theme contrast.
+- Dark theme: Cue text, borders, and backgrounds remain legible without hard-coded light colors.
+- Narrow pane: Inline cues remain in flow and Cornell cards do not cover editor text.
+- Cornell width: Dragging or using the keyboard on the Cornell width separator updates all visible cards and survives reload.
+- Reduced motion: Cornell disclosure and layout changes remain understandable when motion is reduced.
 
 ## Known Manual Gap
 
-Automated tests cover setting options, model output, DOM classes, hidden Terms, failed states, and TypeScript safety. Visual overlap, theme contrast, and real CodeMirror gutter interaction still need manual review inside Obsidian because they depend on editor pane width and active community theme CSS.
+Automated tests cover setting options, persisted-value cleanup, DOM classes, hidden Terms, failed states, Cornell width controls, and TypeScript safety. Visual overlap, theme contrast, and real CodeMirror gutter interaction still need manual review inside Obsidian because they depend on editor pane width and active community theme CSS.

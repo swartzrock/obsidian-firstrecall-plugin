@@ -127,14 +127,7 @@ export function cueFontSizeThumbnailOptions(): AppearanceThumbnailOption<
 export function editorCueDisplayThumbnailOptions(): AppearanceThumbnailOption<
 	EditorCueDisplay
 >[] {
-	const hiddenDisplays = new Set<EditorCueDisplay>([
-		"collapsed-tabs",
-		"active-section-composer",
-		"hook-minimap",
-	]);
-	return EDITOR_CUE_DISPLAY_OPTIONS.filter(
-		(option) => !hiddenDisplays.has(option.id)
-	).map((option) => ({
+	return EDITOR_CUE_DISPLAY_OPTIONS.map((option) => ({
 		id: option.id,
 		label: option.label,
 		description: option.description,
@@ -176,40 +169,11 @@ function renderEditorCueDisplayPreview(
 	display: EditorCueDisplay
 ): void {
 	const doc = previewEl.ownerDocument;
-	if (display === "cornell" || display === "inline-cues") {
-		const surface = editorPreviewSurface(doc, [
-			"cuecraft-preview-editor-display",
-			`cuecraft-preview-editor-display-${display}`,
-		]);
-		surface.appendChild(editorCueCardScene(doc, display));
-		previewEl.appendChild(surface);
-		return;
-	}
-
 	const surface = editorPreviewSurface(doc, [
 		"cuecraft-preview-editor-display",
 		`cuecraft-preview-editor-display-${display}`,
 	]);
-	const scene = editorScene(doc);
-	surface.appendChild(scene);
-
-	switch (display) {
-		case "collapsed-tabs":
-			scene.appendChild(editorTab(doc, "warm", "first"));
-			scene.appendChild(editorTab(doc, "cool", "second"));
-			scene.appendChild(editorPeek(doc));
-			break;
-		case "active-section-composer":
-			scene.appendChild(editorComposerCard(doc));
-			break;
-		case "hook-minimap":
-			scene.appendChild(editorMinimap(doc));
-			scene.appendChild(editorMinimapPopout(doc));
-			break;
-		default:
-			assertNever(display);
-	}
-
+	surface.appendChild(editorCueCardScene(doc, display));
 	previewEl.appendChild(surface);
 }
 
@@ -313,46 +277,4 @@ function editorScene(doc: Document): HTMLElement {
 		scene.appendChild(line);
 	}
 	return scene;
-}
-
-function editorTab(
-	doc: Document,
-	tone: "warm" | "cool",
-	slot: "first" | "second"
-): HTMLElement {
-	const tab = doc.createElement("span");
-	tab.className = [
-		"cuecraft-preview-editor-tab",
-		`cuecraft-preview-editor-tab-${tone}`,
-		`cuecraft-preview-editor-tab-${slot}`,
-	].join(" ");
-	return tab;
-}
-
-function editorPeek(doc: Document): HTMLElement {
-	const peek = doc.createElement("span");
-	peek.className = "cuecraft-preview-editor-peek";
-	return peek;
-}
-
-function editorComposerCard(doc: Document): HTMLElement {
-	const card = doc.createElement("span");
-	card.className = "cuecraft-preview-editor-composer-card";
-	return card;
-}
-
-function editorMinimap(doc: Document): HTMLElement {
-	const minimap = doc.createElement("span");
-	minimap.className = "cuecraft-preview-editor-minimap";
-	return minimap;
-}
-
-function editorMinimapPopout(doc: Document): HTMLElement {
-	const popout = doc.createElement("span");
-	popout.className = "cuecraft-preview-editor-minimap-popout";
-	return popout;
-}
-
-function assertNever(_value: never): never {
-	throw new Error("Unhandled editor thumbnail variant");
 }

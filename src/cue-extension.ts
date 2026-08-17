@@ -17,12 +17,6 @@ import {
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { setIcon, setTooltip } from "obsidian";
 import type { NoteCache } from "./cache";
-import {
-	buildEditorHookCard,
-	type EditorHookCard,
-	type EditorHookCardOptions,
-	type EditorHookCardState,
-} from "./editor-hook-rail";
 import type { EditorCueDisplay } from "./editor-cue-display";
 import {
 	cueFontSizeClass,
@@ -105,7 +99,7 @@ export interface EditorCueWidthController {
 	commitWidthPx(widthPx: number): void;
 }
 
-interface CueRenderOptions extends EditorHookCardOptions {
+interface CueRenderOptions extends CueLineDataOptions {
 	cueFontSize?: CueFontSize;
 	editorCueWidthController?: EditorCueWidthController;
 	collapse?: CueSectionCollapseRenderState;
@@ -190,8 +184,6 @@ export function buildCueLineData(
 class CueWidget extends WidgetType {
 	constructor(
 		private readonly cue: CueLineData,
-		private readonly display: EditorCueDisplay,
-		private readonly index: number,
 		private readonly options: CueRenderOptions = {}
 	) {
 		super();
@@ -199,8 +191,6 @@ class CueWidget extends WidgetType {
 
 	eq(other: CueWidget): boolean {
 		return (
-			other.display === this.display &&
-			other.index === this.index &&
 			editorHookCardOptionsKey(other.options) ===
 				editorHookCardOptionsKey(this.options) &&
 			other.options.collapse?.controller ===
@@ -230,17 +220,7 @@ class CueWidget extends WidgetType {
 					},
 				}
 			: this.options;
-		const element = renderCueElement(
-			this.cue,
-			this.display,
-			this.index,
-			"upcoming",
-			options
-		);
-		if (!isInlineEditorDisplay(this.display)) {
-			element.classList.add("cuecraft-editor-hook-inline-fallback");
-			return element;
-		}
+		const element = renderCueElement(this.cue, "inline-cues", options);
 		const wrapper = element.ownerDocument.createElement("div");
 		wrapper.className = "cuecraft-inline-cue-widget";
 		wrapper.appendChild(element);
@@ -301,9 +281,6 @@ class RailSpacerWidget extends WidgetType {
 class CueGutterMarker extends GutterMarker {
 	constructor(
 		private readonly cue: CueLineData,
-		private readonly display: EditorCueDisplay,
-		private readonly index: number,
-		private readonly state: EditorHookCardState = "upcoming",
 		private readonly options: CueRenderOptions = {}
 	) {
 		super();
@@ -312,9 +289,6 @@ class CueGutterMarker extends GutterMarker {
 	eq(other: GutterMarker): boolean {
 		return (
 			other instanceof CueGutterMarker &&
-			other.display === this.display &&
-			other.index === this.index &&
-			other.state === this.state &&
 			editorHookCardOptionsKey(other.options) ===
 				editorHookCardOptionsKey(this.options) &&
 			other.options.collapse?.controller ===
@@ -344,13 +318,7 @@ class CueGutterMarker extends GutterMarker {
 					},
 				}
 			: this.options;
-		return renderCueElement(
-			this.cue,
-			this.display,
-			this.index,
-			this.state,
-			options
-		);
+		return renderCueElement(this.cue, "cornell", options);
 	}
 
 	destroy(dom: Node): void {
@@ -364,26 +332,11 @@ class CueGutterMarker extends GutterMarker {
 export function renderCueElement(
 	cue: CueLineData,
 	display: EditorCueDisplay,
-	index = 0,
-	state: EditorHookCardState = "upcoming",
 	options: CueRenderOptions = {}
 ): HTMLElement {
-	let element: HTMLElement;
-	if (isCornellEditorDisplay(display)) {
-		element = renderCornellCueElement(
-			cue,
-			display,
-			state,
-			options
-		);
-	} else if (!isInlineEditorDisplay(display)) {
-		element = renderEditorHookElement(
-			buildEditorHookCard(cue, display, index, state, options),
-			options
-		);
-	} else {
-		element = renderInlineCueElement(cue, options);
-	}
+	const element = isCornellEditorDisplay(display)
+		? renderCornellCueElement(cue, options)
+		: renderInlineCueElement(cue, options);
 	applyEditorStudyCueInteraction(element, options.study);
 	return element;
 }
@@ -435,8 +388,6 @@ function cleanupEditorStudyCueInteractions(dom: Node): void {
 
 function renderCornellCueElement(
 	cue: CueLineData,
-	display: EditorCueDisplay,
-	state: EditorHookCardState,
 	options: CueRenderOptions = {}
 ): HTMLElement {
 	const doc = cueDocument();
@@ -450,9 +401,8 @@ function renderCornellCueElement(
 	].join(" ");
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");
-	root.dataset.display = display;
+	root.dataset.display = "cornell";
 	root.dataset.line = String(cue.line);
-	root.dataset.state = state;
 	const showSummary = options.showSummary ?? true;
 	const showTerms = options.showTerms ?? true;
 	const termValues = buildCornellTerms(cue.keywords);
@@ -473,7 +423,7 @@ function renderCornellCueElement(
 		q.className = "cuecraft-cornell-q";
 		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
 		card.appendChild(q);
-		return finalizeRailCard(root, display, options);
+		return finalizeRailCard(root, options);
 	}
 
 	root.classList.add("cuecraft-editor-hook-sectioned");
@@ -518,7 +468,7 @@ function renderCornellCueElement(
 		);
 	}
 
-	return finalizeRailCard(root, display, options);
+	return finalizeRailCard(root, options);
 }
 
 function renderInlineCueElement(
@@ -589,108 +539,6 @@ function renderInlineCueElement(
 	return root;
 }
 
-function renderEditorHookElement(
-	card: EditorHookCard,
-	options: CueRenderOptions = {}
-): HTMLElement {
-	const root = cueDocument().createElement("div");
-	root.className = `cuecraft-editor-hook cuecraft-editor-hook-${card.display}`;
-	applyCueLayoutClasses(root, options);
-	const showSectionLabels =
-		sectionDisclosuresApplyToDisplay(card.display) && !card.error;
-	if (showSectionLabels) root.classList.add("cuecraft-editor-hook-sectioned");
-	root.tabIndex = 0;
-	root.setAttribute("role", "note");
-	root.dataset.display = card.display;
-	root.dataset.line = String(card.line);
-	root.dataset.state = card.state;
-	root.dataset.titleDensity = card.titleDensity;
-	root.dataset.tone = card.tone;
-	root.dataset.gradient = String(card.gradientIndex);
-	root.dataset.summaryVisible = String(card.showSummary);
-	root.dataset.questionVisible = String(card.showQuestion);
-	root.dataset.termsVisible = String(card.showTerms);
-	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
-
-	let hasContent = false;
-	if (card.showSummary && card.summary && showSectionLabels) {
-		const summary = cueDocument().createElement("div");
-		summary.className = "cuecraft-summary";
-		const takeaway = cueDocument().createElement("span");
-		takeaway.className = "cuecraft-summary-takeaway";
-		takeaway.textContent = card.summary.takeaway;
-		summary.appendChild(takeaway);
-		appendEditorHookDisclosure(
-			root,
-			"summary",
-			card.summary.takeaway,
-			summary,
-			options.collapse
-		);
-		hasContent = true;
-	}
-	if (card.showQuestion || card.kind === "failed") {
-		const title = cueDocument().createElement("div");
-		title.className = "cuecraft-editor-hook-title";
-		title.textContent =
-			(card.display === "active-section-composer" &&
-				card.state === "current") ||
-			card.display === "hook-minimap"
-				? card.originalQuestion
-				: card.hookTitle;
-		if (showSectionLabels) {
-			appendEditorHookDisclosure(
-				root,
-				"question",
-				title.textContent,
-				title,
-				options.collapse
-			);
-		} else {
-			root.appendChild(title);
-		}
-		hasContent = true;
-	}
-
-	if (card.error) {
-		root.title = card.error;
-		const error = cueDocument().createElement("div");
-		error.className = "cuecraft-editor-hook-status";
-		error.textContent = "Generation failed - regenerate";
-		root.appendChild(error);
-		return railLayoutAppliesToDisplay(card.display)
-			? finalizeRailCard(root, card.display, options)
-			: root;
-	}
-
-	if (card.showSummary && card.summary && !showSectionLabels) {
-		appendSummary(root, card.summary);
-		hasContent = true;
-	}
-
-	if (card.showTerms && card.keywords.length) {
-		const keywords = cueDocument().createElement("div");
-		keywords.className = "cuecraft-editor-hook-keywords";
-		appendCueTerms(keywords, card.keywords);
-		if (showSectionLabels) {
-			appendEditorHookDisclosure(
-				root,
-				"terms",
-				card.keywords.join(", "),
-				keywords,
-				options.collapse
-			);
-		} else {
-			root.appendChild(keywords);
-		}
-		hasContent = true;
-	}
-	if (!hasContent) root.classList.add("cuecraft-editor-hook-empty");
-	return railLayoutAppliesToDisplay(card.display)
-		? finalizeRailCard(root, card.display, options)
-		: root;
-}
-
 function appendLabelIcon(
 	parent: HTMLElement,
 	icon: string | readonly string[]
@@ -748,16 +596,8 @@ export function railLayoutAppliesToDisplay(display: EditorCueDisplay): boolean {
 	return isCornellEditorDisplay(display);
 }
 
-function sectionDisclosuresApplyToDisplay(display: EditorCueDisplay): boolean {
-	return (
-		display === "inline-cues" ||
-		isCornellEditorDisplay(display)
-	);
-}
-
 function finalizeRailCard(
 	root: HTMLElement,
-	display: EditorCueDisplay,
 	options: CueRenderOptions
 ): HTMLElement {
 	root.classList.add("cuecraft-editor-rail-card");
@@ -775,7 +615,7 @@ function finalizeRailCard(
 	const gripLabel = root.ownerDocument.createElement("span");
 	gripLabel.id = `${root.id}-width-grip-label`;
 	gripLabel.className = "cuecraft-editor-cue-width-grip-label";
-	gripLabel.textContent = `${editorCueDisplayLabel(display)} Section cue rail width`;
+	gripLabel.textContent = "Cornell Section cue rail width";
 	grip.appendChild(gripLabel);
 	grip.setAttribute("aria-labelledby", gripLabel.id);
 	grip.setAttribute("aria-valuemin", String(EDITOR_CUE_WIDTH_MIN_PX));
@@ -795,13 +635,6 @@ function finalizeRailCard(
 	);
 	installEditorCueWidthInteraction(root, grip, controller);
 	return root;
-}
-
-function editorCueDisplayLabel(display: EditorCueDisplay): string {
-	return display
-		.split("-")
-		.map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-		.join(" ");
 }
 
 export function applyEditorCueWidthPreview(
@@ -1536,7 +1369,7 @@ export function buildCueWidgetDecorations(
 		return ranges.length ? Decoration.set(ranges, true) : Decoration.none;
 	}
 
-	for (const [index, cue] of payload.cues.entries()) {
+	for (const cue of payload.cues) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const studyOptions = cueStudyRenderOptions(payload, cue);
 		if (!shouldRenderEditorCue(payload, cue, studyOptions)) continue;
@@ -1549,7 +1382,7 @@ export function buildCueWidgetDecorations(
 		// Block widget rendered on its own line just after the heading.
 		ranges.push(
 			Decoration.widget({
-				widget: new CueWidget(cue, payload.display, index, cueOptions),
+				widget: new CueWidget(cue, cueOptions),
 				block: true,
 				side: 1,
 			}).range(headingLine.to)
@@ -1566,15 +1399,12 @@ export function buildCueGutterMarkers(
 
 	const builder = new RangeSetBuilder<GutterMarker>();
 	const doc = state.doc;
-	const activeLine = doc.lineAt(state.selection.main.head).number;
-	const currentCueLine = activeCueLine(payload.display, payload.cues, activeLine);
 	const options = editorCueRenderOptionsFromPayload(payload);
-	for (const [index, cue] of payload.cues.entries()) {
+	for (const cue of payload.cues) {
 		if (cue.line < 1 || cue.line > doc.lines) continue;
 		const studyOptions = cueStudyRenderOptions(payload, cue);
 		if (!shouldRenderEditorCue(payload, cue, studyOptions)) continue;
 		const markerLine = doc.line(cue.line);
-		const cardState = cue.line === currentCueLine ? "current" : "upcoming";
 		const markerOptions = {
 			...options,
 			...cueCollapseRenderOptions(payload, cue),
@@ -1583,7 +1413,7 @@ export function buildCueGutterMarkers(
 		builder.add(
 			markerLine.from,
 			markerLine.from,
-			new CueGutterMarker(cue, payload.display, index, cardState, markerOptions)
+			new CueGutterMarker(cue, markerOptions)
 		);
 	}
 	return builder.finish();
@@ -1682,7 +1512,6 @@ function cueCollapseRenderOptions(
 	cue: CueLineData
 ): Pick<CueRenderOptions, "collapse"> {
 	if (
-		!sectionDisclosuresApplyToDisplay(payload.display) ||
 		!payload.notePath ||
 		!payload.collapseController
 	) {
@@ -1722,23 +1551,6 @@ function applyCueLayoutClasses(
 ): void {
 	element.classList.add("cuecraft-cuewidth-medium");
 	element.classList.add(cueFontSizeClass(options.cueFontSize));
-}
-
-function activeCueLine(
-	display: EditorCueDisplay,
-	cues: CueLineData[],
-	activeLine: number
-): number | null {
-	if (display !== "active-section-composer" && display !== "hook-minimap") {
-		return null;
-	}
-
-	let current: number | null = null;
-	for (const cue of cues) {
-		if (cue.line > activeLine) break;
-		current = cue.line;
-	}
-	return current;
 }
 
 function isInlineEditorDisplay(display: EditorCueDisplay): boolean {
@@ -1971,19 +1783,15 @@ export const cueGutterField = StateField.define<CueGutterState>({
 			}
 		}
 		if (!payload) {
-			return { markers: value.markers.map(tr.changes), payload };
+			return value;
 		}
 		if (!payloadChanged) {
 			payload = mapCuePayloadThroughChanges(payload, tr);
 		}
-		if (
-			payloadChanged ||
-			tr.selection ||
-			tr.docChanged
-		) {
+		if (payloadChanged || tr.docChanged) {
 			return { markers: buildCueGutterMarkers(tr.state, payload), payload };
 		}
-		return { markers: value.markers.map(tr.changes), payload };
+		return value;
 	},
 });
 
@@ -2218,7 +2026,6 @@ export function railLayoutUpdateNeedsMeasure(update: ViewUpdate): boolean {
 	return (
 		update.docChanged ||
 		update.viewportChanged ||
-		update.selectionSet ||
 		cuesChanged
 	);
 }

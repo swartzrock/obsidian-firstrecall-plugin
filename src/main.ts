@@ -429,6 +429,7 @@ export default class CueCraftPlugin extends Plugin {
 			)
 		) {
 			settings.editorCueDisplay = DEFAULT_EDITOR_CUE_DISPLAY;
+			settingsChanged = true;
 		}
 		for (const key of [
 			"cuePreset",
