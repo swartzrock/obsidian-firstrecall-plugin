@@ -36,7 +36,7 @@ import type {
 import type { StudySessionSnapshot } from "../src/study-session";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
-const SECTION_LENS = {
+const SECTION_SUMMARY = {
 	keyPhrase: "agent autonomy",
 	takeaway: "Agents use tools to complete multi-step work.",
 	explanation: "The section contrasts one-shot chat with tool-using agents.",
@@ -161,7 +161,7 @@ function cue(overrides: Partial<CueLineData> = {}): CueLineData {
 		heading: "Terms",
 		question: "How do agents differ from chatbots?",
 		keywords: ["agents", "tools"],
-		sectionLens: SECTION_LENS,
+		summary: SECTION_SUMMARY,
 		error: null,
 		...overrides,
 	};
@@ -665,7 +665,7 @@ function cacheFrom(
 		contentHash: s.contentHash,
 		keywords: ["k1", "k2"],
 		question: `Q:${s.heading}`,
-		sectionLens: SECTION_LENS,
+		summary: SECTION_SUMMARY,
 		error: null as string | null,
 		...overrides(s, i),
 	}));
@@ -692,7 +692,7 @@ describe("buildCueLineData", () => {
 		expect(cues[0]).toMatchObject({
 			question: "Q:A",
 			keywords: ["k1", "k2"],
-			sectionLens: SECTION_LENS,
+			summary: SECTION_SUMMARY,
 		});
 		expect(cues[0]).not.toHaveProperty("category");
 	});
@@ -714,7 +714,7 @@ describe("buildCueLineData", () => {
 		});
 		expect(cues).toHaveLength(3);
 		expect(cues[0].question).toBe("Q:A");
-		expect(cues.every((c) => c.sectionLens === null)).toBe(true);
+		expect(cues.every((c) => c.summary === null)).toBe(true);
 	});
 
 	it("returns no ordinary cue data when every component is hidden", () => {
@@ -760,7 +760,7 @@ describe("buildCueLineData", () => {
 				contentHash: s.contentHash,
 				keywords: ["k"],
 				question: `Q:${s.heading}`,
-				sectionLens: SECTION_LENS,
+				summary: SECTION_SUMMARY,
 				error: null,
 			})),
 			noteBrief: null,
@@ -1210,7 +1210,7 @@ describe("renderCueElement", () => {
 				question: "What is an agent?",
 				keywords: ["agent", "tool"],
 				category: "stacks",
-				sectionLens: SECTION_LENS,
+				summary: SECTION_SUMMARY,
 				error: null,
 			};
 			const el = renderCueElement(legacyCue, "inline-cues");
@@ -1241,9 +1241,9 @@ describe("renderCueElement", () => {
 				)
 			).toEqual(["agent", "tool"]);
 			expect(
-				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+				el.querySelector(".cuecraft-summary-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
-			expect(el.querySelector(".cuecraft-section-lens-phrase")).toBeNull();
+			expect(el.querySelector(".cuecraft-summary-phrase")).toBeNull();
 		});
 	});
 
@@ -1251,11 +1251,11 @@ describe("renderCueElement", () => {
 		{
 			name: "Cornell",
 			display: "cornell",
-			supportSelector: ".cuecraft-cornell-support-term",
+			termSelector: ".cuecraft-cornell-term",
 		},
 	] as const)(
 		"renders a legacy cue in $name without category markers",
-		({ display, supportSelector }) => {
+		({ display, termSelector }) => {
 			withDocument(() => {
 				const legacyCue: CueLineData & { category: "sequences" } = {
 					line: 7,
@@ -1264,7 +1264,7 @@ describe("renderCueElement", () => {
 					question: "Why does retrieval practice strengthen memory?",
 					keywords: ["retrieval", "testing effect"],
 					category: "sequences",
-					sectionLens: SECTION_LENS,
+					summary: SECTION_SUMMARY,
 					error: null,
 				};
 				const el = renderCueElement(legacyCue, display);
@@ -1274,7 +1274,7 @@ describe("renderCueElement", () => {
 					"Why does retrieval practice strengthen memory"
 				);
 				expect(
-					Array.from(el.querySelectorAll(supportSelector)).map(
+					Array.from(el.querySelectorAll(termSelector)).map(
 						(term) => term.textContent
 					)
 				).toEqual(["retrieval", "testing effect"]);
@@ -1713,7 +1713,7 @@ describe("renderCueElement", () => {
 			expect(calls).toEqual([]);
 
 			const missing = renderCueElement(
-				cue({ sectionLens: null, keywords: [] }),
+				cue({ summary: null, keywords: [] }),
 				"cornell"
 			);
 			expect(disclosureButtons(missing).map((button) => button.dataset.section)).toEqual([
@@ -1723,7 +1723,7 @@ describe("renderCueElement", () => {
 				cue({
 					question: "",
 					keywords: [],
-					sectionLens: null,
+					summary: null,
 					error: "boom",
 				}),
 				"cornell"
@@ -1750,7 +1750,7 @@ describe("renderCueElement", () => {
 				heading: "Terms",
 				question: "How do agents differ from chatbots?",
 				keywords: ["agents", "tools"],
-				sectionLens: SECTION_LENS,
+				summary: SECTION_SUMMARY,
 				error: null,
 			};
 			const options = {
@@ -1759,11 +1759,11 @@ describe("renderCueElement", () => {
 			};
 			const inline = renderCueElement(cue, "inline-cues", 0, "upcoming", options);
 			expect(inline.dataset.questionVisible).toBe("false");
-			expect(inline.dataset.supportTermsVisible).toBe("false");
+			expect(inline.dataset.termsVisible).toBe("false");
 			expect(inline.querySelector(".cuecraft-cue-question")).toBeNull();
 			expect(inline.querySelector(".cuecraft-cue-keywords")).toBeNull();
 			expect(
-				inline.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+				inline.querySelector(".cuecraft-summary-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
 			expect(
 				disclosureButtons(inline).map((button) => button.dataset.section)
@@ -1777,11 +1777,11 @@ describe("renderCueElement", () => {
 				options
 			);
 			expect(cornell.dataset.questionVisible).toBe("false");
-			expect(cornell.dataset.supportTermsVisible).toBe("false");
+			expect(cornell.dataset.termsVisible).toBe("false");
 			expect(cornell.querySelector(".cuecraft-cornell-q")).toBeNull();
 			expect(cornell.querySelector(".cuecraft-cornell-kw")).toBeNull();
 			expect(
-				cornell.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+				cornell.querySelector(".cuecraft-summary-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
 			expect(cornell.querySelector(".cuecraft-cue-section-label")).toBeNull();
 		});
@@ -1806,7 +1806,7 @@ describe("renderCueElement", () => {
 				expect(
 					disclosureButtons(element).map((button) => button.dataset.section)
 				).toEqual(["question", "terms"]);
-				expect(element.querySelector(".cuecraft-section-lens")).toBeNull();
+				expect(element.querySelector(".cuecraft-summary")).toBeNull();
 			}
 		});
 	});
@@ -1823,7 +1823,7 @@ describe("renderCueElement", () => {
 					},
 				},
 				{
-					cue: cue({ sectionLens: null }),
+					cue: cue({ summary: null }),
 					options: {
 						showSummary: true,
 						showQuestion: false,
@@ -1858,7 +1858,7 @@ describe("renderCueElement", () => {
 					heading: "Who It Is For",
 					question: "Who is this workflow designed for?",
 					keywords: [],
-					sectionLens: SECTION_LENS,
+					summary: SECTION_SUMMARY,
 					error: null,
 				},
 				"collapsed-tabs"
@@ -1889,7 +1889,7 @@ describe("renderCueElement", () => {
 					heading: "Who It Is For",
 					question: "Who should use this workflow?",
 					keywords: ["students", "researchers"],
-					sectionLens: SECTION_LENS,
+					summary: SECTION_SUMMARY,
 					error: null,
 				},
 				"active-section-composer"
@@ -1920,7 +1920,7 @@ describe("renderCueElement", () => {
 					heading: "How To Upskill Employees",
 					question,
 					keywords: ["org knowledge"],
-					sectionLens: SECTION_LENS,
+					summary: SECTION_SUMMARY,
 					error: null,
 				},
 				"active-section-composer",
@@ -1945,7 +1945,7 @@ describe("renderCueElement", () => {
 					heading: "Study Takeaway",
 					question,
 					keywords: ["takeaway"],
-					sectionLens: SECTION_LENS,
+					summary: SECTION_SUMMARY,
 					error: null,
 				},
 				"hook-minimap"
@@ -1974,7 +1974,7 @@ describe("renderCueElement", () => {
 					heading: "Terms",
 					question: "",
 					keywords: [],
-					sectionLens: null,
+					summary: null,
 					error: "boom",
 				},
 				"collapsed-tabs"
@@ -2043,7 +2043,7 @@ describe("cue editor placement", () => {
 			heading: "A",
 			question: "What is A?",
 			keywords: ["alpha"],
-			sectionLens: SECTION_LENS,
+			summary: SECTION_SUMMARY,
 			error: null,
 		},
 		{
@@ -2052,7 +2052,7 @@ describe("cue editor placement", () => {
 			heading: "B",
 			question: "What is B?",
 			keywords: ["beta"],
-			sectionLens: SECTION_LENS,
+			summary: SECTION_SUMMARY,
 			error: null,
 		},
 	];
@@ -2351,10 +2351,10 @@ describe("cue editor placement", () => {
 				"What is A?"
 			);
 			expect(
-				el.querySelector(".cuecraft-cornell-support-term")?.textContent
+				el.querySelector(".cuecraft-cornell-term")?.textContent
 			).toBe("alpha");
 			expect(
-				el.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+				el.querySelector(".cuecraft-summary-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
 		});
 	});
@@ -2383,9 +2383,9 @@ describe("cue editor placement", () => {
 					button.getAttribute("aria-expanded")
 				)
 			).toEqual(["true", "false", "true"]);
-			expect(element.querySelector(".cuecraft-section-lens-phrase")).toBeNull();
+			expect(element.querySelector(".cuecraft-summary-phrase")).toBeNull();
 			expect(
-				element.querySelector(".cuecraft-section-lens-takeaway")?.textContent
+				element.querySelector(".cuecraft-summary-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
 		});
 	});
@@ -2411,7 +2411,7 @@ describe("rail spacers", () => {
 			heading: "A",
 			question: "What is A?",
 			keywords: ["alpha"],
-			sectionLens: SECTION_LENS,
+			summary: SECTION_SUMMARY,
 			error: null,
 		},
 		{
@@ -2420,7 +2420,7 @@ describe("rail spacers", () => {
 			heading: "B",
 			question: "What is B?",
 			keywords: ["beta"],
-			sectionLens: SECTION_LENS,
+			summary: SECTION_SUMMARY,
 			error: null,
 		},
 	];

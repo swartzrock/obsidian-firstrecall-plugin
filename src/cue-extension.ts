@@ -30,7 +30,7 @@ import {
 } from "./cornell-layout";
 import { EDITOR_CORNELL_STYLE_CLASS } from "./cornell-style";
 import { isCueEligibleSection, type Section } from "./parser";
-import type { NoteBriefOutput, SectionLens } from "./schemas";
+import type { NoteBriefOutput, SectionSummary } from "./schemas";
 import type { StudyProjection, StudySessionSnapshot } from "./study-session";
 import {
 	CUE_SECTION_KINDS,
@@ -73,7 +73,7 @@ export interface CueLineData {
 	heading: string;
 	question: string;
 	keywords: string[];
-	sectionLens: SectionLens | null;
+	summary: SectionSummary | null;
 	/** Generation error message, when this section failed. */
 	error: string | null;
 }
@@ -170,13 +170,13 @@ export function buildCueLineData(
 			heading: sec.heading,
 			question: failed ? "" : (sec.question ?? ""),
 			keywords: failed || !showTerms ? [] : sec.keywords ?? [],
-			sectionLens: failed || !showSummary ? null : sec.sectionLens ?? null,
+			summary: failed || !showSummary ? null : sec.summary ?? null,
 			error: failed ? sec.error ?? "Generation failed" : null,
 		};
 		if (
 			cue.error ||
 			(showQuestion && cue.question.trim().length > 0) ||
-			cue.sectionLens ||
+			cue.summary ||
 			cue.keywords.length > 0
 		) {
 			out.push(cue);
@@ -210,7 +210,7 @@ class CueWidget extends WidgetType {
 			other.cue.sectionId === this.cue.sectionId &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
-			sectionLensKey(other.cue.sectionLens) === sectionLensKey(this.cue.sectionLens) &&
+			summaryKey(other.cue.summary) === summaryKey(this.cue.summary) &&
 			other.cue.error === this.cue.error
 		);
 	}
@@ -324,7 +324,7 @@ class CueGutterMarker extends GutterMarker {
 			other.cue.sectionId === this.cue.sectionId &&
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
-			sectionLensKey(other.cue.sectionLens) === sectionLensKey(this.cue.sectionLens) &&
+			summaryKey(other.cue.summary) === summaryKey(this.cue.summary) &&
 			other.cue.error === this.cue.error
 		);
 	}
@@ -459,7 +459,7 @@ function renderCornellCueElement(
 	const showQuestion = options.showQuestion ?? true;
 	root.dataset.summaryVisible = String(showSummary);
 	root.dataset.questionVisible = String(showQuestion);
-	root.dataset.supportTermsVisible = String(showTerms);
+	root.dataset.termsVisible = String(showTerms);
 	applyCueLayoutClasses(root, options);
 
 	const card = doc.createElement("div");
@@ -477,17 +477,17 @@ function renderCornellCueElement(
 	}
 
 	root.classList.add("cuecraft-editor-hook-sectioned");
-	if (showSummary && cue.sectionLens) {
+	if (showSummary && cue.summary) {
 		const summary = doc.createElement("div");
-		summary.className = "cuecraft-section-lens";
+		summary.className = "cuecraft-summary";
 		const takeaway = doc.createElement("span");
-		takeaway.className = "cuecraft-section-lens-takeaway";
-		takeaway.textContent = cue.sectionLens.takeaway;
+		takeaway.className = "cuecraft-summary-takeaway";
+		takeaway.textContent = cue.summary.takeaway;
 		summary.appendChild(takeaway);
 		appendEditorHookDisclosure(
 			card,
 			"summary",
-			cue.sectionLens.takeaway,
+			cue.summary.takeaway,
 			summary,
 			options.collapse
 		);
@@ -508,7 +508,7 @@ function renderCornellCueElement(
 	if (showTerms && termValues.length) {
 		const kw = doc.createElement("div");
 		kw.className = "cuecraft-cornell-kw";
-		appendCueTerms(kw, termValues, "cuecraft-cornell-support-term");
+		appendCueTerms(kw, termValues, "cuecraft-cornell-term");
 		appendEditorHookDisclosure(
 			card,
 			"terms",
@@ -533,7 +533,7 @@ function renderInlineCueElement(
 	const showQuestion = options.showQuestion ?? true;
 	root.dataset.summaryVisible = String(showSummary);
 	root.dataset.questionVisible = String(showQuestion);
-	root.dataset.supportTermsVisible = String(showTerms);
+	root.dataset.termsVisible = String(showTerms);
 	applyCueLayoutClasses(root, options);
 
 	if (cue.error) {
@@ -546,17 +546,17 @@ function renderInlineCueElement(
 		return root;
 	}
 
-	if (showSummary && cue.sectionLens) {
+	if (showSummary && cue.summary) {
 		const summary = cueDocument().createElement("div");
-		summary.className = "cuecraft-section-lens";
+		summary.className = "cuecraft-summary";
 		const takeaway = cueDocument().createElement("span");
-		takeaway.className = "cuecraft-section-lens-takeaway";
-		takeaway.textContent = cue.sectionLens.takeaway;
+		takeaway.className = "cuecraft-summary-takeaway";
+		takeaway.textContent = cue.summary.takeaway;
 		summary.appendChild(takeaway);
 		appendEditorHookDisclosure(
 			root,
 			"summary",
-			cue.sectionLens.takeaway,
+			cue.summary.takeaway,
 			summary,
 			options.collapse
 		);
@@ -609,21 +609,21 @@ function renderEditorHookElement(
 	root.dataset.gradient = String(card.gradientIndex);
 	root.dataset.summaryVisible = String(card.showSummary);
 	root.dataset.questionVisible = String(card.showQuestion);
-	root.dataset.supportTermsVisible = String(card.showTerms);
+	root.dataset.termsVisible = String(card.showTerms);
 	if (card.kind === "failed") root.classList.add("cuecraft-editor-hook-failed");
 
 	let hasContent = false;
-	if (card.showSummary && card.sectionLens && showSectionLabels) {
+	if (card.showSummary && card.summary && showSectionLabels) {
 		const summary = cueDocument().createElement("div");
-		summary.className = "cuecraft-section-lens";
+		summary.className = "cuecraft-summary";
 		const takeaway = cueDocument().createElement("span");
-		takeaway.className = "cuecraft-section-lens-takeaway";
-		takeaway.textContent = card.sectionLens.takeaway;
+		takeaway.className = "cuecraft-summary-takeaway";
+		takeaway.textContent = card.summary.takeaway;
 		summary.appendChild(takeaway);
 		appendEditorHookDisclosure(
 			root,
 			"summary",
-			card.sectionLens.takeaway,
+			card.summary.takeaway,
 			summary,
 			options.collapse
 		);
@@ -663,8 +663,8 @@ function renderEditorHookElement(
 			: root;
 	}
 
-	if (card.showSummary && card.sectionLens && !showSectionLabels) {
-		appendSectionLens(root, card.sectionLens);
+	if (card.showSummary && card.summary && !showSectionLabels) {
+		appendSummary(root, card.summary);
 		hasContent = true;
 	}
 
@@ -1421,38 +1421,38 @@ export function renderNoteBriefElement(
 	return root;
 }
 
-export function appendSectionLens(
+export function appendSummary(
 	parent: HTMLElement,
-	lens: SectionLens | null
+	summary: SectionSummary | null
 ): void {
-	if (!lens) return;
+	if (!summary) return;
 	const doc = parent.ownerDocument;
 	const root = doc.createElement("div");
-	root.className = "cuecraft-section-lens";
+	root.className = "cuecraft-summary";
 
 	const phrase = doc.createElement("span");
-	phrase.className = "cuecraft-section-lens-phrase";
-	phrase.textContent = lens.keyPhrase;
+	phrase.className = "cuecraft-summary-phrase";
+	phrase.textContent = summary.keyPhrase;
 	root.appendChild(phrase);
 
 	root.appendChild(doc.createTextNode(" - "));
 
 	const takeaway = doc.createElement("span");
-	takeaway.className = "cuecraft-section-lens-takeaway";
-	takeaway.textContent = lens.takeaway;
+	takeaway.className = "cuecraft-summary-takeaway";
+	takeaway.textContent = summary.takeaway;
 	root.appendChild(takeaway);
 
 	const explanation = doc.createElement("div");
-	explanation.className = "cuecraft-section-lens-explanation";
-	explanation.textContent = lens.explanation;
+	explanation.className = "cuecraft-summary-explanation";
+	explanation.textContent = summary.explanation;
 	root.appendChild(explanation);
 
 	parent.appendChild(root);
 }
 
-function sectionLensKey(lens: SectionLens | null): string {
-	return lens
-		? [lens.keyPhrase, lens.takeaway, lens.explanation].join("\u0001")
+function summaryKey(summary: SectionSummary | null): string {
+	return summary
+		? [summary.keyPhrase, summary.takeaway, summary.explanation].join("\u0001")
 		: "";
 }
 
@@ -1672,7 +1672,7 @@ function shouldRenderEditorCue(
 	return Boolean(
 		((inStudy || (payload.showQuestion ?? true)) &&
 			cue.question.trim().length > 0) ||
-			((payload.showSummary ?? true) && cue.sectionLens) ||
+			((payload.showSummary ?? true) && cue.summary) ||
 			((payload.showTerms ?? true) && cue.keywords.length > 0)
 	);
 }

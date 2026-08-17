@@ -1,7 +1,7 @@
 import { z } from "zod/v3";
 import {
 	noteBriefOutputSchema,
-	sectionLensSchema,
+	sectionSummarySchema,
 	type ValidationResult,
 } from "./schemas";
 import { cueEligibleSections, type Section } from "./parser";
@@ -11,7 +11,7 @@ import type { NoteGenerationResult } from "./generator";
  * Persisted per-note study data. Bumping CACHE_SCHEMA_VERSION requires adding a
  * migration step in `migrateCache` so existing caches upgrade rather than break.
  */
-export const CACHE_SCHEMA_VERSION = 7;
+export const CACHE_SCHEMA_VERSION = 8;
 
 const cachedSectionSchema = z.object({
 	id: z.string(),
@@ -21,7 +21,7 @@ const cachedSectionSchema = z.object({
 	contentHash: z.string(),
 	keywords: z.array(z.string()).nullable(),
 	question: z.string().nullable(),
-	sectionLens: sectionLensSchema.nullable(),
+	summary: sectionSummarySchema.nullable(),
 	error: z.string().nullable(),
 });
 
@@ -71,7 +71,7 @@ export function buildNoteCache(params: BuildCacheParams): NoteCache {
 			contentHash: s.contentHash,
 			keywords: s.keywords,
 			question: s.question,
-			sectionLens: s.sectionLens ?? null,
+			summary: s.summary ?? null,
 			error: s.error,
 		})),
 		noteBrief: params.result.noteBrief,
@@ -100,7 +100,8 @@ export function validateCache(raw: unknown): ValidationResult<NoteCache> {
  * v3 -> v4: v3 lacked generated Summary and Note Brief data.
  * v4 -> v5: v4 lacked per-cue semantic category tags.
  * v5 -> v6: v5 included per-cue category tags that are no longer used.
- * v6 -> v7: remove confidence/rationale, Summary, and Learning Objective.
+ * v6 -> v7: remove confidence/rationale, whole-note Summary, and Learning Objective.
+ * v7 -> v8: rename the per-section `sectionLens` field to `summary`.
  */
 export function migrateCache(raw: unknown): NoteCache | null {
 	if (!raw || typeof raw !== "object") return null;
@@ -131,7 +132,7 @@ export function migrateCache(raw: unknown): NoteCache | null {
 					question: sec.question ?? null,
 					confidence: sec.confidence ?? null,
 					rationale: null,
-					sectionLens: null,
+					summary: null,
 					error: sec.error ?? null,
 				};
 			}),
@@ -151,7 +152,7 @@ export function migrateCache(raw: unknown): NoteCache | null {
 						typeof sec.rationale === "string" && sec.rationale.trim()
 							? sec.rationale.trim()
 							: null,
-					sectionLens: null,
+					summary: null,
 				};
 			}),
 			noteBrief: null,
@@ -165,7 +166,7 @@ export function migrateCache(raw: unknown): NoteCache | null {
 				const sec = (s ?? {}) as Record<string, unknown>;
 				return {
 					...sec,
-					sectionLens: null,
+					summary: null,
 				};
 			}),
 			noteBrief: null,
@@ -176,6 +177,19 @@ export function migrateCache(raw: unknown): NoteCache | null {
 		candidate = {
 			...obj,
 			sections,
+		};
+	}
+	if (version <= 7) {
+		const sections = Array.isArray(candidate.sections) ? candidate.sections : [];
+		candidate = {
+			...candidate,
+			sections: sections.map((section) => {
+				const record = (section ?? {}) as Record<string, unknown>;
+				return {
+					...record,
+					summary: record.summary ?? record.sectionLens ?? null,
+				};
+			}),
 		};
 	}
 	candidate = { ...candidate, schemaVersion: CACHE_SCHEMA_VERSION };

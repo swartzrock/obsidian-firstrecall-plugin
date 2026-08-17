@@ -42,8 +42,8 @@ import {
 	buildNoteBriefPrompt,
 	buildNoteBriefInstructionsTemplate,
 	NOTE_BRIEF_JSON_SCHEMA,
-	SECTION_LENS_JSON_SCHEMA,
-} from "./review-artifact-prompts";
+	SUMMARY_JSON_SCHEMA,
+} from "./study-material-instructions";
 import {
 	cueGenerationSchema,
 	cueOutputSchema,
@@ -109,9 +109,9 @@ const CUE_JSON_SCHEMA = JSON.stringify({
 			minItems: 2,
 			maxItems: 5,
 		},
-		sectionLens: SECTION_LENS_JSON_SCHEMA,
+		summary: SUMMARY_JSON_SCHEMA,
 	},
-	required: ["question", "keywords", "sectionLens"],
+	required: ["question", "keywords", "summary"],
 	additionalProperties: false,
 });
 

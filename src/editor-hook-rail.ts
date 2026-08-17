@@ -1,6 +1,6 @@
 import type { CueLineData } from "./cue-extension";
 import type { EditorCueDisplay } from "./editor-cue-display";
-import type { SectionLens } from "./schemas";
+import type { SectionSummary } from "./schemas";
 
 export type EditorHookCardKind = "hook" | "failed";
 export type EditorHookCardState = "current" | "upcoming";
@@ -20,7 +20,7 @@ export interface EditorHookCard {
 	hookTitle: string;
 	originalQuestion: string;
 	keywords: string[];
-	sectionLens: SectionLens | null;
+	summary: SectionSummary | null;
 	error: string | null;
 	titleDensity: "standard" | "long" | "dense";
 	state: EditorHookCardState;
@@ -51,7 +51,7 @@ export function buildEditorHookCard(
 		hookTitle,
 		originalQuestion: cue.question,
 		keywords: cue.keywords,
-		sectionLens: cue.sectionLens,
+		summary: cue.summary,
 		error: cue.error,
 		titleDensity: editorHookTitleDensity(hookTitle),
 		state,

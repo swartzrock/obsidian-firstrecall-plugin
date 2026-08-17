@@ -25,7 +25,7 @@ describe("extractJson", () => {
 		const cue = {
 			question: "What does the product promise?",
 			keywords: ["promise", "study"],
-			sectionLens: {
+			summary: {
 				takeaway: "CueCraft turns notes into Section cues.",
 				keyPhrase: "Section cues",
 				explanation: "The phrase names the review output.",
@@ -83,7 +83,7 @@ describe("validateCue", () => {
 					question: "Q",
 					keywords: ["a", "b"],
 					category,
-					sectionLens: {
+					summary: {
 						takeaway: "Focus on the main idea.",
 						keyPhrase: "main idea",
 						explanation: "This phrase anchors recall.",
@@ -96,7 +96,7 @@ describe("validateCue", () => {
 				value: {
 					question: "Q",
 					keywords: ["a", "b"],
-					sectionLens: {
+					summary: {
 						takeaway: "Focus on the main idea.",
 						keyPhrase: "main idea",
 						explanation: "This phrase anchors recall.",
@@ -111,7 +111,7 @@ describe("validateCue", () => {
 			JSON.stringify({
 				question: "Q",
 				keywords: ["a", "b"],
-				sectionLens: {
+				summary: {
 					takeaway: "Focus on agent autonomy.",
 					keyPhrase: "agent autonomy",
 					explanation: "This phrase separates multi-step work from chat.",
@@ -120,7 +120,7 @@ describe("validateCue", () => {
 		);
 		expect(r.ok).toBe(true);
 		if (r.ok) {
-			expect(r.value.sectionLens?.keyPhrase).toBe("agent autonomy");
+			expect(r.value.summary?.keyPhrase).toBe("agent autonomy");
 		}
 	});
 
@@ -129,14 +129,14 @@ describe("validateCue", () => {
 			JSON.stringify({
 				question: "Q",
 				keywords: ["a", "b"],
-				sectionLens: {
+				summary: {
 					keyPhrase: "agent autonomy",
 					explanation: "This phrase separates multi-step work from chat.",
 				},
 			})
 		);
 		expect(r.ok).toBe(false);
-		if (!r.ok) expect(r.error).toMatch(/sectionLens\.takeaway/);
+		if (!r.ok) expect(r.error).toMatch(/summary\.takeaway/);
 	});
 
 	it("rejects an empty question", () => {

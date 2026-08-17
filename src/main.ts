@@ -65,7 +65,7 @@ import {
 } from "./cache";
 import {
 	applyEditorCueWidthPreview,
-	appendSectionLens,
+	appendSummary,
 	buildCueLineData,
 	cueEditorExtension,
 	railLayoutAppliesToDisplay,
@@ -154,7 +154,7 @@ const STUDY_RIBBON_ICON = "book-open-check";
 const STUDY_READY_LABEL = "CueCraft: Study this note";
 const STUDY_ACTIVE_LABEL = "CueCraft: Exit Study";
 const STUDY_GENERATE_FIRST = "CueCraft: generate Section cues for this note first.";
-const LEGACY_CORNELL_VIEW_TYPE = "cuecraft-cornell";
+const RETIRED_DEDICATED_VIEW_TYPE = "cuecraft-cornell";
 
 type StudyProjectionMode = "source" | "preview";
 
@@ -311,7 +311,7 @@ export default class CueCraftPlugin extends Plugin {
 		// the restored editor's CodeMirror instance isn't ready yet, so an early
 		// renderCues would no-op and the cues would never appear on startup.
 		this.app.workspace.onLayoutReady(() => {
-			this.app.workspace.detachLeavesOfType(LEGACY_CORNELL_VIEW_TYPE);
+			this.app.workspace.detachLeavesOfType(RETIRED_DEDICATED_VIEW_TYPE);
 			this.onActiveFile(this.app.workspace.getActiveFile());
 		});
 	}
@@ -1564,7 +1564,7 @@ export default class CueCraftPlugin extends Plugin {
 			});
 			return root;
 		}
-		appendSectionLens(root, cue.sectionLens);
+		appendSummary(root, cue.summary);
 		if (visibility.showQuestion) {
 			root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
 		}
@@ -2485,7 +2485,7 @@ function toCachedSection(result: SectionResult): CachedSection {
 		contentHash: result.contentHash,
 		keywords: result.keywords,
 		question: result.question,
-		sectionLens: result.sectionLens,
+		summary: result.summary,
 		error: result.error,
 	};
 }

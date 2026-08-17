@@ -105,7 +105,7 @@ import { DEFAULT_SHOW_NOTE_BRIEF } from "./review-surfaces";
 import {
 	buildSectionCueInstructionsTemplate,
 } from "./cue-instructions";
-import { buildNoteBriefInstructionsTemplate } from "./review-artifact-prompts";
+import { buildNoteBriefInstructionsTemplate } from "./study-material-instructions";
 
 /**
  * CueCraft supports a local provider (Ollama), local CLI providers, and several

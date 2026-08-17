@@ -70,7 +70,7 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 			return {
 				question: `Q:${input.heading}`,
 				keywords: ["k1", "k2"],
-				sectionLens: {
+				summary: {
 					takeaway: `${input.heading} carries the main review idea.`,
 					keyPhrase: input.heading || "section",
 					explanation: "This phrase anchors recall for the section.",
@@ -108,7 +108,7 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 					cue: {
 						question: `Q:${input.heading}`,
 						keywords: ["k1", "k2"],
-						sectionLens: {
+						summary: {
 							takeaway: `${input.heading} carries the main review idea.`,
 							keyPhrase: input.heading || "section",
 							explanation: "This phrase anchors recall for the section.",
@@ -145,7 +145,7 @@ describe("generateNote", () => {
 		]);
 		expect(provider.noteBriefCalls).toBe(1);
 		expect(result.noteBrief?.overview).toBe("the note brief");
-		expect(result.sections[0].sectionLens?.keyPhrase).toBe("A");
+		expect(result.sections[0].summary?.keyPhrase).toBe("A");
 		expect(provider.lastNoteBriefInput?.sections.map((s) => s.heading)).toEqual([
 			"A",
 			"B",
@@ -466,7 +466,7 @@ describe("generateSectionCue", () => {
 		expect(result.id).toBe("terms");
 		expect(result.question).toBe("Q:Terms");
 		expect(result.keywords).toEqual(["k1", "k2"]);
-		expect(result.sectionLens?.keyPhrase).toBe("Terms");
+		expect(result.summary?.keyPhrase).toBe("Terms");
 		expect(result.error).toBeNull();
 		expect(result.contentHash).toBe("abc123");
 		expect(result).not.toHaveProperty("category");

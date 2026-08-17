@@ -7,7 +7,7 @@ import type {
 	CueCraftCueBatchResult,
 	CueCraftCueProviderRuntime,
 } from "./cue-provider";
-import type { NoteBriefOutput, SectionLens } from "./schemas";
+import type { NoteBriefOutput, SectionSummary } from "./schemas";
 
 export interface SectionResult {
 	id: string;
@@ -17,7 +17,7 @@ export interface SectionResult {
 	contentHash: string;
 	keywords: string[] | null;
 	question: string | null;
-	sectionLens: SectionLens | null;
+	summary: SectionSummary | null;
 	/** Non-null when this section failed validation/generation (isolated). */
 	error: string | null;
 }
@@ -131,7 +131,7 @@ function emptySectionResult(
 		contentHash: section.contentHash,
 		keywords: null,
 		question: null,
-		sectionLens: null,
+		summary: null,
 		error: null,
 	};
 }
@@ -154,7 +154,7 @@ function applyCueResult(
 	}
 	result.keywords = item.cue.keywords;
 	result.question = item.cue.question;
-	result.sectionLens = item.cue.sectionLens ?? null;
+	result.summary = item.cue.summary ?? null;
 }
 
 /**

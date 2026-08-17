@@ -2,7 +2,7 @@ import { composeSectionCueBatchPrompt } from "./cue-instructions";
 import { DEFAULT_QUESTION_TYPE } from "./cue-generation";
 import type { CueCraftCueBatchResult, CueCraftCueInput } from "./cue-provider";
 import { validateCueBatch } from "./schemas";
-import { SECTION_LENS_JSON_SCHEMA } from "./review-artifact-prompts";
+import { SUMMARY_JSON_SCHEMA } from "./study-material-instructions";
 
 const CUE_BATCH_ITEM_SCHEMA = {
 	type: "object",
@@ -14,9 +14,9 @@ const CUE_BATCH_ITEM_SCHEMA = {
 			minItems: 2,
 			maxItems: 5,
 		},
-		sectionLens: SECTION_LENS_JSON_SCHEMA,
+		summary: SUMMARY_JSON_SCHEMA,
 	},
-	required: ["question", "keywords", "sectionLens"],
+	required: ["question", "keywords", "summary"],
 	additionalProperties: false,
 };
 

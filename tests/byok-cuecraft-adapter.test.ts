@@ -27,7 +27,7 @@ import type {
 	SecureCredentialStore,
 } from "../src/secure-credential-store";
 import { buildSectionCuePrompt } from "../src/cue-instructions";
-import { buildNoteBriefPrompt } from "../src/review-artifact-prompts";
+import { buildNoteBriefPrompt } from "../src/study-material-instructions";
 
 function settings(
 	overrides: Partial<CueCraftSettings> = {}
@@ -356,7 +356,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 										question: "What is an agent?",
 										keywords: ["plan", "tools"],
 										category: "stacks",
-											sectionLens: {
+											summary: {
 												takeaway: "Agents plan and use tools.",
 												keyPhrase: "use tools",
 												explanation: "Tool use enables action.",
@@ -382,7 +382,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		).resolves.toEqual({
 			question: "What is an agent?",
 			keywords: ["plan", "tools"],
-			sectionLens: {
+			summary: {
 				takeaway: "Agents plan and use tools.",
 				keyPhrase: "use tools",
 				explanation: "Tool use enables action.",
@@ -401,7 +401,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		for (const field of [
 			"question",
 			"keywords",
-			"sectionLens",
+			"summary",
 			"takeaway",
 			"keyPhrase",
 			"explanation",
@@ -420,7 +420,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("ignores retired custom Cue instructions while retaining repair behavior", async () => {
 		const calls: Array<{ body?: string }> = [];
-		const systemPromptLog = vi
+		const instructionLog = vi
 			.spyOn(console, "info")
 			.mockImplementation(() => undefined);
 		const cuePolicy =
@@ -434,7 +434,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 				: JSON.stringify({
 					question: "How do agents use tools?",
 					keywords: ["agents", "tools"],
-					sectionLens: {
+					summary: {
 						takeaway: "Agents use tools to act.",
 						keyPhrase: "use tools",
 						explanation: "Tool use enables action.",
@@ -470,8 +470,8 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			expect(body.format).toBe("json");
 		}
 		const repairBody = JSON.parse(calls[1].body ?? "{}");
-		expect(systemPromptLog).toHaveBeenCalledOnce();
-		expect(systemPromptLog.mock.calls[0]?.[0]).not.toContain(cuePolicy);
+		expect(instructionLog).toHaveBeenCalledOnce();
+		expect(instructionLog.mock.calls[0]?.[0]).not.toContain(cuePolicy);
 		expect(repairBody.prompt).toContain(
 			"Your previous reply could not be validated (response was not valid JSON)."
 		);
@@ -562,7 +562,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("ignores retired Note Brief custom instructions on initial and repair requests", async () => {
 		const calls: Array<{ body?: string }> = [];
-		const systemPromptLog = vi
+		const instructionLog = vi
 			.spyOn(console, "info")
 			.mockImplementation(() => undefined);
 		const reviewPolicy =
@@ -626,8 +626,8 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			expect(body.prompt).toContain("How do plans guide tool use?");
 		}
 		const repairBody = JSON.parse(calls[1].body ?? "{}");
-		expect(systemPromptLog).toHaveBeenCalledOnce();
-		expect(systemPromptLog.mock.calls[0]?.[0]).not.toContain(reviewPolicy);
+		expect(instructionLog).toHaveBeenCalledOnce();
+		expect(instructionLog.mock.calls[0]?.[0]).not.toContain(reviewPolicy);
 		expect(repairBody.prompt).toContain(
 			"Your previous reply could not be validated (response was not valid JSON)."
 		);
@@ -641,7 +641,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		const cue = {
 			question: "What does CueCraft turn notes into?",
 			keywords: ["notes", "Section cues"],
-			sectionLens: {
+			summary: {
 				takeaway: "CueCraft turns notes into Section cues.",
 				keyPhrase: "Section cues",
 				explanation: "The phrase names the product's review output.",
@@ -683,7 +683,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		const cue = {
 			question: "What does CueCraft turn notes into?",
 			keywords: ["notes", "Section cues"],
-			sectionLens: {
+			summary: {
 				takeaway: "CueCraft turns notes into Section cues.",
 				keyPhrase: "Section cues",
 				explanation: "The phrase names the product's review output.",
@@ -719,7 +719,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		const cue = {
 			question: "What does CueCraft turn notes into?",
 			keywords: ["notes", "Section cues"],
-			sectionLens: {
+			summary: {
 				takeaway: "CueCraft turns notes into Section cues.",
 				keyPhrase: "Section cues",
 				explanation: "The phrase names the product's review output.",

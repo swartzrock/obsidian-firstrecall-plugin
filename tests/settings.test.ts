@@ -14,12 +14,12 @@ import {
 } from "../src/editor-cue-display";
 import {
 	DEFAULT_SHOW_NOTE_BRIEF,
-	DEFAULT_SHOW_SECTION_LENS,
+	DEFAULT_SHOW_SUMMARY,
 } from "../src/review-surfaces";
 import {
 	buildSectionCueInstructionsTemplate,
 } from "../src/cue-instructions";
-import { buildNoteBriefInstructionsTemplate } from "../src/review-artifact-prompts";
+import { buildNoteBriefInstructionsTemplate } from "../src/study-material-instructions";
 import { QUESTION_TYPES } from "../src/cue-generation";
 
 function createObsidianMock() {
@@ -580,7 +580,7 @@ describe("settings defaults", () => {
 	});
 
 	it("defaults generated review surfaces to visible", () => {
-		expect(DEFAULT_SHOW_SECTION_LENS).toBe(true);
+		expect(DEFAULT_SHOW_SUMMARY).toBe(true);
 		expect(DEFAULT_SHOW_NOTE_BRIEF).toBe(true);
 	});
 
