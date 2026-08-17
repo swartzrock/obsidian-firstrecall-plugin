@@ -99,19 +99,6 @@ Settings therefore do not compete with or override the instruction templates. A 
 
 The **Advanced** disclosure in Cue Generation shows read-only **Section cue instructions** and **Note Brief instructions**. These are the complete initial CueCraft-owned templates for the selected provider route, with visible placeholders instead of active note content. They are for inspection only: there is no second editable prompt authority.
 
-## Retired or ambiguous terms
-
-Use the preferred replacement in new interface copy and user-facing documentation.
-
-| Avoid | Prefer | Why |
-| --- | --- | --- |
-| **Cue** by itself | **Section cue** for the complete card; **Question** for its prompt | “Cue” has been used for both, so its scope is unclear. |
-| **Cue supports** or **support terms** | **Terms** | Terms is the title users see in the generated card. |
-| **Keywords** | **Terms** | Keywords is an implementation field name, not the user-facing component name. |
-| **Section Lens** | **Summary** | Summary is the title users see. Section Lens is an internal or legacy name. |
-| **Cue preset**, **Cue density**, or **Question style** | **Question type** | These overlapping controls are replaced by one coherent choice. |
-| **Editing View** as a settings category | **Main settings** for appearance; **Cue Generation** for generation | Shared visibility and font choices apply in both note modes, while Cue display controls the Editing layout. Editing View remains valid only when naming Obsidian's actual note mode. |
-
 ## Capitalization
 
 Capitalize **Note Brief**, **Section cue**, **Summary**, **Question**, **Terms**, **Core idea**, **Review first**, and **Self-test** when they name CueCraft interface components. Use lowercase for ordinary prose that is not naming a component, such as “summarize the section” or “review these terms.”

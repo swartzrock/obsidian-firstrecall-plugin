@@ -4,7 +4,6 @@ import {
 	QUESTION_TYPES,
 	isQuestionType,
 	questionTypeInfo,
-	resolveLegacyQuestionType,
 } from "../src/cue-generation";
 
 describe("cue-generation: Question type", () => {
@@ -31,34 +30,5 @@ describe("cue-generation: Question type", () => {
 		for (const invalid of ["", "exam", null, undefined, 1, {}]) {
 			expect(isQuestionType(invalid)).toBe(false);
 		}
-	});
-});
-
-describe("cue-generation: legacy Question type migration", () => {
-	it.each([
-		[{}, "conceptual"],
-		[{ cuePreset: "conceptual", cueDensity: 2, questionStyle: "recall" }, "conceptual"],
-		[{ cueDensity: 3 }, "conceptual"],
-		[{ cuePreset: "exam-prep" }, "exam-practice"],
-		[{ questionStyle: "exam" }, "exam-practice"],
-		[{ cuePreset: "exam-prep", questionStyle: "exam" }, "exam-practice"],
-		[{ cuePreset: "vocabulary" }, "vocabulary-check"],
-		[{ cuePreset: "minimal" }, "direct-recall"],
-		[{ cueDensity: 1 }, "direct-recall"],
-		[{ cuePreset: "minimal", cueDensity: 1 }, "direct-recall"],
-		[{ questionStyle: "socratic" }, "socratic-reasoning"],
-	] as const)("maps compatible legacy settings %#", (legacy, expected) => {
-		expect(resolveLegacyQuestionType(legacy)).toBe(expected);
-	});
-
-	it.each([
-		{ cuePreset: "vocabulary", questionStyle: "exam" },
-		{ cuePreset: "minimal", questionStyle: "socratic" },
-		{ cuePreset: "unknown" },
-		{ cueDensity: "1" },
-		{ questionStyle: "quiz" },
-		{ cuePreset: "exam-prep", cueDensity: 0 },
-	] as const)("falls back for conflicting or invalid settings %#", (legacy) => {
-		expect(resolveLegacyQuestionType(legacy)).toBe("conceptual");
 	});
 });

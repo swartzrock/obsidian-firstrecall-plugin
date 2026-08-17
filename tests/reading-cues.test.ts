@@ -42,8 +42,6 @@ function cacheFrom(
 	}));
 	const result: NoteGenerationResult = {
 		sections,
-		summary: "s",
-		learningObjective: null,
 		noteBrief: null,
 		canceled: false,
 	};

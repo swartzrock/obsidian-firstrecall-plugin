@@ -8,11 +8,8 @@ import {
 import { cueEligibleSections, type Section } from "./parser";
 import type { NoteGenerationResult } from "./generator";
 
-/**
- * Persisted per-note study data. Bumping CACHE_SCHEMA_VERSION requires adding a
- * migration step in `migrateCache` so existing caches upgrade rather than break.
- */
-export const CACHE_SCHEMA_VERSION = 8;
+/** Persisted per-note study data. Unsupported schema versions are ignored. */
+export const CACHE_SCHEMA_VERSION = 1;
 
 const cachedSectionSchema = z.object({
 	id: z.string(),
@@ -90,118 +87,10 @@ export function validateCache(raw: unknown): ValidationResult<NoteCache> {
 	return { ok: true, value: parsed.data };
 }
 
-/**
- * Upgrade an older cache object to the current schema. Returns the validated
- * NoteCache or null if the input is unrecognizable / unmigratable.
- *
- * v1 -> v2: v1 lacked `level`, `outline`, `generationMode`, and `preset`.
- * v2 -> v3: v2 lacked per-Section-cue `rationale`.
- * v3 -> v4: v3 lacked generated Summary and Note Brief data.
- * v4 -> v5: v4 lacked per-cue semantic category tags.
- * v5 -> v6: v5 included per-cue category tags that are no longer used.
- * v6 -> v7: remove confidence/rationale, whole-note Summary, and Learning Objective.
- * v7 -> v8: rename the per-section `sectionLens` field to `summary`.
- */
-export function migrateCache(raw: unknown): NoteCache | null {
-	if (!raw || typeof raw !== "object") return null;
-	const obj = raw as Record<string, unknown>;
-	const version = typeof obj.schemaVersion === "number" ? obj.schemaVersion : 1;
-	if (!Number.isInteger(version) || version < 1 || version > CACHE_SCHEMA_VERSION) {
-		return null;
-	}
-
-	let candidate: Record<string, unknown> = obj;
-	if (version === 1) {
-		const sections = Array.isArray(obj.sections) ? obj.sections : [];
-		candidate = {
-			...obj,
-			generationMode: obj.generationMode ?? "whole-note-context",
-			preset: obj.preset ?? "conceptual",
-			outline:
-				obj.outline ?? { learningObjective: null },
-			sections: sections.map((s) => {
-				const sec = (s ?? {}) as Record<string, unknown>;
-				return {
-					id: sec.id ?? "section",
-					heading: sec.heading ?? "",
-					level: typeof sec.level === "number" ? sec.level : 0,
-					lineNumber: typeof sec.lineNumber === "number" ? sec.lineNumber : 1,
-					contentHash: sec.contentHash ?? "",
-					keywords: sec.keywords ?? null,
-					question: sec.question ?? null,
-					confidence: sec.confidence ?? null,
-					rationale: null,
-					summary: null,
-					error: sec.error ?? null,
-				};
-			}),
-			summary: obj.summary ?? null,
-			noteBrief: null,
-		};
-	}
-	if (version === 2) {
-		const sections = Array.isArray(obj.sections) ? obj.sections : [];
-		candidate = {
-			...obj,
-			sections: sections.map((s) => {
-				const sec = (s ?? {}) as Record<string, unknown>;
-				return {
-					...sec,
-					rationale:
-						typeof sec.rationale === "string" && sec.rationale.trim()
-							? sec.rationale.trim()
-							: null,
-					summary: null,
-				};
-			}),
-			noteBrief: null,
-		};
-	}
-	if (version === 3) {
-		const sections = Array.isArray(obj.sections) ? obj.sections : [];
-		candidate = {
-			...obj,
-			sections: sections.map((s) => {
-				const sec = (s ?? {}) as Record<string, unknown>;
-				return {
-					...sec,
-					summary: null,
-				};
-			}),
-			noteBrief: null,
-		};
-	}
-	if (version === 5) {
-		const sections = Array.isArray(obj.sections) ? obj.sections : [];
-		candidate = {
-			...obj,
-			sections,
-		};
-	}
-	if (version <= 7) {
-		const sections = Array.isArray(candidate.sections) ? candidate.sections : [];
-		candidate = {
-			...candidate,
-			sections: sections.map((section) => {
-				const record = (section ?? {}) as Record<string, unknown>;
-				return {
-					...record,
-					summary: record.summary ?? record.sectionLens ?? null,
-				};
-			}),
-		};
-	}
-	candidate = { ...candidate, schemaVersion: CACHE_SCHEMA_VERSION };
-
-	const validated = validateCache(candidate);
-	return validated.ok ? validated.value : null;
-}
-
-/** Load a cache from arbitrary stored data: validate, else migrate, else null. */
+/** Load current-schema cache data, or return null when validation fails. */
 export function loadCache(raw: unknown): NoteCache | null {
-	const direct = validateCache(raw);
-	if (direct.ok) return direct.value;
-	return migrateCache(raw);
+	const validated = validateCache(raw);
+	return validated.ok ? validated.value : null;
 }
 
 /** Normalize the persisted per-note cache map and report whether it changed. */

@@ -26,7 +26,7 @@ import {
 	type CueLineData,
 } from "../src/cue-extension";
 import { EDITOR_CUE_DISPLAY_OPTIONS } from "../src/editor-cue-display";
-import { buildNoteCache, migrateCache } from "../src/cache";
+import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
 import type {
@@ -675,7 +675,6 @@ describe("buildCueLineData", () => {
 			keywords: ["k1", "k2"],
 			summary: SECTION_SUMMARY,
 		});
-		expect(cues[0]).not.toHaveProperty("category");
 	});
 
 	it("can hide keyword data while keeping questions visible", () => {
@@ -715,7 +714,6 @@ describe("buildCueLineData", () => {
 		expect(cues).toHaveLength(3);
 		const b = cues.find((c) => c.heading === "B");
 		expect(b).toMatchObject({ error: "boom", question: "", keywords: [] });
-		expect(b).not.toHaveProperty("category");
 		// Usable cues carry no error.
 		expect(cues.find((c) => c.heading === "A")?.error).toBeNull();
 	});
@@ -1161,35 +1159,6 @@ describe("renderCueElement", () => {
 			dispatchKey("keyup", "ArrowRight");
 			expect(controller.commitWidthPx).toHaveBeenCalledOnce();
 			expect(controller.commitWidthPx).toHaveBeenCalledWith(240);
-		});
-	});
-
-	it("keeps Terms when rendering a migrated v5 Section cue", () => {
-		withDocument(() => {
-			const current = cacheFrom();
-			const migrated = migrateCache({
-				...current,
-				schemaVersion: 5,
-				sections: current.sections.map((section) => ({
-					...section,
-					category: "linkedlists",
-				})),
-			});
-			expect(migrated).not.toBeNull();
-			if (!migrated) throw new Error("Expected v5 cache to migrate");
-			const [cue] = buildCueLineData(migrated, parseSections(NOTE));
-			const el = renderCueElement(cue, "inline-cues");
-
-			expect(el.hasAttribute("data-category")).toBe(false);
-			expect(el.querySelector("[data-category]")).toBeNull();
-			expect(el.querySelector(".cuecraft-section-tag")).toBeNull();
-			expect(el.querySelector(".cuecraft-section-tag-dot")).toBeNull();
-			expect(el.textContent).not.toContain("linkedlists");
-			expect(
-				Array.from(el.querySelectorAll(".cuecraft-cue-term")).map(
-					(term) => term.textContent
-				)
-			).toEqual(["k1", "k2"]);
 		});
 	});
 

@@ -452,21 +452,6 @@ describe("settings defaults", () => {
 			showQuestion: true,
 			showTerms: true,
 		});
-		for (const key of [
-			"cuePreset",
-			"cueDensity",
-			"questionStyle",
-			"generateKeywords",
-			"cueInstructionsOverride",
-			"noteBriefInstructionsOverride",
-			"showSectionLens",
-			"showRailSummary",
-			"showRailQuestions",
-			"showRailSupportTerms",
-			"renderInReadingMode",
-		]) {
-			expect(DEFAULT_SETTINGS).not.toHaveProperty(key);
-		}
 	});
 
 	it("defaults auto-generation settle delay to 10 seconds", () => {
@@ -503,26 +488,6 @@ describe("settings defaults", () => {
 			"25 seconds",
 			"60 seconds",
 		]);
-	});
-
-	it("uses fixed inline Reading cues without a display preference", async () => {
-		const { DEFAULT_SETTINGS } = await loadSettingsModule();
-		expect("readingModeDisplay" in DEFAULT_SETTINGS).toBe(false);
-	});
-
-	it("contains no dedicated Cornell pane settings", async () => {
-		const { DEFAULT_SETTINGS } = await loadSettingsModule();
-		for (const key of [
-			"cornellDisplayMode",
-			"cornellStyle",
-			"cueColumnWidth",
-			"cueAccent",
-			"showCueBorder",
-			"compactChips",
-			"foldCueColumnOnMobile",
-		]) {
-			expect(DEFAULT_SETTINGS).not.toHaveProperty(key);
-		}
 	});
 
 	it("defaults editor Cue display to inline Section cues", () => {
@@ -648,11 +613,6 @@ describe("settings defaults", () => {
 		const text = settingText(tab.containerEl);
 		expect(text).toContain("Question type");
 		expect(text).toContain("Auto-generate on save");
-		expect(text).not.toContain("Cue preset");
-		expect(text).not.toContain("Cue density");
-		expect(text).not.toContain("Question style");
-		expect(text).not.toContain("Generate cue supports");
-		expect(text).not.toContain("system prompt");
 		const select = tab.containerEl.querySelector<HTMLSelectElement>(
 			'[data-setting-name="Question type"] select'
 		);

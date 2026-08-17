@@ -27,7 +27,6 @@ function cacheFor(markdown: string) {
 			error: null,
 		})),
 		summary: null,
-		learningObjective: null,
 		noteBrief: null,
 		canceled: false,
 	};

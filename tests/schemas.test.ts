@@ -75,37 +75,6 @@ describe("validateCue", () => {
 		if (r.ok) expect(r.value.keywords).toEqual(["a", "b"]);
 	});
 
-	it.each([null, "sequences", "unrelated"])(
-		"strips a stray category value (%s) while preserving the cue",
-		(category) => {
-			const r = validateCue(
-				JSON.stringify({
-					question: "Q",
-					keywords: ["a", "b"],
-					category,
-					summary: {
-						takeaway: "Focus on the main idea.",
-						keyPhrase: "main idea",
-						explanation: "This phrase anchors recall.",
-					},
-				})
-			);
-
-			expect(r).toEqual({
-				ok: true,
-				value: {
-					question: "Q",
-					keywords: ["a", "b"],
-					summary: {
-						takeaway: "Focus on the main idea.",
-						keyPhrase: "main idea",
-						explanation: "This phrase anchors recall.",
-					},
-				},
-			});
-		}
-	);
-
 	it("accepts an optional Summary payload", () => {
 		const r = validateCue(
 			JSON.stringify({
@@ -152,7 +121,7 @@ describe("validateCue", () => {
 });
 
 describe("validateCueBatch", () => {
-	it("accepts a cue array and strips stray category properties", () => {
+	it("accepts a cue array", () => {
 		const r = validateCueBatch(
 			JSON.stringify({
 				cues: [
@@ -160,7 +129,6 @@ describe("validateCueBatch", () => {
 					{
 						question: "Q2?",
 						keywords: ["c", "d"],
-						category: "intervals",
 					},
 				],
 			}),
@@ -169,7 +137,6 @@ describe("validateCueBatch", () => {
 		expect(r.ok).toBe(true);
 		if (r.ok) {
 			expect(r.value.map((item) => item.value?.question)).toEqual(["Q1?", "Q2?"]);
-			expect(r.value[1].value).not.toHaveProperty("category");
 			expect(r.value.every((item) => item.error === null)).toBe(true);
 		}
 	});
