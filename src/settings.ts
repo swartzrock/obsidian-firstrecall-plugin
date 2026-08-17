@@ -701,7 +701,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		const questionTypeDescription = (): string => {
 			const selected = questionTypeInfo(this.plugin.settings.questionType);
-			return `${selected.description} Guides newly generated or regenerated Questions only. It does not directly guide Summary, Terms, or Note Brief. Cached Questions change only after regeneration.`;
+			return `${selected.description} Cues will change after regeneration.`;
 		};
 		const questionTypeSetting = new Setting(containerEl)
 			.setName("Question type")

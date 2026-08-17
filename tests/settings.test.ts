@@ -769,9 +769,12 @@ describe("settings defaults", () => {
 		await vi.waitFor(() => expect(plugin.saveSettings).toHaveBeenCalledTimes(1));
 		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
 		expect(settingText(tab.containerEl)).toContain("Uses precise wording similar to an exam prompt.");
-		expect(settingText(tab.containerEl)).toContain("newly generated or regenerated Questions only");
-		expect(settingText(tab.containerEl)).toContain("does not directly guide Summary, Terms, or Note Brief");
-		expect(settingText(tab.containerEl)).toContain("Cached Questions change only after regeneration");
+		expect(settingText(tab.containerEl)).not.toContain(
+			"newly generated or regenerated Questions only"
+		);
+		expect(settingText(tab.containerEl)).toContain(
+			"Cues will change after regeneration."
+		);
 		expect(
 			tab.containerEl.querySelector<HTMLTextAreaElement>(
 				'textarea[aria-label="Section cue instructions"]'
