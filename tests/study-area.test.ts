@@ -100,8 +100,6 @@ function buildCache(markdown = NOTE): NoteCache {
 	}));
 	const result: NoteGenerationResult = {
 		sections,
-		summary: "summary",
-		learningObjective: "learn biology",
 		noteBrief: null,
 		canceled: false,
 	};
@@ -434,7 +432,7 @@ describe("study area generation planning", () => {
 });
 
 describe("loadStudyAreas", () => {
-	it("loads legacy or invalid settings defensively", () => {
+	it("loads missing or invalid settings defensively", () => {
 		expect(loadStudyAreas(undefined)).toEqual([]);
 		expect(loadStudyAreas({})).toEqual([]);
 		expect(loadStudyAreas([{ id: "", parentPath: "Courses" }, "bad"])).toEqual([]);

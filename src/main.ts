@@ -17,7 +17,7 @@ import {
 	DEFAULT_SETTINGS,
 } from "./settings";
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
-import { cueFontSizeClass } from "./cornell-layout";
+import { cueFontSizeClass, isCueFontSize } from "./cornell-layout";
 import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import {
 	normalizeAutoGenerationSettleDelaySeconds,
@@ -38,7 +38,7 @@ import {
 	cueCraftSelectedProvider,
 	clearCueCraftStoredCloudCredential,
 	markCueCraftCloudCredentialSaved,
-	migrateCueCraftCloudCredentials,
+	secureCueCraftCloudCredentials,
 	normalizeCueCraftProviderSettings,
 	listCueCraftProviderModelsFromStore,
 	makeCueCraftByokProviderFromStore,
@@ -91,13 +91,9 @@ import {
 	type StudySectionDescriptor,
 	type StudySessionSnapshot,
 } from "./study-session";
+import { isEditorCueDisplay } from "./editor-cue-display";
 import {
-	DEFAULT_EDITOR_CUE_DISPLAY,
-	isEditorCueDisplay,
-} from "./editor-cue-display";
-import {
-	exportFilePaths,
-	resolveExportTarget,
+	exportFilePath,
 	selectExportableQuestions,
 	questionsAndTermsToAnki,
 	questionsAndTermsToMarkdown,
@@ -114,9 +110,7 @@ import {
 	type CueSectionCollapseMap,
 } from "./cue-section-collapse";
 import {
-	DEFAULT_QUESTION_TYPE,
 	isQuestionType,
-	resolveLegacyQuestionType,
 	type CueGenerationOptions,
 } from "./cue-generation";
 import { statusLabel, type CueStatus } from "./status";
@@ -154,8 +148,6 @@ const STUDY_RIBBON_ICON = "book-open-check";
 const STUDY_READY_LABEL = "CueCraft: Study this note";
 const STUDY_ACTIVE_LABEL = "CueCraft: Exit Study";
 const STUDY_GENERATE_FIRST = "CueCraft: generate Section cues for this note first.";
-const RETIRED_DEDICATED_VIEW_TYPE = "cuecraft-cornell";
-
 type StudyProjectionMode = "source" | "preview";
 
 export default class CueCraftPlugin extends Plugin {
@@ -192,7 +184,7 @@ export default class CueCraftPlugin extends Plugin {
 	private visibility!: VisibilityStore;
 	private cueSectionCollapse!: CueSectionCollapseStore;
 	private credentialStore!: SecureCredentialStore;
-	private credentialMigrationWarnings: string[] = [];
+	private credentialStorageWarnings: string[] = [];
 	private readonly editorCueWidthController: EditorCueWidthController = {
 		getCommittedWidthPx: () => this.settings.editorCueCustomWidthPx,
 		previewWidthPx: (widthPx) => this.previewEditorCueWidth(widthPx),
@@ -311,7 +303,6 @@ export default class CueCraftPlugin extends Plugin {
 		// the restored editor's CodeMirror instance isn't ready yet, so an early
 		// renderCues would no-op and the cues would never appear on startup.
 		this.app.workspace.onLayoutReady(() => {
-			this.app.workspace.detachLeavesOfType(RETIRED_DEDICATED_VIEW_TYPE);
 			this.onActiveFile(this.app.workspace.getActiveFile());
 		});
 	}
@@ -339,128 +330,71 @@ export default class CueCraftPlugin extends Plugin {
 
 	private async loadPluginData(): Promise<void> {
 		const loaded = (await this.loadData()) as Partial<PluginData> | null;
-		const rawSettings = loaded?.settings ?? loaded ?? {};
+		const rawSettings = loaded?.settings ?? {};
 		const rawSettingsRecord = rawSettings as Record<string, unknown>;
-		const settings = Object.assign({}, DEFAULT_SETTINGS, rawSettings);
-		let settingsChanged = false;
+		const booleanSetting = (
+			key: keyof CueCraftSettings,
+			fallback: boolean
+		): boolean =>
+			typeof rawSettingsRecord[key] === "boolean"
+				? rawSettingsRecord[key]
+				: fallback;
+		const rawConcurrency = rawSettingsRecord.sectionConcurrency;
+		const settings: CueCraftSettings = {
+			...DEFAULT_SETTINGS,
+			byok: DEFAULT_SETTINGS.byok,
+			questionType: isQuestionType(rawSettingsRecord.questionType)
+				? rawSettingsRecord.questionType
+				: DEFAULT_SETTINGS.questionType,
+			studyHideMode:
+				rawSettingsRecord.studyHideMode === "blur" ||
+				rawSettingsRecord.studyHideMode === "collapse"
+					? rawSettingsRecord.studyHideMode
+					: DEFAULT_SETTINGS.studyHideMode,
+			editorCueDisplay: isEditorCueDisplay(rawSettingsRecord.editorCueDisplay)
+				? rawSettingsRecord.editorCueDisplay
+				: DEFAULT_SETTINGS.editorCueDisplay,
+			editorCueCustomWidthPx: normalizeEditorCueCustomWidthPx(
+				rawSettingsRecord.editorCueCustomWidthPx
+			),
+			cueFontSize: isCueFontSize(rawSettingsRecord.cueFontSize)
+				? rawSettingsRecord.cueFontSize
+				: DEFAULT_SETTINGS.cueFontSize,
+			autoGenerateOnSave: booleanSetting(
+				"autoGenerateOnSave",
+				DEFAULT_SETTINGS.autoGenerateOnSave
+			),
+			autoGenerationSettleDelaySeconds:
+				normalizeAutoGenerationSettleDelaySeconds(
+					rawSettingsRecord.autoGenerationSettleDelaySeconds
+				),
+			studyAreas: loadStudyAreas(rawSettingsRecord.studyAreas),
+			sectionConcurrency:
+				typeof rawConcurrency === "number" &&
+				Number.isInteger(rawConcurrency) &&
+				rawConcurrency >= 1 &&
+				rawConcurrency <= 5
+					? rawConcurrency
+					: DEFAULT_SETTINGS.sectionConcurrency,
+			showNoteBrief: booleanSetting(
+				"showNoteBrief",
+				DEFAULT_SETTINGS.showNoteBrief
+			),
+			showSummary: booleanSetting("showSummary", DEFAULT_SETTINGS.showSummary),
+			showQuestion: booleanSetting(
+				"showQuestion",
+				DEFAULT_SETTINGS.showQuestion
+			),
+			showTerms: booleanSetting("showTerms", DEFAULT_SETTINGS.showTerms),
+		};
 		normalizeCueCraftProviderSettings(settings, DEFAULT_SETTINGS, rawSettings);
-		const credentialMigration = await migrateCueCraftCloudCredentials(
+		const credentialStorage = await secureCueCraftCloudCredentials(
 			settings,
 			this.credentialStore
 		);
-		this.credentialMigrationWarnings = credentialMigration.warnings;
-		settings.studyAreas = loadStudyAreas(
-			(settings as { studyAreas?: unknown }).studyAreas
-		);
-		settings.autoGenerationSettleDelaySeconds =
-			normalizeAutoGenerationSettleDelaySeconds(
-				(settings as { autoGenerationSettleDelaySeconds?: unknown })
-					.autoGenerationSettleDelaySeconds
-			);
-		const rawQuestionType = rawSettingsRecord.questionType;
-		if (isQuestionType(rawQuestionType)) {
-			settings.questionType = rawQuestionType;
-		} else {
-			const hasLegacyQuestionSettings = [
-				"cuePreset",
-				"cueDensity",
-				"questionStyle",
-			].some((key) =>
-				Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)
-			);
-			settings.questionType = hasLegacyQuestionSettings
-				? resolveLegacyQuestionType(rawSettingsRecord)
-				: DEFAULT_QUESTION_TYPE;
-			if (
-				Object.prototype.hasOwnProperty.call(rawSettingsRecord, "questionType")
-			) {
-				settingsChanged = true;
-			}
-		}
-		settings.editorCueCustomWidthPx = normalizeEditorCueCustomWidthPx(
-			(rawSettings as { editorCueCustomWidthPx?: unknown })
-				.editorCueCustomWidthPx
-		);
-		const firstBoolean = (
-			keys: readonly string[],
-			fallback: boolean
-		): boolean => {
-			for (const key of keys) {
-				const value = rawSettingsRecord[key];
-				if (typeof value === "boolean") return value;
-			}
-			return fallback;
-		};
-		settings.showSummary = firstBoolean(
-			["showSummary", "showRailSummary", "showSectionLens"],
-			DEFAULT_SETTINGS.showSummary
-		);
-		settings.showQuestion = firstBoolean(
-			["showQuestion", "showRailQuestions"],
-			DEFAULT_SETTINGS.showQuestion
-		);
-		settings.showTerms = firstBoolean(
-			["showTerms", "showRailSupportTerms", "generateKeywords"],
-			DEFAULT_SETTINGS.showTerms
-		);
-		settings.showNoteBrief = firstBoolean(
-			["showNoteBrief"],
-			DEFAULT_SETTINGS.showNoteBrief
-		);
-		for (const key of [
-			"questionType",
-			"showSummary",
-			"showQuestion",
-			"showTerms",
-			"showNoteBrief",
-		] as const) {
-			if (!Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)) {
-				continue;
-			}
-			const isValid =
-				key === "questionType"
-					? isQuestionType(rawSettingsRecord[key])
-					: typeof rawSettingsRecord[key] === "boolean";
-			if (!isValid) settingsChanged = true;
-		}
-		if (
-			!isEditorCueDisplay(
-				(settings as { editorCueDisplay?: unknown }).editorCueDisplay
-			)
-		) {
-			settings.editorCueDisplay = DEFAULT_EDITOR_CUE_DISPLAY;
-			settingsChanged = true;
-		}
-		for (const key of [
-			"cuePreset",
-			"cueDensity",
-			"questionStyle",
-			"generateKeywords",
-			"cueInstructionsOverride",
-			"noteBriefInstructionsOverride",
-			"summaryInstructionsOverride",
-			"showSectionLens",
-			"showRailSummary",
-			"showRailQuestions",
-			"showRailSupportTerms",
-			"renderInReadingMode",
-			"autoSummary",
-			"cornellDisplayMode",
-			"cornellStyle",
-			"cueColumnWidth",
-			"cueAccent",
-			"showCueBorder",
-			"compactChips",
-			"foldCueColumnOnMobile",
-			"editorCueWidthPreset",
-			"editorHookCardStyle",
-			"readingModeDisplay",
-		] as const) {
-			if (Object.prototype.hasOwnProperty.call(rawSettingsRecord, key)) {
-				settingsChanged = true;
-			}
-			delete (settings as unknown as Record<string, unknown>)[key];
-		}
+		this.credentialStorageWarnings = credentialStorage.warnings;
+		const settingsChanged =
+			JSON.stringify(settings) !== JSON.stringify(rawSettingsRecord);
 		const rawCaches = (loaded?.caches ?? {}) as Record<string, unknown>;
 		const {
 			caches,
@@ -475,7 +409,7 @@ export default class CueCraftPlugin extends Plugin {
 		this.data = { settings, caches, hidden, cueSectionCollapse };
 		this.settings = this.data.settings;
 		if (
-			credentialMigration.settingsChanged ||
+			credentialStorage.settingsChanged ||
 			cachesChanged ||
 			settingsChanged
 		) {
@@ -1044,8 +978,8 @@ export default class CueCraftPlugin extends Plugin {
 		return this.credentialStore.availability();
 	}
 
-	secureCredentialMigrationWarnings(): string[] {
-		return [...this.credentialMigrationWarnings];
+	secureCredentialWarnings(): string[] {
+		return [...this.credentialStorageWarnings];
 	}
 
 	isProviderCredentialSaved(provider = cueCraftSelectedProvider(this.settings)): boolean {
@@ -1237,7 +1171,7 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const dir =
 			file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
-		const { preferred: outPath, legacy: legacyPath } = exportFilePaths(
+		const outPath = exportFilePath(
 			dir,
 			file.basename,
 			format
@@ -1246,17 +1180,7 @@ export default class CueCraftPlugin extends Plugin {
 			format === "markdown"
 				? questionsAndTermsToMarkdown(file.basename, questions)
 				: questionsAndTermsToAnki(questions);
-		const preferred = this.app.vault.getAbstractFileByPath(outPath);
-		const legacy = this.app.vault.getAbstractFileByPath(legacyPath);
-		const target = resolveExportTarget(
-			preferred instanceof TFile,
-			legacy instanceof TFile
-		);
-		let existing = preferred;
-		if (target === "migrate-legacy" && legacy instanceof TFile) {
-			await this.app.vault.rename(legacy, outPath);
-			existing = legacy;
-		}
+		const existing = this.app.vault.getAbstractFileByPath(outPath);
 		let out: TFile;
 		if (existing instanceof TFile) {
 			await this.app.vault.modify(existing, content);

@@ -6,7 +6,6 @@ import {
 	hasUsableCues,
 	isStale,
 	loadCache,
-	migrateCache,
 	normalizeCacheMap,
 	reconcileCacheSections,
 	replaceSection,
@@ -50,70 +49,6 @@ function build(): NoteCache {
 	});
 }
 
-function richV6Cache() {
-	return {
-		schemaVersion: 6,
-		generatedAt: "2026-08-01T12:00:00.000Z",
-		noteModifiedAt: 1234,
-		provider: "openai",
-		model: "gpt-5-mini",
-		generationMode: "whole-note-context",
-		preset: "exam-prep",
-		outline: {
-			learningObjective: "Explain how retrieval strengthens memory.",
-			keyThemes: ["retrieval", "memory"],
-		},
-		sections: [
-			{
-				id: "retrieval-practice",
-				heading: "Retrieval Practice",
-				level: 2,
-				lineNumber: 7,
-				contentHash: "abc123",
-				keywords: ["retrieval", "testing effect"],
-				question: "Why does retrieval practice strengthen memory?",
-				confidence: "low",
-				rationale: "The section states the causal relationship directly.",
-				sectionLens: {
-					takeaway: "Practice recalling an idea instead of rereading it.",
-					keyPhrase: "retrieval practice",
-					explanation: "Active recall makes the memory easier to access later.",
-				},
-				error: null,
-			},
-			{
-				id: "summary-section",
-				heading: "Summary",
-				level: 2,
-				lineNumber: 20,
-				contentHash: "def456",
-				keywords: null,
-				question: null,
-				confidence: null,
-				rationale: "Provider validation failed.",
-				sectionLens: null,
-				error: "question is required",
-			},
-		],
-		summary: "Retrieval practice improves later access to learned material.",
-		noteBrief: {
-			overview: "Retrieval strengthens memory. Repeated recall improves access.",
-			whatMatters: {
-				title: "Recall beats rereading",
-				detail: "Effortful retrieval produces more durable learning.",
-			},
-			reviewFirst: {
-				title: "Retrieval practice",
-				detail: "Start with the mechanism that strengthens recall.",
-			},
-			sayItBack: {
-				title: "Why does retrieval strengthen memory?",
-				detail: "Explain the testing effect without looking at the note.",
-			},
-		},
-	};
-}
-
 describe("buildNoteCache + validateCache", () => {
 	it("produces a current-schema cache that validates", () => {
 		const cache = build();
@@ -121,9 +56,6 @@ describe("buildNoteCache + validateCache", () => {
 		expect(cache.sections).toHaveLength(2);
 		expect(cache.outline).toEqual({});
 		expect(cache).not.toHaveProperty("summary");
-		expect(cache.sections[0]).not.toHaveProperty("category");
-		expect(cache.sections[0]).not.toHaveProperty("confidence");
-		expect(cache.sections[0]).not.toHaveProperty("rationale");
 		expect(cache.sections[0].summary).toBeNull();
 		expect(cache.noteBrief).toBeNull();
 		expect(validateCache(cache).ok).toBe(true);
@@ -152,7 +84,6 @@ describe("buildNoteCache + validateCache", () => {
 		});
 
 		expect(cache.sections[0].summary?.keyPhrase).toBe("A");
-		expect(cache.sections[0]).not.toHaveProperty("category");
 		expect(cache.noteBrief?.reviewFirst.title).toBe("A");
 		expect(validateCache(cache).ok).toBe(true);
 	});
@@ -213,139 +144,18 @@ describe("isStale", () => {
 	});
 });
 
-describe("migrateCache", () => {
-	it("renames a v7 sectionLens field to Summary", () => {
-		const current = build();
-		const legacy = {
-			...current,
-			schemaVersion: 7,
-			sections: current.sections.map((section, index) => ({
-				...section,
-				summary: undefined,
-				sectionLens:
-					index === 0
-						? {
-							takeaway: "Focus on A.",
-							keyPhrase: "A",
-							explanation: "A frames the rest of the note.",
-						}
-						: null,
-			})),
-		};
+describe("loadCache", () => {
+	it("rejects unsupported cache versions", () => {
+		const cache = build();
 
-		const migrated = migrateCache(legacy);
-
-		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
-		expect(migrated?.sections[0].summary?.keyPhrase).toBe("A");
-		expect(migrated?.sections[0]).not.toHaveProperty("sectionLens");
+		expect(loadCache({ ...cache, schemaVersion: 7 })).toBeNull();
 	});
 
-	it("upgrades a rich v6 cache by discarding only retired review metadata", () => {
-		const v6 = richV6Cache();
-
-		const migrated = migrateCache(v6);
-
-		expect(migrated).toEqual({
-			schemaVersion: CACHE_SCHEMA_VERSION,
-			generatedAt: "2026-08-01T12:00:00.000Z",
-			noteModifiedAt: 1234,
-			provider: "openai",
-			model: "gpt-5-mini",
-			generationMode: "whole-note-context",
-			preset: "exam-prep",
-			outline: { keyThemes: ["retrieval", "memory"] },
-			sections: [
-				{
-					id: "retrieval-practice",
-					heading: "Retrieval Practice",
-					level: 2,
-					lineNumber: 7,
-					contentHash: "abc123",
-					keywords: ["retrieval", "testing effect"],
-					question: "Why does retrieval practice strengthen memory?",
-					summary: {
-						takeaway: "Practice recalling an idea instead of rereading it.",
-						keyPhrase: "retrieval practice",
-						explanation: "Active recall makes the memory easier to access later.",
-					},
-					error: null,
-				},
-				{
-					id: "summary-section",
-					heading: "Summary",
-					level: 2,
-					lineNumber: 20,
-					contentHash: "def456",
-					keywords: null,
-					question: null,
-					summary: null,
-					error: "question is required",
-				},
-			],
-			noteBrief: v6.noteBrief,
-		});
-		expect(migrateCache(migrated)).toEqual(migrated);
-	});
-
-	it("upgrades a v1 cache by filling new fields", () => {
-		const v1 = {
-			schemaVersion: 1,
-			generatedAt: "2026-06-01T00:00:00.000Z",
-			noteModifiedAt: 5,
-			provider: "ollama",
-			model: "llama3.1:8b",
-			summary: "old summary",
-			sections: [
-				{
-					id: "a",
-					heading: "A",
-					lineNumber: 1,
-					contentHash: "deadbeef",
-					keywords: ["x", "y"],
-					question: "Q",
-					confidence: "medium",
-					error: null,
-				},
-			],
-		};
-		const migrated = migrateCache(v1);
-		expect(migrated).not.toBeNull();
-		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
-		expect(migrated?.preset).toBe("conceptual");
-		expect(migrated?.generationMode).toBe("whole-note-context");
-		expect(migrated?.sections[0].level).toBe(0);
-		expect(migrated?.sections[0]).not.toHaveProperty("category");
-		expect(migrated?.sections[0]).not.toHaveProperty("confidence");
-		expect(migrated?.sections[0]).not.toHaveProperty("rationale");
-		expect(migrated?.sections[0].summary).toBeNull();
-		expect(migrated?.noteBrief).toBeNull();
-		expect(validateCache(migrated).ok).toBe(true);
-	});
-
-	it.each([2, 3, 4, 5])("upgrades a valid v%i cache to stable v8", (version) => {
-		const legacy = richV6Cache();
-		const migrated = migrateCache({ ...legacy, schemaVersion: version });
-		expect(migrated?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
-		expect(migrated?.outline).toEqual({ keyThemes: ["retrieval", "memory"] });
-		expect(migrated).not.toHaveProperty("summary");
-		expect(migrated?.sections[0]).not.toHaveProperty("confidence");
-		expect(migrated?.sections[0]).not.toHaveProperty("rationale");
-		expect(migrated?.sections[1].heading).toBe("Summary");
-		expect(migrated?.sections[1].error).toBe("question is required");
-		expect(validateCache(migrated).ok).toBe(true);
-		expect(migrateCache(migrated)).toEqual(migrated);
-	});
-
-	it("returns null for unmigratable junk", () => {
-		expect(migrateCache(42)).toBeNull();
-		expect(migrateCache({ ...richV6Cache(), schemaVersion: 6.5 })).toBeNull();
-		expect(migrateCache({ schemaVersion: 99, nonsense: true })).toBeNull();
-	});
-
-	it("loadCache passes through a current cache and migrates a v1 cache", () => {
+	it("loads a current cache and rejects invalid data", () => {
 		const current = build();
 		expect(loadCache(current)?.schemaVersion).toBe(CACHE_SCHEMA_VERSION);
-		expect(loadCache({ schemaVersion: 1, sections: [] })).toBeNull();
+		expect(loadCache({ schemaVersion: 99, sections: [] })).toBeNull();
+		expect(loadCache(42)).toBeNull();
 	});
 });
 
@@ -359,41 +169,24 @@ describe("normalizeCacheMap", () => {
 		});
 	});
 
-	it("reports when persisted caches were normalized to v8", () => {
-		const v6 = richV6Cache();
-
-		const normalized = normalizeCacheMap({ "notes/retrieval.md": v6 });
-
+	it("reports when unknown cache properties are removed", () => {
+		const cache = { ...build(), temporary: true };
+		const normalized = normalizeCacheMap({ "notes/retrieval.md": cache });
 		expect(normalized.changed).toBe(true);
-		expect(normalized.caches["notes/retrieval.md"]).toEqual(migrateCache(v6));
-		expect(normalized.caches["notes/retrieval.md"].sections[0]).not.toHaveProperty(
-			"confidence"
-		);
+		expect(normalized.caches["notes/retrieval.md"]).toEqual(build());
 	});
 
-	it("migrates valid caches while retaining invalid entries for persistence", () => {
-		const current = build();
-		const v5 = {
-			...current,
-			schemaVersion: 5,
-			sections: current.sections.map((section) => ({
-				...section,
-				category: "sequences",
-			})),
-		};
-
+	it("retains invalid cache entries for persistence", () => {
 		const invalid = { schemaVersion: 99, sections: ["unknown"] };
 		const normalized = normalizeCacheMap({
-			"note.md": v5,
 			"unrecognized.md": invalid,
 		});
 
-		expect(normalized.caches["note.md"].schemaVersion).toBe(CACHE_SCHEMA_VERSION);
-		expect(normalized.caches).not.toHaveProperty("unrecognized.md");
+		expect(normalized.caches).toEqual({});
 		expect(normalized.retainedCaches).toEqual({
 			"unrecognized.md": invalid,
 		});
-		expect(normalized.changed).toBe(true);
+		expect(normalized.changed).toBe(false);
 	});
 });
 
@@ -496,7 +289,6 @@ describe("reconcileCacheSections", () => {
 
 		expect(result.sections.map((section) => section.heading)).toEqual(["A", "C"]);
 		expect(result.sections.map((section) => section.question)).toEqual(["Q:A", "Q:C"]);
-		expect(result.sections[1]).not.toHaveProperty("category");
 	});
 
 	it("preserves existing cues when sections are reordered", () => {

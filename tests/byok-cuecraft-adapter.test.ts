@@ -10,7 +10,7 @@ import {
 	deriveCueCraftProviderSetupStatus,
 	makeCueCraftByokProvider,
 	makeCueCraftByokProviderFromStore,
-	migrateCueCraftCloudCredentials,
+	secureCueCraftCloudCredentials,
 	normalizeCueCraftProviderSettings,
 	recordCueCraftProviderConnectionSuccess,
 	resetCueCraftFetchedModels,
@@ -18,8 +18,14 @@ import {
 	setCueCraftProviderCredentialMetadata,
 	setCueCraftProviderModel,
 } from "../src/byok-cuecraft-adapter";
-import type { ByokHttpClient, ByokModelOption } from "@swartzrock/byok-runtime";
+import type {
+	ByokHttpClient,
+	ByokModelOption,
+	ByokProviderId,
+	ByokProviderStoredSettings,
+} from "@swartzrock/byok-runtime";
 import {
+	DEFAULT_SETTINGS,
 	type CueCraftSettings,
 } from "../src/settings";
 import type {
@@ -30,54 +36,44 @@ import { buildSectionCuePrompt } from "../src/cue-instructions";
 import { buildNoteBriefPrompt } from "../src/study-material-instructions";
 
 function settings(
-	overrides: Partial<CueCraftSettings> = {}
+	overrides: Partial<CueCraftSettings> & {
+		selectedProvider?: ByokProviderId;
+		selectedProviderSettings?: Partial<ByokProviderStoredSettings>;
+	} = {}
 ): CueCraftSettings {
+	const {
+		selectedProvider = "ollama",
+		selectedProviderSettings = {},
+		...currentOverrides
+	} = overrides;
+	const base = structuredClone(DEFAULT_SETTINGS);
+	const stored = {
+		credential: "",
+		credentialSaved: false,
+		credentialUpdatedAt: "",
+		credentialLength: 0,
+		model: "",
+		modelSelection: "",
+		availableModels: [],
+		modelOptions: [],
+		hasFetchedModels: false,
+		modelRefreshMessage: "",
+		...base.byok.providers[selectedProvider],
+		...selectedProviderSettings,
+	};
 	return {
-		provider: "ollama",
-		ollamaHost: "http://localhost:11434",
-		ollamaModel: "llama3.1:8b",
-		ollamaAvailableModels: [],
-		ollamaHasFetchedModels: false,
-		ollamaModelRefreshMessage: "",
-		anthropicApiKey: "sk-ant-test",
-		anthropicModel: "claude-sonnet-4-6",
-		anthropicModelSelection: "claude-sonnet-4-6",
-		anthropicAvailableModels: [],
-		anthropicHasFetchedModels: false,
-		anthropicModelRefreshMessage: "",
-		openaiApiKey: "sk-openai-test",
-		openaiModel: "gpt-4o-mini",
-		openaiAvailableModels: [],
-		openaiHasFetchedModels: false,
-		openaiModelRefreshMessage: "",
-		googleApiKey: "AIza-test",
-		googleModel: "gemini-1.5-flash",
-		googleAvailableModels: [],
-		googleHasFetchedModels: false,
-		googleModelRefreshMessage: "",
-		xaiApiKey: "xai-test",
-		xaiModel: "grok-2-latest",
-		xaiAvailableModels: [],
-		xaiHasFetchedModels: false,
-		xaiModelRefreshMessage: "",
-		openrouterApiKey: "sk-or-test",
-		openrouterModel: "anthropic/claude-sonnet-4",
-		openrouterAvailableModels: [],
-		openrouterModelOptions: [],
-		openrouterHasFetchedModels: false,
-		openrouterModelRefreshMessage: "",
-		lmStudioUrl: "http://localhost:1234/v1",
-		lmStudioModel: "local-model",
-		lmStudioAvailableModels: [],
-		lmStudioHasFetchedModels: false,
-		lmStudioModelRefreshMessage: "",
-		codexCliCommand: "codex",
-		codexCliModel: "gpt-5",
-		claudeCliCommand: "claude",
-		claudeCliModel: "sonnet",
-		providerConnectionStatus: {},
-		...overrides,
-	} as CueCraftSettings;
+		...base,
+		...currentOverrides,
+		byok: {
+			...base.byok,
+			selectedProvider,
+			providers: {
+				...base.byok.providers,
+				[selectedProvider]: stored,
+			},
+			verification: {},
+		},
+	};
 }
 
 const http: ByokHttpClient = async () => ({ status: 200, text: "{}", json: {} });
@@ -146,9 +142,11 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(
 			cueCraftProviderConfigFromSettings(
 				settings({
-					provider: "openrouter",
-					openrouterApiKey: "sk-or-test",
-					openrouterModel: "anthropic/claude-sonnet-4",
+					selectedProvider: "openrouter",
+					selectedProviderSettings: {
+						credential: "sk-or-test",
+						model: "anthropic/claude-sonnet-4",
+					},
 				})
 			)
 		).toEqual({
@@ -159,9 +157,8 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(
 			cueCraftProviderConfigFromSettings(
 				settings({
-					provider: "codex-cli",
-					codexCliCommand: "codex",
-					codexCliModel: "",
+					selectedProvider: "codex-cli",
+					selectedProviderSettings: { credential: "codex", model: "" },
 				})
 			)
 		).toEqual({
@@ -172,9 +169,11 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(
 			cueCraftProviderConfigFromSettings(
 				settings({
-					provider: "ollama",
-					ollamaHost: "http://localhost:11434",
-					ollamaModel: "llama3.1:8b",
+					selectedProvider: "ollama",
+					selectedProviderSettings: {
+						credential: "http://localhost:11434",
+						model: "llama3.1:8b",
+					},
 				})
 			)
 		).toEqual({
@@ -185,9 +184,11 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(
 			cueCraftProviderConfigFromSettings(
 				settings({
-					provider: "lm-studio",
-					lmStudioUrl: "http://localhost:1234/v1",
-					lmStudioModel: "qwen3-4b",
+					selectedProvider: "lm-studio",
+					selectedProviderSettings: {
+						credential: "http://localhost:1234/v1",
+						model: "qwen3-4b",
+					},
 				})
 			)
 		).toEqual({
@@ -199,24 +200,12 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("resolves cloud provider configs through secure storage", async () => {
 		const s = settings({
-			provider: "openai",
-			openaiApiKey: "",
-			openaiModel: "gpt-4o-mini",
-			byok: {
-				selectedProvider: "openai",
-				providers: {
-					openai: {
-						credential: "",
-						credentialSaved: true,
-						credentialUpdatedAt: "token",
-						model: "gpt-4o-mini",
-						availableModels: [],
-						modelOptions: [],
-						hasFetchedModels: false,
-						modelRefreshMessage: "",
-					},
-				},
-				verification: {},
+			selectedProvider: "openai",
+			selectedProviderSettings: {
+				credential: "",
+				credentialSaved: true,
+				credentialUpdatedAt: "token",
+				model: "gpt-4o-mini",
 			},
 		});
 
@@ -241,9 +230,11 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("does not touch secure storage for local provider configs", async () => {
 		const s = settings({
-			provider: "ollama",
-			ollamaHost: "http://localhost:11434",
-			ollamaModel: "llama3.1:8b",
+			selectedProvider: "ollama",
+			selectedProviderSettings: {
+				credential: "http://localhost:11434",
+				model: "llama3.1:8b",
+			},
 		});
 		let readCount = 0;
 
@@ -281,9 +272,9 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		"codex-cli",
 		"claude-cli",
 	] as const)("creates a BYOK runtime for %s", (provider) => {
-		const providerSettings = settings({ provider });
+		const providerSettings = settings({ selectedProvider: provider });
 		if (
-			["groq", "mistral", "deepseek", "deepinfra"].includes(provider)
+			!["ollama", "lm-studio", "codex-cli", "claude-cli"].includes(provider)
 		) {
 			const stored = cueCraftProviderSettings(providerSettings, provider);
 			stored.credential = "test-key";
@@ -305,12 +296,11 @@ describe("cueCraftProviderConfigFromSettings", () => {
 					response: JSON.stringify({
 						question: "What is an agent?",
 						keywords: ["plan", "tools"],
-						category: "unrelated",
 					}),
 				},
 			};
 		};
-		const provider = makeCueCraftByokProvider(settings({ provider: "ollama" }), {
+		const provider = makeCueCraftByokProvider(settings({ selectedProvider: "ollama" }), {
 			fetchImpl,
 			http,
 		});
@@ -330,18 +320,21 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(body.format).toBe("json");
 		expect(body.prompt).toContain("Section heading: Agents");
 		expect(body.prompt).toContain("Agents can plan and use tools.");
-		expect(body.prompt).not.toContain('"category"');
 		expect(body.prompt).not.toContain("sequences");
 		expect(body.prompt).not.toContain("linkedlists");
 		expect(body.prompt).not.toContain("stacks");
 		expect(body.prompt).not.toContain("intervals");
 	});
 
-	it("omits category from structured-object cue requests and normalized output", async () => {
+	it("uses the current structured-object cue fields", async () => {
 		const calls: Array<{ body?: string }> = [];
 		const provider = makeCueCraftByokProvider(
 			settings({
-				provider: "openai",
+				selectedProvider: "openai",
+				selectedProviderSettings: {
+					credential: "test-key",
+					model: "gpt-4o-mini",
+				},
 			}),
 			{
 				http,
@@ -352,10 +345,9 @@ describe("cueCraftProviderConfigFromSettings", () => {
 							choices: [
 								{
 									message: {
-										content: JSON.stringify({
+									content: JSON.stringify({
 										question: "What is an agent?",
 										keywords: ["plan", "tools"],
-										category: "stacks",
 											summary: {
 												takeaway: "Agents plan and use tools.",
 												keyPhrase: "use tools",
@@ -415,82 +407,17 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			'Respond with ONLY a valid JSON object matching this schema'
 		);
 		expect(promptMessage.content).toContain("Agents can plan and use tools.");
-		expect(promptMessage.content).not.toContain('"category"');
-	});
-
-	it("ignores retired custom Cue instructions while retaining repair behavior", async () => {
-		const calls: Array<{ body?: string }> = [];
-		const instructionLog = vi
-			.spyOn(console, "info")
-			.mockImplementation(() => undefined);
-		const cuePolicy =
-			"Speak like the Swedish Chef. End every response with Bork! Bork! Bork! " +
-			"Describe kitchen chaos inside brackets.";
-		const reviewPolicy = "REVIEW_TEXT_POLICY_SENTINEL: review-only guidance.";
-		const http: ByokHttpClient = async (request) => {
-			calls.push({ body: request.body });
-			const response = calls.length === 1
-				? "not json"
-				: JSON.stringify({
-					question: "How do agents use tools?",
-					keywords: ["agents", "tools"],
-					summary: {
-						takeaway: "Agents use tools to act.",
-						keyPhrase: "use tools",
-						explanation: "Tool use enables action.",
-					},
-				});
-			return { status: 200, text: "{}", json: { response } };
-		};
-		const provider = makeCueCraftByokProvider(
-			settings({
-				provider: "ollama",
-				cueInstructionsOverride: cuePolicy,
-				noteBriefInstructionsOverride: reviewPolicy,
-			}),
-			{ fetchImpl, http }
-		);
-
-		await expect(
-			provider.generateCue({
-				heading: "Agents",
-				content: "Agents can plan and use tools.",
-				options: { questionType: "socratic-reasoning" },
-			})
-		).resolves.toMatchObject({ question: "How do agents use tools?" });
-
-		expect(calls).toHaveLength(2);
-		for (const call of calls) {
-			const body = JSON.parse(call.body ?? "{}");
-			expect(body.system).toBeUndefined();
-			expect(body.prompt).not.toContain(cuePolicy);
-			expect(body.prompt).not.toContain(reviewPolicy);
-			expect(body.prompt).toContain("Question: Ask one open Socratic question");
-			expect(body.prompt).toContain("Agents can plan and use tools.");
-			expect(body.format).toBe("json");
-		}
-		const repairBody = JSON.parse(calls[1].body ?? "{}");
-		expect(instructionLog).toHaveBeenCalledOnce();
-		expect(instructionLog.mock.calls[0]?.[0]).not.toContain(cuePolicy);
-		expect(repairBody.prompt).toContain(
-			"Your previous reply could not be validated (response was not valid JSON)."
-		);
-		expect(repairBody.prompt).toContain("Previous reply:\nnot json");
-		expect(repairBody.prompt).toContain(
-			"Reply again with ONLY the corrected JSON object."
-		);
 	});
 
 	it("uses the shared Note Brief template for structured requests", async () => {
 		const calls: Array<{ body?: string }> = [];
-		const reviewPolicy =
-			"NOTE_BRIEF_POLICY_SENTINEL: return prose and only two cards.";
-		const cuePolicy = "CUE_NOTE_BRIEF_ISOLATION_SENTINEL";
 		const provider = makeCueCraftByokProvider(
 			settings({
-				provider: "openai",
-				cueInstructionsOverride: cuePolicy,
-				noteBriefInstructionsOverride: reviewPolicy,
+				selectedProvider: "openai",
+				selectedProviderSettings: {
+					credential: "test-key",
+					model: "gpt-4o-mini",
+				},
 			}),
 			{
 				http,
@@ -546,8 +473,6 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(body.messages[0].role).toBe("user");
 		expect(body.messages).toHaveLength(1);
 		expect(instructions).toContain(buildNoteBriefPrompt(input));
-		expect(instructions).not.toContain(reviewPolicy);
-		expect(instructions).not.toContain(cuePolicy);
 		expect(instructions).toContain('"whatMatters"');
 		expect(instructions).toContain('"reviewFirst"');
 		expect(instructions).toContain('"sayItBack"');
@@ -556,84 +481,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		);
 		expect(instructions).toContain("Agents plan before they use tools.");
 		expect(instructions).toContain("How do plans guide tool use?");
-		expect(instructions).not.toContain(cuePolicy);
 		expect(instructions).toContain("exactly 2 concise sentences");
-	});
-
-	it("ignores retired Note Brief custom instructions on initial and repair requests", async () => {
-		const calls: Array<{ body?: string }> = [];
-		const instructionLog = vi
-			.spyOn(console, "info")
-			.mockImplementation(() => undefined);
-		const reviewPolicy =
-			"NOTE_BRIEF_TEXT_POLICY_SENTINEL: use prose and omit review cards.";
-		const cuePolicy = "CUE_NOTE_BRIEF_TEXT_ISOLATION_SENTINEL";
-		const noteBrief = {
-			overview: "Agents plan. They use tools.",
-			whatMatters: { title: "Planning", detail: "Plans organize work." },
-			reviewFirst: {
-				title: "Tool selection",
-				detail: "Choose tools that fit the plan.",
-			},
-			sayItBack: {
-				title: "How do plans guide tool use?",
-				detail: "Explain the relationship.",
-			},
-		};
-		const http: ByokHttpClient = async (request) => {
-			calls.push({ body: request.body });
-			return {
-				status: 200,
-				text: "{}",
-				json: {
-					response: calls.length === 1 ? "not json" : JSON.stringify(noteBrief),
-				},
-			};
-		};
-		const provider = makeCueCraftByokProvider(
-			settings({
-				provider: "ollama",
-				cueInstructionsOverride: cuePolicy,
-				noteBriefInstructionsOverride: reviewPolicy,
-			}),
-			{ fetchImpl, http }
-		);
-
-		await expect(
-			provider.generateNoteBrief?.({
-				noteTitle: "Agents",
-				fullText: "Agents plan before they use tools.",
-				sections: [
-					{
-						heading: "Planning",
-						question: "How do plans guide tool use?",
-						keywords: ["plans", "tools"],
-					},
-				],
-			})
-		).resolves.toEqual(noteBrief);
-
-		expect(calls).toHaveLength(2);
-		for (const call of calls) {
-			const body = JSON.parse(call.body ?? "{}");
-			expect(body.system).toBeUndefined();
-			expect(body.prompt).not.toContain(reviewPolicy);
-			expect(body.prompt).not.toContain(cuePolicy);
-			expect(body.prompt).toContain('"whatMatters"');
-			expect(body.prompt).toContain('"reviewFirst"');
-			expect(body.prompt).toContain('"sayItBack"');
-			expect(body.prompt).toContain("Agents plan before they use tools.");
-			expect(body.prompt).toContain("How do plans guide tool use?");
-		}
-		const repairBody = JSON.parse(calls[1].body ?? "{}");
-		expect(instructionLog).toHaveBeenCalledOnce();
-		expect(instructionLog.mock.calls[0]?.[0]).not.toContain(reviewPolicy);
-		expect(repairBody.prompt).toContain(
-			"Your previous reply could not be validated (response was not valid JSON)."
-		);
-		expect(repairBody.prompt).toContain(
-			"Reply again with ONLY the corrected JSON object."
-		);
 	});
 
 	it("disables Ollama thinking mode and recovers Qwen JSON from thinking output", async () => {
@@ -658,7 +506,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 				},
 			};
 		};
-		const provider = makeCueCraftByokProvider(settings({ provider: "ollama" }), {
+		const provider = makeCueCraftByokProvider(settings({ selectedProvider: "ollama" }), {
 			fetchImpl,
 			http,
 		});
@@ -697,7 +545,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			}),
 			json: null,
 		});
-		const provider = makeCueCraftByokProvider(settings({ provider: "ollama" }), {
+		const provider = makeCueCraftByokProvider(settings({ selectedProvider: "ollama" }), {
 			fetchImpl,
 			http,
 		});
@@ -737,7 +585,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			};
 		};
 		const provider = await makeCueCraftByokProviderFromStore(
-			settings({ provider: "ollama" }),
+			settings({ selectedProvider: "ollama" }),
 			{ fetchImpl, http },
 			fakeCredentialStore()
 		);
@@ -760,50 +608,90 @@ describe("cueCraftProviderConfigFromSettings", () => {
 });
 
 describe("CueCraft provider settings normalization", () => {
-	it("normalizes provider ids, CLI defaults, and legacy Anthropic model data", () => {
+	it("normalizes partial current provider data", () => {
 		const s = settings({
-			provider: "claude" as never,
-			codexCliCommand: undefined as never,
-			claudeCliModel: 123 as never,
-			anthropicModel: "claude-account-123",
-			anthropicAvailableModels: undefined as never,
-		}) as CueCraftSettings & { anthropicAvailableModelIds?: string[] };
-		s.anthropicAvailableModelIds = ["claude-account-123"];
-		delete (s as Partial<CueCraftSettings>).anthropicHasFetchedModels;
-		delete (s as Partial<CueCraftSettings>).anthropicModelSelection;
+			selectedProvider: "claude-cli",
+			selectedProviderSettings: {
+				credential: "claude",
+				model: 123 as never,
+				availableModels: ["sonnet"],
+				hasFetchedModels: true,
+			},
+		});
 
-		normalizeCueCraftProviderSettings(s, settings());
+		normalizeCueCraftProviderSettings(s, settings(), s);
 
 		expect(s.byok.selectedProvider).toBe("claude-cli");
 		expect(cueCraftProviderSettings(s, "codex-cli").credential).toBe("codex");
-		expect(cueCraftProviderSettings(s, "claude-cli").model).toBe("sonnet");
-		expect(cueCraftProviderSettings(s, "anthropic").availableModels).toEqual([
-			"claude-account-123",
+		expect(cueCraftProviderSettings(s, "claude-cli").model).toBe("");
+		expect(cueCraftProviderSettings(s, "claude-cli").availableModels).toEqual([
+			"sonnet",
 		]);
-		expect(cueCraftProviderSettings(s, "anthropic").hasFetchedModels).toBe(true);
-		expect(cueCraftProviderSettings(s, "anthropic").modelSelection).toBe(
-			"claude-account-123"
-		);
+	});
+
+	it("drops unknown and malformed nested provider data", () => {
+		const s = settings({ selectedProvider: "openai" });
+		const raw = s as unknown as {
+			byok: {
+				providers: Record<string, Record<string, unknown>>;
+				verification: Record<string, Record<string, unknown>>;
+			};
+		};
+		raw.byok.providers.openai = {
+			...raw.byok.providers.openai,
+			availableModels: ["gpt-5-mini", 42],
+			modelOptions: [
+				{ id: "gpt-5-mini", label: "GPT-5 mini" },
+				{ id: 42, label: "invalid" },
+			],
+			unexpected: true,
+		};
+		raw.byok.verification.openai = {
+			credentialFingerprint: "fingerprint",
+			credentialToken: "token",
+			modelId: "gpt-5-mini",
+			testedAt: "2026-08-17T12:00:00.000Z",
+			unexpected: true,
+		};
+		raw.byok.verification.unknown = {
+			credentialFingerprint: "unknown",
+			modelId: "unknown",
+			testedAt: "2026-08-17T12:00:00.000Z",
+		};
+
+		normalizeCueCraftProviderSettings(s, settings(), raw);
+
+		expect(cueCraftProviderSettings(s, "openai")).toEqual({
+			credential: "",
+			credentialSaved: false,
+			credentialUpdatedAt: "",
+			credentialLength: 0,
+			model: "",
+			modelSelection: "",
+			availableModels: ["gpt-5-mini"],
+			modelOptions: [{ id: "gpt-5-mini", label: "GPT-5 mini" }],
+			hasFetchedModels: false,
+			modelRefreshMessage: "",
+		});
+		expect(s.byok.verification).toEqual({
+			openai: {
+				credentialFingerprint: "fingerprint",
+				credentialToken: "token",
+				modelId: "gpt-5-mini",
+				testedAt: "2026-08-17T12:00:00.000Z",
+			},
+		});
 	});
 
 	it("normalizes and mutates saved cloud credential metadata", () => {
 		const s = settings({
-			byok: {
-				selectedProvider: "openai",
-				providers: {
-					openai: {
-						credential: "",
-						credentialSaved: true,
-						credentialUpdatedAt: "token-1",
-						credentialLength: 14,
-						model: "gpt-4o-mini",
-						availableModels: [],
-						modelOptions: [],
-						hasFetchedModels: false,
-						modelRefreshMessage: "",
-					},
-				},
-				verification: {},
+			selectedProvider: "openai",
+			selectedProviderSettings: {
+				credential: "",
+				credentialSaved: true,
+				credentialUpdatedAt: "token-1",
+				credentialLength: 14,
+				model: "gpt-4o-mini",
 			},
 		});
 
@@ -838,9 +726,12 @@ describe("CueCraft provider settings normalization", () => {
 describe("CueCraft fetched model adapters", () => {
 	it("resets provider-specific fetched model state when credentials change", () => {
 		const s = settings({
-			openrouterAvailableModels: ["anthropic/claude-sonnet-4"],
-			openrouterModelOptions: [openrouterOption],
-			openrouterHasFetchedModels: true,
+			selectedProvider: "openrouter",
+			selectedProviderSettings: {
+				availableModels: ["anthropic/claude-sonnet-4"],
+				modelOptions: [openrouterOption],
+				hasFetchedModels: true,
+			},
 		});
 
 		resetCueCraftFetchedModels(s, "openrouter", "Enter an OpenRouter key.");
@@ -923,8 +814,11 @@ describe("CueCraft fetched model adapters", () => {
 
 	it("persists model refresh failures as fetched-but-empty state", () => {
 		const s = settings({
-			ollamaAvailableModels: ["llama3.1:8b"],
-			ollamaHasFetchedModels: false,
+			selectedProvider: "ollama",
+			selectedProviderSettings: {
+				availableModels: ["llama3.1:8b"],
+				hasFetchedModels: false,
+			},
 		});
 
 		applyCueCraftModelRefreshFailure(
@@ -945,9 +839,11 @@ describe("CueCraft fetched model adapters", () => {
 describe("CueCraft provider connection adapters", () => {
 	it("records and derives setup status through BYOK snapshots", () => {
 		const s = settings({
-			provider: "openai",
-			openaiApiKey: "sk-openai-test",
-			openaiModel: "gpt-4o-mini",
+			selectedProvider: "openai",
+			selectedProviderSettings: {
+				credential: "sk-openai-test",
+				model: "gpt-4o-mini",
+			},
 		});
 
 		recordCueCraftProviderConnectionSuccess(
@@ -967,56 +863,19 @@ describe("CueCraft provider connection adapters", () => {
 	});
 });
 
-describe("CueCraft BYOK settings migration", () => {
-	it("projects flat CueCraft provider settings into BYOK-owned storage", () => {
-		const s = settings({
-			provider: "openrouter",
-			openrouterApiKey: "sk-or-test",
-			openrouterModel: "anthropic/claude-sonnet-4",
-			openrouterAvailableModels: ["anthropic/claude-sonnet-4"],
-			openrouterModelOptions: [openrouterOption],
-			openrouterHasFetchedModels: true,
-			openrouterModelRefreshMessage: "",
-		});
-		recordCueCraftProviderConnectionSuccess(
-			s,
-			"2026-06-27T00:00:00.000Z"
-		);
-
-		expect(s.byok).toMatchObject({
-			selectedProvider: "openrouter",
-			providers: {
-				openrouter: {
-					credential: "sk-or-test",
-					model: "anthropic/claude-sonnet-4",
-					availableModels: ["anthropic/claude-sonnet-4"],
-					modelOptions: [openrouterOption],
-					hasFetchedModels: true,
-					modelRefreshMessage: "",
-				},
-				"codex-cli": {
-					credential: "codex",
-					model: "gpt-5",
-				},
-			},
-			verification: {
-				openrouter: {
-					testedAt: "2026-06-27T00:00:00.000Z",
-				},
-			},
-		});
-	});
-
+describe("CueCraft secure credential storage", () => {
 	it("moves plaintext cloud credentials into secure storage metadata", async () => {
 		const saved: Array<[CueCraftCloudCredentialProvider, string]> = [];
 		const s = settings({
-			provider: "openai",
-			openaiApiKey: "sk-openai-test",
-			openaiModel: "gpt-4o-mini",
+			selectedProvider: "openai",
+			selectedProviderSettings: {
+				credential: "sk-openai-test",
+				model: "gpt-4o-mini",
+			},
 		});
 		normalizeCueCraftProviderSettings(s, settings(), s);
 
-		const result = await migrateCueCraftCloudCredentials(
+		const result = await secureCueCraftCloudCredentials(
 			s,
 			fakeCredentialStore({
 				save: async (provider, value) => {
@@ -1028,7 +887,7 @@ describe("CueCraft BYOK settings migration", () => {
 
 		expect(result).toMatchObject({
 			settingsChanged: true,
-			migratedProviders: ["anthropic", "openai", "google", "xai", "openrouter"],
+			securedProviders: ["openai"],
 			warnings: [],
 		});
 		expect(saved).toContainEqual(["openai", "sk-openai-test"]);
@@ -1039,27 +898,17 @@ describe("CueCraft BYOK settings migration", () => {
 			credentialLength: 14,
 			model: "gpt-4o-mini",
 		});
-		expect((s as unknown as { openaiApiKey?: string }).openaiApiKey).toBeUndefined();
-		const serialized = JSON.stringify(s);
-		for (const key of [
-			"sk-ant-test",
-			"sk-openai-test",
-			"AIza-test",
-			"xai-test",
-			"sk-or-test",
-		]) {
-			expect(serialized).not.toContain(key);
-		}
+		expect(JSON.stringify(s)).not.toContain("sk-openai-test");
 	});
 
-	it("keeps plaintext recoverable when secure migration fails", async () => {
+	it("keeps plaintext recoverable when secure storage fails", async () => {
 		const s = settings({
-			provider: "openai",
-			openaiApiKey: "sk-openai-test",
+			selectedProvider: "openai",
+			selectedProviderSettings: { credential: "sk-openai-test" },
 		});
 		normalizeCueCraftProviderSettings(s, settings(), s);
 
-		const result = await migrateCueCraftCloudCredentials(
+		const result = await secureCueCraftCloudCredentials(
 			s,
 			fakeCredentialStore({
 				save: async (provider) =>
@@ -1069,7 +918,7 @@ describe("CueCraft BYOK settings migration", () => {
 			})
 		);
 
-		expect(result.settingsChanged).toBe(true);
+		expect(result.settingsChanged).toBe(false);
 		expect(result.warnings.join("\n")).toContain("disk full");
 		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
 			credential: "sk-openai-test",
@@ -1077,19 +926,16 @@ describe("CueCraft BYOK settings migration", () => {
 			credentialUpdatedAt: "",
 			credentialLength: 0,
 		});
-		expect((s as unknown as { openaiApiKey?: string }).openaiApiKey).toBe(
-			"sk-openai-test"
-		);
 	});
 
 	it("hydrates saved cloud credential metadata from secure storage", async () => {
 		const s = settings({
-			provider: "openai",
-			openaiApiKey: "",
+			selectedProvider: "openai",
+			selectedProviderSettings: { credential: "" },
 		});
 		normalizeCueCraftProviderSettings(s, settings(), s);
 
-		const result = await migrateCueCraftCloudCredentials(
+		const result = await secureCueCraftCloudCredentials(
 			s,
 			fakeCredentialStore({
 				metadata: async (provider) =>
@@ -1130,7 +976,7 @@ describe("CueCraft BYOK settings migration", () => {
 		});
 		normalizeCueCraftProviderSettings(s, settings(), s);
 
-		const result = await migrateCueCraftCloudCredentials(
+		const result = await secureCueCraftCloudCredentials(
 			s,
 			fakeCredentialStore({
 				metadata: async (provider) =>

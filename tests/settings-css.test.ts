@@ -96,7 +96,7 @@ describe("settings CSS", () => {
 		expect(cueRule).toContain("margin-bottom: 0");
 	});
 
-	it("uses neutral cue tokens without legacy category styling", () => {
+	it("uses neutral cue tokens", () => {
 		const cueRule = ruleFor(".cuecraft-cue");
 		expect(cueRule).toContain(
 			"border-inline-start: 3px solid var(--cc-border)"
@@ -109,12 +109,10 @@ describe("settings CSS", () => {
 			)
 		).toBe(true);
 
-		expect(styles).not.toContain("--cc-category-accent");
 		expect(styles).not.toContain("--cc-sequences");
 		expect(styles).not.toContain("--cc-linkedlists");
 		expect(styles).not.toContain("--cc-stacks");
 		expect(styles).not.toContain("--cc-intervals");
-		expect(styles).not.toContain("[data-category=");
 		expect(styles).not.toContain(".cuecraft-section-tag");
 	});
 
@@ -123,14 +121,6 @@ describe("settings CSS", () => {
 			".cuecraft-cue-error,\n.cuecraft-cornell-cue-error"
 		);
 		expect(failedCueRule).toContain("border-left-color: var(--text-error)");
-	});
-
-	it("does not paint cue rails from confidence", () => {
-		const confidenceRail = styles.match(
-			/\.cuecraft-cue\[data-confidence=["'][^"']+["']\]\s*\{[^}]*border-(?:left|inline-start)-color/
-		);
-		expect(confidenceRail).toBeNull();
-		expect(styles).not.toContain("data-confidence");
 	});
 
 	it("keeps Note Brief insight columns flat", () => {

@@ -319,51 +319,6 @@ beforeEach(() => {
 });
 
 describe("Study plugin orchestration", () => {
-	const retiredDedicatedViewCommand = ["open", "cornell", "view"].join("-");
-
-	it.each([
-		[
-			"active",
-			[
-				{ type: "cuecraft-cornell", active: true },
-				{ type: "markdown", active: false },
-			],
-		],
-		[
-			"background",
-			[
-				{ type: "markdown", active: true },
-				{ type: "cuecraft-cornell", active: false },
-			],
-		],
-		[
-			"duplicates",
-			[
-				{ type: "cuecraft-cornell", active: true },
-				{ type: "markdown", active: false },
-				{ type: "cuecraft-cornell", active: false },
-			],
-		],
-		["only leaf", [{ type: "cuecraft-cornell", active: true }]],
-	] as const)("detaches restored %s legacy leaves without redirecting or starting Study", async (_name, restored) => {
-		const harness = createHarness();
-		harness.restoreLayout([...restored]);
-
-		await harness.plugin.onload();
-		harness.layoutReady();
-
-		expect(harness.registerView).not.toHaveBeenCalled();
-		expect(harness.commands.has(retiredDedicatedViewCommand)).toBe(false);
-		expect(harness.detachLeavesOfType).toHaveBeenCalledOnce();
-		expect(harness.detachLeavesOfType).toHaveBeenCalledWith("cuecraft-cornell");
-		expect(harness.restoredLayout()).toEqual(
-			restored.filter((leaf) => leaf.type !== "cuecraft-cornell")
-		);
-		expect(harness.openedFiles).toEqual([]);
-		expect(harness.viewStates).toEqual([]);
-		expect(harness.controller().snapshot().active).toBe(false);
-	});
-
 	it("keeps one enabled or aria-disabled Study action in every Markdown header and a distinct ribbon shortcut", async () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
@@ -426,7 +381,6 @@ describe("Study plugin orchestration", () => {
 		await harness.commands.get("toggle-study-mode")?.callback();
 		expect(harness.controller().snapshot().revealedCount).toBe(0);
 
-		expect(harness.commands.has(retiredDedicatedViewCommand)).toBe(false);
 		expect(harness.viewStates).toEqual([]);
 	});
 

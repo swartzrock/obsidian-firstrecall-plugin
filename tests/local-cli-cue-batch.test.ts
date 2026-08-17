@@ -227,7 +227,7 @@ describe("local CLI cue batch prompt", () => {
 		expect(calls[1].prompt).toContain("Previous reply:");
 	});
 
-	it("does not request or describe retired cue metadata or categories", () => {
+	it("requests only the current cue fields", () => {
 		const prompt = buildCueBatchPrompt([
 				{
 					heading: "Stacks",
@@ -239,16 +239,14 @@ describe("local CLI cue batch prompt", () => {
 		expect(prompt).toContain('"question"');
 		expect(prompt).toContain('"keywords"');
 		expect(prompt).toContain('"summary"');
-		expect(prompt).not.toContain('"category"');
 		expect(prompt).not.toContain("sequences");
 		expect(prompt).not.toContain("linkedlists");
 		expect(prompt).not.toContain("stacks");
 		expect(prompt).not.toContain("intervals");
 	});
 
-	it("omits category from the JSON schema", () => {
+	it("requires every current cue field in the JSON schema", () => {
 		const schema = JSON.parse(cueBatchJsonSchema(1));
-		expect(schema.properties.cues.items.properties).not.toHaveProperty("category");
 		expect(schema.properties.cues.items.required).toEqual([
 			"question",
 			"keywords",

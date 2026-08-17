@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-	exportFilePaths,
-	resolveExportTarget,
+	exportFilePath,
 	selectExportableQuestions,
 	questionsAndTermsToAnki,
 	questionsAndTermsToMarkdown,
@@ -32,8 +31,6 @@ function cacheFrom(
 	}));
 	const result: NoteGenerationResult = {
 		sections,
-		summary: "s",
-		learningObjective: null,
 		noteBrief: null,
 		canceled: false,
 	};
@@ -109,32 +106,16 @@ describe("questionsAndTermsToAnki", () => {
 	});
 });
 
-describe("exportFilePaths", () => {
-	it("returns preferred and legacy Markdown paths", () => {
-		expect(exportFilePaths("folder/", "Note", "markdown")).toEqual({
-			preferred: "folder/Note (questions-and-terms).md",
-			legacy: "folder/Note (cues).md",
-		});
+describe("exportFilePath", () => {
+	it("returns the Markdown export path", () => {
+		expect(exportFilePath("folder/", "Note", "markdown")).toBe(
+			"folder/Note (questions-and-terms).md"
+		);
 	});
 
-	it("returns preferred and legacy Anki paths", () => {
-		expect(exportFilePaths("", "Note", "anki")).toEqual({
-			preferred: "Note (questions-and-terms.anki).txt",
-			legacy: "Note (cues.anki).txt",
-		});
-	});
-});
-
-describe("resolveExportTarget", () => {
-	it("overwrites the preferred path when both preferred and legacy files exist", () => {
-		expect(resolveExportTarget(true, true)).toBe("overwrite-preferred");
-	});
-
-	it("migrates a legacy file when the preferred path is absent", () => {
-		expect(resolveExportTarget(false, true)).toBe("migrate-legacy");
-	});
-
-	it("creates the preferred path when no export exists", () => {
-		expect(resolveExportTarget(false, false)).toBe("create-preferred");
+	it("returns the Anki export path", () => {
+		expect(exportFilePath("", "Note", "anki")).toBe(
+			"Note (questions-and-terms.anki).txt"
+		);
 	});
 });
