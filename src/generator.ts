@@ -246,7 +246,6 @@ export async function generateNoteBriefForSections(
 		}));
 	if (!sections.length || params.signal?.aborted) return null;
 	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
-	const t0 = Date.now();
 	try {
 		const noteBrief = await generateNoteBrief(
 			{
@@ -256,14 +255,8 @@ export async function generateNoteBriefForSections(
 			},
 			params.signal
 		);
-		console.debug(
-			`CueCraft note brief done (${((Date.now() - t0) / 1000).toFixed(1)}s)`
-		);
 		return noteBrief;
 	} catch {
-		console.debug(
-			`CueCraft note brief failed (${((Date.now() - t0) / 1000).toFixed(1)}s)`
-		);
 		return null;
 	}
 }
@@ -302,7 +295,6 @@ export async function generateNote(
 		}
 		const batch = sections.slice(start, start + sectionConcurrency);
 		if (provider.generateCues) {
-			const t0 = Date.now();
 			const batchResults = await generateSectionCueBatch({
 				sections: batch,
 				provider,
@@ -313,10 +305,6 @@ export async function generateNote(
 			});
 			batchResults.forEach((result, offset) => {
 				if (signal?.aborted && result.error) return;
-				const label = result.heading.trim() || "intro";
-				console.debug(
-					`CueCraft section "${label}" ${result.error ? "failed" : "done"} (${((Date.now() - t0) / 1000).toFixed(1)}s)`
-				);
 				results[start + offset] = result;
 				done++;
 				onProgress?.(done, total);
@@ -328,7 +316,6 @@ export async function generateNote(
 		} else {
 			await Promise.all(
 				batch.map(async (s, offset) => {
-					const t0 = Date.now();
 					const result = await generateSectionCue({
 						section: s,
 						provider,
@@ -338,10 +325,6 @@ export async function generateNote(
 						signal,
 					});
 					if (signal?.aborted && result.error) return;
-					const label = s.heading.trim() || "intro";
-					console.debug(
-						`CueCraft section "${label}" ${result.error ? "failed" : "done"} (${((Date.now() - t0) / 1000).toFixed(1)}s)`
-					);
 					results[start + offset] = result;
 					done++;
 					onProgress?.(done, total);

@@ -12,7 +12,9 @@ export const CLI_DEFAULT_MODEL_SENTINEL = "__byok_cli_default__";
 export type ProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 
 export interface ProviderSetupStatusSettings {
-	byok: ByokStoredSettings;
+	byok: Omit<ByokStoredSettings, "selectedProvider"> & {
+		selectedProvider: unknown;
+	};
 }
 
 function trimValue(value: unknown): string {

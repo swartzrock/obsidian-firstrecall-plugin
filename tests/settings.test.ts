@@ -308,6 +308,7 @@ async function setupSettingsTab(): Promise<{
 	globalThis.window = dom.window as unknown as typeof globalThis.window;
 	globalThis.document = dom.window.document;
 	globalThis.HTMLElement = dom.window.HTMLElement;
+	Object.assign(globalThis, { activeDocument: dom.window.document });
 
 	const proto = dom.window.HTMLElement.prototype as HTMLElement & {
 		empty?: () => void;
@@ -446,12 +447,39 @@ describe("settings defaults", () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
 		expect(DEFAULT_SETTINGS).toMatchObject({
-			questionType: "conceptual",
+			byok: { selectedProvider: null },
+			questionType: "exam-practice",
 			showNoteBrief: true,
 			showSummary: true,
 			showQuestion: true,
 			showTerms: true,
 		});
+	});
+
+	it("prompts a clean install to select an AI provider", async () => {
+		const { tab } = await setupSettingsTab();
+		tab.display();
+
+		expect(settingText(tab.containerEl)).toContain(
+			"Select an AI provider to generate cues"
+		);
+		openSettingsCard(tab, "AI Provider & Settings");
+
+		expect(settingText(tab.containerEl)).toContain(
+			"Select an AI provider to generate cues"
+		);
+		const providerOptions = [
+			...tab.containerEl.querySelectorAll('[role="radio"]'),
+		];
+		expect(providerOptions).toHaveLength(13);
+		expect(
+			providerOptions.every(
+				(option) => option.getAttribute("aria-checked") === "false"
+			)
+		).toBe(true);
+		expect(
+			tab.containerEl.querySelector(".cuecraft-active-provider-panel")
+		).toBeNull();
 	});
 
 	it("defaults auto-generation settle delay to 10 seconds", () => {
@@ -490,10 +518,10 @@ describe("settings defaults", () => {
 		]);
 	});
 
-	it("defaults editor Cue display to inline Section cues", () => {
-		expect(DEFAULT_EDITOR_CUE_DISPLAY).toBe("inline-cues");
+	it("defaults editor Cue display to Cornell", () => {
+		expect(DEFAULT_EDITOR_CUE_DISPLAY).toBe("cornell");
 		expect(editorCueDisplayOption(DEFAULT_EDITOR_CUE_DISPLAY).label).toBe(
-			"Inline Section cues"
+			"Cornell"
 		);
 	});
 
@@ -592,7 +620,7 @@ describe("settings defaults", () => {
 
 		expect(settingText(tab.containerEl)).toContain("Changes Section cue layout in Editing only; Reading remains inline.");
 		expect(settingText(tab.containerEl)).toContain("Applies in Editing and Reading.");
-		await clickThumbnail(tab.containerEl, "Cue display", "cornell");
+		await clickThumbnail(tab.containerEl, "Cue display", "inline-cues");
 		expect(plugin.saveSettings).toHaveBeenLastCalledWith({
 			refreshReviewSurfaces: false,
 		});

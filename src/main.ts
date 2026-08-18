@@ -21,7 +21,10 @@ import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
 import { cueFontSizeClass } from "./cornell-layout";
 import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import { scheduleAutoGenerationTimer } from "./auto-generation-delay";
-import { type ByokHttpClient } from "@swartzrock/byok-runtime";
+import {
+	type ByokHttpClient,
+	type ByokProviderId,
+} from "@swartzrock/byok-runtime";
 import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
 	generateNote,
@@ -914,7 +917,9 @@ export default class CueCraftPlugin extends Plugin {
 		this.readingCueMemo = null;
 		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
 			const view = leaf.view as MarkdownView;
-			if (view.getMode() !== "preview") continue;
+			if (typeof view.getMode !== "function" || view.getMode() !== "preview") {
+				continue;
+			}
 			view.previewMode.rerender(true);
 		}
 	}
@@ -928,9 +933,9 @@ export default class CueCraftPlugin extends Plugin {
 
 	/** True once the selected provider has its required fields set. */
 	private isConfigured(): boolean {
-		const definition = byokProviderDefinition(
-			cueCraftSelectedProvider(this.settings)
-		);
+		const provider = cueCraftSelectedProvider(this.settings);
+		if (!provider) return false;
+		const definition = byokProviderDefinition(provider);
 		const hasCredential =
 			definition.credentialKind === "api-key"
 				? this.credentialStore.availability().ok &&
@@ -955,7 +960,9 @@ export default class CueCraftPlugin extends Plugin {
 		return [...this.credentialStorageWarnings];
 	}
 
-	isProviderCredentialSaved(provider = cueCraftSelectedProvider(this.settings)): boolean {
+	isProviderCredentialSaved(provider?: ByokProviderId): boolean {
+		provider ??= cueCraftSelectedProvider(this.settings) ?? undefined;
+		if (!provider) return false;
 		return cueCraftProviderCredentialSaved(this.settings, provider);
 	}
 
@@ -1594,10 +1601,10 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private selectedModelName(): string {
-		const model = cueCraftProviderModel(this.settings).trim();
-		return byokProviderDefinition(
-			cueCraftSelectedProvider(this.settings)
-		).modelBehavior === "optional"
+		const provider = cueCraftSelectedProvider(this.settings);
+		if (!provider) return "";
+		const model = cueCraftProviderModel(this.settings, provider).trim();
+		return byokProviderDefinition(provider).modelBehavior === "optional"
 			? model || "CLI default"
 			: model;
 	}
@@ -2290,7 +2297,6 @@ export default class CueCraftPlugin extends Plugin {
 		this.currentRun = controller;
 		this.setStatus("generating", { done: 0, total: 0 });
 
-		const startTime = Date.now();
 		try {
 			const result = await generateNote({
 				noteTitle: file.basename,
@@ -2330,9 +2336,6 @@ export default class CueCraftPlugin extends Plugin {
 			} else if (failed) {
 				new Notice(`CueCraft: auto-generation finished with ${failed} failed section(s).`);
 			}
-			// Rendering/caching of `result` lands with the cue-extension + cache modules.
-			const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-			console.debug(`CueCraft generation result (${elapsed}s)`, result);
 		} catch (e) {
 			console.error("CueCraft generation failed", e);
 			new Notice("CueCraft: generation failed. See console for details.");

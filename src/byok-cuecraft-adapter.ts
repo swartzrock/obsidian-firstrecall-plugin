@@ -1,6 +1,7 @@
 import {
 	BYOK_PROVIDER_IDS,
 	ByokProviderError,
+	isByokProviderId,
 	listModels,
 	normalizeProviderId,
 	type ByokHttpClient,
@@ -22,9 +23,8 @@ import {
 	recordProviderConnectionSuccess,
 } from "./byok-setup-status";
 import { sortFetchedModelIds } from "./byok-model-options";
-import { DEFAULT_QUESTION_TYPE } from "./cue-generation";
 import {
-	buildSectionCueInstructionsTemplate,
+	
 	buildSectionCuePrompt,
 } from "./cue-instructions";
 import {
@@ -39,7 +39,7 @@ import type {
 } from "./cue-provider";
 import {
 	buildNoteBriefPrompt,
-	buildNoteBriefInstructionsTemplate,
+	
 	NOTE_BRIEF_JSON_SCHEMA,
 	SUMMARY_JSON_SCHEMA,
 } from "./study-material-instructions";
@@ -114,16 +114,6 @@ const CUE_JSON_SCHEMA = JSON.stringify({
 
 const NOTE_BRIEF_SCHEMA = JSON.stringify(NOTE_BRIEF_JSON_SCHEMA);
 
-type InstructionArtifact = "Section cue" | "Section cue batch" | "Note Brief";
-
-function logInstructionTemplate(
-	artifact: InstructionArtifact,
-	instructions: string
-): void {
-	// eslint-disable-next-line obsidianmd/rule-custom-message -- User-requested prompt diagnostics in Obsidian DevTools.
-	console.info(`[CueCraft BYOK] ${artifact} instructions\n${instructions}`);
-}
-
 function cueCraftProviderError(message: string): ByokProviderError {
 	return new ByokProviderError(message);
 }
@@ -151,17 +141,6 @@ function parseJsonRecord(text: string): Record<string, unknown> | null {
 	}
 }
 
-function describeOllamaJsonRequest(body: string | undefined): Record<string, unknown> {
-	const parsed = body ? parseJsonRecord(body) : null;
-	return {
-		bodyLength: body?.length ?? 0,
-		model: typeof parsed?.model === "string" ? parsed.model : undefined,
-		format: parsed?.format === undefined ? undefined : typeof parsed.format,
-		think: parsed?.think,
-		stream: parsed?.stream,
-	};
-}
-
 function normalizeOllamaJsonRequestBody(body: string | undefined): string | undefined {
 	if (!body) return body;
 	const parsed = parseJsonRecord(body);
@@ -181,10 +160,6 @@ function normalizeOllamaJsonResponse(response: Awaited<ReturnType<ByokHttpClient
 		thinkingText.trim()
 	) {
 		const json = { ...record, response: thinkingText };
-		console.debug("[CueCraft BYOK] Recovered Ollama JSON response from thinking output", {
-			thinkingLength: thinkingText.length,
-			thinkingPreview: thinkingText.slice(0, 300),
-		});
 		return { ...response, json, text: JSON.stringify(json) };
 	}
 	if (typeof generatedText === "string" && generatedText.trim() === "") {
@@ -209,14 +184,7 @@ function cueCraftProviderDeps(
 		...deps,
 		http: async (request) => {
 			const body = normalizeOllamaJsonRequestBody(request.body);
-			const requestSummary = describeOllamaJsonRequest(body);
 			const response = await deps.http({ ...request, body });
-			if (requestSummary.format !== undefined) {
-				console.debug("[CueCraft BYOK] Ollama JSON request completed", {
-					...requestSummary,
-					status: response.status,
-				});
-			}
 			return normalizeOllamaJsonResponse(response);
 		},
 	};
@@ -409,16 +377,11 @@ export function wrapCueCraftByokRuntime(
 		testConnection: () => runtime.testConnection(),
 		listModels: () => runtime.listModels(),
 		generateCue: (input, signal) => {
-			logInstructionTemplate(
-				"Section cue",
-				buildSectionCueInstructionsTemplate(input.options.questionType, "single")
-			);
 			return generateFromObject
 				? generateCueFromObjectProvider(runtime, input, signal)
 				: generateCueFromTextProvider(runtime, input, signal);
 		},
 		generateNoteBrief: (input, signal) => {
-			logInstructionTemplate("Note Brief", buildNoteBriefInstructionsTemplate());
 			return generateFromObject
 				? generateNoteBriefFromObjectProvider(runtime, input, signal)
 				: generateNoteBriefFromTextProvider(runtime, input, signal);
@@ -426,13 +389,6 @@ export function wrapCueCraftByokRuntime(
 	};
 	if (runtime.id === "codex-cli" || runtime.id === "claude-cli") {
 		cueRuntime.generateCues = (inputs, signal) => {
-			logInstructionTemplate(
-				"Section cue batch",
-				buildSectionCueInstructionsTemplate(
-					inputs[0]?.options.questionType ?? DEFAULT_QUESTION_TYPE,
-					"batch"
-				)
-			);
 			return generateCueBatchFromTextProvider(runtime, inputs, signal);
 		};
 	}
@@ -559,16 +515,18 @@ function normalizeVerificationSnapshot(
 }
 
 function normalizeCueCraftByokSettings(
-	defaults: ByokStoredSettings,
+	defaults: CueCraftSettings["byok"],
 	rawSettings: unknown
-): ByokStoredSettings {
+): CueCraftSettings["byok"] {
 	const rawByok = (rawSettings as { byok?: unknown } | null | undefined)?.byok;
 	const hasRawByok = Boolean(
 		rawByok &&
 			typeof rawByok === "object" &&
 			"providers" in rawByok
 	);
-	const existing = hasRawByok ? (rawByok as Partial<ByokStoredSettings>) : {};
+	const existing = hasRawByok
+		? (rawByok as Partial<CueCraftSettings["byok"]>)
+		: {};
 	const providers: ByokStoredSettings["providers"] = {};
 	const verification: ByokVerificationSnapshotMap = {};
 	for (const provider of BYOK_PROVIDER_IDS) {
@@ -581,7 +539,7 @@ function normalizeCueCraftByokSettings(
 		if (snapshot) verification[provider] = snapshot;
 	}
 	return {
-		selectedProvider: normalizeProviderId(
+		selectedProvider: normalizeCueCraftSelectedProvider(
 			existing.selectedProvider ?? defaults.selectedProvider
 		),
 		providers,
@@ -589,13 +547,27 @@ function normalizeCueCraftByokSettings(
 	};
 }
 
+function normalizeCueCraftSelectedProvider(value: unknown): ByokProviderId | null {
+	if (isByokProviderId(value)) return value;
+	if (value === "codex" || value === "claude") return normalizeProviderId(value);
+	return null;
+}
+
 export function cueCraftSelectedProvider(
 	settings: CueCraftSettings
-): ByokProviderId {
-	return normalizeProviderId(
+): ByokProviderId | null {
+	return normalizeCueCraftSelectedProvider(
 		(settings.byok as { selectedProvider?: unknown } | undefined)
 			?.selectedProvider
 	);
+}
+
+function requireCueCraftSelectedProvider(
+	settings: CueCraftSettings
+): ByokProviderId {
+	const provider = cueCraftSelectedProvider(settings);
+	if (!provider) throw cueCraftProviderError("Choose an AI provider in Settings.");
+	return provider;
 }
 
 export function setCueCraftSelectedProvider(
@@ -605,13 +577,15 @@ export function setCueCraftSelectedProvider(
 	ensureCueCraftByokSettings(settings).selectedProvider = provider;
 }
 
-function ensureCueCraftByokSettings(settings: CueCraftSettings): ByokStoredSettings {
+function ensureCueCraftByokSettings(
+	settings: CueCraftSettings
+): CueCraftSettings["byok"] {
 	const maybeSettings = settings as CueCraftSettings & {
-		byok?: ByokStoredSettings;
+		byok?: CueCraftSettings["byok"];
 	};
 	if (!maybeSettings.byok?.providers) {
 		maybeSettings.byok = {
-			selectedProvider: "ollama",
+			selectedProvider: null,
 			providers: {},
 			verification: {},
 		};
@@ -620,16 +594,14 @@ function ensureCueCraftByokSettings(settings: CueCraftSettings): ByokStoredSetti
 	if (!maybeSettings.byok.verification) {
 		maybeSettings.byok.verification = {};
 	}
-	if (!maybeSettings.byok.selectedProvider) {
-		maybeSettings.byok.selectedProvider = cueCraftSelectedProvider(settings);
-	}
 	return maybeSettings.byok;
 }
 
 export function cueCraftProviderSettings(
 	settings: CueCraftSettings,
-	provider: ByokProviderId = cueCraftSelectedProvider(settings)
+	provider?: ByokProviderId
 ): ByokProviderStoredSettings {
+	provider ??= requireCueCraftSelectedProvider(settings);
 	const providers = ensureCueCraftByokSettings(settings).providers;
 	const stored = {
 		...emptyStoredProviderSettings(),
@@ -730,7 +702,7 @@ export function cueCraftProviderConfigFromSettings(
 		cloudCredentials?: Partial<Record<CueCraftCloudCredentialProvider, string>>;
 	} = {}
 ): ByokProviderConfig {
-	const provider = cueCraftSelectedProvider(settings);
+	const provider = requireCueCraftSelectedProvider(settings);
 	const stored = cueCraftProviderSettings(settings, provider);
 	const credentialKind = byokProviderDefinition(provider).credentialKind;
 	if (credentialKind === "api-key") {
@@ -769,7 +741,7 @@ export async function resolveCueCraftProviderConfigFromStore(
 	settings: CueCraftSettings,
 	credentialStore: SecureCredentialStore
 ): Promise<ByokProviderConfig> {
-	const provider = cueCraftSelectedProvider(settings);
+	const provider = requireCueCraftSelectedProvider(settings);
 	if (!isCueCraftCloudCredentialProvider(provider)) {
 		return cueCraftProviderConfigFromSettings(settings);
 	}
@@ -854,15 +826,17 @@ export function cueCraftProviderLabel(provider: ByokProviderId): string {
 
 export function cueCraftProviderCredential(
 	settings: CueCraftSettings,
-	provider: ByokProviderId = cueCraftSelectedProvider(settings)
+	provider?: ByokProviderId
 ): string {
+	provider ??= requireCueCraftSelectedProvider(settings);
 	return cueCraftProviderSettings(settings, provider).credential;
 }
 
 export function cueCraftProviderCredentialSaved(
 	settings: CueCraftSettings,
-	provider: ByokProviderId = cueCraftSelectedProvider(settings)
+	provider?: ByokProviderId
 ): boolean {
+	provider ??= requireCueCraftSelectedProvider(settings);
 	const stored = cueCraftProviderSettings(settings, provider);
 	return isCueCraftCloudCredentialProvider(provider)
 		? Boolean(stored.credentialSaved) || stored.credential.trim().length > 0
@@ -871,8 +845,9 @@ export function cueCraftProviderCredentialSaved(
 
 export function cueCraftProviderCredentialLength(
 	settings: CueCraftSettings,
-	provider: ByokProviderId = cueCraftSelectedProvider(settings)
+	provider?: ByokProviderId
 ): number {
+	provider ??= requireCueCraftSelectedProvider(settings);
 	const stored = cueCraftProviderSettings(settings, provider);
 	if (isCueCraftCloudCredentialProvider(provider)) {
 		return stored.credentialSaved
@@ -943,8 +918,9 @@ export async function secureCueCraftCloudCredentials(
 
 export function cueCraftProviderModel(
 	settings: CueCraftSettings,
-	provider: ByokProviderId = cueCraftSelectedProvider(settings)
+	provider?: ByokProviderId
 ): string {
+	provider ??= requireCueCraftSelectedProvider(settings);
 	return cueCraftProviderSettings(settings, provider).model;
 }
 

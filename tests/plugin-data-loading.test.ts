@@ -74,6 +74,23 @@ describe("plugin data loading", () => {
 		expect(saveData).not.toHaveBeenCalled();
 	});
 
+	it("preserves a selected AI provider after loading", async () => {
+		const currentSettings = structuredClone(DEFAULT_SETTINGS);
+		currentSettings.byok.selectedProvider = "openai";
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({ settings: currentSettings })),
+			saveData: vi.fn(async () => {}),
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.byok.selectedProvider).toBe("openai");
+	});
+
 	it("persists only the current settings schema", async () => {
 		const saveData = vi.fn(async () => {});
 		const plugin = new CueCraftPlugin({} as never, {} as never);
@@ -119,9 +136,9 @@ describe("plugin data loading", () => {
 		).loadPluginData();
 
 		expect(plugin.settings).toMatchObject({
-			editorCueDisplay: "inline-cues",
+			editorCueDisplay: "cornell",
 			cueFontSize: "medium",
-			questionType: "conceptual",
+			questionType: "exam-practice",
 			sectionConcurrency: 5,
 			showQuestion: true,
 		});

@@ -5,11 +5,12 @@
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
-		"dev": "bun esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && bun esbuild.config.mjs production",
-		"typecheck": "tsc -noEmit -skipLibCheck",
+		"check": "bun run lint && bun run build && bun run typecheck && bun run test",
+		"dev": "bun esbuild.config.mjs",
 		"lint": "eslint .",
-		"test": "vitest run"
+		"test": "vitest run",
+		"typecheck": "tsc -noEmit -skipLibCheck"
 	},
 	"keywords": [
 		"obsidian",

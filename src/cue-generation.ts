@@ -42,7 +42,7 @@ export const QUESTION_TYPES = [
 export type QuestionType = (typeof QUESTION_TYPES)[number]["id"];
 export type QuestionTypeInfo = (typeof QUESTION_TYPES)[number];
 
-export const DEFAULT_QUESTION_TYPE: QuestionType = QUESTION_TYPES[0].id;
+export const DEFAULT_QUESTION_TYPE: QuestionType = "exam-practice";
 
 /** Narrow an arbitrary value to a supported Question type. */
 export function isQuestionType(value: unknown): value is QuestionType {
