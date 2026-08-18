@@ -945,9 +945,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 
 		new Setting(containerEl)
-			.setName("Wait after typing")
+			.setName("Automatic update delay")
 			.setDesc(
-				"After you stop typing in an automatically maintained note, wait this long before updating it. Longer waits reduce repeated AI requests."
+				"After you stop typing in an automatically-updated note, CueCraft waits this long before updating its study material. Longer delays reduce repeated AI requests."
 			)
 			.addDropdown((dropdown) => {
 				for (const seconds of AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS) {
@@ -1015,7 +1015,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (area.maintenanceMode === "maintain-on-save") {
 			setting.descEl.createDiv({
 				cls: "cuecraft-study-area-help",
-				text: "New and changed study material updates automatically after the wait above.",
+				text: "CueCraft automatically updates new and changed study material after the selected delay.",
 			});
 		}
 

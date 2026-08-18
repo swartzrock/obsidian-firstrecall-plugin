@@ -747,7 +747,7 @@ describe("settings defaults", () => {
 
 		const text = settingText(tab.containerEl);
 		expect(text).toContain("Recall question style");
-		expect(text).not.toContain("Wait after typing");
+		expect(text).not.toContain("Automatic update delay");
 		const select = tab.containerEl.querySelector<HTMLSelectElement>(
 			'[data-setting-name="Recall question style"] select'
 		);
@@ -871,7 +871,10 @@ describe("folders and automatic updates settings", () => {
 			"Add a folder—or your entire vault—to generate and refresh study material in bulk. Turn on automatic updates when you want CueCraft to keep future changes current."
 		);
 		expect(settingsText.indexOf("Add folder or vault")).toBeLessThan(
-			settingsText.indexOf("Wait after typing")
+			settingsText.indexOf("Automatic update delay")
+		);
+		expect(settingsText).toContain(
+			"After you stop typing in an automatically-updated note, CueCraft waits this long before updating its study material. Longer delays reduce repeated AI requests."
 		);
 		const input = tab.containerEl.querySelector<HTMLInputElement>(
 			'input[placeholder="Choose a folder or Entire vault..."]'
@@ -996,6 +999,10 @@ describe("folders and automatic updates settings", () => {
 		expect(plugin.updateStudyArea).toHaveBeenCalledWith(
 			expect.objectContaining({ maintenanceMode: "maintain-on-save" })
 		);
+		expect(settingText(tab.containerEl)).toContain(
+			"CueCraft automatically updates new and changed study material after the selected delay."
+		);
+		expect(settingText(tab.containerEl)).not.toContain("the wait above");
 		expect(plugin.runStudyArea).not.toHaveBeenCalled();
 	});
 
