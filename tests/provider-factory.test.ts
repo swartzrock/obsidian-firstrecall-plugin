@@ -7,7 +7,7 @@ import { DEFAULT_SETTINGS, type CueCraftSettings } from "../src/settings";
 import {
 	makeCueCraftByokProvider,
 	cueCraftProviderConfigFromSettings,
-	type CueCraftHttpClient,
+	type CueCraftTransport,
 } from "../src/byok-cuecraft-adapter";
 
 function settings(
@@ -33,8 +33,7 @@ function settings(
 	return current;
 }
 
-const http: CueCraftHttpClient = async () => ({ status: 200, text: "{}", json: {} });
-const fetchImpl = (async () => new Response("{}")) as typeof fetch;
+const transport: CueCraftTransport = async () => new Response("{}");
 
 describe("makeCueCraftByokProvider", () => {
 	it("requires the user to select a provider", () => {
@@ -95,14 +94,14 @@ describe("makeCueCraftByokProvider", () => {
 			? {}
 			: { credential: "test-key", model: "test-model" };
 		expect(
-			makeCueCraftByokProvider(settings(provider, stored), { fetchImpl, http }).id
+			makeCueCraftByokProvider(settings(provider, stored), { transport }).id
 		).toBe(expectedId);
 	});
 
 	it("creates the Codex CLI provider without a sequential concurrency cap", () => {
 		const provider = makeCueCraftByokProvider(
 			settings("codex-cli", { credential: "codex" }),
-			{ fetchImpl, http }
+			{ transport }
 		);
 		expect(provider.id).toBe("codex-cli");
 		expect(typeof provider.listModels).toBe("function");
@@ -115,7 +114,7 @@ describe("makeCueCraftByokProvider", () => {
 	it("creates the Claude CLI provider without a sequential concurrency cap", () => {
 		const provider = makeCueCraftByokProvider(
 			settings("claude-cli", { credential: "claude" }),
-			{ fetchImpl, http }
+			{ transport }
 		);
 		expect(provider.id).toBe("claude-cli");
 		expect(typeof provider.listModels).toBe("function");

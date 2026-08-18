@@ -22,8 +22,8 @@ import { cueFontSizeClass } from "./cornell-layout";
 import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import { scheduleAutoGenerationTimer } from "./auto-generation-delay";
 import {
-	type ByokHttpClient,
 	type ByokProviderId,
+	type ByokTransport,
 } from "@swartzrock/byok-runtime";
 import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
@@ -1500,33 +1500,12 @@ export default class CueCraftPlugin extends Plugin {
 		}).open();
 	}
 
-	/** Wraps Obsidian's requestUrl as the provider HTTP client (avoids CORS). */
-	private makeHttpClient(): ByokHttpClient {
-		return async (req) => {
-			const res = await requestUrl({
-				url: req.url,
-				method: req.method,
-				body: req.body,
-				headers: req.headers,
-				throw: false,
-			});
-			let json: unknown = null;
-			try {
-				json = res.json;
-			} catch {
-				json = null;
-			}
-			return { status: res.status, text: res.text, json };
-		};
-	}
-
 	/**
-	 * Wraps Obsidian's requestUrl as a Web `fetch` so AI SDK providers route
-	 * through it (avoids CORS in Electron; no proxy needed).
+	 * Routes all provider requests through Obsidian's HTTP client to avoid CORS
+	 * in Electron. Obsidian buffers responses, so this transport is non-streaming.
 	 */
-	private makeFetch(): typeof fetch {
-		const fetchImpl: typeof fetch = async (input, init) => {
-			const request = new Request(input, init);
+	private makeTransport(): ByokTransport {
+		return async (request) => {
 			const headers: Record<string, string> = {};
 			request.headers.forEach((value, key) => {
 				headers[key] = value;
@@ -1556,14 +1535,12 @@ export default class CueCraftPlugin extends Plugin {
 				headers: res.headers,
 			});
 		};
-		return fetchImpl;
 	}
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
 	async makeProvider(): Promise<CueCraftByokRuntime> {
 		return makeCueCraftByokProviderFromStore(this.settings, {
-			fetchImpl: this.makeFetch(),
-			http: this.makeHttpClient(),
+			transport: this.makeTransport(),
 		}, this.credentialStore);
 	}
 
@@ -1571,8 +1548,7 @@ export default class CueCraftPlugin extends Plugin {
 		provider: CueCraftFetchedModelProvider
 	) {
 		return listCueCraftProviderModelsFromStore(this.settings, provider, {
-			fetchImpl: this.makeFetch(),
-			http: this.makeHttpClient(),
+			transport: this.makeTransport(),
 		}, this.credentialStore);
 	}
 

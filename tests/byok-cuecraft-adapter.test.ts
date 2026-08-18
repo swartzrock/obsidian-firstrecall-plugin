@@ -19,10 +19,10 @@ import {
 	setCueCraftProviderModel,
 } from "../src/byok-cuecraft-adapter";
 import type {
-	ByokHttpClient,
 	ByokModelOption,
 	ByokProviderId,
 	ByokProviderStoredSettings,
+	ByokTransport,
 } from "@swartzrock/byok-runtime";
 import {
 	DEFAULT_SETTINGS,
@@ -76,8 +76,7 @@ function settings(
 	};
 }
 
-const http: ByokHttpClient = async () => ({ status: 200, text: "{}", json: {} });
-const fetchImpl = (async () => new Response("{}")) as typeof fetch;
+const transport: ByokTransport = async () => new Response("{}");
 
 afterEach(() => {
 	vi.restoreAllMocks();
@@ -281,28 +280,26 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			stored.model = "test-model";
 		}
 		expect(
-			makeCueCraftByokProvider(providerSettings, { fetchImpl, http }).id
+			makeCueCraftByokProvider(providerSettings, { transport }).id
 		).toBe(provider);
 	});
 
 	it("wraps generic text providers with CueCraft cue generation", async () => {
 		const calls: Array<{ url: string; body?: string }> = [];
-		const http: ByokHttpClient = async (request) => {
-			calls.push({ url: request.url, body: request.body });
-			return {
-				status: 200,
-				text: "{}",
-				json: {
+		const transport: ByokTransport = async (request) => {
+			calls.push({ url: request.url, body: await request.clone().text() });
+			return new Response(
+				JSON.stringify({
 					response: JSON.stringify({
 						question: "What is an agent?",
 						keywords: ["plan", "tools"],
 					}),
-				},
-			};
+				}),
+				{ status: 200, headers: { "content-type": "application/json" } }
+			);
 		};
 		const provider = makeCueCraftByokProvider(settings({ selectedProvider: "ollama" }), {
-			fetchImpl,
-			http,
+			transport,
 		});
 
 		const cue = await provider.generateCue({
@@ -337,9 +334,8 @@ describe("cueCraftProviderConfigFromSettings", () => {
 				},
 			}),
 			{
-				http,
-				fetchImpl: (async (_input, init) => {
-					calls.push({ body: init?.body as string | undefined });
+				transport: async (request) => {
+					calls.push({ body: await request.clone().text() });
 					return new Response(
 						JSON.stringify({
 							choices: [
@@ -360,7 +356,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 						}),
 						{ status: 200, headers: { "content-type": "application/json" } }
 					);
-				}) as typeof fetch,
+				},
 			}
 		);
 
@@ -420,9 +416,8 @@ describe("cueCraftProviderConfigFromSettings", () => {
 				},
 			}),
 			{
-				http,
-				fetchImpl: (async (_input, init) => {
-					calls.push({ body: init?.body as string | undefined });
+				transport: async (request) => {
+					calls.push({ body: await request.clone().text() });
 					return new Response(
 						JSON.stringify({
 							choices: [
@@ -449,7 +444,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 						}),
 						{ status: 200, headers: { "content-type": "application/json" } }
 					);
-				}) as typeof fetch,
+				},
 			}
 		);
 
@@ -495,20 +490,18 @@ describe("cueCraftProviderConfigFromSettings", () => {
 				explanation: "The phrase names the product's review output.",
 			},
 		};
-		const http: ByokHttpClient = async (request) => {
-			calls.push({ url: request.url, body: request.body });
-			return {
-				status: 200,
-				text: "{}",
-				json: {
+		const transport: ByokTransport = async (request) => {
+			calls.push({ url: request.url, body: await request.clone().text() });
+			return new Response(
+				JSON.stringify({
 					response: "",
 					thinking: JSON.stringify(cue),
-				},
-			};
+				}),
+				{ status: 200, headers: { "content-type": "application/json" } }
+			);
 		};
 		const provider = makeCueCraftByokProvider(settings({ selectedProvider: "ollama" }), {
-			fetchImpl,
-			http,
+			transport,
 		});
 
 		await expect(
@@ -537,17 +530,13 @@ describe("cueCraftProviderConfigFromSettings", () => {
 				explanation: "The phrase names the product's review output.",
 			},
 		};
-		const http: ByokHttpClient = async () => ({
-			status: 200,
-			text: JSON.stringify({
+		const transport: ByokTransport = async () =>
+			new Response(JSON.stringify({
 				response: "",
 				thinking: JSON.stringify(cue),
-			}),
-			json: null,
-		});
+			}), { status: 200, headers: { "content-type": "application/json" } });
 		const provider = makeCueCraftByokProvider(settings({ selectedProvider: "ollama" }), {
-			fetchImpl,
-			http,
+			transport,
 		});
 
 		await expect(
@@ -573,20 +562,16 @@ describe("cueCraftProviderConfigFromSettings", () => {
 				explanation: "The phrase names the product's review output.",
 			},
 		};
-		const http: ByokHttpClient = async (request) => {
-			calls.push({ url: request.url, body: request.body });
-			return {
-				status: 200,
-				text: JSON.stringify({
+		const transport: ByokTransport = async (request) => {
+			calls.push({ url: request.url, body: await request.clone().text() });
+			return new Response(JSON.stringify({
 					response: "",
 					thinking: JSON.stringify(cue),
-				}),
-				json: null,
-			};
+				}), { status: 200, headers: { "content-type": "application/json" } });
 		};
 		const provider = await makeCueCraftByokProviderFromStore(
 			settings({ selectedProvider: "ollama" }),
-			{ fetchImpl, http },
+			{ transport },
 			fakeCredentialStore()
 		);
 

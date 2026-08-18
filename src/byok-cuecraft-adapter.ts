@@ -4,7 +4,7 @@ import {
 	isByokProviderId,
 	listModels,
 	normalizeProviderId,
-	type ByokHttpClient,
+	parseByokStoredSettings,
 	type ByokModelOption,
 	type ByokProviderConfig,
 	type ByokProviderDeps,
@@ -13,7 +13,7 @@ import {
 	type ByokProviderStoredSettings,
 	type ByokSetupStatus,
 	type ByokStoredSettings,
-	type ByokVerificationSnapshot,
+	type ByokTransport,
 	type ByokVerificationSnapshotMap,
 } from "@swartzrock/byok-runtime";
 import { createByokNodeProvider } from "@swartzrock/byok-runtime/node";
@@ -62,7 +62,7 @@ import {
 } from "./secure-credential-store";
 
 export type CueCraftByokRuntime = CueCraftCueProviderRuntime;
-export type CueCraftHttpClient = ByokHttpClient;
+export type CueCraftTransport = ByokTransport;
 export type CueCraftProviderFactoryDeps = ByokProviderDeps;
 export type CueCraftProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type { ByokProviderConfig, ByokProviderDeps } from "@swartzrock/byok-runtime";
@@ -148,8 +148,9 @@ function normalizeOllamaJsonRequestBody(body: string | undefined): string | unde
 	return JSON.stringify({ ...parsed, think: false });
 }
 
-function normalizeOllamaJsonResponse(response: Awaited<ReturnType<ByokHttpClient>>) {
-	const record = isRecord(response.json) ? response.json : parseJsonRecord(response.text);
+async function normalizeOllamaJsonResponse(response: Response): Promise<Response> {
+	const text = await response.clone().text();
+	const record = parseJsonRecord(text);
 	if (!record) return response;
 	const generatedText = record.response;
 	const thinkingText = record.thinking;
@@ -160,7 +161,13 @@ function normalizeOllamaJsonResponse(response: Awaited<ReturnType<ByokHttpClient
 		thinkingText.trim()
 	) {
 		const json = { ...record, response: thinkingText };
-		return { ...response, json, text: JSON.stringify(json) };
+		const headers = new Headers(response.headers);
+		headers.delete("content-length");
+		return new Response(JSON.stringify(json), {
+			status: response.status,
+			statusText: response.statusText,
+			headers,
+		});
 	}
 	if (typeof generatedText === "string" && generatedText.trim() === "") {
 		console.warn("[CueCraft BYOK] Ollama returned an empty JSON response", {
@@ -168,8 +175,8 @@ function normalizeOllamaJsonResponse(response: Awaited<ReturnType<ByokHttpClient
 			responseKeys: Object.keys(record),
 			responseLength: generatedText.length,
 			thinkingLength: typeof thinkingText === "string" ? thinkingText.length : undefined,
-			textLength: response.text.length,
-			textPreview: response.text.slice(0, 500),
+			textLength: text.length,
+			textPreview: text.slice(0, 500),
 		});
 	}
 	return response;
@@ -182,9 +189,17 @@ function cueCraftProviderDeps(
 	if (config.provider !== "ollama") return deps;
 	return {
 		...deps,
-		http: async (request) => {
-			const body = normalizeOllamaJsonRequestBody(request.body);
-			const response = await deps.http({ ...request, body });
+		transport: async (request) => {
+			const body = normalizeOllamaJsonRequestBody(
+				request.body === null ? undefined : await request.clone().text()
+			);
+			let normalizedRequest = request;
+			if (body !== undefined) {
+				const headers = new Headers(request.headers);
+				headers.delete("content-length");
+				normalizedRequest = new Request(request, { body, headers });
+			}
+			const response = await deps.transport(normalizedRequest);
 			return normalizeOllamaJsonResponse(response);
 		},
 	};
@@ -440,80 +455,6 @@ function emptyStoredProviderSettings(): ByokProviderStoredSettings {
 	};
 }
 
-function normalizeStoredProviderSettings(
-	value: unknown
-): ByokProviderStoredSettings {
-	const source = value && typeof value === "object"
-		? value as Record<string, unknown>
-		: {};
-	const credentialLength = source.credentialLength;
-	return {
-		credential: typeof source.credential === "string" ? source.credential : "",
-		credentialSaved:
-			typeof source.credentialSaved === "boolean"
-				? source.credentialSaved
-				: false,
-		credentialUpdatedAt:
-			typeof source.credentialUpdatedAt === "string"
-				? source.credentialUpdatedAt
-				: "",
-		credentialLength:
-			typeof credentialLength === "number" &&
-			Number.isFinite(credentialLength) &&
-			credentialLength >= 0
-				? Math.floor(credentialLength)
-				: 0,
-		model: typeof source.model === "string" ? source.model : "",
-		modelSelection:
-			typeof source.modelSelection === "string" ? source.modelSelection : "",
-		availableModels: Array.isArray(source.availableModels)
-			? source.availableModels.filter(
-				(model): model is string => typeof model === "string"
-			)
-			: [],
-		modelOptions: Array.isArray(source.modelOptions)
-			? source.modelOptions.flatMap((option) => {
-				if (!option || typeof option !== "object") return [];
-				const record = option as Record<string, unknown>;
-				return typeof record.id === "string" &&
-					typeof record.label === "string"
-					? [{ id: record.id, label: record.label }]
-					: [];
-			})
-			: [],
-		hasFetchedModels:
-			typeof source.hasFetchedModels === "boolean"
-				? source.hasFetchedModels
-				: false,
-		modelRefreshMessage:
-			typeof source.modelRefreshMessage === "string"
-				? source.modelRefreshMessage
-				: "",
-	};
-}
-
-function normalizeVerificationSnapshot(
-	value: unknown
-): ByokVerificationSnapshot | null {
-	if (!value || typeof value !== "object") return null;
-	const source = value as Record<string, unknown>;
-	if (
-		typeof source.credentialFingerprint !== "string" ||
-		typeof source.modelId !== "string" ||
-		typeof source.testedAt !== "string"
-	) {
-		return null;
-	}
-	return {
-		credentialFingerprint: source.credentialFingerprint,
-		...(typeof source.credentialToken === "string"
-			? { credentialToken: source.credentialToken }
-			: {}),
-		modelId: source.modelId,
-		testedAt: source.testedAt,
-	};
-}
-
 function normalizeCueCraftByokSettings(
 	defaults: CueCraftSettings["byok"],
 	rawSettings: unknown
@@ -527,23 +468,20 @@ function normalizeCueCraftByokSettings(
 	const existing = hasRawByok
 		? (rawByok as Partial<CueCraftSettings["byok"]>)
 		: {};
+	const parsed = parseByokStoredSettings(hasRawByok ? rawByok : defaults);
 	const providers: ByokStoredSettings["providers"] = {};
-	const verification: ByokVerificationSnapshotMap = {};
 	for (const provider of BYOK_PROVIDER_IDS) {
-		const source = existing.providers?.[provider] ?? defaults.providers[provider];
-		const stored = normalizeStoredProviderSettings(source);
-		providers[provider] = stored;
-		const snapshot = normalizeVerificationSnapshot(
-			existing.verification?.[provider]
-		);
-		if (snapshot) verification[provider] = snapshot;
+		providers[provider] = {
+			...emptyStoredProviderSettings(),
+			...(parsed.providers[provider] ?? defaults.providers[provider]),
+		};
 	}
 	return {
 		selectedProvider: normalizeCueCraftSelectedProvider(
 			existing.selectedProvider ?? defaults.selectedProvider
 		),
 		providers,
-		verification,
+		verification: parsed.verification,
 	};
 }
 
