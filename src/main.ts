@@ -1849,6 +1849,48 @@ export default class CueCraftPlugin extends Plugin {
 		await this.saveSettings();
 	}
 
+	async recoverDisabledStudyArea(
+		disabledAreaId: string,
+		conflictingAreaId?: string
+	): Promise<void> {
+		const disabled = this.settings.disabledStudyAreas.find(
+			(area) => area.id === disabledAreaId
+		);
+		if (!disabled) return;
+		const remaining = conflictingAreaId
+			? this.settings.studyAreas.filter((area) => area.id !== conflictingAreaId)
+			: this.settings.studyAreas;
+		if (
+			conflictingAreaId &&
+			remaining.length === this.settings.studyAreas.length
+		) return;
+		const validation = validateStudyAreaScope(remaining, disabled.parentPath);
+		this.settings.studyAreas = remaining;
+		if (validation.valid) {
+			const recovered: StudyArea = {
+				id: disabled.id,
+				name: disabled.name,
+				parentPath: disabled.parentPath,
+				excludedPaths: disabled.excludedPaths,
+				maintenanceMode: "paused",
+				createdAt: disabled.createdAt,
+			};
+			this.settings.studyAreas = [...remaining, recovered];
+			this.settings.disabledStudyAreas =
+				this.settings.disabledStudyAreas.filter(
+					(area) => area.id !== disabledAreaId
+				);
+		} else {
+			this.settings.disabledStudyAreas =
+				this.settings.disabledStudyAreas.map((area) =>
+					area.id === disabledAreaId
+						? { ...area, disabledReason: validation.reason }
+						: area
+				);
+		}
+		await this.saveSettings();
+	}
+
 	async runStudyArea(
 		areaId: string,
 		mode: StudyAreaPlanMode = "backfill",

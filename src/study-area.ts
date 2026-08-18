@@ -31,6 +31,15 @@ export type StudyAreaScopeValidation =
 	| { valid: true; reason: null }
 	| { valid: false; reason: StudyAreaScopeConflictReason };
 
+export type StudyAreaExclusionConflictReason =
+	| "empty-path"
+	| "outside-scope"
+	| "duplicate-path";
+
+export type StudyAreaExclusionValidation =
+	| { valid: true; reason: null }
+	| { valid: false; reason: StudyAreaExclusionConflictReason };
+
 export interface DisabledStudyArea extends StudyArea {
 	maintenanceMode: "paused";
 	disabledReason: StudyAreaScopeConflictReason;
@@ -125,7 +134,7 @@ export function studyAreaNameForParentPath(parentPath: string): string {
 
 export function formatStudyAreaReadinessCounts(
 	counts: StudyAreaReadinessCounts,
-	opts: { cueSectionCount?: number } = {}
+	opts: { cueSectionCount?: number; excludedCount?: number } = {}
 ): string {
 	const noteLabel = (count: number): string =>
 		`${count} note${count === 1 ? "" : "s"}`;
@@ -146,6 +155,9 @@ export function formatStudyAreaReadinessCounts(
 		);
 	}
 	if (counts.failed) parts.push(`${noteLabel(counts.failed)} failed`);
+	if (opts.excludedCount) {
+		parts.push(`${noteLabel(opts.excludedCount)} excluded`);
+	}
 	return parts.length
 		? parts.join(" · ")
 		: counts.skipped
@@ -179,6 +191,40 @@ export function validateStudyAreaScope(
 		) {
 			return { valid: false, reason: "overlapping-path" };
 		}
+	}
+	return { valid: true, reason: null };
+}
+
+export function findConflictingStudyArea(
+	areas: readonly StudyArea[],
+	parentPath: string
+): StudyArea | null {
+	const normalized = normalizeVaultPath(parentPath);
+	return (
+		areas.find((area) => {
+			const existing = normalizeVaultPath(area.parentPath);
+			return (
+				existing === normalized ||
+				!existing ||
+				!normalized ||
+				isDescendantPath(normalized, existing) ||
+				isDescendantPath(existing, normalized)
+			);
+		}) ?? null
+	);
+}
+
+export function validateStudyAreaExclusion(
+	area: Pick<StudyArea, "parentPath" | "excludedPaths">,
+	path: string
+): StudyAreaExclusionValidation {
+	const normalized = normalizeVaultPath(path);
+	if (!normalized) return { valid: false, reason: "empty-path" };
+	if (area.excludedPaths.some((entry) => normalizeVaultPath(entry) === normalized)) {
+		return { valid: false, reason: "duplicate-path" };
+	}
+	if (!isDescendantPath(normalized, area.parentPath)) {
+		return { valid: false, reason: "outside-scope" };
 	}
 	return { valid: true, reason: null };
 }

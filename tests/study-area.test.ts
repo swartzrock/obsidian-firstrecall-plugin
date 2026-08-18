@@ -17,6 +17,8 @@ import {
 	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
 	validateStudyAreaScope,
+	validateStudyAreaExclusion,
+	findConflictingStudyArea,
 	type StudyArea,
 } from "../src/study-area";
 import type { NoteGenerationResult } from "../src/generator";
@@ -26,6 +28,28 @@ const NOTE = "# A\nalpha\n## B\nbeta";
 describe("study area defaults", () => {
 	it("starts with no study areas", () => {
 		expect(DEFAULT_STUDY_AREAS).toEqual([]);
+	});
+});
+
+describe("study area exclusion and recovery validation", () => {
+	it("accepts only unique nested exclusion paths", () => {
+		const biology = area({ excludedPaths: ["Courses/Biology/Drafts"] });
+		expect(validateStudyAreaExclusion(biology, "Courses/Biology/Cells.md"))
+			.toEqual({ valid: true, reason: null });
+		expect(validateStudyAreaExclusion(biology, "Courses/Biology/Drafts"))
+			.toEqual({ valid: false, reason: "duplicate-path" });
+		expect(validateStudyAreaExclusion(biology, "Courses/Chemistry"))
+			.toEqual({ valid: false, reason: "outside-scope" });
+		expect(validateStudyAreaExclusion(biology, "Courses/Biology"))
+			.toEqual({ valid: false, reason: "outside-scope" });
+	});
+
+	it("names the active scope responsible for a disabled legacy conflict", () => {
+		const parent = area({ id: "parent" });
+		expect(
+			findConflictingStudyArea([parent], "Courses/Biology/Year 1")?.id
+		).toBe("parent");
+		expect(findConflictingStudyArea([parent], "Courses/Chemistry")).toBeNull();
 	});
 });
 

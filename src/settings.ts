@@ -82,13 +82,17 @@ import {
 	DEFAULT_STUDY_AREAS,
 	ENTIRE_VAULT_STUDY_AREA_LABEL,
 	formatStudyAreaReadinessCounts,
+	findConflictingStudyArea,
 	isEntireVaultStudyArea,
+	isDescendantPath,
 	normalizeVaultPath,
 	studyAreaScopeLabel,
+	validateStudyAreaExclusion,
 	validateStudyAreaScope,
 	type DisabledStudyArea,
 	type StudyArea,
 	type StudyAreaGenerationPlan,
+	type StudyAreaRunSummary,
 } from "./study-area";
 import { formatCueCraftNotice } from "./notice";
 import {
@@ -136,6 +140,23 @@ const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 	"stroke",
 	"stroke-width",
 ]);
+
+type StudyAreaUiPhase =
+	| "initial"
+	| "scanning"
+	| "ready"
+	| "running"
+	| "success"
+	| "partial-failure"
+	| "failure";
+
+interface StudyAreaUiState {
+	phase: StudyAreaUiPhase;
+	plan: StudyAreaGenerationPlan | null;
+	scanToken: number;
+	hasScanned: boolean;
+	message: string | null;
+}
 
 export interface CueCraftSettings {
 	byok: Omit<ByokStoredSettings, "selectedProvider"> & {
@@ -218,6 +239,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 export class CueCraftSettingTab extends PluginSettingTab {
 	private plugin: CueCraftPlugin;
 	private currentSubpage: CueCraftSettingsSubpage = "home";
+	private readonly studyAreaUi = new Map<string, StudyAreaUiState>();
 
 	constructor(app: App, plugin: CueCraftPlugin) {
 		super(app, plugin);
@@ -242,22 +264,22 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			case "cue-generation":
 				this.renderSubpageHeader(
 					containerEl,
-					"Cue Generation",
-					"Choose how Questions are written and when CueCraft creates Section cues and Note Brief."
+					"Generation",
+					"Choose how recall questions are written and review the instructions used to create study material."
 				);
 				this.renderCueGenerationSection(containerEl, false);
 				break;
 			case "study-areas":
 				this.renderSubpageHeader(
 					containerEl,
-					"Study Areas",
-					"Generate Section cues for your vault or specific folders. CueCraft keeps Section cues up to date for notes in these areas."
+					"Folders & automatic updates",
+					"Choose which notes CueCraft can keep current, scan them without using your AI provider, and explicitly bring study material up to date."
 				);
 				this.renderStudyAreasSection(containerEl, false);
 				break;
 			default:
 				containerEl.createEl("p", {
-					text: "CueCraft generates Section cues and Note Briefs using a local Ollama model, a frontier model (Claude, ChatGPT, Gemini, Grok), or any model via OpenRouter. Your Markdown files are never modified.",
+					text: "CueCraft turns your notes into active-recall study material: a Note Brief for the whole note and a study card for each section. Choose an AI provider and model to get started. Your Markdown files are never modified.",
 					cls: "cuecraft-settings-intro",
 				});
 				this.renderSettingsHome(containerEl);
@@ -268,6 +290,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	override hide(): void {
 		super.hide();
 		this.currentSubpage = "home";
+		this.studyAreaUi.clear();
 		this.plugin.promptForCueSettingsRegeneration();
 	}
 
@@ -276,22 +299,22 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		const navEl = containerEl.createDiv({ cls: "cuecraft-settings-nav" });
 		this.renderSettingsNavCard(navEl, {
-			title: "AI Provider & Settings",
-			description: "Provider & model selection, connection check, and parallel request tuning.",
+			title: "AI model",
+			description: "Choose a provider and model, check the connection, and tune request speed.",
 			summary: this.aiModelSummary(),
 			onOpen: () => this.openSubpage("ai-model"),
 		});
 		this.renderSettingsNavCard(navEl, {
-			title: "Study Areas",
-			description: "Generate Section cues for your vault or specific folders.",
-			summary: this.studyAreasSummary(),
-			onOpen: () => this.openSubpage("study-areas"),
-		});
-		this.renderSettingsNavCard(navEl, {
-			title: "Cue Generation",
-			description: "Choose the Question type and automatic generation behavior.",
+			title: "Generation",
+			description: "Choose the recall-question style and review generation instructions.",
 			summary: this.cueGenerationSummary(),
 			onOpen: () => this.openSubpage("cue-generation"),
+		});
+		this.renderSettingsNavCard(navEl, {
+			title: "Folders & automatic updates",
+			description: "Choose which notes stay current and when updates happen.",
+			summary: this.studyAreasSummary(),
+			onOpen: () => this.openSubpage("study-areas"),
 		});
 
 		this.renderArtifactVisibilitySection(containerEl);
@@ -407,23 +430,21 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const enabled = this.plugin.settings.studyAreas.filter(
 			(area) => area.maintenanceMode === "maintain-on-save"
 		).length;
-		if (!count) return "No study areas";
+		if (!count) return "No folders or vault scope";
 		const entireVaultArea = this.plugin.settings.studyAreas.find((area) =>
 			isEntireVaultStudyArea(area)
 		);
 		if (entireVaultArea) {
-			return `${this.vaultStudyAreaLabel()} · ${entireVaultArea.maintenanceMode === "maintain-on-save"
-				? "updates on save"
-				: "manual updates"
+			return `${ENTIRE_VAULT_STUDY_AREA_LABEL} · ${entireVaultArea.maintenanceMode === "maintain-on-save"
+				? "updates automatically"
+				: "automatic updates off"
 				}`;
 		}
-		return `${count} area${count === 1 ? "" : "s"} · ${enabled} update on save`;
+		return `${count} folder${count === 1 ? "" : "s"} · ${enabled} update automatically`;
 	}
 
 	private vaultStudyAreaLabel(): string {
-		const vaultName = this.app.vault.getName().trim();
-		if (!vaultName) return ENTIRE_VAULT_STUDY_AREA_LABEL;
-		return /\bvault$/i.test(vaultName) ? vaultName : `${vaultName} Vault`;
+		return ENTIRE_VAULT_STUDY_AREA_LABEL;
 	}
 
 	private providerDisplayName(provider: ByokProviderId): string {
@@ -694,13 +715,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 	}
 
-	// ── Cue generation ────────────────────────────────────────────────────
+	// ── Generation ────────────────────────────────────────────────────────
 	private renderCueGenerationSection(
 		containerEl: HTMLElement,
 		showHeading: boolean
 	): void {
 		if (showHeading) {
-			new Setting(containerEl).setName("Cue Generation").setHeading();
+			new Setting(containerEl).setName("Generation").setHeading();
 		}
 
 		const questionTypeDescription = (): string => {
@@ -708,7 +729,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			return `${selected.description} Questions will change after regeneration.`;
 		};
 		const questionTypeSetting = new Setting(containerEl)
-			.setName("Question type")
+			.setName("Recall question style")
 			.setDesc(questionTypeDescription());
 		let sectionInstructions: HTMLTextAreaElement | undefined;
 		questionTypeSetting.addDropdown((dropdown) => {
@@ -727,29 +748,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				});
 		});
-
-		new Setting(containerEl)
-			.setName("Auto-generation delay")
-			.setDesc(
-				"Wait this long after you stop typing before CueCraft generates Section cues and a Note Brief. Longer delays reduce repeated provider requests."
-			)
-			.addDropdown((dropdown) => {
-				for (const seconds of AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS) {
-					dropdown.addOption(
-						String(seconds),
-						formatAutoGenerationSettleDelayLabel(seconds)
-					);
-				}
-				dropdown
-					.setValue(
-						String(this.plugin.settings.autoGenerationSettleDelaySeconds)
-					)
-					.onChange(async (value) => {
-						this.plugin.settings.autoGenerationSettleDelaySeconds =
-							normalizeAutoGenerationSettleDelaySeconds(Number(value));
-						await this.plugin.saveSettings();
-					});
-			});
 
 		const advanced = containerEl.createEl("details", {
 			cls: "cuecraft-generation-advanced",
@@ -804,14 +802,53 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		return input;
 	}
 
-	// ── Study areas ───────────────────────────────────────────────────────
+	// ── Folders and automatic updates ─────────────────────────────────────
 	private studyAreaFolderPaths(): string[] {
 		return this.app.vault
 			.getAllLoadedFiles()
-			.filter((file): file is TFolder => file instanceof TFolder)
+			.filter(
+				(file): file is TFolder =>
+					file instanceof TFolder || "children" in file
+			)
 			.map((folder) => normalizeVaultPath(folder.path))
 			.filter(Boolean)
 			.sort((a, b) => a.localeCompare(b));
+	}
+
+	private studyAreaExclusionPaths(area: StudyArea): string[] {
+		return this.app.vault
+			.getAllLoadedFiles()
+			.filter(
+				(file) =>
+					file instanceof TFolder ||
+					"children" in file ||
+					("extension" in file &&
+						typeof file.extension === "string" &&
+						file.extension.toLowerCase() === "md")
+			)
+			.map((file) => normalizeVaultPath(file.path))
+			.filter(
+				(path) =>
+					Boolean(path) &&
+					isDescendantPath(path, area.parentPath) &&
+					validateStudyAreaExclusion(area, path).valid
+			)
+			.sort((a, b) => a.localeCompare(b));
+	}
+
+	private studyAreaState(areaId: string): StudyAreaUiState {
+		let state = this.studyAreaUi.get(areaId);
+		if (!state) {
+			state = {
+				phase: "initial",
+				plan: null,
+				scanToken: 0,
+				hasScanned: false,
+				message: null,
+			};
+			this.studyAreaUi.set(areaId, state);
+		}
+		return state;
 	}
 
 	private renderStudyAreasSection(
@@ -819,8 +856,34 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		showHeading: boolean
 	): void {
 		if (showHeading) {
-			new Setting(containerEl).setName("Study areas").setHeading();
+			new Setting(containerEl)
+				.setName("Folders & automatic updates")
+				.setHeading();
 		}
+		containerEl.createEl("p", {
+			cls: "cuecraft-study-area-intro",
+			text: "Scan a folder or your entire vault to see what needs study material. Creating a scope never generates anything, and automatic updates start off.",
+		});
+		new Setting(containerEl)
+			.setName("Wait after typing")
+			.setDesc(
+				"After you stop typing in an automatically maintained note, wait this long before updating it. Longer waits reduce repeated AI requests."
+			)
+			.addDropdown((dropdown) => {
+				for (const seconds of AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS) {
+					dropdown.addOption(
+						String(seconds),
+						formatAutoGenerationSettleDelayLabel(seconds)
+					);
+				}
+				dropdown
+					.setValue(String(this.plugin.settings.autoGenerationSettleDelaySeconds))
+					.onChange(async (value) => {
+						this.plugin.settings.autoGenerationSettleDelaySeconds =
+							normalizeAutoGenerationSettleDelaySeconds(Number(value));
+						await this.plugin.saveSettings();
+					});
+			});
 		const folderPaths = this.studyAreaFolderPaths();
 		const assignedFolderPaths = new Set(
 			this.plugin.settings.studyAreas.map((area) =>
@@ -845,7 +908,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				];
 
 		if (hasStudyAreas) {
-			new Setting(containerEl).setName("Manage Study Areas").setHeading();
+			new Setting(containerEl).setName("Covered notes").setHeading();
 			const manageEl = containerEl.createDiv({
 				cls: "cuecraft-settings-flow",
 			});
@@ -853,8 +916,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderStudyAreaRow(manageEl, area);
 			}
 		}
+		if (this.plugin.settings.disabledStudyAreas.length) {
+			new Setting(containerEl).setName("Scopes needing attention").setHeading();
+			const recoveryEl = containerEl.createDiv({ cls: "cuecraft-settings-flow" });
+			for (const area of this.plugin.settings.disabledStudyAreas) {
+				this.renderDisabledStudyAreaRow(recoveryEl, area);
+			}
+		}
 
-		new Setting(containerEl).setName("Create Study Area").setHeading();
+		new Setting(containerEl).setName("Add coverage").setHeading();
 		const createEl = containerEl.createDiv({
 			cls: "cuecraft-settings-flow",
 		});
@@ -863,15 +933,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		parentFolderSetting
 			.setName(
 				hasEntireVaultArea
-					? `${vaultScopeLabel} is already a study area`
-					: "Choose notes to include"
+					? `${vaultScopeLabel} is already covered`
+					: "Entire vault or folder"
 			)
 			.setDesc(
 				hasEntireVaultArea
-					? "Remove the existing study area above before adding a specific folder."
+					? "Remove Entire vault above before adding a folder instead."
 					: hasStudyAreas
-						? `Type to filter existing vault folders. Remove folder study areas above to choose ${vaultScopeLabel}.`
-						: `Select ${vaultScopeLabel} or an existing folder; use explicit exclusions for nested opt-outs.`
+						? `Type to filter folders. Remove folder scopes above before choosing ${vaultScopeLabel}.`
+						: `Select ${vaultScopeLabel} or a folder. Use exclusions for the only per-note opt-out.`
 			);
 		if (hasEntireVaultArea) {
 			parentFolderSetting.controlEl.empty();
@@ -881,7 +951,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				value: "",
 				options: normalizeModelIds(availableScopes),
 				placeholder: availableScopes.length
-					? "Choose a scope..."
+					? "Choose Entire vault or a folder..."
 					: "No unassigned folders",
 				emptyMessage: availableScopes.length
 					? `No matching scopes. Choose ${vaultScopeLabel} or an existing vault folder.`
@@ -914,7 +984,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						return;
 					}
 					const area = await this.plugin.createStudyArea(normalized);
-					if (area) this.display();
+					if (area) {
+						this.studyAreaUi.delete(area.id);
+						this.display();
+					}
 				},
 				renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
 				pinnedOptionIds: [vaultScopeLabel],
@@ -924,6 +997,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private renderStudyAreaRow(containerEl: HTMLElement, area: StudyArea): void {
+		const state = this.studyAreaState(area.id);
+		const providerReady = this.plugin.isProviderConfigured();
+		const busy = state.phase === "scanning" || state.phase === "running";
 		const setting = new Setting(containerEl).setName(
 			isEntireVaultStudyArea(area) ? this.vaultStudyAreaLabel() : area.name
 		);
@@ -935,81 +1011,91 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				text: studyAreaScopeLabel(area.parentPath),
 			});
 		}
-		const countsEl = setting.descEl.createDiv({
+		setting.descEl.createDiv({
 			cls: "cuecraft-study-area-counts",
-			text: "Checking notes...",
+			text: this.studyAreaCountsText(state),
+			attr: { role: "status", "aria-live": "polite" },
 		});
-		const upToDateEl = setting.descEl.createDiv({
+		setting.descEl.createDiv({
 			cls: "cuecraft-study-area-status",
-			text: "Up to date",
+			text: state.message ?? this.studyAreaStatusText(state),
+			attr: { role: "status", "aria-live": "polite" },
 		});
-		upToDateEl.hidden = true;
 		setting.descEl.createDiv({
 			cls: "cuecraft-study-area-help",
 			text:
 				area.maintenanceMode === "maintain-on-save"
-					? "Section cues update automatically when notes in this area are saved."
-					: "Saved notes in this area will not update automatically.",
+					? "New and changed study material updates automatically after the wait above. Existing outdated material changes only when you use the explicit action."
+					: "Automatic updates are off. Scanning never invokes your AI provider.",
 		});
 
 		setting.controlEl.addClass("cuecraft-study-area-controls");
 		setting.controlEl.createSpan({
 			cls: "cuecraft-study-area-toggle-label",
-			text: "Update on save",
+			text: "Update automatically",
 		});
-		setting.addToggle((tg) =>
-			tg
+		setting.addToggle((tg) => {
+			tg.toggleEl.setAttribute(
+				"aria-label",
+				`Update automatically for ${studyAreaScopeLabel(area.parentPath)}`
+			);
+			(tg.toggleEl as HTMLInputElement).disabled = busy || !providerReady;
+			return tg
 				.setValue(area.maintenanceMode === "maintain-on-save")
 				.onChange(async (value) => {
+					if (this.studyAreaState(area.id).phase === "running") return;
 					await this.plugin.updateStudyArea({
 						...area,
 						maintenanceMode: value ? "maintain-on-save" : "paused",
 					});
 					this.display();
-				})
-		);
+				});
+		});
 
 		const backfillBtn = setting.controlEl.createEl("button", {
-			text: "Generate missing Section cues",
+			text: state.phase === "running" ? "Updating..." : "Bring study material up to date",
 			attr: { type: "button" },
 		});
 		backfillBtn.addClass("mod-cta");
-		backfillBtn.disabled = true;
+		backfillBtn.disabled =
+			busy || !providerReady || (state.plan?.items.length ?? 0) === 0;
 		const retryBtn = setting.controlEl.createEl("button", {
-			text: "Retry failed",
+			text: "Retry update",
 			attr: { type: "button" },
 		});
 		retryBtn.addClass("cuecraft-study-area-retry");
-		retryBtn.disabled = true;
-		retryBtn.hidden = true;
-		retryBtn.addClass("cuecraft-study-area-hidden");
+		const hasFailed = Boolean(state.plan?.counts.failed);
+		retryBtn.disabled = busy || !providerReady || !hasFailed;
+		retryBtn.hidden = !hasFailed;
+		retryBtn.classList.toggle("cuecraft-study-area-hidden", !hasFailed);
+		const scanBtn = setting.controlEl.createEl("button", {
+			text: state.phase === "scanning" ? "Cancel scan" : "Scan again",
+			attr: {
+				type: "button",
+				"aria-label": state.phase === "scanning"
+					? `Cancel scan for ${studyAreaScopeLabel(area.parentPath)}`
+					: `Scan ${studyAreaScopeLabel(area.parentPath)} again`,
+			},
+		});
+		scanBtn.disabled = state.phase === "running";
 		const removeBtn = setting.controlEl.createEl("button", {
 			cls: "clickable-icon cuecraft-study-area-remove",
 			attr: { type: "button", "aria-label": `Remove ${area.name}` },
 		});
 		setIcon(removeBtn, "trash-2");
 
-		void this.plugin.previewStudyArea(area.id).then((plan) => {
-			this.renderStudyAreaPlan(
-				countsEl,
-				upToDateEl,
-				backfillBtn,
-				retryBtn,
-				plan
-			);
-		});
-
 		this.plugin.registerDomEvent(backfillBtn, "click", async () => {
-			upToDateEl.hidden = true;
-			backfillBtn.disabled = true;
-			backfillBtn.textContent = "Generating...";
-			countsEl.setText("Generating Section cues...");
-			await this.plugin.runStudyArea(area.id, "backfill");
-			this.display();
+			await this.runStudyAreaAction(area.id, "backfill");
 		});
 		this.plugin.registerDomEvent(retryBtn, "click", async () => {
-			await this.plugin.runStudyArea(area.id, "retry-failed");
-			this.display();
+			await this.runStudyAreaAction(area.id, "retry-failed");
+		});
+		this.plugin.registerDomEvent(scanBtn, "click", () => {
+			if (this.studyAreaState(area.id).phase === "scanning") {
+				this.cancelStudyAreaScan(area.id);
+			} else {
+				void this.scanStudyArea(area.id);
+			}
 		});
 		this.plugin.registerDomEvent(removeBtn, "click", () => {
 			new StudyAreaConfirmModal(this.app, {
@@ -1022,47 +1108,238 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				},
 			}).open();
 		});
+
+		if (!providerReady) this.renderProviderSetupAction(containerEl);
+		this.renderStudyAreaExclusions(containerEl, area);
+		if (!state.hasScanned && state.phase === "initial") {
+			void this.scanStudyArea(area.id);
+		}
 	}
 
-	private renderStudyAreaPlan(
-		countsEl: HTMLElement,
-		upToDateEl: HTMLElement,
-		backfillBtn: HTMLButtonElement,
-		retryBtn: HTMLButtonElement,
-		plan: StudyAreaGenerationPlan | null
-	): void {
-		if (!plan) {
-			countsEl.setText("Study area no longer exists.");
-			upToDateEl.hidden = true;
-			backfillBtn.disabled = true;
-			backfillBtn.textContent = "Generate missing Section cues";
-			retryBtn.disabled = true;
-			retryBtn.hidden = true;
-			retryBtn.addClass("cuecraft-study-area-hidden");
-			return;
-		}
+	private studyAreaCountsText(state: StudyAreaUiState): string {
+		if (state.phase === "scanning") return "Scanning notes...";
+		if (state.phase === "running") return "Updating study material...";
+		const plan = state.plan;
+		if (!plan) return state.hasScanned ? "No scan results" : "Not scanned yet";
 		const cueSectionCount = plan.items
 			.filter((item) => item.readiness === "uncued" || item.readiness === "stale")
 			.reduce((total, item) => total + item.sectionCount, 0);
-		countsEl.setText(formatStudyAreaReadinessCounts(plan.counts, {
+		const excludedCount = plan.readiness.filter(
+			(item) => item.reason === "excluded"
+		).length;
+		return formatStudyAreaReadinessCounts(plan.counts, {
 			cueSectionCount,
-		}));
-		const hasMissingCueWork = plan.items.some(
-			(item) => item.readiness === "uncued" || item.readiness === "stale"
-		);
-		const hasFailedWork = plan.counts.failed > 0;
-		upToDateEl.hidden =
-			hasMissingCueWork || hasFailedWork || plan.counts.ready === 0;
-		backfillBtn.disabled = !hasMissingCueWork;
-		backfillBtn.textContent = "Generate missing Section cues";
-		retryBtn.disabled = !hasFailedWork;
-		retryBtn.hidden = !hasFailedWork;
-		retryBtn.toggleClass("cuecraft-study-area-hidden", !hasFailedWork);
+			excludedCount,
+		});
 	}
 
-	// ── Note format ───────────────────────────────────────────────────────
+	private studyAreaStatusText(state: StudyAreaUiState): string {
+		if (state.phase === "scanning") return "Scanning without using your AI provider.";
+		if (state.phase === "running") return "Update in progress.";
+		if (state.phase === "success") return "Study material is up to date.";
+		if (state.phase === "partial-failure") return "Update finished with some failures.";
+		if (state.phase === "failure") return "Scan or update failed. Try again.";
+		if (state.plan && !state.plan.items.length) return "Study material is up to date.";
+		return "Automatic updates affect future edits only.";
+	}
+
+	private async scanStudyArea(areaId: string): Promise<void> {
+		const state = this.studyAreaState(areaId);
+		if (state.phase === "scanning" || state.phase === "running") return;
+		const token = state.scanToken + 1;
+		state.phase = "scanning";
+		state.plan = null;
+		state.scanToken = token;
+		state.hasScanned = true;
+		state.message = null;
+		this.display();
+		try {
+			const plan = await this.plugin.previewStudyArea(areaId);
+			if (state.scanToken !== token || state.phase !== "scanning") return;
+			state.plan = plan;
+			state.phase = plan ? "ready" : "failure";
+			state.message = plan ? null : "This scope no longer exists.";
+		} catch {
+			if (state.scanToken !== token || state.phase !== "scanning") return;
+			state.phase = "failure";
+			state.message = "Scan failed. No partial results were kept.";
+		}
+		this.display();
+	}
+
+	private cancelStudyAreaScan(areaId: string): void {
+		const state = this.studyAreaState(areaId);
+		if (state.phase !== "scanning") return;
+		state.scanToken += 1;
+		state.phase = "initial";
+		state.plan = null;
+		state.hasScanned = true;
+		state.message = "Scan canceled. Automatic updates remain off until you enable them.";
+		this.display();
+	}
+
+	private async runStudyAreaAction(
+		areaId: string,
+		mode: "backfill" | "retry-failed"
+	): Promise<void> {
+		const state = this.studyAreaState(areaId);
+		if (state.phase === "running" || state.phase === "scanning") return;
+		if (!this.plugin.isProviderConfigured()) return;
+		state.phase = "running";
+		state.message = mode === "retry-failed" ? "Retrying update..." : "Updating study material...";
+		this.display();
+		let summary: StudyAreaRunSummary | null = null;
+		try {
+			summary = await this.plugin.runStudyArea(areaId, mode);
+			state.phase = this.studyAreaCompletionPhase(summary);
+			state.message = this.studyAreaCompletionMessage(summary);
+			state.plan = await this.plugin.previewStudyArea(areaId);
+		} catch {
+			state.phase = "failure";
+			state.message = "Update failed. Your last good study material was kept.";
+		}
+		this.display();
+	}
+
+	private studyAreaCompletionPhase(
+		summary: StudyAreaRunSummary | null
+	): StudyAreaUiPhase {
+		if (!summary) return "failure";
+		if (summary.failed && summary.completed) return "partial-failure";
+		if (summary.failed) return "failure";
+		return "success";
+	}
+
+	private studyAreaCompletionMessage(summary: StudyAreaRunSummary | null): string {
+		if (!summary) return "Update could not start.";
+		if (summary.failed) {
+			return `${summary.completed} updated · ${summary.failed} failed. Last good material was kept.`;
+		}
+		return summary.completed
+			? `${summary.completed} note${summary.completed === 1 ? "" : "s"} updated.`
+			: "Study material is already up to date.";
+	}
+
+	private renderProviderSetupAction(containerEl: HTMLElement): void {
+		const setup = new Setting(containerEl)
+			.setName("AI model required")
+			.setDesc("Scanning is available now. Configure a provider and model before generating or automatically updating study material.");
+		setup.settingEl.addClass("cuecraft-study-area-provider-setup");
+		setup.addButton((button) =>
+			button.setButtonText("Configure AI model").onClick(() => {
+				this.openSubpage("ai-model");
+			})
+		);
+	}
+
+	private renderStudyAreaExclusions(
+		containerEl: HTMLElement,
+		area: StudyArea
+	): void {
+		const exclusions = containerEl.createDiv({
+			cls: "cuecraft-study-area-exclusions",
+			attr: { role: "group", "aria-label": `Exclusions for ${studyAreaScopeLabel(area.parentPath)}` },
+		});
+		exclusions.createDiv({
+			cls: "cuecraft-study-area-exclusions-title",
+			text: "Exclusions",
+		});
+		exclusions.createDiv({
+			cls: "cuecraft-study-area-help",
+			text: "Notes inherit coverage from this scope. Excluding a note or nested folder is the only per-note opt-out.",
+		});
+		for (const path of area.excludedPaths) {
+			const row = exclusions.createDiv({ cls: "cuecraft-study-area-exclusion-row" });
+			row.createSpan({ text: path });
+			const remove = row.createEl("button", {
+				cls: "clickable-icon",
+				attr: { type: "button", "aria-label": `Remove exclusion ${path}` },
+			});
+			setIcon(remove, "x");
+			this.plugin.registerDomEvent(remove, "click", async () => {
+				await this.plugin.updateStudyArea({
+					...area,
+					excludedPaths: area.excludedPaths.filter(
+						(entry) => normalizeVaultPath(entry) !== normalizeVaultPath(path)
+					),
+				});
+				this.studyAreaUi.delete(area.id);
+				this.display();
+			});
+		}
+		const options = this.studyAreaExclusionPaths(area);
+		const picker = new Setting(exclusions)
+			.setName("Exclude a note or nested folder")
+			.setDesc("Type to search paths inside this scope.");
+		renderModelCombobox({
+			containerEl: picker.controlEl,
+			value: "",
+			options: normalizeModelIds(options),
+			placeholder: options.length ? "Search notes and folders..." : "No paths available",
+			emptyMessage: "No matching note or nested folder.",
+			onCommit: async (value) => {
+				const normalized = normalizeVaultPath(value);
+				const validation = validateStudyAreaExclusion(area, normalized);
+				if (!options.includes(normalized) || !validation.valid) {
+					const reason = validation.valid ? "outside-scope" : validation.reason;
+					new Notice(
+						reason === "duplicate-path"
+							? "CueCraft: that path is already excluded."
+							: "CueCraft: choose an existing note or nested folder inside this scope."
+					);
+					return;
+				}
+				await this.plugin.updateStudyArea({
+					...area,
+					excludedPaths: [...area.excludedPaths, normalized],
+				});
+				this.studyAreaUi.delete(area.id);
+				this.display();
+			},
+			renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
+			suggestionsLabel: "exclusion suggestions",
+		});
+	}
+
+	private renderDisabledStudyAreaRow(
+		containerEl: HTMLElement,
+		area: DisabledStudyArea
+	): void {
+		const conflict = findConflictingStudyArea(
+			this.plugin.settings.studyAreas,
+			area.parentPath
+		);
+		const scope = studyAreaScopeLabel(area.parentPath);
+		const conflictLabel = conflict
+			? studyAreaScopeLabel(conflict.parentPath)
+			: null;
+		const setting = new Setting(containerEl)
+			.setName(scope)
+			.setDesc(
+				conflictLabel
+					? `${scope} is disabled because it conflicts with ${conflictLabel}. It does not cover or update notes.`
+					: `${scope} is disabled and does not cover notes. Its previous conflict is gone.`
+			);
+		setting.settingEl.addClass("cuecraft-study-area-row", "is-disabled");
+		setting.settingEl.setAttr("aria-disabled", "true");
+		setting.addButton((button) =>
+			button
+				.setButtonText(conflictLabel ? `Remove ${conflictLabel} and recover` : "Recover scope")
+				.onClick(async () => {
+					await this.plugin.recoverDisabledStudyArea(area.id, conflict?.id);
+					this.studyAreaUi.delete(area.id);
+					this.display();
+				})
+		);
+	}
+
+	// ── Content shown in notes ────────────────────────────────────────────
 	private renderArtifactVisibilitySection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Study aids").setHeading();
+		new Setting(containerEl).setName("Content shown in notes").setHeading();
+		containerEl.createEl("p", {
+			cls: "cuecraft-settings-visibility-note",
+			text: "These controls only change what appears in Editing and Reading. Hiding generated material never disables automatic maintenance.",
+		});
 		const noteBriefCard = this.createArtifactCard(
 			containerEl,
 			"Note Brief",
@@ -1084,14 +1361,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			});
 		const cueCard = this.createArtifactCard(
 			containerEl,
-			"Section cue",
-			"Choose which parts of each Section cue appear in Editing and Reading."
+			"Section card",
+			"Choose which parts of each section study card appear in Editing and Reading."
 		);
 
 		new Setting(cueCard)
-			.setName("Show Summary")
+			.setName("Show summary")
 			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show Summary");
+				tg.toggleEl.setAttribute("aria-label", "Show summary");
 				return tg
 					.setValue(this.plugin.settings.showSummary)
 					.onChange(async (value) => {
@@ -1102,9 +1379,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			});
 
 		new Setting(cueCard)
-			.setName("Show Question")
+			.setName("Show recall question")
 			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show Question");
+				tg.toggleEl.setAttribute("aria-label", "Show recall question");
 				return tg
 					.setValue(this.plugin.settings.showQuestion)
 					.onChange(async (value) => {
@@ -1114,9 +1391,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					});
 			});
 		new Setting(cueCard)
-			.setName("Show Terms")
+			.setName("Show key terms")
 			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show Terms");
+				tg.toggleEl.setAttribute("aria-label", "Show key terms");
 				return tg
 					.setValue(this.plugin.settings.showTerms)
 					.onChange(async (value) => {

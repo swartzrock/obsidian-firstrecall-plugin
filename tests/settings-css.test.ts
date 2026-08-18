@@ -40,6 +40,19 @@ describe("settings CSS", () => {
 		expect(styles).toContain(".cuecraft-generation-instructions");
 	});
 
+	it("keeps exclusions legible and recovery scopes visibly disabled", () => {
+		const exclusionsRule = ruleFor(".cuecraft-study-area-exclusions");
+		expect(exclusionsRule).toContain("border: 1px solid");
+		expect(exclusionsRule).toContain("background: var(--background-secondary)");
+
+		const exclusionRowRule = ruleFor(".cuecraft-study-area-exclusion-row");
+		expect(exclusionRowRule).toContain("display: flex");
+		expect(exclusionRowRule).toContain("justify-content: space-between");
+
+		const disabledRule = ruleFor(".cuecraft-study-area-row.is-disabled");
+		expect(disabledRule).toContain("opacity:");
+	});
+
 	it("stacks active CLI command labels above the command input", () => {
 		const settingRule = ruleFor(
 			".cuecraft-active-provider-fields .cuecraft-cli-text-setting"

@@ -2128,7 +2128,9 @@ button.cuecraft-study-section-toggle svg {
 .cuecraft-study-area-path,
 .cuecraft-study-area-counts,
 .cuecraft-study-area-status,
-.cuecraft-study-area-help {
+.cuecraft-study-area-help,
+.cuecraft-study-area-intro,
+.cuecraft-settings-visibility-note {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	line-height: 1.4;
@@ -2158,6 +2160,10 @@ button.cuecraft-study-section-toggle svg {
 	align-items: flex-start;
 }
 
+.cuecraft-study-area-row.is-disabled {
+	opacity: var(--opacity-disabled, 0.65);
+}
+
 .cuecraft-study-area-row .setting-item-info {
 	min-width: 0;
 }
@@ -2183,6 +2189,36 @@ button.cuecraft-study-section-toggle svg {
 .cuecraft-study-area-controls button.mod-cta:disabled {
 	cursor: default;
 	opacity: var(--opacity-disabled, 0.45);
+}
+
+.cuecraft-study-area-exclusions {
+	margin: -4px 0 16px;
+	padding: 12px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-secondary);
+}
+
+.cuecraft-study-area-exclusions-title {
+	font-weight: var(--font-semibold);
+}
+
+.cuecraft-study-area-exclusion-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-width: 0;
+	padding-block: 6px;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.cuecraft-study-area-exclusion-row>span {
+	overflow-wrap: anywhere;
+}
+
+.cuecraft-study-area-provider-setup {
+	margin-block: 4px 12px;
 }
 
 button.cuecraft-study-area-remove {
