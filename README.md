@@ -1,32 +1,57 @@
 # CueCraft
 
 CueCraft is a desktop [Obsidian](https://obsidian.md) plugin that turns notes into
-active-recall study sessions without changing the source Markdown.
+active-recall study material. It creates one **Note Brief** for the whole note and one
+**section study card** for each eligible section. Every section card contains a
+**Summary**, **Recall question**, and **Key terms**.
 
-For each section with a heading and body, CueCraft generates a **Summary**, **Question**,
-and **Terms**. It can also create a whole-note **Note Brief**. The results appear beside
-your notes in Editing and Reading views, where Study Mode lets you reveal answers one
-section at a time.
-
-Other useful features include:
-
-- generation across a note, selected folders, or the entire vault;
-- automatic refresh when studied notes change;
-- inline and Cornell-style Section cue layouts; and
-- Markdown and Anki-compatible TSV exports.
+Study material appears beside the source in Editing and Reading views. Study Mode lets
+you attempt each recall question before revealing the answer. CueCraft saves generated
+material in Obsidian's plugin data and never modifies your source Markdown.
 
 ## Quick start
 
-1. Open **Settings → CueCraft → AI Provider & Settings**.
+1. Open **Settings → CueCraft → AI model**.
 2. Choose a provider, complete its setup, select a model, and run **Test connection**.
-3. Open a note with headings and run **CueCraft: Generate Study Material for This Note**
+3. Open a note with headings and run **CueCraft: Generate study material for this note**
    from the command palette.
 4. Run **CueCraft: Toggle Study Mode** to practice recalling each section before revealing
    its answer.
 
-Generated material is cached in Obsidian's plugin data. Visibility settings hide or show
-cached material without regenerating it, and CueCraft never writes generated content into
-the source note.
+## Folders & automatic updates
+
+Use **Folders & automatic updates** to cover selected folders or **Entire vault**. These
+scope choices are mutually exclusive: use folder scopes for selected areas, or use Entire
+vault for broad coverage with exclusions.
+
+Adding a scope runs a read-only, provider-free scan. The scan reports missing, outdated,
+ready, excluded, and failed study material. Choose **Bring study material up to date** to
+explicitly generate missing material and refresh outdated material.
+
+**Update automatically** is off for every new scope. When enabled, CueCraft waits until
+editing pauses, then creates study material for new content and refreshes only the affected
+section cards plus the Note Brief. Explicit note or nested-folder exclusions are the only
+opt-out inside an enabled scope.
+
+Coverage and freshness are separate:
+
+- **Automatic** coverage means an enabled scope will keep the note current.
+- **Manual** coverage means updates happen only when you request them.
+- Generated material can be **Current**, **Outdated**, **Updating**, or **Failed**.
+
+Hiding generated material, collapsing a card, or using Study Mode never changes automatic
+coverage. If an update fails, CueCraft keeps the last successful material visible, marks it
+outdated, and offers **Retry update**. Scanning, generation, automatic updates, and retries
+never write to the source note; neither do rendering or export.
+
+## Content shown in notes
+
+Visibility settings control whether the Note Brief, section cards, and their components
+appear in Editing and Reading. Hidden material remains cached and, when covered by an
+enabled scope, continues to receive automatic updates.
+
+CueCraft supports inline and Cornell-style section card layouts, plus Markdown and
+Anki-compatible TSV exports.
 
 ## Providers
 
@@ -68,6 +93,7 @@ bun run typecheck
 bun run lint
 bun run test
 bun run build      # typecheck and create a production bundle
+bun run check      # run every release check
 ```
 
 Terminology and product language are defined in the

@@ -1,104 +1,64 @@
 # CueCraft Glossary
 
-This glossary defines the language CueCraft uses in the interface, help text, and product documentation.
+CueCraft turns a note into active-recall study material while leaving the source Markdown
+unchanged.
 
-## The basic model
-
-CueCraft turns one note into two kinds of generated study material:
+## Study material
 
 ```mermaid
 flowchart TD
-  Note["Note"] --> Brief["One Note Brief for the whole note"]
-  Note --> Sections["Sections"]
-  Sections --> Cue["One Section cue for each eligible section"]
-  Cue --> Summary["Summary"]
-  Cue --> Question["Question"]
-  Cue --> Terms["Terms"]
-  Brief --> Overview["Overview"]
-  Brief --> Core["Core idea"]
-  Brief --> Review["Review first"]
-  Brief --> Test["Self-test"]
+  Note["Note"] --> Brief["One Note Brief"]
+  Note --> Cards["Section study cards"]
+  Cards --> Summary["Summary"]
+  Cards --> Recall["Recall question"]
+  Cards --> KeyTerms["Key terms"]
 ```
 
-The **Note Brief** belongs to the whole note and appears near the top. A **Section cue** belongs to one section and appears beside or beneath that section. A visibility setting changes what CueCraft shows; it does not change what CueCraft generates.
-
-## Generated content
-
-| Preferred term | Meaning | Do not confuse it with |
-| --- | --- | --- |
-| **Note** | The Markdown document CueCraft reads as source material. | A Note Brief, which CueCraft generates from the note. |
-| **Section** | A portion of a note beginning at a heading. CueCraft can generate one Section cue for each eligible section. | The whole note. |
-| **Note Brief** | The whole-note study artifact shown near the top of the note. It combines an overview with Core idea, Review first, and Self-test cards. | A Section cue or a section Summary. |
-| **Overview** | The opening synthesis inside the Note Brief. It connects the important ideas across the note. | Summary, which describes one section. |
-| **Core idea** | The Note Brief card that identifies the note's central claim or most important relationship. | Summary, which is scoped to one section. |
-| **Review first** | The Note Brief card that identifies the material worth revisiting first. | A generation sequence or queue. It is a study recommendation. |
-| **Self-test** | The Note Brief card that gives the reader an active-recall challenge spanning important note content. | Question, which belongs to one Section cue. |
-| **Section cue** | The complete generated study card for one section. It contains Summary, Question, and Terms. | Cue used as shorthand for only the Question. |
-| **Summary** | A concise statement of what one section says or establishes. | The Note Brief Overview, which synthesizes the whole note. |
-| **Question** | The active-recall prompt for one section. The answer should be recoverable from that section. | Self-test, which appears in the whole-note Note Brief. |
-| **Terms** | Short words or phrases that anchor the important evidence or vocabulary in one section. | A complete Summary or answer. In implementation code these may still be called `keywords`. |
-
-## Settings
-
-| Preferred term | Meaning |
+| Term | Meaning |
 | --- | --- |
-| **Main settings** | The home for global appearance and visibility controls. Its miniature Note Brief and Section cue cards show which visible component each control affects. |
-| **Appearance setting** | A control that changes which study aids are shown or how they look. It does not change model instructions or trigger generation. |
-| **Visibility** | Whether a generated component is shown in the note. Hidden content remains generated and cached. |
-| **Cue Generation** | The settings area for what CueCraft asks the model to create and when generation runs. It is not an appearance section. |
-| **Generation setting** | A control that changes model instructions or when generation runs. A content-changing generation setting can require regeneration. |
-| **Question type** | The single generation choice that changes the kind of Question written for each section. It does not change Summary, Terms, or Note Brief. |
-| **Conceptual question** | A Question type that asks how or why ideas relate. This is the default. |
-| **Direct recall** | A Question type that asks for a fact, definition, list, or other direct retrieval. |
-| **Exam practice** | A Question type phrased like a likely test or assessment prompt. |
-| **Vocabulary check** | A Question type centered on the meaning or use of an important term. |
-| **Socratic reasoning** | A Question type that leads the reader to explain assumptions, implications, or reasoning. |
-| **Auto-generate on save** | Whether CueCraft generates study material automatically after a note change or save. |
-| **Auto-generation delay** | How long CueCraft waits after the triggering change before starting automatic generation. |
-| **Cue display** | The presentation layout used for Section cues while editing. It changes placement or visual form, not generated content; Reading remains inline. |
-| **Cue font size** | The global text size used in generated study components. It does not affect model output. |
-| **Show Note Brief** | Whether the whole-note Note Brief is visible. The generated Note Brief remains cached while hidden. |
-| **Show Summary** | Whether Summary is visible in Section cues. |
-| **Show Question** | Whether Question is visible in Section cues. |
-| **Show Terms** | Whether Terms are visible in Section cues. Terms are still generated while hidden. |
-| **Advanced** | A collapsed inspection area within Cue Generation. It shows CueCraft's exact instruction templates but does not provide a second settings system. |
+| **Note** | The Markdown document CueCraft reads as source material. |
+| **Note Brief** | The whole-note overview and review guidance shown near the top of a note. CueCraft creates one for the note. |
+| **Section study card** | The complete study card for one eligible headed section. |
+| **Summary** | A concise statement of what the section says or establishes. |
+| **Recall question** | An active-recall prompt whose answer can be recovered from the section. |
+| **Key terms** | Short words or phrases that anchor the section's important evidence or vocabulary. |
+| **Study Mode** | A temporary practice view that hides answers until they are revealed. It does not change saved visibility or automatic-update settings. |
 
-## Instructions and generation
+## Coverage and automatic updates
 
-| Preferred term | Meaning | Authority |
-| --- | --- | --- |
-| **Instruction template** | CueCraft's exact reusable directions to the model, including the required output structure and placeholders for source material. | Owned by CueCraft and read-only in Advanced. |
-| **Section cue instructions** | The instruction template used to create Summary, Question, and Terms for a section. It includes the selected Question type guidance. | Governs Section cues only. |
-| **Note Brief instructions** | The instruction template used to create the Note Brief from bounded note text and successful Section cue results. | Governs the Note Brief only. |
-| **Output contract** | The required fields and structure the model must return so CueCraft can validate and display generated content. | Owned by CueCraft; settings and source material cannot remove it. |
-| **Provider request** | The complete package sent for one generation call: instructions, settings-derived guidance, source context, and the output contract. | Assembled by CueCraft for the selected provider. |
-| **Source material** | The note or section text supplied for the model to study. CueCraft tells the model to treat this text as content, not as commands. | Supplies facts; it does not override CueCraft's instructions. |
-| **Context** | The bounded selection of note text and generated results included in a generation request. It may be shortened to fit model limits. | Supplies the material the model can use. |
-| **Generation** | Asking the configured model to create new study material from CueCraft's instructions and source material. | May replace previously generated content. |
-| **Regeneration** | Running generation again because the source or a generation setting changed. | Uses the current instructions and settings. |
-| **Cache** | CueCraft's saved copy of generated content. It lets hidden components return without another model request. | Stores output; it does not author it. |
-| **Model** | The language model that produces output from CueCraft's instructions and the note's source material. | Must follow CueCraft's output contract, but its wording can vary. |
-| **Provider** | The service or local runtime through which CueCraft accesses a model. | Handles the model request; it does not define CueCraft's artifact names. |
-| **BYOK** | “Bring your own key”: the user supplies credentials for a supported model provider. | Controls access to a provider, not the content design. |
+**Folders & automatic updates** defines which notes CueCraft can keep current. Select one or
+more non-overlapping folders, or select **Entire vault**. A note or nested-folder exclusion
+is the only opt-out inside a selected scope.
 
-### How the pieces combine
+Adding a scope only scans it. The scan is read-only, makes no provider requests, and reports
+missing, outdated, ready, excluded, and failed work. **Bring study material up to date** is
+the explicit action that generates missing material and refreshes outdated material.
 
-For a Section cue, CueCraft assembles the request in this order:
+**Update automatically** is off for every new scope. When enabled, CueCraft waits until
+editing pauses and then maintains new or changed study material. It creates cards for new
+sections, refreshes changed section cards and the Note Brief, removes cards for deleted
+sections, and preserves unchanged cards.
 
-1. CueCraft applies its read-only Section cue instructions.
-2. The selected Question type adds guidance for Question only.
-3. CueCraft fills the source placeholders with bounded section and note context.
-4. The model returns structured Summary, Question, and Terms content.
-5. CueCraft validates and caches the result, then shows the components allowed by the global visibility settings.
+| Term | Meaning |
+| --- | --- |
+| **Automatic coverage** | The note belongs to an enabled, unpaused scope and is not excluded. CueCraft keeps its study material current after edits. |
+| **Manual coverage** | CueCraft updates the note only after an explicit update, retry, or command. |
+| **Exclusion** | An explicit note or nested-folder opt-out within a scope. |
+| **Current** | Generated material reflects the latest source note. |
+| **Outdated** | The source changed after the affected study material was generated. |
+| **Updating** | CueCraft is generating the work needed for the latest source. |
+| **Failed** | The latest update attempt did not finish successfully. CueCraft preserves the last successful material and offers **Retry update**. |
 
-The Note Brief follows a separate path: CueCraft applies the Note Brief instructions to bounded whole-note text plus successful Section cue results. Question type does not change this path.
+Freshness appears when generated material exists or automatic work is pending. A manual note
+with no generated material has manual coverage but no freshness state.
 
-Settings therefore do not compete with or override the instruction templates. A generation setting selects guidance that CueCraft inserts into its own template. Appearance settings are applied after generation and never instruct the model.
+Coverage is independent from presentation. Hiding generated material, hiding a component,
+collapsing a section card, or entering Study Mode never disables automatic updates. Scans,
+catch-up, automatic maintenance, retries, rendering, and export never modify source Markdown.
 
-## Advanced instruction inspection
+## Generation and providers
 
-The **Advanced** disclosure in Cue Generation shows read-only **Section cue instructions** and **Note Brief instructions**. These are the complete initial CueCraft-owned templates for the selected provider route, with visible placeholders instead of active note content. They are for inspection only: there is no second editable prompt authority.
-
-## Capitalization
-
-Capitalize **Note Brief**, **Section cue**, **Summary**, **Question**, **Terms**, **Core idea**, **Review first**, and **Self-test** when they name CueCraft interface components. Use lowercase for ordinary prose that is not naming a component, such as “summarize the section” or “review these terms.”
+**Generation** asks the configured model to create study material from the note. The
+**provider** is the local runtime, desktop CLI, or cloud service through which CueCraft
+accesses that model. With an online provider, the provider receives the note content needed
+for generation; adding or scanning a scope does not send note content to a provider.
