@@ -917,7 +917,9 @@ export default class CueCraftPlugin extends Plugin {
 		this.readingCueMemo = null;
 		for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
 			const view = leaf.view as MarkdownView;
-			if (view.getMode() !== "preview") continue;
+			if (typeof view.getMode !== "function" || view.getMode() !== "preview") {
+				continue;
+			}
 			view.previewMode.rerender(true);
 		}
 	}

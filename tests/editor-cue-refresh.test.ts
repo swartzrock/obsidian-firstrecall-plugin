@@ -219,4 +219,17 @@ describe("Editing View cue refresh", () => {
 		expect(secondRerender).toHaveBeenCalledWith(true);
 		expect(editingRerender).not.toHaveBeenCalled();
 	});
+
+	it("skips reported Markdown leaves without Markdown view methods", () => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			app: {
+				workspace: {
+					getLeavesOfType: () => [{ view: { getViewType: () => "markdown" } }],
+				},
+			},
+		});
+
+		expect(() => plugin.refreshReadingModeSurface()).not.toThrow();
+	});
 });
