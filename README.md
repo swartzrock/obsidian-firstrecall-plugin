@@ -24,17 +24,17 @@ Use **Managed folders** to generate and refresh study material in bulk for selec
 or **Entire vault**. Turn on automatic updates for the folders you want CueCraft to keep
 current. Folder choices and Entire vault are mutually exclusive.
 
-Adding a scope runs a read-only, provider-free scan. The scan reports missing, outdated,
-ready, and failed study material. Choose **Bring study material up to date** to
-explicitly generate missing material and refresh outdated material.
+Adding a managed folder runs a read-only, provider-free scan. The scan reports
+missing, outdated, ready, and failed study material. Choose **Bring study material
+up to date** to explicitly generate missing material and refresh outdated material.
 
-**Update automatically** is off for every new scope. When enabled, CueCraft waits until
+**Update automatically** is off for every new managed folder. When enabled, CueCraft waits until
 editing pauses, then creates study material for new content and refreshes only the affected
 section cards plus the Note Brief.
 
 Coverage and freshness are separate:
 
-- **Automatic** coverage means an enabled scope will keep the note current.
+- **Automatic** coverage means enabled managed folders stay current.
 - **Manual** coverage means updates happen only when you request them.
 - Generated material can be **Current**, **Outdated**, **Updating**, or **Failed**.
 
@@ -45,9 +45,9 @@ never write to the source note; neither do rendering or export.
 
 ## Content shown in notes
 
-Visibility settings control whether the Note Brief, section cards, and their components
-appear in Editing and Reading. Hidden material remains cached and, when covered by an
-enabled scope, continues to receive automatic updates.
+Visibility settings control whether the Note Brief, section cards, and their
+components appear in Editing and Reading. Hidden material remains cached and, when
+covered by a managed folder, continues to receive automatic updates.
 
 CueCraft supports inline and Cornell-style section card layouts, plus Markdown and
 Anki-compatible TSV exports.

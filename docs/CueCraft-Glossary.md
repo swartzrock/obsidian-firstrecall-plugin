@@ -29,18 +29,19 @@ flowchart TD
 **Managed folders** defines which notes are available for bulk generation and optional
 automatic updates. Select one or more non-overlapping folders, or select **Entire vault**.
 
-Adding a scope only scans it. The scan is read-only, makes no provider requests, and reports
-missing, outdated, ready, and failed work. **Bring study material up to date** is
-the explicit action that generates missing material and refreshes outdated material.
+Adding managed-folder coverage only scans it. The scan is read-only, makes no
+provider requests, and reports missing, outdated, ready, and failed work.
+**Bring study material up to date** is the explicit action that generates missing
+material and refreshes outdated material.
 
-**Update automatically** is off for every new scope. When enabled, CueCraft waits until
+**Update automatically** is off for every new managed folder. When enabled, CueCraft waits until
 editing pauses and then maintains new or changed study material. It creates cards for new
 sections, refreshes changed section cards and the Note Brief, removes cards for deleted
 sections, and preserves unchanged cards.
 
 | Term | Meaning |
 | --- | --- |
-| **Automatic coverage** | The note belongs to an enabled, unpaused scope. CueCraft keeps its study material current after edits. |
+| **Automatic coverage** | The note belongs to an enabled, unpaused managed folder. CueCraft keeps its study material current after edits. |
 | **Manual coverage** | CueCraft updates the note only after an explicit update, retry, or command. |
 | **Current** | Generated material reflects the latest source note. |
 | **Outdated** | The source changed after the affected study material was generated. |
@@ -59,4 +60,5 @@ catch-up, automatic maintenance, retries, rendering, and export never modify sou
 **Generation** asks the configured model to create study material from the note. The
 **provider** is the local runtime, desktop CLI, or cloud service through which CueCraft
 accesses that model. With an online provider, the provider receives the note content needed
-for generation; adding or scanning a scope does not send note content to a provider.
+for generation; adding or scanning managed-folder coverage does not send note
+content to a provider.
