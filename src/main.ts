@@ -52,7 +52,6 @@ import {
 } from "./secure-credential-store";
 import { parseSections, type Section } from "./parser";
 import {
-	CacheStore,
 	buildNoteCache,
 	hasUsableCues,
 	isStale,
@@ -63,6 +62,11 @@ import {
 	type CachedSection,
 	type NoteCache,
 } from "./cache";
+import {
+	StudyMaterialStore,
+	normalizeMaintenanceStateMap,
+	type MaintenanceStateMap,
+} from "./study-material-state";
 import {
 	applyEditorCueWidthPreview,
 	appendSummary,
@@ -136,6 +140,7 @@ import {
 interface PluginData {
 	settings: CueCraftSettings;
 	caches: Record<string, NoteCache>;
+	maintenanceStates: MaintenanceStateMap;
 	hidden: Record<string, true>;
 	cueSectionCollapse: CueSectionCollapseMap;
 }
@@ -202,13 +207,14 @@ export default class CueCraftPlugin extends Plugin {
 	private data: PluginData = {
 		settings: DEFAULT_SETTINGS,
 		caches: {},
+		maintenanceStates: {},
 		hidden: {},
 		cueSectionCollapse: {},
 	};
 	private retainedCaches: Record<string, unknown> = {};
 	private pluginDataWrite: Promise<void> = Promise.resolve();
 	private settingTab!: CueCraftSettingTab;
-	private cacheStore!: CacheStore;
+	private cacheStore!: StudyMaterialStore;
 	private visibility!: VisibilityStore;
 	private cueSectionCollapse!: CueSectionCollapseStore;
 	private credentialStore!: SecureCredentialStore;
@@ -236,13 +242,18 @@ export default class CueCraftPlugin extends Plugin {
 			(widthPx) => this.applyEditorCueWidthNow(widthPx)
 		);
 
-		this.cacheStore = new CacheStore(this.data.caches, async (map) => {
-			for (const path of Object.keys(map)) {
+		this.cacheStore = new StudyMaterialStore(
+			this.data.caches,
+			this.data.maintenanceStates,
+			async (caches, maintenanceStates) => {
+			for (const path of Object.keys(caches)) {
 				delete this.retainedCaches[path];
 			}
-			this.data.caches = map;
+			this.data.caches = caches;
+			this.data.maintenanceStates = maintenanceStates;
 			await this.persistPluginData();
-		});
+			}
+		);
 		this.visibility = new VisibilityStore(this.data.hidden, async (map) => {
 			this.data.hidden = map;
 			await this.persistPluginData();
@@ -299,11 +310,17 @@ export default class CueCraftPlugin extends Plugin {
 		this.registerEvent(
 			this.app.vault.on("rename", (file, oldPath) => {
 				this.endStudyForPath(oldPath);
-				if (file instanceof TFile) void this.visibility.rename(oldPath, file.path);
+				if (file instanceof TFile) {
+					void this.cacheStore.rename(oldPath, file.path);
+					void this.visibility.rename(oldPath, file.path);
+				}
 			})
 		);
 		this.registerEvent(
-			this.app.vault.on("delete", (file) => this.endStudyForPath(file.path))
+			this.app.vault.on("delete", (file) => {
+				this.endStudyForPath(file.path);
+				void this.cacheStore.delete(file.path);
+			})
 		);
 		this.registerEvent(
 			this.app.vault.on("modify", (file) => {
@@ -372,16 +389,27 @@ export default class CueCraftPlugin extends Plugin {
 			retainedCaches,
 			changed: cachesChanged,
 		} = normalizeCacheMap(rawCaches);
+		const {
+			states: maintenanceStates,
+			changed: maintenanceStatesChanged,
+		} = normalizeMaintenanceStateMap(loadedRecord.maintenanceStates, caches);
 		const hidden = loadHiddenMap(loadedRecord.hidden);
 		const cueSectionCollapse = loadCueSectionCollapseMap(
 			loadedRecord.cueSectionCollapse
 		);
 		this.retainedCaches = retainedCaches;
-		this.data = { settings, caches, hidden, cueSectionCollapse };
+		this.data = {
+			settings,
+			caches,
+			maintenanceStates,
+			hidden,
+			cueSectionCollapse,
+		};
 		this.settings = this.data.settings;
 		if (
 			credentialStorage.settingsChanged ||
 			cachesChanged ||
+			maintenanceStatesChanged ||
 			settingsChanged
 		) {
 			await this.persistPluginData();

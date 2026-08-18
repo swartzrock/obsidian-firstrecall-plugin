@@ -220,6 +220,18 @@ describe("CacheStore", () => {
 		expect(store.get("seed.md")).toEqual(cache);
 		expect(store.snapshot()).toEqual({ "seed.md": cache });
 	});
+
+	it("moves a cache across a rename", async () => {
+		const cache = build();
+		const persist = vi.fn(async () => {});
+		const store = new CacheStore({ "old.md": cache }, persist);
+
+		await store.rename("old.md", "new.md");
+
+		expect(store.get("old.md")).toBeNull();
+		expect(store.get("new.md")).toEqual(cache);
+		expect(persist).toHaveBeenCalledTimes(1);
+	});
 });
 
 describe("sectionIdsNeedingGeneration", () => {
@@ -299,6 +311,32 @@ describe("reconcileCacheSections", () => {
 		expect(result.sections.map((section) => section.heading)).toEqual(["B", "A"]);
 		expect(result.sections.map((section) => section.question)).toEqual(["Q:B", "Q:A"]);
 	});
+
+	it("does not advance a changed section hash without a successful replacement", () => {
+		const cache = build();
+		const edited = parseSections("# A\nalpha edited\n## B\nbeta");
+		const failed = {
+			...cache.sections[0],
+			contentHash: edited[0].contentHash,
+			question: null,
+			error: "provider unavailable",
+		};
+
+		const result = reconcileCacheSections(cache, edited, [failed]);
+
+		expect(result.sections[0]).toEqual(cache.sections[0]);
+		expect(sectionIdsNeedingGeneration(result, edited)).toEqual([edited[0].id]);
+	});
+
+	it("removes all generated material when no eligible sections remain", () => {
+		const result = reconcileCacheSections(
+			build(),
+			parseSections("# Empty heading\n")
+		);
+
+		expect(result.sections).toEqual([]);
+		expect(result.noteBrief).toBeNull();
+	});
 });
 
 describe("replaceSection", () => {
@@ -333,6 +371,17 @@ describe("replaceSection", () => {
 		const result = replaceSection(cache, updated);
 		expect(result.sections[0].question).toBe("replaced");
 		expect(cache.sections[0].question).toBe("Q:A"); // original unchanged
+	});
+
+	it("preserves the last-good section when its replacement failed", () => {
+		const cache = build();
+		const failed = {
+			...cache.sections[0],
+			question: null,
+			error: "provider unavailable",
+		};
+
+		expect(replaceSection(cache, failed)).toBe(cache);
 	});
 });
 
