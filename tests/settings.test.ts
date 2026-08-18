@@ -835,7 +835,10 @@ describe("folders and automatic updates settings", () => {
 
 	it("creates a paused scope, scans it, and never starts generation", async () => {
 		const { tab, plugin } = await setupSettingsTab({
-			loadedFiles: [{ path: "Courses/Biology", folder: true }],
+			loadedFiles: [
+				{ path: "Courses/Biology", folder: true },
+				{ path: "Courses/Chemistry", folder: true },
+			],
 		});
 		plugin.createStudyArea.mockImplementationOnce(async (parentPath: string) => {
 			const area = studyArea({ parentPath });
@@ -844,10 +847,22 @@ describe("folders and automatic updates settings", () => {
 		});
 		tab.display();
 		openSettingsCard(tab, "Folders & automatic updates");
+		const settingsText = settingText(tab.containerEl);
+		expect(settingsText).not.toContain("Scan a folder");
+		expect(settingsText.indexOf("Add coverage")).toBeLessThan(
+			settingsText.indexOf("Wait after typing")
+		);
 		const input = tab.containerEl.querySelector<HTMLInputElement>(
 			'input[placeholder="Choose Entire vault or a folder..."]'
 		)!;
 		input.dispatchEvent(new window.Event("focus"));
+		const listbox = tab.containerEl.querySelector<HTMLElement>("[role='listbox']")!;
+		expect(
+			[...listbox.querySelectorAll<HTMLElement>("[role='option']")].map(
+				(candidate) => candidate.textContent
+			)
+		).toEqual(["Entire vault", "Courses/Biology", "Courses/Chemistry"]);
+		expect(listbox.children[1]?.getAttribute("role")).toBe("separator");
 		const option = [...tab.containerEl.querySelectorAll<HTMLButtonElement>(
 			"[role='option']"
 		)].find((candidate) => candidate.textContent === "Courses/Biology")!;

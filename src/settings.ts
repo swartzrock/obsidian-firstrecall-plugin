@@ -50,7 +50,11 @@ import {
 	formatAnthropicUnavailableModelMessage,
 	isAnthropicCustomModelSelection,
 } from "./anthropic-model-options";
-import { normalizeModelIds, type ModelOption } from "./byok-model-options";
+import {
+	normalizeModelIds,
+	normalizeStringId,
+	type ModelOption,
+} from "./byok-model-options";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
 import {
 	applyCueCraftListedModels,
@@ -272,7 +276,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderSubpageHeader(
 					containerEl,
 					"Folders & automatic updates",
-					"Choose which notes CueCraft can keep current, scan them without using your AI provider, and explicitly bring study material up to date."
+					"Choose which notes CueCraft should maintain and when automatic updates run."
 				);
 				this.renderStudyAreasSection(containerEl, false);
 				break;
@@ -852,28 +856,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 		containerEl.createEl("p", {
 			cls: "cuecraft-study-area-intro",
-			text: "Scan a folder or your entire vault to see what needs study material. Creating a scope never generates anything, and automatic updates start off.",
+			text: "When you add Entire vault or a folder, CueCraft checks what needs attention without using your AI provider. Nothing is generated until you choose Bring up to date, and automatic updates start off.",
 		});
-		new Setting(containerEl)
-			.setName("Wait after typing")
-			.setDesc(
-				"After you stop typing in an automatically maintained note, wait this long before updating it. Longer waits reduce repeated AI requests."
-			)
-			.addDropdown((dropdown) => {
-				for (const seconds of AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS) {
-					dropdown.addOption(
-						String(seconds),
-						formatAutoGenerationSettleDelayLabel(seconds)
-					);
-				}
-				dropdown
-					.setValue(String(this.plugin.settings.autoGenerationSettleDelaySeconds))
-					.onChange(async (value) => {
-						this.plugin.settings.autoGenerationSettleDelaySeconds =
-							normalizeAutoGenerationSettleDelaySeconds(Number(value));
-						await this.plugin.saveSettings();
-					});
-			});
 		const folderPaths = this.studyAreaFolderPaths();
 		const assignedFolderPaths = new Set(
 			this.plugin.settings.studyAreas.map((area) =>
@@ -890,48 +874,24 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			isEntireVaultStudyArea(area)
 		);
 		const vaultScopeLabel = ENTIRE_VAULT_STUDY_AREA_LABEL;
-		const availableScopes = hasEntireVaultArea
-			? []
-			: [
-					...(!hasStudyAreas ? [vaultScopeLabel] : []),
-					...availableFolderPaths,
-				];
+		const canChooseEntireVault = !hasStudyAreas;
+		const hasAvailableScope =
+			canChooseEntireVault || availableFolderPaths.length > 0;
 
-		if (hasStudyAreas) {
-			new Setting(containerEl).setName("Covered notes").setHeading();
-			const manageEl = containerEl.createDiv({
-				cls: "cuecraft-settings-flow",
-			});
-			for (const area of this.plugin.settings.studyAreas) {
-				this.renderStudyAreaRow(manageEl, area);
-			}
-		}
-		if (this.plugin.settings.disabledStudyAreas.length) {
-			new Setting(containerEl).setName("Scopes needing attention").setHeading();
-			const recoveryEl = containerEl.createDiv({ cls: "cuecraft-settings-flow" });
-			for (const area of this.plugin.settings.disabledStudyAreas) {
-				this.renderDisabledStudyAreaRow(recoveryEl, area);
-			}
-		}
-
-		new Setting(containerEl).setName("Add coverage").setHeading();
-		const createEl = containerEl.createDiv({
-			cls: "cuecraft-settings-flow",
-		});
-		const parentFolderSetting = new Setting(createEl);
+		const parentFolderSetting = new Setting(containerEl);
 		parentFolderSetting.settingEl.addClass("cuecraft-study-area-create-row");
 		parentFolderSetting
 			.setName(
 				hasEntireVaultArea
 					? `${vaultScopeLabel} is already covered`
-					: "Entire vault or folder"
+					: "Add coverage"
 			)
 			.setDesc(
 				hasEntireVaultArea
 					? "Remove Entire vault above before adding a folder instead."
 					: hasStudyAreas
-						? `Type to filter folders. Remove folder scopes above before choosing ${vaultScopeLabel}.`
-						: `Select ${vaultScopeLabel} or a folder. Use exclusions for the only per-note opt-out.`
+						? `Choose another folder. Remove folder coverage before switching to ${vaultScopeLabel}.`
+						: `Choose ${vaultScopeLabel} or a folder. You can exclude individual notes or nested folders afterward.`
 			);
 		if (hasEntireVaultArea) {
 			parentFolderSetting.controlEl.empty();
@@ -939,12 +899,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			renderModelCombobox({
 				containerEl: parentFolderSetting.controlEl,
 				value: "",
-				options: normalizeModelIds(availableScopes),
-				placeholder: availableScopes.length
+				options: normalizeModelIds(availableFolderPaths),
+				placeholder: hasAvailableScope
 					? "Choose Entire vault or a folder..."
 					: "No unassigned folders",
-				emptyMessage: availableScopes.length
-					? `No matching scopes. Choose ${vaultScopeLabel} or an existing vault folder.`
+				emptyMessage: hasAvailableScope
+					? "No matching folders."
 					: "No unassigned folders found.",
 				onCommit: async (value) => {
 					const selectedScope = value.trim();
@@ -980,9 +940,49 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					}
 				},
 				renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
-				pinnedOptionIds: [vaultScopeLabel],
+				leadingOption: canChooseEntireVault
+					? normalizeStringId(vaultScopeLabel)
+					: undefined,
 				suggestionsLabel: "scope suggestions",
 			});
+		}
+
+		new Setting(containerEl)
+			.setName("Wait after typing")
+			.setDesc(
+				"After you stop typing in an automatically maintained note, wait this long before updating it. Longer waits reduce repeated AI requests."
+			)
+			.addDropdown((dropdown) => {
+				for (const seconds of AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS) {
+					dropdown.addOption(
+						String(seconds),
+						formatAutoGenerationSettleDelayLabel(seconds)
+					);
+				}
+				dropdown
+					.setValue(String(this.plugin.settings.autoGenerationSettleDelaySeconds))
+					.onChange(async (value) => {
+						this.plugin.settings.autoGenerationSettleDelaySeconds =
+							normalizeAutoGenerationSettleDelaySeconds(Number(value));
+						await this.plugin.saveSettings();
+					});
+			});
+
+		if (hasStudyAreas) {
+			new Setting(containerEl).setName("Covered notes").setHeading();
+			const manageEl = containerEl.createDiv({
+				cls: "cuecraft-settings-flow",
+			});
+			for (const area of this.plugin.settings.studyAreas) {
+				this.renderStudyAreaRow(manageEl, area);
+			}
+		}
+		if (this.plugin.settings.disabledStudyAreas.length) {
+			new Setting(containerEl).setName("Scopes needing attention").setHeading();
+			const recoveryEl = containerEl.createDiv({ cls: "cuecraft-settings-flow" });
+			for (const area of this.plugin.settings.disabledStudyAreas) {
+				this.renderDisabledStudyAreaRow(recoveryEl, area);
+			}
 		}
 	}
 

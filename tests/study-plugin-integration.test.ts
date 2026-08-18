@@ -671,7 +671,9 @@ describe("Study plugin orchestration", () => {
 		});
 		expect(harness.statusBar.dataset.coverage).toBe("manual");
 		expect(harness.statusBar.dataset.freshness).toBe("outdated");
-		expect(harness.statusBar.textContent).toContain("Manual · outdated");
+		expect(harness.statusBar.textContent).toContain(
+			"Study material needs updating · Auto-updates off"
+		);
 		expect(harness.statusBar.textContent).not.toContain("study");
 		expect(harness.statusBar.getAttribute("role")).toBe("status");
 		expect(harness.statusBar.getAttribute("aria-live")).toBe("polite");
@@ -733,7 +735,9 @@ describe("Study plugin orchestration", () => {
 
 		expect(harness.statusBar.dataset.coverage).toBe("manual");
 		expect(harness.statusBar.dataset.freshness).toBe("outdated");
-		expect(harness.statusBar.textContent).toContain("Manual · outdated");
+		expect(harness.statusBar.textContent).toContain(
+			"Study material needs updating · Auto-updates off"
+		);
 	});
 
 	it("opens a requested Markdown target for fresh review without opening Cornell", async () => {

@@ -51,7 +51,7 @@ export function asUpdatingProjection(
 	return {
 		...projection,
 		freshness: "updating",
-		statusLabel: `${projection.coverage === "automatic" ? "Automatic" : "Manual"} · updating`,
+		statusLabel: projectionLabel(projection.coverage, "updating"),
 		banner: null,
 	};
 }
@@ -66,9 +66,17 @@ function projectionLabel(
 	coverage: StudyCoverage,
 	freshness: StudyFreshness
 ): string {
-	const coverageLabel = coverage === "automatic" ? "Automatic" : "Manual";
+	const coverageLabel = coverage === "automatic"
+		? "Auto-updates on"
+		: "Auto-updates off";
 	if (!freshness) return coverageLabel;
-	return `${coverageLabel} · ${freshness === "failed" ? "update failed" : freshness}`;
+	const freshnessLabel = {
+		current: "Study material up to date",
+		outdated: "Study material needs updating",
+		updating: "Updating study material",
+		failed: "Study material update failed",
+	}[freshness];
+	return `${freshnessLabel} · ${coverageLabel}`;
 }
 
 /**

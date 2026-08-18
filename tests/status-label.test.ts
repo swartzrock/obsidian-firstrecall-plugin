@@ -30,14 +30,14 @@ describe("statusLabel", () => {
 
 describe("projectStudyMaterialStatus", () => {
 	it.each([
-		["automatic", "current", "Automatic · current"],
-		["automatic", "outdated", "Automatic · outdated"],
-		["automatic", "updating", "Automatic · updating"],
-		["automatic", "failed", "Automatic · update failed"],
-		["manual", "current", "Manual · current"],
-		["manual", "outdated", "Manual · outdated"],
-		["manual", "updating", "Manual · updating"],
-		["manual", "failed", "Manual · update failed"],
+		["automatic", "current", "Study material up to date · Auto-updates on"],
+		["automatic", "outdated", "Study material needs updating · Auto-updates on"],
+		["automatic", "updating", "Updating study material · Auto-updates on"],
+		["automatic", "failed", "Study material update failed · Auto-updates on"],
+		["manual", "current", "Study material up to date · Auto-updates off"],
+		["manual", "outdated", "Study material needs updating · Auto-updates off"],
+		["manual", "updating", "Updating study material · Auto-updates off"],
+		["manual", "failed", "Study material update failed · Auto-updates off"],
 	] as const)(
 		"projects %s coverage crossed with %s freshness",
 		(coverage, freshness, label) => {
@@ -66,7 +66,7 @@ describe("projectStudyMaterialStatus", () => {
 		expect(result).toMatchObject({
 			coverage: "manual",
 			freshness: null,
-			statusLabel: "Manual",
+			statusLabel: "Auto-updates off",
 			providerSetupRequired: true,
 			noteBriefOutdated: false,
 			outdatedSectionIds: [],
@@ -113,7 +113,7 @@ describe("projectStudyMaterialStatus", () => {
 		).toMatchObject({
 			coverage: "automatic",
 			freshness: null,
-			statusLabel: "Automatic",
+			statusLabel: "Auto-updates on",
 			banner: null,
 		});
 	});
@@ -152,7 +152,7 @@ describe("projectStudyMaterialStatus", () => {
 		).toMatchObject({
 			coverage: "manual",
 			freshness: "outdated",
-			statusLabel: "Manual · outdated",
+			statusLabel: "Study material needs updating · Auto-updates off",
 			providerSetupRequired: true,
 		});
 	});
