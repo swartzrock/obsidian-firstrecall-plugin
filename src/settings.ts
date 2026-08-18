@@ -1088,9 +1088,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			}
 		});
 		this.plugin.registerDomEvent(removeBtn, "click", () => {
+			const scopeLabel = studyAreaScopeLabel(area.parentPath);
 			new StudyAreaConfirmModal(this.app, {
-				title: "Remove automatic-update scope?",
-				message: `Remove "${area.name}" from automatic updates? Generated section cards stay cached.`,
+				title: area.parentPath
+					? "Remove managed folder?"
+					: "Remove managed vault?",
+				message: `Remove "${scopeLabel}" from Managed folders? Existing study material will remain available.`,
 				confirmText: "Remove",
 				onConfirm: async () => {
 					await this.plugin.removeStudyArea(area.id);

@@ -207,6 +207,25 @@ function createObsidianMock() {
 		}
 	}
 
+	class MockModal {
+		readonly contentEl: HTMLElement;
+
+		constructor(_app: unknown) {
+			this.contentEl = document.createElement("div");
+			this.contentEl.className = "modal-content";
+		}
+
+		open(): void {
+			document.body.appendChild(this.contentEl);
+			(this as MockModal & { onOpen?: () => void }).onOpen?.();
+		}
+
+		close(): void {
+			this.contentEl.remove();
+			(this as MockModal & { onClose?: () => void }).onClose?.();
+		}
+	}
+
 	class MockButton {
 		constructor(private button: HTMLButtonElement) {}
 
@@ -227,7 +246,7 @@ function createObsidianMock() {
 
 	return {
 		App: class {},
-		Modal: class {},
+		Modal: MockModal,
 		Notice: class {},
 		PluginSettingTab: MockPluginSettingTab,
 		Setting: MockSetting,
@@ -1024,6 +1043,29 @@ describe("folders and automatic updates settings", () => {
 		)!;
 		expect(row.textContent?.match(/Claudes/g)).toHaveLength(1);
 		expect(plugin.updateStudyArea).not.toHaveBeenCalled();
+	});
+
+	it("describes removal as leaving Managed folders when automatic updates are off", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.studyAreas = [studyArea({
+			name: "Claudes",
+			parentPath: "Claudes",
+			maintenanceMode: "paused",
+		})];
+		tab.display();
+		openSettingsCard(tab, "Managed folders");
+		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
+
+		tab.containerEl.querySelector<HTMLButtonElement>(
+			'.cuecraft-study-area-remove[aria-label="Remove Claudes"]'
+		)?.click();
+
+		const modal = document.body.querySelector<HTMLElement>(".modal-content")!;
+		expect(modal.querySelector("h2")?.textContent).toBe("Remove managed folder?");
+		expect(modal.querySelector("p")?.textContent).toBe(
+			'Remove "Claudes" from Managed folders? Existing study material will remain available.'
+		);
+		expect(modal.textContent).not.toContain("automatic updates");
 	});
 
 	it("names a legacy conflict and offers direct recovery", async () => {
