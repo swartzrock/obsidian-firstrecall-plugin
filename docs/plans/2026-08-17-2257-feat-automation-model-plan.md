@@ -16,7 +16,7 @@ execution: code
 - **Objective:** Ship one release in which CueCraft uses plain study vocabulary and one understandable system for keeping selected study material current.
 - **Authority:** R1-R25 govern automation and override conflicting automation concepts in `docs/ideation/2026-08-17-cuecraft-vocabulary-review.html`; R26 binds that slideshow as the authority for user-facing vocabulary and Settings structure.
 - **Execution profile:** Deep, cross-cutting implementation across persisted state, scheduling, generation, Editing and Reading surfaces, Settings, commands, exports, documentation, and release metadata.
-- **Stop conditions:** Stop if implementation would modify source Markdown, enable provider work without explicit scope consent, weaken an R1-R25 qualifier, or require a new product decision not represented below.
+- **Stop conditions:** Stop if implementation would modify source Markdown, enable automatic provider work without explicit scope consent, invoke provider work without an enabled scope or an explicit catch-up, update, Retry, or command action, weaken an R1-R25 qualifier, or require a new product decision not represented below.
 - **Tail ownership:** The release includes code, tests, user documentation, metadata, and production-build verification as one coherent vocabulary and behavior change.
 
 ---
@@ -74,10 +74,10 @@ The vocabulary authority makes the same product model legible everywhere a learn
 **Incremental maintenance**
 
 - R8. An enabled entry schedules maintenance after editing has remained quiet for the configured delay, resetting that delay when more edits arrive.
-- R9. A new eligible note receives a Note Brief and one section study card for each eligible headed section.
+- R9. A newly created Markdown note covered by an enabled, unpaused scope and not explicitly excluded receives a Note Brief and one section study card for each eligible headed section.
 - R10. A newly added section receives a section study card and causes the Note Brief to refresh.
 - R11. An edited section causes only its section study card and the Note Brief to refresh.
-- R12. A deleted section removes its obsolete cached card and causes the Note Brief to refresh.
+- R12. A deleted section removes its obsolete cached card and causes the Note Brief to refresh; deleting the final eligible section also removes the obsolete Note Brief and clears component attempt state because no generated material remains.
 - R13. Reordered sections reconcile card order and cause the Note Brief to refresh without changing unaffected card content.
 - R14. Unchanged sections preserve their existing cards, and changing a provider, model, or generation instructions does not by itself make existing material outdated.
 
@@ -101,7 +101,7 @@ flowchart TB
 
 **Freshness and coverage**
 
-- R15. The active-note status indicator reports whether coverage is automatic or manual and whether generated material is current, outdated, updating, or failed.
+- R15. The active-note status indicator reports whether coverage is automatic or manual and, when generated material exists or automatic generation is pending, whether it is current, outdated, updating, or failed. A manual note with no generated material reports manual coverage without a stale-material banner or freshness badge.
 - R16. An outdated note shows a persistent view-wide banner below the note header in Editing and Reading views when automatic maintenance is inactive or an automatic update has failed.
 - R17. The outdated banner offers **Update study material**, while a failed update offers **Retry update**.
 - R18. Each affected section study card shows an **Outdated** badge, and the Note Brief shows the same badge whenever any note-level source change has not been incorporated.
@@ -278,13 +278,13 @@ flowchart TB
 ### Key Technical Decisions
 
 - KTD1. **Retain the existing scope data shape and remove the global authority.** Keep `StudyArea` and `studyAreas` as internal persisted concepts, remove `autoGenerateOnSave` from the active settings schema, and never translate it into Entire vault (session-settled: user-approved — chosen over migrating the legacy global switch into an Entire vault scope: automatic coverage must remain explicit and conservative). Covers R1-R7.
-- KTD2. **Normalize scope invariants without enabling work.** Reuse the existing path and exclusion primitives, add one invariant validator for Entire vault and parent/descendant conflicts, retain valid entries, and normalize ambiguous invalid combinations to paused entries that require user correction. Covers R2-R7, R22.
+- KTD2. **Quarantine invalid legacy scopes without enabling work.** Reuse the existing path and exclusion primitives, add one invariant validator for Entire vault and parent/descendant conflicts, retain valid entries in the active scope list, and persist conflicting legacy paths as disabled recovery records that the coverage resolver ignores until the user corrects them. Covers R2-R7, R22.
 - KTD3. **Treat visibility as presentation state only.** Remove hidden-state inputs from scan, coverage, and scheduling, and do not translate previously hidden notes into exclusions (session-settled: user-approved — chosen over preserving hidden-note opt-outs through migration: visibility must not create an invisible automation rule). Covers R4, R21-R22.
-- KTD4. **Separate last-good content from maintenance attempt state.** Keep successful generated content in the cache and introduce a persisted per-note maintenance-state map for the latest source revision, Note Brief revision, affected components, failures, retry state, and banner-dismissed revision. Failed attempts never replace successful cards. Covers R15-R24.
+- KTD4. **Separate last-good content from attempt state and commit them together.** Keep successful generated content in the cache and introduce a persisted per-note maintenance-state map for the latest source revision, Note Brief revision, affected components, failures, retry state, and banner-dismissed revision. Cache changes and their matching state transition use one serialized plugin-data write, and load-time reconciliation falls back to outdated when revisions disagree. Failed attempts never replace successful cards. Covers R15-R24.
 - KTD5. **Use source-derived revisions for freshness.** Keep section content hashes for card freshness and derive the Note Brief revision from note title plus Markdown content; configuration changes remain outside both revision calculations. Covers R10-R14, R18-R20.
 - KTD6. **Route every maintenance entry point through one planner and runner.** Scope catch-up, automatic maintenance, banner update, Retry, and command actions share readiness classification, component work planning, generation, reconciliation, and outcome projection. The DOM and Settings handlers remain thin adapters. Covers R5-R25.
-- KTD7. **Coalesce edits and reject stale completions.** Use one per-note quiet timer path, re-read source before work begins, compare the completed run's revision with the latest source before marking components current, and retain pending work when another provider run is active. Covers R8-R14, R20, R23-R24.
-- KTD8. **Project coverage and freshness independently.** Derive coverage as automatic or manual from scopes and derive freshness as current, outdated, updating, or failed from cache plus maintenance state; hidden presentation never replaces either dimension. Covers R15-R22.
+- KTD7. **Coordinate one in-flight run per note, bound aggregate provider work, and reject stale completions.** Use one per-note quiet timer and single-flight coordinator across catch-up, automatic maintenance, active-note update, Retry, and commands, then admit provider work through one global capacity-one scheduler so different notes cannot bypass the existing aggregate limit; section concurrency remains bounded inside the admitted run. Coalesce equivalent work for the same revision, queue one follow-up for the latest revision, re-read source before work begins, and never let an older completion mark newer source current. Every run also captures a per-note lifecycle epoch and path; rename, move, or deletion increments the epoch, and completion discards output when the epoch, current path, file existence, or automatic-coverage authorization no longer matches. Covers R8-R14, R20, R23-R24.
+- KTD8. **Project coverage and freshness independently.** Derive coverage as automatic or manual from scopes and derive freshness as current, outdated, updating, or failed from cache plus maintenance state; project missing required material as outdated for automatic coverage, while a manual note with no generated material has no freshness projection. Hidden presentation never replaces either dimension. Covers R15-R22.
 - KTD9. **Apply vocabulary at the user boundary.** Update visible labels, export names, prompt-inspection prose, accessibility text, documentation, and metadata while retaining stable command IDs and internal schema keys unless a behavioral unit requires a change (session-settled: user-approved — chosen over renaming internal identifiers with the visible vocabulary: the release should avoid non-user-facing churn). Covers R26.
 - KTD10. **Defer an integration API but keep action parity.** Settings, banners, commands, Editing, and Reading invoke shared operations and observe the same state transitions; no speculative agent or MCP surface is added. Covers R5-R26.
 
@@ -403,7 +403,7 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 
 ### Risks and Mitigations
 
-- **Ambiguous legacy scopes:** Existing invalid Entire vault/folder or parent/child combinations cannot be represented safely. Normalize conflicting entries to paused and show them for correction rather than choosing precedence.
+- **Ambiguous legacy scopes:** Existing invalid Entire vault/folder or parent/child combinations cannot remain in the active scope list safely. Quarantine conflicting paths as disabled recovery records and show the exact conflict with correction actions rather than choosing precedence.
 - **In-flight source changes:** Provider results may arrive after another edit. Compare source revisions before clearing freshness and reschedule the latest revision.
 - **Partial provider failure:** A failed card or Note Brief can otherwise overwrite useful content or falsely mark a note ready. Merge only successful outputs and record failed components separately.
 - **Large scope scans:** Entire vault scans can be expensive even without provider calls. Reuse current vault enumeration and cached reads, keep scan work cancellable at the UI boundary, and avoid generating during scan.
@@ -423,7 +423,7 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 - **Approach:**
   1. Extend the existing path primitives with a pure scope-invariant validator for Entire vault and parent/descendant conflicts.
   2. Remove the global automatic-generation field from current defaults, parsing, summaries, scheduling, and active settings persistence without translating it into a scope.
-  3. Preserve valid configured scopes, default newly created scopes to paused, and normalize ambiguous stored combinations without enabling work.
+  3. Preserve valid configured scopes, default newly created scopes to paused, and move ambiguous stored combinations into disabled recovery records outside active coverage resolution.
   4. Remove hidden state from scope matching and readiness classification while retaining explicit exclusions as the only nested opt-out.
 - **Execution note:** Start with characterization coverage for current scope loading and matching, then change the schema and eligibility rules.
 - **Patterns to follow:** `normalizeVaultPath`, `isDescendantPath`, `isExcludedPath`, `loadStudyAreas`, and allowlist-based parsing in `parsePersistedCueCraftSettings`.
@@ -434,7 +434,7 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
   4. A note and a nested folder exclusion both resolve to manual coverage inside an enabled scope.
   5. Covers AE8. Hiding generated material does not change scope matching, scan eligibility, or automatic coverage.
   6. Loading a legacy global true value does not create Entire vault or enable provider work.
-  7. Loading invalid overlapping scopes leaves the affected entries paused and preserves their paths for user correction.
+  7. Loading invalid overlapping scopes keeps the active scope list valid, invokes no provider, and preserves each conflicting path in a disabled recovery record.
 - **Verification:** Current persisted settings normalize to one unambiguous scope authority, and no load or scope-creation path invokes a provider.
 
 ### U2. Model component freshness and maintenance attempts
@@ -445,9 +445,11 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 - **Files:** `src/cache.ts`, `src/main.ts`, `src/study-material-state.ts`, `tests/cache.test.ts`, `tests/study-material-state.test.ts`, `tests/plugin-data-loading.test.ts`.
 - **Approach:**
   1. Add a pure source-revision and component-freshness model that combines existing section hashes with a note-level revision.
-  2. Persist maintenance state separately from last-good generated output, including Note Brief revision, failed components, retry state, and dismissed revision.
-  3. Extend readiness planning to distinguish missing Note Briefs, missing cards, outdated components, failures, ready notes, and explicit exclusions.
-  4. Move and remove path-keyed maintenance state on note rename and deletion.
+  2. Persist maintenance state separately from last-good generated output, but write cache changes and their matching state transition in one serialized plugin-data commit.
+  3. Reconcile cache/state revision mismatches conservatively on load; preserve legacy section cards from existing hashes and mark a legacy Note Brief outdated until its first successful refresh records a source revision.
+  4. Extend readiness planning to distinguish missing Note Briefs, missing cards, outdated components, failures, ready notes, and explicit exclusions.
+  5. Move and remove path-keyed maintenance state on note rename and deletion.
+  6. Treat zero eligible sections as a terminal reconciliation: remove obsolete section cards and the Note Brief, clear component failure and dismissal state, and report no generated material rather than outdated.
 - **Execution note:** Implement the state reducer and serialization test-first before wiring provider work into it.
 - **Patterns to follow:** `NoteCache`, `sectionIdsNeedingGeneration`, `reconcileCacheSections`, `CacheStore`, `VisibilityStore`, and serialized writes through `persistPluginData`.
 - **Test scenarios:**
@@ -459,6 +461,9 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
   6. A failed attempt retains the prior card and Note Brief, records affected components, and exposes Retry.
   7. Dismissing the banner stores the current source revision; the next source revision clears the dismissal match.
   8. Plugin restart, note rename, and note deletion preserve or clean maintenance state consistently.
+  9. A legacy cache preserves its generated cards, derives card freshness from existing hashes, and reports its Note Brief outdated until refreshed.
+  10. A simulated cache/state revision mismatch loads as outdated without discarding last-good content.
+  11. Deleting the final eligible section from an automatic or manual note removes generated material and clears attempt and dismissal state without leaving an outdated terminal state.
 - **Verification:** Cache content remains the last successful output while the companion state precisely describes work needed for the latest source.
 
 ### U3. Consolidate scan, catch-up, and automatic maintenance
@@ -466,13 +471,15 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 - **Goal:** Use one revision-safe operation path for explicit catch-up, automatic maintenance, active-note update, Retry, and commands.
 - **Requirements:** R4-R14, R17, R20, R23-R25; F1-F4; AE2-AE6, AE10; KTD6-KTD7, KTD10.
 - **Dependencies:** U1, U2.
-- **Files:** `src/main.ts`, `src/study-area.ts`, `src/study-material-maintenance.ts`, `src/auto-generation-delay.ts`, `tests/study-area.test.ts`, `tests/auto-generation-delay.test.ts`, `tests/study-plugin-integration.test.ts`, `tests/generator.test.ts`.
+- **Files:** `src/main.ts`, `src/generator.ts`, `src/study-area.ts`, `src/study-material-maintenance.ts`, `src/auto-generation-delay.ts`, `tests/study-area.test.ts`, `tests/auto-generation-delay.test.ts`, `tests/study-plugin-integration.test.ts`, `tests/generator.test.ts`.
 - **Approach:**
   1. Extract shared readiness planning and result reconciliation from the current global and Study Area handlers.
-  2. Replace both timer maps with one per-note quiet scheduler that resolves coverage again before running.
+  2. Replace both timer maps with one per-note quiet scheduler and single-flight coordinator that resolves coverage again before running; route admitted work through one global capacity-one provider scheduler, retaining section concurrency only inside that run.
   3. Keep scope scans read-only and create the provider only after an explicit catch-up, update, Retry, or eligible automatic run begins.
-  4. Generate only missing or changed section cards, always refresh the Note Brief for any note-level revision change, and reconcile deletion or order without regenerating unchanged cards.
-  5. Merge successful components, retain prior output for failures, compare completed and latest revisions, and reschedule edits that arrive during another run.
+  4. Generate only missing or changed section cards, always refresh the Note Brief for any note-level revision change, and reconcile deletion or order without regenerating unchanged cards. Make Note Brief generation return a discriminated success, skipped, canceled, or failed outcome, including an error for failures, so the runner can preserve last-good output and persist component-specific Retry state.
+  5. Route Markdown create, rename/move, and deletion events through the shared planner. Every run captures the note lifecycle epoch and path; rename or move increments the epoch, transfers path-keyed records, and replans against destination coverage, while deletion increments the epoch and removes queued work and persisted state.
+  6. Merge successful components, retain prior output for failures, compare completed and latest revisions, and reschedule edits that arrive during another run.
+  7. Preserve the note's existing generated-material visibility after catch-up, maintenance, update, Retry, and command operations.
 - **Execution note:** Drive the refactor from integration tests that assert provider-call counts and source revisions, not private method structure.
 - **Patterns to follow:** `planStudyAreaGeneration`, `scheduleAutoGenerationTimer`, `generateSectionCueBatch`, `generateNoteBriefForSections`, and `reconcileCacheSections`.
 - **Test scenarios:**
@@ -481,11 +488,17 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
   3. Covers AE4. Editing one section produces one section-card provider call plus a Note Brief refresh.
   4. Covers AE5. Deleting or reordering sections makes no unaffected section-card provider calls but refreshes the Note Brief.
   5. Additional edits reset the quiet timer and produce one run against the latest revision.
-  6. Outside, paused, and excluded notes invoke no provider; a hidden eligible note still does.
+  6. Outside, paused, and excluded notes invoke no automatic provider work; an explicit manual update can invoke the provider, and a hidden automatically covered note still does.
   7. Enabling automatic updates does not launch catch-up for already missing or outdated material.
   8. An edit during a provider run cannot let the older completion mark the newer source current; the latest revision remains pending and is retried.
   9. A partial failure preserves old material, marks only affected components failed or outdated, and leaves the Note Brief outdated until it succeeds.
   10. Every operation reads source Markdown and leaves the vault file content unchanged.
+  11. Concurrent actions for one source revision share one in-flight run; a newer revision queues exactly one follow-up run.
+  12. Creating a Markdown note covered by an enabled, unpaused scope and not explicitly excluded schedules its initial material, while renaming or moving a note transfers state and applies destination coverage.
+  13. A hidden eligible note remains hidden after catch-up, automatic maintenance, active-note update, Retry, and command generation.
+  14. Renaming, moving, or deleting a note during an in-flight run prevents the old completion from writing old-path state, recreating deleted state, or marking a now-excluded or manual destination current.
+  15. Automatic work for two different notes never exceeds the global provider scheduler's capacity, while section concurrency remains bounded inside the active run.
+  16. Note Brief success, skipped, canceled, and failed outcomes reconcile distinctly; only failure records an error and Retry state, and none overwrites last-good content incorrectly.
 - **Verification:** All provider-incurring entry points share one work plan and lifecycle, with no duplicate scheduling and no stale completion clearing newer work.
 
 ### U4. Rebuild Settings around generation, scope, and visibility
@@ -497,8 +510,12 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 - **Approach:**
   1. Use the approved introduction and Settings order: AI model, Generation, Folders & automatic updates, Content shown in notes, Appearance, and Study Mode.
   2. Keep Recall question style and visible instruction templates under Generation; move the quiet-delay control into Folders & automatic updates with the automation controls.
-  3. Present mutually exclusive Entire vault or folder entries, exclusions, readiness counts, **Bring study material up to date**, and per-entry **Update automatically**.
-  4. Make scope creation scan-only, automatic updates off by default, and hidden-material descriptions presentation-only.
+  3. Present mutually exclusive Entire vault or folder entries, readiness counts, **Bring study material up to date**, and per-entry **Update automatically**.
+  4. Give each configured scope an Exclusions block with a searchable note-or-folder picker, inherited-coverage explanation, duplicate prevention, and removable excluded-path rows.
+  5. Show invalid legacy paths as recovery-only rows that name the Entire vault, parent, or descendant conflict and offer a direct remove-conflicting-entry action; keep each recovery row disabled and excluded from coverage until its named conflicting path is removed.
+  6. Define initial, scanning, running, success, partial-failure, and failure states for scan, catch-up, update, and Retry controls; disable duplicate activation, announce state changes, and refresh counts and note surfaces from the shared outcome. During scanning, replace the scan action with a named **Cancel scan** control; cancellation discards partial counts, leaves the scope paused, and returns the row to **Scan again**.
+  7. Keep scanning available before provider setup. When no provider and model are ready, disable **Bring study material up to date**, **Update study material**, and **Retry update**, and show an inline **Configure AI model** action that opens AI model settings; restore generation actions when setup becomes ready.
+  8. Make scope creation scan-only, automatic updates off by default, and hidden-material descriptions presentation-only.
 - **Patterns to follow:** Existing subpage navigation cards, `renderStudyAreaRow`, `previewStudyArea`, and thumbnail-backed appearance controls.
 - **Test scenarios:**
   1. The home page renders the approved introduction without provider brand enumeration.
@@ -508,6 +525,11 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
   5. Toggling **Update automatically** affects future edits only.
   6. Entire vault, folder overlap, exclusions, removal, and paused states remain legible and keyboard accessible.
   7. Visibility controls use Note Brief, Section card, summary, recall question, and key terms language and do not imply generation eligibility.
+  8. Users can add and remove note and nested-folder exclusions, while duplicates and paths outside the configured scope are rejected without changing coverage.
+  9. Invalid legacy scope rows identify the conflicting entry and remain disabled until the user removes a conflicting path.
+  10. Repeated activation while a scan, catch-up, update, or Retry is running does not start duplicate work; completion and partial failure refresh counts and actions.
+  11. Cancelling a scan discards partial counts, keeps the scope paused, and exposes **Scan again** without invoking a provider.
+  12. Before provider setup, scans remain available while generation actions are disabled and **Configure AI model** opens the setup surface; actions restore when setup becomes ready.
 - **Verification:** A user can determine setup, generation style, coverage, visibility, appearance, and Study Mode from the Settings map without encountering the superseded product model.
 
 ### U5. Add persistent coverage and freshness surfaces
@@ -517,10 +539,11 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 - **Dependencies:** U2, U3.
 - **Files:** `src/status.ts`, `src/main.ts`, `src/study-material-banner.ts`, `src/cue-extension.ts`, `src/reading-cues.ts`, `src/visibility.ts`, `styles.css`, `tests/status-label.test.ts`, `tests/visibility.test.ts`, `tests/editor-cue-refresh.test.ts`, `tests/cue-extension.test.ts`, `tests/reading-cues.test.ts`, `tests/study-plugin-integration.test.ts`.
 - **Approach:**
-  1. Replace freshness-only status with an independent coverage and freshness projection while preserving setup, generation-progress, Study Mode, and visibility actions.
+  1. Replace freshness-only status with a persistent, primary coverage and freshness projection. Provider setup appears when generation is unavailable, generation progress maps to updating, and Study Mode and visibility remain adjacent independent actions; none replaces the coverage/freshness result.
   2. Add one view-wide banner host below the note header in Editing and Reading with update, Retry, dismiss, and cleanup behavior driven by shared state.
   3. Pass component freshness into both rendering paths and add **Outdated** badges to affected cards and the Note Brief.
   4. Keep maintenance status visible even when generated content or individual components are hidden.
+  5. Use semantic status or alert roles and live announcements for outdated, updating, current, and failed transitions; keep focus stable after update, Retry, and dismiss actions in both views.
 - **Execution note:** Build the projection and DOM renderers from pure state tests, then add Editing/Reading integration coverage.
 - **Patterns to follow:** `updateStatusForFile`, `renderCuesInView`, `renderReadingCues`, `renderNoteBriefElement`, `buildCueLineData`, and existing Study control host cleanup.
 - **Test scenarios:**
@@ -533,6 +556,9 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
   7. A pre-existing stale note in an enabled scope shows status and badges without launching catch-up merely because automation was enabled.
   8. Banner and badges clear only when the latest Note Brief and all affected cards are current.
   9. Switching files, modes, or closing a view removes duplicate or orphaned banner hosts and listeners.
+  10. Keyboard and screen-reader interaction announces update progress and failure, exposes named update, Retry, and dismiss controls, and preserves focus after each action.
+  11. An automatically covered note with missing required material projects as outdated until generation starts, while a manual note with no generated material shows manual coverage without freshness, a stale banner, or badges.
+  12. Provider setup, Study Mode, and visibility actions remain available without replacing the primary coverage/freshness projection; active generation uses the updating state.
 - **Verification:** Editing and Reading expose the same coverage, freshness, dismissal, and recovery outcomes for the same note state.
 
 ### U6. Apply the approved vocabulary across product surfaces
@@ -580,7 +606,7 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 |---|---|---|
 | Focused Vitest suites | U1-U6 | Each unit's named test files pass with the new behavior and vocabulary assertions. |
 | Full repository check with `bun run check` | U1-U7 | Lint, TypeScript compilation, production build, typecheck, and the full Vitest suite pass together. |
-| Scope and provider-call audit | U1, U3, U4 | Tests prove scan-only creation, automatic-update defaults, exclusions, quiet-delay coalescing, and no provider calls outside enabled scopes. |
+| Scope and provider-call audit | U1, U3, U4 | Tests prove scan-only creation, automatic-update defaults, exclusions, quiet-delay coalescing, no automatic provider calls outside enabled scopes, and provider calls outside those scopes only after an explicit update, Retry, or command action. |
 | Revision and failure audit | U2, U3, U5 | Tests prove stale completions cannot clear newer work and failed attempts preserve last-good material with Retry. |
 | Editing and Reading parity | U5 | The same note state produces equivalent banner, badge, dismissal, update, and retry outcomes in both views. |
 | Source-safety audit | U3, U6, U7 | Integration and export tests compare source Markdown before and after every provider-incurring action. |
