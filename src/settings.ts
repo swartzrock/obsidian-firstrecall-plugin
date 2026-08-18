@@ -257,7 +257,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					"AI model",
 					cueCraftSelectedProvider(this.plugin.settings)
 						? "Provider setup, connection checks, model selection, and speed tuning."
-						: "Select an AI provider to generate cues"
+						: "Select an AI provider to generate study material"
 				);
 				this.renderAiModelSection(containerEl, false);
 				break;
@@ -408,7 +408,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private aiModelSummary(): string {
 		const provider = cueCraftSelectedProvider(this.plugin.settings);
-		if (!provider) return "Select an AI provider to generate cues";
+		if (!provider) return "Select an AI provider to generate study material";
 		const setup = deriveCueCraftProviderSetupStatus(this.plugin.settings);
 		const providerLabel = this.providerDisplayName(provider);
 		const modelLabel = this.selectedModelLabel() || "No model selected";
@@ -416,7 +416,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			setup.connection === "verified"
 				? "Connection verified"
 				: setup.connection === "stale"
-					? "Connection stale"
+					? "Connection check outdated"
 					: "Connection untested";
 		return `${providerLabel} · ${modelLabel} · ${connectionLabel}`;
 	}
@@ -487,7 +487,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			providerFlowEl,
 			"Provider",
-			"Pick where CueCraft should generate Section cues and Note Briefs."
+			"Pick where CueCraft should generate section study cards and Note Briefs."
 		);
 
 		this.renderProviderPicker(providerFlowEl);
@@ -505,7 +505,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			performanceFlowEl,
 			"Performance",
-			"Tune how quickly CueCraft generates Section cues."
+			"Tune how quickly CueCraft generates section cards."
 		);
 		this.renderParallelRequestsSetting(performanceFlowEl);
 	}
@@ -634,7 +634,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				? `Last checked ${new Date(status.testedAt).toLocaleString()}.`
 				: status.connection === "stale"
 					? "Saved check no longer matches these settings."
-					: "Run a quick provider check before generating Section cues.";
+					: "Run a quick provider check before generating section cards.";
 		const statusSetting = new Setting(containerEl)
 			.setName("Connection")
 			.setDesc(description);
@@ -667,7 +667,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			status.connection === "verified"
 				? "Connection verified"
 				: status.connection === "stale"
-					? "Connection stale"
+					? "Connection check outdated"
 					: "Connection untested",
 			status.connection === "verified"
 				? "is-positive"
@@ -726,7 +726,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		const questionTypeDescription = (): string => {
 			const selected = questionTypeInfo(this.plugin.settings.questionType);
-			return `${selected.description} Questions will change after regeneration.`;
+			return `${selected.description} Recall questions will change after regeneration.`;
 		};
 		const questionTypeSetting = new Setting(containerEl)
 			.setName("Recall question style")
@@ -765,7 +765,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		sectionInstructions = this.renderInstructionTemplate(
 			content,
-			"Section cue instructions",
+			"Section study card instructions",
 			this.sectionCueInstructionsTemplate()
 		);
 		this.renderInstructionTemplate(
@@ -968,13 +968,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					if (!normalized && !isEntireVaultSelection) return;
 					if (isEntireVaultSelection && hasStudyAreas) {
 						new Notice(
-							`CueCraft: remove folder study areas before using ${vaultScopeLabel}.`
+							`CueCraft: remove folder scopes before using ${vaultScopeLabel}.`
 						);
 						this.display();
 						return;
 					}
 					if (assignedFolderPaths.has(normalized)) {
-						new Notice("CueCraft: that study area already exists.");
+						new Notice("CueCraft: that scope already exists.");
 						this.display();
 						return;
 					}
@@ -1099,8 +1099,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		this.plugin.registerDomEvent(removeBtn, "click", () => {
 			new StudyAreaConfirmModal(this.app, {
-				title: "Remove study area?",
-				message: `Remove study area "${area.name}"? Generated Section cues stay cached.`,
+				title: "Remove automatic-update scope?",
+				message: `Remove "${area.name}" from automatic updates? Generated section cards stay cached.`,
 				confirmText: "Remove",
 				onConfirm: async () => {
 					await this.plugin.removeStudyArea(area.id);
@@ -1121,14 +1121,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (state.phase === "running") return "Updating study material...";
 		const plan = state.plan;
 		if (!plan) return state.hasScanned ? "No scan results" : "Not scanned yet";
-		const cueSectionCount = plan.items
-			.filter((item) => item.readiness === "uncued" || item.readiness === "stale")
-			.reduce((total, item) => total + item.sectionCount, 0);
 		const excludedCount = plan.readiness.filter(
 			(item) => item.reason === "excluded"
 		).length;
 		return formatStudyAreaReadinessCounts(plan.counts, {
-			cueSectionCount,
 			excludedCount,
 		});
 	}
@@ -1361,8 +1357,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			});
 		const cueCard = this.createArtifactCard(
 			containerEl,
-			"Section card",
-			"Choose which parts of each section study card appear in Editing and Reading."
+			"Section study card",
+			"Choose which parts of each section card appear in Editing and Reading."
 		);
 
 		new Setting(cueCard)
@@ -1430,8 +1426,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const editorDisplayDesc = (): string =>
 			editorCueDisplayOption(this.plugin.settings.editorCueDisplay).description;
 		this.renderAppearanceThumbnailSetting<EditorCueDisplay>(containerEl, {
-			name: "Cue display",
-			description: () => `${editorDisplayDesc()} Changes Section cue layout in Editing only; Reading remains inline.`,
+			name: "Section card layout",
+			description: () => `${editorDisplayDesc()} Changes section card layout in Editing only; Reading remains inline.`,
 			options: editorCueDisplayThumbnailOptions(),
 			value: () => this.plugin.settings.editorCueDisplay,
 			setValue: (value) => {
@@ -1444,9 +1440,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		const editorFontDesc = (): string =>
 			CUE_FONT_SIZES.find((f) => f.id === this.plugin.settings.cueFontSize)
-				?.description ?? "Font size of Section cue text.";
+				?.description ?? "Font size of study text.";
 		this.renderAppearanceThumbnailSetting<CueFontSize>(containerEl, {
-			name: "Cue font size",
+			name: "Study text size",
 			description: () => `${editorFontDesc()} Applies in Editing and Reading.`,
 			options: cueFontSizeThumbnailOptions(),
 			value: () => this.plugin.settings.cueFontSize,

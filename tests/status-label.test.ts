@@ -23,7 +23,7 @@ function classification(
 describe("statusLabel", () => {
 	it("uses user-facing status-bar copy", () => {
 		expect(statusLabel("ready")).toBe("up to date");
-		expect(statusLabel("stale")).toBe("Section cues need updating");
+		expect(statusLabel("stale")).toBe("study material is outdated");
 		expect(statusLabel("setup")).toBe("setup needed");
 	});
 });

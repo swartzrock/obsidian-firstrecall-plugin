@@ -531,7 +531,7 @@ describe("settings defaults", () => {
 		});
 	});
 
-	it("uses one Question type and canonical artifact visibility defaults", async () => {
+	it("uses one recall-question style and canonical content visibility defaults", async () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
 		expect(DEFAULT_SETTINGS).toMatchObject({
@@ -549,12 +549,12 @@ describe("settings defaults", () => {
 		tab.display();
 
 		expect(settingText(tab.containerEl)).toContain(
-			"Select an AI provider to generate cues"
+			"Select an AI provider to generate study material"
 		);
 		openSettingsCard(tab, "AI model");
 
 		expect(settingText(tab.containerEl)).toContain(
-			"Select an AI provider to generate cues"
+			"Select an AI provider to generate study material"
 		);
 		const providerOptions = [
 			...tab.containerEl.querySelectorAll('[role="radio"]'),
@@ -606,7 +606,7 @@ describe("settings defaults", () => {
 		]);
 	});
 
-	it("defaults editor Cue display to Cornell", () => {
+	it("defaults the editor section card layout to Cornell", () => {
 		expect(DEFAULT_EDITOR_CUE_DISPLAY).toBe("cornell");
 		expect(editorCueDisplayOption(DEFAULT_EDITOR_CUE_DISPLAY).label).toBe(
 			"Cornell"
@@ -643,7 +643,7 @@ describe("settings defaults", () => {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}
 	});
-	it("maps main-page controls to visible Note Brief and Section cue components", async () => {
+	it("maps main-page controls to visible Note Brief and section card components", async () => {
 		const { tab } = await setupSettingsTab();
 		tab.display();
 
@@ -653,7 +653,7 @@ describe("settings defaults", () => {
 		expect(text).toContain("Appearance");
 		expect(text).not.toContain("Editing View");
 		expect(text).not.toContain("Note format");
-		for (const groupName of ["Note Brief", "Section card"]) {
+		for (const groupName of ["Note Brief", "Section study card"]) {
 			expect(
 				tab.containerEl.querySelector(`[role="group"][aria-label="${groupName}"]`)
 			).not.toBeNull();
@@ -702,26 +702,26 @@ describe("settings defaults", () => {
 		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
 	});
 
-	it("keeps Cue display Editing-only and cue font size shared", async () => {
+	it("keeps section card layout Editing-only and study text size shared", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 
-		expect(settingText(tab.containerEl)).toContain("Changes Section cue layout in Editing only; Reading remains inline.");
+		expect(settingText(tab.containerEl)).toContain("Changes section card layout in Editing only; Reading remains inline.");
 		expect(settingText(tab.containerEl)).toContain("Applies in Editing and Reading.");
-		await clickThumbnail(tab.containerEl, "Cue display", "inline-cues");
+		await clickThumbnail(tab.containerEl, "Section card layout", "inline-cues");
 		expect(plugin.saveSettings).toHaveBeenLastCalledWith({
 			refreshReviewSurfaces: false,
 		});
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshReadingModeSurface).not.toHaveBeenCalled();
 
-		await clickThumbnail(tab.containerEl, "Cue font size", "large");
+		await clickThumbnail(tab.containerEl, "Study text size", "large");
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledTimes(1);
 		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
 	});
 
-	it("shows one Question type control and exact read-only Advanced templates", async () => {
+	it("shows one recall-question style control and exact read-only Advanced templates", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "Generation");
@@ -746,7 +746,7 @@ describe("settings defaults", () => {
 			"cuecraft-generation-instructions"
 		);
 		const section = advanced.querySelector<HTMLTextAreaElement>(
-			'textarea[aria-label="Section cue instructions"]'
+			'textarea[aria-label="Section study card instructions"]'
 		)!;
 		const brief = advanced.querySelector<HTMLTextAreaElement>(
 			'textarea[aria-label="Note Brief instructions"]'
@@ -766,14 +766,14 @@ describe("settings defaults", () => {
 		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
 	});
 
-	it("uses the selected provider route in Section cue instructions", async () => {
+	it("uses the selected provider route in section study card instructions", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.byok.selectedProvider = "codex-cli";
 		tab.display();
 		openSettingsCard(tab, "Generation");
 
 		const section = tab.containerEl.querySelector<HTMLTextAreaElement>(
-			'textarea[aria-label="Section cue instructions"]'
+			'textarea[aria-label="Section study card instructions"]'
 		)!;
 		expect(section.value).toBe(
 			buildSectionCueInstructionsTemplate(plugin.settings.questionType, "batch")
@@ -781,7 +781,7 @@ describe("settings defaults", () => {
 		expect(section.value).toContain("{{section_list}}");
 	});
 
-	it("updates Question type explanation and template before save completes", async () => {
+	it("updates recall-question explanation and template before save completes", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		let finishSave: (() => void) | undefined;
 		plugin.saveSettings.mockImplementationOnce(
@@ -795,14 +795,14 @@ describe("settings defaults", () => {
 		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
 		expect(settingText(tab.containerEl)).toContain("Uses precise wording similar to an exam prompt.");
 		expect(settingText(tab.containerEl)).not.toContain(
-			"newly generated or regenerated Questions only"
+			"newly generated or regenerated recall questions only"
 		);
 		expect(settingText(tab.containerEl)).toContain(
-			"Questions will change after regeneration."
+			"Recall questions will change after regeneration."
 		);
 		expect(
 			tab.containerEl.querySelector<HTMLTextAreaElement>(
-				'textarea[aria-label="Section cue instructions"]'
+				'textarea[aria-label="Section study card instructions"]'
 			)?.value
 		).toBe(buildSectionCueInstructionsTemplate("exam-practice", "single"));
 

@@ -18,7 +18,7 @@ export function statusLabel(status: CueStatus): string {
 		case "ready":
 			return "up to date";
 		case "stale":
-			return "Section cues need updating";
+			return "study material is outdated";
 		case "setup":
 			return "setup needed";
 		default:

@@ -383,7 +383,7 @@ function applyEditorStudyCueInteraction(
 	toggle.type = "button";
 	toggle.className = "cuecraft-study-section-toggle";
 	toggle.dataset.revealed = String(study.revealed);
-	const label = study.revealed ? "Hide section" : "Show section";
+	const label = study.revealed ? "Hide answer" : "Show answer";
 	toggle.setAttribute("aria-label", label);
 	toggle.setAttribute("aria-pressed", String(study.revealed));
 	setIcon(toggle, study.revealed ? "eye-off" : "eye");
@@ -642,7 +642,7 @@ function finalizeRailCard(
 	const gripLabel = root.ownerDocument.createElement("span");
 	gripLabel.id = `${root.id}-width-grip-label`;
 	gripLabel.className = "cuecraft-editor-cue-width-grip-label";
-	gripLabel.textContent = "Cornell Section cue rail width";
+	gripLabel.textContent = "Cornell section card rail width";
 	grip.appendChild(gripLabel);
 	grip.setAttribute("aria-labelledby", gripLabel.id);
 	grip.setAttribute("aria-valuemin", String(EDITOR_CUE_WIDTH_MIN_PX));
@@ -1129,7 +1129,14 @@ function appendEditorHookDisclosure(
 	sectionLabel.className = "cuecraft-editor-hook-section-label";
 	sectionLabel.dataset.section = kind;
 	appendLabelIcon(sectionLabel, CUE_SECTION_ICON_CANDIDATES[kind]);
-	appendLabelText(sectionLabel, kind.toUpperCase());
+	appendLabelText(
+		sectionLabel,
+		kind === "question"
+			? "RECALL QUESTION"
+			: kind === "terms"
+				? "KEY TERMS"
+				: "SUMMARY"
+	);
 
 	const chevron = doc.createElement("span");
 	chevron.className = "cuecraft-editor-hook-section-chevron";
@@ -1187,7 +1194,7 @@ function appendEditorHookDisclosure(
 				)
 				.catch((error: unknown) => {
 					console.error(
-						"CueCraft Section cue collapse persistence failed",
+						"CueCraft section card collapse persistence failed",
 						error
 					);
 				});
@@ -1958,17 +1965,17 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			helpCopy.className = "cuecraft-study-help-copy";
 			const helpTitle = doc.createElement("span");
 			helpTitle.className = "cuecraft-study-help-title";
-			helpTitle.textContent = "Show or hide sections";
+			helpTitle.textContent = "Show or hide answers";
 			const helpDetail = doc.createElement("span");
 			helpDetail.className = "cuecraft-study-help-detail";
-			helpDetail.textContent = "Click the eye icon on any Section cue card.";
+			helpDetail.textContent = "Click the eye icon on any section card.";
 			helpCopy.append(helpTitle, helpDetail);
 			help.append(helpCopy);
 
 			const progress = doc.createElement("span");
 			progress.className = "cuecraft-editor-study-progress";
 			progress.setAttribute("aria-live", "polite");
-			progress.textContent = `${snapshot.revealedCount} / ${snapshot.total} revealed`;
+			progress.textContent = `${snapshot.revealedCount} / ${snapshot.total} answers revealed`;
 
 			const progressTrack = doc.createElement("div");
 			progressTrack.className = "cuecraft-study-progress-track";
@@ -1979,7 +1986,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 				"aria-valuenow",
 				String(snapshot.revealedCount)
 			);
-			progressTrack.setAttribute("aria-label", "Sections revealed");
+			progressTrack.setAttribute("aria-label", "Answers revealed");
 			const progressFill = doc.createElement("div");
 			progressFill.className = "cuecraft-study-progress-fill";
 			progressFill.style.width = `${
@@ -1994,7 +2001,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			showAll.className =
 				"cuecraft-study-action cuecraft-editor-study-show-all";
 			setIcon(showAll, "eye");
-			showAll.append("Show All Sections");
+			showAll.append("Show All Answers");
 			showAll.disabled = snapshot.revealedCount === snapshot.total;
 
 			const hideAll = doc.createElement("button");
@@ -2002,7 +2009,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			hideAll.className =
 				"cuecraft-study-action cuecraft-editor-study-hide-all";
 			setIcon(hideAll, "eye-off");
-			hideAll.append("Hide All Sections");
+			hideAll.append("Hide All Answers");
 			hideAll.disabled = snapshot.revealedCount === 0;
 
 			const exit = doc.createElement("button");

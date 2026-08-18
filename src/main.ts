@@ -184,7 +184,7 @@ const RIBBON_ICON = "graduation-cap";
 const STUDY_RIBBON_ICON = "book-open-check";
 const STUDY_READY_LABEL = "CueCraft: Study this note";
 const STUDY_ACTIVE_LABEL = "CueCraft: Exit Study";
-const STUDY_GENERATE_FIRST = "CueCraft: generate Section cues for this note first.";
+const STUDY_GENERATE_FIRST = "CueCraft: generate study material for this note first.";
 type StudyProjectionMode = "source" | "preview";
 
 export default class CueCraftPlugin extends Plugin {
@@ -1273,11 +1273,11 @@ export default class CueCraftPlugin extends Plugin {
 				.setIcon(RIBBON_ICON)
 				.onClick(() => void this.setNoteVisibility(hidden, file))
 		);
-		// "Review" is only meaningful once a note has usable Section cues to study.
+		// "Review" is only meaningful once a note has usable section cards to study.
 		if (this.hasUsableCueCache(file.path)) {
 			menu.addItem((item) =>
 				item
-					.setTitle("CueCraft: Review (Study Mode)")
+					.setTitle("CueCraft: Start Study Mode for this note")
 					.setIcon(STUDY_RIBBON_ICON)
 					.onClick(() => void this.reviewThisNote(file))
 			);
@@ -1287,32 +1287,32 @@ export default class CueCraftPlugin extends Plugin {
 	private registerCommands(): void {
 		this.addCommand({
 			id: "generate-cues",
-			name: "Generate Study Material for This Note",
+			name: "Generate study material for this note",
 			callback: () => this.generateCues(),
 		});
 		this.addCommand({
 			id: "regenerate-section",
-			name: "Regenerate Section cue and Note Brief\u2026",
+			name: "Update a section card and Note Brief\u2026",
 			callback: () => this.pickAndRegenerateSection(),
 		});
 		this.addCommand({
 			id: "regenerate-stale-sections",
-			name: "Regenerate Stale Study Material",
+			name: "Update outdated study material",
 			callback: () => void this.regenerateStaleSections(),
 		});
 		this.addCommand({
 			id: "run-study-area-backfill",
-			name: "Generate Study Material for Study Area...",
+			name: "Bring folder or vault study material up to date\u2026",
 			callback: () => this.pickStudyAreaAndRun("backfill"),
 		});
 		this.addCommand({
 			id: "retry-study-area-failures",
-			name: "Retry Study Area Failures...",
+			name: "Retry folder or vault update\u2026",
 			callback: () => this.pickStudyAreaAndRun("retry-failed"),
 		});
 		this.addCommand({
 			id: "manage-study-areas",
-			name: "Manage Study Areas",
+			name: "Manage folders & automatic updates",
 			callback: () => this.openStudyAreaManager(),
 		});
 		this.addCommand({
@@ -1337,35 +1337,35 @@ export default class CueCraftPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "review-this-note",
-			name: "Review This Note (Study Mode)",
+			name: "Start Study Mode for this note",
 			callback: () => void this.reviewThisNote(),
 		});
 		this.addCommand({
 			id: "export-cues-markdown",
-			name: "Export Questions and Terms to Markdown",
+			name: "Export Recall Questions and Key Terms to Markdown",
 			callback: () => void this.exportCues("markdown"),
 		});
 		this.addCommand({
 			id: "export-cues-anki",
-			name: "Export Questions and Terms to Anki (TSV)",
+			name: "Export Recall Questions and Key Terms to Anki (TSV)",
 			callback: () => void this.exportCues("anki"),
 		});
 	}
 
 	/**
-	 * Export the active note's usable Questions and Terms to a sibling file: a Markdown study
+	 * Export the active note's usable recall questions and key terms to a sibling file: a Markdown study
 	 * sheet or Anki-importable TSV. Never touches the source note.
 	 */
 	private async exportCues(format: "markdown" | "anki"): Promise<void> {
 		const file = this.app.workspace.getActiveFile();
 		if (!file) {
-			new Notice("CueCraft: open a note to export its Questions and Terms.");
+			new Notice("CueCraft: open a note to export its recall questions and key terms.");
 			return;
 		}
 		const cache = this.cacheStore.get(file.path);
 		const questions = cache ? selectExportableQuestions(cache) : [];
 		if (questions.length === 0) {
-			new Notice("CueCraft: no usable Questions and Terms to export \u2014 generate first.");
+			new Notice("CueCraft: no usable recall questions and key terms to export \u2014 generate first.");
 			return;
 		}
 		const dir =
@@ -1387,10 +1387,10 @@ export default class CueCraftPlugin extends Plugin {
 		} else {
 			out = await this.app.vault.create(outPath, content);
 		}
-		const questionCount = `${questions.length} ${
-			questions.length === 1 ? "Question" : "Questions"
+		const questionCount = `${questions.length} recall ${
+			questions.length === 1 ? "question" : "questions"
 		}`;
-		new Notice(`CueCraft: exported ${questionCount} and Terms to ${outPath}`);
+		new Notice(`CueCraft: exported ${questionCount} and key terms to ${outPath}`);
 		if (format === "markdown") {
 			await this.app.workspace.getLeaf(true).openFile(out);
 		}
@@ -1889,7 +1889,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		if (!this.cacheStore.has(file.path)) {
-			new Notice("CueCraft: generate Section cues for this note first.");
+			new Notice("CueCraft: generate study material for this note first.");
 			return;
 		}
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -1935,7 +1935,7 @@ export default class CueCraftPlugin extends Plugin {
 		if (outcome.status === "failed") {
 			new Notice(`CueCraft: regeneration failed \u2014 ${outcome.errors.join("; ")}`);
 		} else if (outcome.status === "completed") {
-			new Notice(`CueCraft: regenerated Section cue for "${section.heading}".`);
+			new Notice(`CueCraft: updated the section card for "${section.heading}".`);
 		}
 		await this.updateStatusForFile(this.app.workspace.getActiveFile());
 	}
@@ -1985,7 +1985,7 @@ export default class CueCraftPlugin extends Plugin {
 	private pickStudyAreaAndRun(mode: StudyAreaPlanMode): void {
 		const areas = this.settings.studyAreas;
 		if (!areas.length) {
-			new Notice("CueCraft: create a study area in Settings first.");
+			new Notice("CueCraft: add a folder or Entire vault in Settings first.");
 			this.openSettings();
 			return;
 		}
@@ -2054,12 +2054,12 @@ export default class CueCraftPlugin extends Plugin {
 		reason: ReturnType<typeof validateStudyAreaScope>["reason"]
 	): string {
 		if (reason === "duplicate-path") {
-			return "CueCraft: that study area already exists.";
+			return "CueCraft: that automatic-update scope already exists.";
 		}
 		if (reason === "entire-vault-conflict") {
-			return "CueCraft: remove the conflicting Entire vault or folder study area first.";
+			return "CueCraft: remove the conflicting Entire vault or folder scope first.";
 		}
-		return "CueCraft: parent and descendant study areas cannot overlap.";
+		return "CueCraft: parent and descendant folder scopes cannot overlap.";
 	}
 
 	async removeStudyArea(areaId: string): Promise<void> {
@@ -2124,7 +2124,7 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const area = this.findStudyArea(areaId);
 		if (!area) {
-			new Notice("CueCraft: study area no longer exists.");
+			new Notice("CueCraft: automatic-update scope no longer exists.");
 			return null;
 		}
 		const plan = await this.buildStudyAreaPlan(
@@ -2136,8 +2136,8 @@ export default class CueCraftPlugin extends Plugin {
 			if (!opts.automatic) {
 				new Notice(
 					mode === "retry-failed"
-						? "CueCraft: no failed study-area work to retry."
-						: "CueCraft: this study area is already ready."
+						? "CueCraft: no failed updates to retry in this scope."
+						: "CueCraft: study material in this scope is already up to date."
 				);
 			}
 			return summarizeStudyAreaRun(plan, {});
@@ -2321,9 +2321,9 @@ class RegenerateSettingsModal extends Modal {
 	override onOpen(): void {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.createEl("h2", { text: "Regenerate Section cues with new settings?" });
+		contentEl.createEl("h2", { text: "Regenerate section cards with new settings?" });
 		contentEl.createEl("p", {
-			text: `CueCraft settings that affect generated Questions changed. Regenerate cached Section cues for "${this.noteName}" now?`,
+			text: `CueCraft settings that affect recall questions changed. Regenerate cached section cards for "${this.noteName}" now?`,
 		});
 		const actions = contentEl.createEl("div", {
 			cls: "cuecraft-modal-actions",
@@ -2382,7 +2382,7 @@ class StudyAreaSuggestModal extends FuzzySuggestModal<StudyArea> {
 		private readonly onChoose: (area: StudyArea) => void
 	) {
 		super(app);
-		this.setPlaceholder("Pick a study area...");
+		this.setPlaceholder("Pick a folder or Entire vault...");
 	}
 
 	getItems(): StudyArea[] {

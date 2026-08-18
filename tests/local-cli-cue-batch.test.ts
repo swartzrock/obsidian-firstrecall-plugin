@@ -111,9 +111,9 @@ describe("local CLI cue batch prompt", () => {
 		expect(calls[0].prompt).toBe(initialTemplate);
 		for (const call of calls) {
 			expect(call.prompt).toContain(
-				"Create exactly one Section cue for each of the 2 supplied sections"
+				"Create exactly one section study card for each of the 2 supplied sections"
 			);
-			expect(call.prompt).toContain("Question: Ask one precise exam-style question");
+			expect(call.prompt).toContain("Recall question: Ask one precise exam-style question");
 			for (const field of [
 				"question",
 				"keywords",

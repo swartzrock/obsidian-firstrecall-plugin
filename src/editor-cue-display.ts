@@ -12,12 +12,12 @@ export const EDITOR_CUE_DISPLAY_OPTIONS: readonly EditorCueDisplayOption[] = [
 	{
 		id: "cornell",
 		label: "Cornell",
-		description: "Show Cornell-style Section cue cards beside their editor sections.",
+		description: "Show Cornell-style section cards beside their editor sections.",
 	},
 	{
 		id: "inline-cues",
-		label: "Inline Section cues",
-		description: "Show cached Section cues beneath their headings in the editor.",
+		label: "Inline section cards",
+		description: "Show section cards beneath their headings in the editor.",
 	},
 ];
 

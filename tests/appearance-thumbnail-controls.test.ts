@@ -211,13 +211,13 @@ describe("Editing View thumbnail option recipes", () => {
 			inline?.querySelectorAll(".cuecraft-preview-editor-cue-section")
 		).toHaveLength(3);
 		expect(cornell?.textContent).toContain("SUMMARY");
-		expect(cornell?.textContent).toContain("QUESTION");
-		expect(cornell?.textContent).toContain("TERMS");
+		expect(cornell?.textContent).toContain("RECALL QUESTION");
+		expect(cornell?.textContent).toContain("KEY TERMS");
 		expect(inline?.textContent).toContain("SUMMARY");
-		expect(inline?.textContent).toContain("QUESTION");
-		expect(inline?.textContent).toContain("TERMS");
+		expect(inline?.textContent).toContain("RECALL QUESTION");
+		expect(inline?.textContent).toContain("KEY TERMS");
 		expect(root.textContent).toContain("Cornell");
-		expect(root.textContent).toContain("Inline Section cues");
+		expect(root.textContent).toContain("Inline section cards");
 		expect(root.textContent).not.toContain("Cornell Exam Prep");
 		expect(root.textContent).not.toContain("Cornell Minimal");
 		expect(root.textContent).not.toContain("Anchored card rail");

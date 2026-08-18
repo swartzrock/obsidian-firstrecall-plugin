@@ -134,26 +134,16 @@ export function studyAreaNameForParentPath(parentPath: string): string {
 
 export function formatStudyAreaReadinessCounts(
 	counts: StudyAreaReadinessCounts,
-	opts: { cueSectionCount?: number; excludedCount?: number } = {}
+	opts: { excludedCount?: number } = {}
 ): string {
 	const noteLabel = (count: number): string =>
 		`${count} note${count === 1 ? "" : "s"}`;
-	const sectionLabel = (count: number): string =>
-		`${count} section${count === 1 ? "" : "s"}`;
 	const parts: string[] = [];
 	if (counts.ready) parts.push(`${noteLabel(counts.ready)} ready`);
-	const notesNeedingCues = counts.uncued + counts.stale;
-	if (notesNeedingCues) {
-		const sectionCount =
-			opts.cueSectionCount && opts.cueSectionCount > 0
-				? ` (${sectionLabel(opts.cueSectionCount)})`
-				: "";
-		parts.push(
-			`${noteLabel(notesNeedingCues)}${sectionCount} ${
-				notesNeedingCues === 1 ? "needs" : "need"
-			} Section cues`
-		);
+	if (counts.uncued) {
+		parts.push(`${noteLabel(counts.uncued)} missing study material`);
 	}
+	if (counts.stale) parts.push(`${noteLabel(counts.stale)} outdated`);
 	if (counts.failed) parts.push(`${noteLabel(counts.failed)} failed`);
 	if (opts.excludedCount) {
 		parts.push(`${noteLabel(opts.excludedCount)} excluded`);

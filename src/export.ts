@@ -1,9 +1,9 @@
 /**
- * Export generated Questions and Terms for external study. Two pure formatters turn a note's
+ * Export generated recall questions and key terms for external study. Two pure formatters turn a note's
  * cached study material into:
- *   - a Markdown study sheet (human-readable, one Question + Terms per section), and
+ *   - a Markdown study sheet (human-readable, one recall question + key terms per section), and
  *   - Anki-compatible TSV (`question<TAB>answer`), importable as Basic notes.
- * Both ignore sections that never produced a usable Question (no question, or an
+ * Both ignore sections that never produced a usable recall question (no question, or an
  * error), so an export is always clean review material.
  */
 
@@ -26,21 +26,21 @@ export function selectExportableQuestions(cache: NoteCache): ExportQuestion[] {
 		}));
 }
 
-/** A Markdown study sheet: a heading + Question + Terms line per section. */
+/** A Markdown study sheet: a heading + recall question + key terms per section. */
 export function questionsAndTermsToMarkdown(
 	noteTitle: string,
 	questions: ExportQuestion[]
 ): string {
-	const lines: string[] = [`# Questions and Terms — ${noteTitle}`, ""];
+	const lines: string[] = [`# Recall Questions and Key Terms — ${noteTitle}`, ""];
 	if (questions.length === 0) {
-		lines.push("_No generated Questions and Terms to export yet._", "");
+		lines.push("_No generated recall questions and key terms to export yet._", "");
 		return lines.join("\n");
 	}
 	for (const question of questions) {
 		if (question.heading) lines.push(`## ${question.heading}`);
-		lines.push(`**Question:** ${question.question}`);
+		lines.push(`**Recall question:** ${question.question}`);
 		if (question.keywords.length) {
-			lines.push("", `_Terms:_ ${question.keywords.join(" · ")}`);
+			lines.push("", `_Key terms:_ ${question.keywords.join(" · ")}`);
 		}
 		lines.push("");
 	}
@@ -54,7 +54,7 @@ function tsvField(value: string): string {
 
 /**
  * Anki TSV: `question<TAB>answer`, one note per line. The answer is the
- * section's Terms (falling back to the heading) so the front is the Question and
+ * section's key terms (falling back to the heading) so the front is the recall question and
  * the back is what to recall. Import into Anki as a Basic (front/back) note type.
  */
 export function questionsAndTermsToAnki(questions: ExportQuestion[]): string {
@@ -74,7 +74,8 @@ export function exportFilePath(
 	format: "markdown" | "anki"
 ): string {
 	const ext = format === "markdown" ? "md" : "txt";
-	const tag =
-		format === "markdown" ? "questions-and-terms" : "questions-and-terms.anki";
+	const tag = format === "markdown"
+		? "recall-questions-and-key-terms"
+		: "recall-questions-and-key-terms.anki";
 	return `${dir}${basename} (${tag}).${ext}`;
 }

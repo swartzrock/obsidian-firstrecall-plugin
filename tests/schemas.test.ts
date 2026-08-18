@@ -165,7 +165,7 @@ describe("validateCueBatch", () => {
 		if (r.ok) {
 			expect(r.value[0].value?.question).toBe("Q1?");
 			expect(r.value[1].error).toMatch(/question/);
-			expect(r.value[2].error).toMatch(/missing Section cue/i);
+			expect(r.value[2].error).toMatch(/missing section study card/i);
 		}
 	});
 

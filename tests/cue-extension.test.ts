@@ -323,10 +323,10 @@ describe("Editing View Study projection", () => {
 			const toggle = studyCue.querySelector<HTMLButtonElement>(
 				".cuecraft-study-section-toggle"
 			)!;
-			expect(toggle.getAttribute("aria-label")).toBe("Show section");
+			expect(toggle.getAttribute("aria-label")).toBe("Show answer");
 			expect(toggle.getAttribute("aria-pressed")).toBe("false");
 			expect(toggle.dataset.icon).toBe("eye");
-			expect(toggle.dataset.tooltip).toBe("Show section");
+			expect(toggle.dataset.tooltip).toBe("Show answer");
 			expect(toggle.dataset.tooltipPlacement).toBe("right");
 			studyCue.click();
 			studyCue.dispatchEvent(
@@ -372,7 +372,7 @@ describe("Editing View Study projection", () => {
 			const hideToggle = revealedCue.querySelector<HTMLButtonElement>(
 				".cuecraft-study-section-toggle"
 			)!;
-			expect(hideToggle.getAttribute("aria-label")).toBe("Hide section");
+			expect(hideToggle.getAttribute("aria-label")).toBe("Hide answer");
 			expect(hideToggle.getAttribute("aria-pressed")).toBe("true");
 			expect(hideToggle.dataset.icon).toBe("eye-off");
 		});
@@ -461,16 +461,16 @@ describe("Editing View Study projection", () => {
 				const controls = controlsContainer.querySelector<HTMLElement>(
 					".cuecraft-editor-study-controls"
 				)!;
-				expect(controls.textContent).toContain("0 / 1 revealed");
+				expect(controls.textContent).toContain("0 / 1 answers revealed");
 				const help = controls.firstElementChild as HTMLElement;
 				expect(help.classList.contains("cuecraft-study-help")).toBe(true);
 				expect(help.dataset.icon).toBe("eye");
 				expect(
 					help.querySelector(".cuecraft-study-help-title")?.textContent
-				).toBe("Show or hide sections");
+				).toBe("Show or hide answers");
 				expect(
 					help.querySelector(".cuecraft-study-help-detail")?.textContent
-				).toBe("Click the eye icon on any Section cue card.");
+				).toBe("Click the eye icon on any section card.");
 				expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
 					2
 				);
@@ -491,8 +491,8 @@ describe("Editing View Study projection", () => {
 				).toBe("0%");
 				const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
 				expect([...buttons].map((button) => button.textContent)).toEqual([
-					"Show All Sections",
-					"Hide All Sections",
+					"Show All Answers",
+					"Hide All Answers",
 					"Exit Study Mode",
 				]);
 				expect([...buttons].map((button) => button.dataset.icon)).toEqual([
@@ -915,7 +915,7 @@ describe("renderCueElement", () => {
 				const gripLabel = card.querySelector<HTMLElement>(
 					".cuecraft-editor-cue-width-grip-label"
 				);
-				expect(gripLabel?.textContent).toContain("cue rail width");
+				expect(gripLabel?.textContent).toContain("section card rail width");
 				expect(grip?.getAttribute("aria-labelledby")).toBe(gripLabel?.id);
 				expect(grip?.getAttribute("aria-valuemin")).toBe("96");
 				expect(grip?.getAttribute("aria-valuemax")).toBe("512");
@@ -1610,7 +1610,7 @@ describe("renderCueElement", () => {
 			await Promise.resolve();
 
 			expect(consoleError).toHaveBeenCalledWith(
-				"CueCraft Section cue collapse persistence failed",
+				"CueCraft section card collapse persistence failed",
 				error
 			);
 			expect(summary?.getAttribute("aria-expanded")).toBe("true");

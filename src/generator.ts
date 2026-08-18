@@ -67,7 +67,7 @@ export interface GenerateNoteParams {
 	useWholeNoteContext?: boolean;
 	/** Cap (in chars) on note text injected into prompts; keeps requests within model context limits. */
 	maxContextChars?: number;
-	/** Maximum number of section cue requests running at once. */
+	/** Maximum number of section-card requests running at once. */
 	sectionConcurrency?: number;
 	signal?: AbortSignal;
 	onProgress?: (done: number, total: number) => void;
@@ -152,7 +152,7 @@ function applyCueResult(
 	item: CueCraftCueBatchResult | undefined
 ): void {
 	if (!item) {
-		result.error = "Provider returned no Section cue for this section.";
+		result.error = "Provider returned no section study card for this section.";
 		return;
 	}
 	if (item.error) {
@@ -160,7 +160,7 @@ function applyCueResult(
 		return;
 	}
 	if (!item.cue) {
-		result.error = "Provider returned no Section cue for this section.";
+		result.error = "Provider returned no section study card for this section.";
 		return;
 	}
 	result.keywords = item.cue.keywords;

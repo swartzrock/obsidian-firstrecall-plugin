@@ -322,10 +322,10 @@ describe("projectReadingStudyBlock", () => {
 		const toggle = strictCue.querySelector<HTMLButtonElement>(
 			".cuecraft-study-section-toggle"
 		)!;
-		expect(toggle.getAttribute("aria-label")).toBe("Show section");
+		expect(toggle.getAttribute("aria-label")).toBe("Show answer");
 		expect(toggle.getAttribute("aria-pressed")).toBe("false");
 		expect(toggle.dataset.icon).toBe("eye");
-		expect(toggle.dataset.tooltip).toBe("Show section");
+		expect(toggle.dataset.tooltip).toBe("Show answer");
 		expect(toggle.dataset.tooltipPlacement).toBe("right");
 		expect(fallbackCue.querySelector(".cuecraft-study-section-toggle")).toBeNull();
 
@@ -383,7 +383,7 @@ describe("projectReadingStudyBlock", () => {
 		expect(
 			block.querySelector<HTMLButtonElement>(".cuecraft-study-section-toggle")
 				?.getAttribute("aria-label")
-		).toBe("Show section");
+		).toBe("Show answer");
 
 		const revealed = {
 			...hidden,
@@ -402,7 +402,7 @@ describe("projectReadingStudyBlock", () => {
 		const revealedToggle = block.querySelector<HTMLButtonElement>(
 			".cuecraft-study-section-toggle"
 		)!;
-		expect(revealedToggle.getAttribute("aria-label")).toBe("Hide section");
+		expect(revealedToggle.getAttribute("aria-label")).toBe("Hide answer");
 		expect(revealedToggle.getAttribute("aria-pressed")).toBe("true");
 		expect(revealedToggle.dataset.icon).toBe("eye-off");
 
@@ -443,15 +443,15 @@ describe("syncReadingStudyControls", () => {
 		const controls = controlsContainer.querySelector<HTMLElement>(
 			".cuecraft-reading-study-controls"
 		)!;
-		expect(controls.textContent).toContain("0 / 1 revealed");
+		expect(controls.textContent).toContain("0 / 1 answers revealed");
 		const help = controls.firstElementChild as HTMLElement;
 		expect(help.classList.contains("cuecraft-study-help")).toBe(true);
 		expect(help.dataset.icon).toBe("eye");
 		expect(help.querySelector(".cuecraft-study-help-title")?.textContent).toBe(
-			"Show or hide sections"
+			"Show or hide answers"
 		);
 		expect(help.querySelector(".cuecraft-study-help-detail")?.textContent).toBe(
-			"Click the eye icon on any Section cue card."
+			"Click the eye icon on any section card."
 		);
 		expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
 			2
@@ -468,8 +468,8 @@ describe("syncReadingStudyControls", () => {
 		expect(progressTrack.getAttribute("aria-valuemax")).toBe("1");
 		const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
 		expect([...buttons].map((button) => button.textContent)).toEqual([
-			"Show All Sections",
-			"Hide All Sections",
+			"Show All Answers",
+			"Hide All Answers",
 			"Exit Study Mode",
 		]);
 		expect([...buttons].map((button) => button.dataset.icon)).toEqual([
@@ -646,7 +646,7 @@ describe("Reading postprocessor Study plumbing", () => {
 		);
 		expect(
 			container.querySelector(".cuecraft-reading-study-controls")?.textContent
-		).toContain("1 / 3 revealed");
+		).toContain("1 / 3 answers revealed");
 
 		container
 			.querySelector<HTMLButtonElement>(".cuecraft-reading-study-hide-all")
@@ -657,7 +657,7 @@ describe("Reading postprocessor Study plumbing", () => {
 		);
 		expect(
 			container.querySelector(".cuecraft-reading-study-controls")?.textContent
-		).toContain("0 / 3 revealed");
+		).toContain("0 / 3 answers revealed");
 
 		container
 			.querySelector<HTMLButtonElement>(".cuecraft-reading-study-exit")

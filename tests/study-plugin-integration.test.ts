@@ -35,7 +35,7 @@ import type { StudyMaterialMaintenance } from "../src/study-material-maintenance
 
 const NOTE = "# Agents\nAgents use tools.";
 const OTHER_NOTE = "# Memory\nRetrieval strengthens memory.";
-const GENERATE_FIRST = "CueCraft: generate Section cues for this note first.";
+const GENERATE_FIRST = "CueCraft: generate study material for this note first.";
 
 function cacheFor(markdown: string): NoteCache {
 	const section = parseSections(markdown)[0];
@@ -329,6 +329,30 @@ function createHarness() {
 
 beforeEach(() => {
 	notices.length = 0;
+});
+
+it("keeps stable command IDs while using the approved vocabulary", async () => {
+	const harness = createHarness();
+	await harness.plugin.onload();
+
+	expect(harness.commands.get("regenerate-section")?.name).toBe(
+		"Update a section card and Note Brief\u2026"
+	);
+	expect(harness.commands.get("regenerate-stale-sections")?.name).toBe(
+		"Update outdated study material"
+	);
+	expect(harness.commands.get("run-study-area-backfill")?.name).toBe(
+		"Bring folder or vault study material up to date\u2026"
+	);
+	expect(harness.commands.get("retry-study-area-failures")?.name).toBe(
+		"Retry folder or vault update\u2026"
+	);
+	expect(harness.commands.get("manage-study-areas")?.name).toBe(
+		"Manage folders & automatic updates"
+	);
+	expect(harness.commands.get("export-cues-markdown")?.name).toBe(
+		"Export Recall Questions and Key Terms to Markdown"
+	);
 });
 
 describe("Study plugin orchestration", () => {

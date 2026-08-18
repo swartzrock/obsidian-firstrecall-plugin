@@ -210,8 +210,8 @@ function editorCueCard(
 			"SUMMARY",
 			"AI and expertise shape trusted products."
 		),
-		editorCueSection(doc, "question", "QUESTION", SAMPLE_QUESTION),
-		editorCueSection(doc, "terms", "TERMS", null)
+		editorCueSection(doc, "question", "RECALL QUESTION", SAMPLE_QUESTION),
+		editorCueSection(doc, "terms", "KEY TERMS", null)
 	);
 	return card;
 }

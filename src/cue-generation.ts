@@ -1,5 +1,5 @@
 /**
- * The single Question-generation choice shared by persistence, prompts, and UI.
+ * The single recall-question style shared by persistence, prompts, and UI.
  */
 export const QUESTION_TYPES = [
 	{
@@ -44,7 +44,7 @@ export type QuestionTypeInfo = (typeof QUESTION_TYPES)[number];
 
 export const DEFAULT_QUESTION_TYPE: QuestionType = "exam-practice";
 
-/** Narrow an arbitrary value to a supported Question type. */
+/** Narrow an arbitrary value to a supported recall-question style. */
 export function isQuestionType(value: unknown): value is QuestionType {
 	return QUESTION_TYPES.some((type) => type.id === value);
 }
