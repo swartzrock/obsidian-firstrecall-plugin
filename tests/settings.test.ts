@@ -978,6 +978,11 @@ describe("folders and automatic updates settings", () => {
 		const button = tab.containerEl.querySelector<HTMLButtonElement>("button.mod-cta")!;
 		button.click();
 		button.click();
+		await vi.waitFor(() => {
+			expect(
+				settingText(tab.containerEl).match(/Updating study material\.\.\./g)
+			).toHaveLength(1);
+		});
 		expect(plugin.runStudyArea).toHaveBeenCalledTimes(1);
 		expect(plugin.runStudyArea).toHaveBeenCalledWith("biology", "backfill");
 		finishRun({ total: 2, completed: 1, failed: 1, skipped: 0, remaining: 0, canceled: false });

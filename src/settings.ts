@@ -1126,7 +1126,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private studyAreaStatusText(state: StudyAreaUiState): string | null {
 		if (state.phase === "scanning") return "Scanning without using your AI provider.";
-		if (state.phase === "running") return "Update in progress.";
+		if (state.phase === "running") return null;
 		if (state.phase === "success") return "Study material is up to date.";
 		if (state.phase === "partial-failure") return "Update finished with some failures.";
 		if (state.phase === "failure") return "Scan or update failed. Try again.";
@@ -1177,7 +1177,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (state.phase === "running" || state.phase === "scanning") return;
 		if (!this.plugin.isProviderConfigured()) return;
 		state.phase = "running";
-		state.message = mode === "retry-failed" ? "Retrying update..." : "Updating study material...";
+		state.message = null;
 		this.display();
 		let summary: StudyAreaRunSummary | null = null;
 		try {
