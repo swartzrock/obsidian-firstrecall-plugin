@@ -431,6 +431,16 @@ async function clickThumbnail(
 }
 
 describe("settings defaults", () => {
+	it("does not choose models for providers", async () => {
+		const { DEFAULT_SETTINGS } = await loadSettingsModule();
+
+		expect(
+			Object.values(DEFAULT_SETTINGS.byok.providers).every(
+				(provider) => provider?.model === ""
+			)
+		).toBe(true);
+	});
+
 	it("includes LM Studio as a local URL provider", async () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 

@@ -160,7 +160,7 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 		providers: {
 			ollama: {
 				credential: "http://localhost:11434",
-				model: "llama3.1:8b",
+				model: "",
 				modelSelection: "",
 				availableModels: [],
 				modelOptions: [],
