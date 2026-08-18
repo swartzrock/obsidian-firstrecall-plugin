@@ -685,9 +685,12 @@ describe("settings defaults", () => {
 		]) {
 			expect(tab.containerEl.querySelector(`[aria-label="${label}"]`)).not.toBeNull();
 		}
-		expect(text).toContain("Core idea");
-		expect(text).toContain("Review first");
-		expect(text).toContain("Self-test");
+		expect(text).toContain("Summary");
+		expect(text).toContain("Recall question");
+		expect(text).toContain("Key terms");
+		expect(text).not.toContain("Core idea");
+		expect(text).not.toContain("Review first");
+		expect(text).not.toContain("Self-test");
 		expect(
 			tab.containerEl.querySelectorAll(".cuecraft-settings-artifact-part")
 		).toHaveLength(0);

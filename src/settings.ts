@@ -434,7 +434,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const enabled = this.plugin.settings.studyAreas.filter(
 			(area) => area.maintenanceMode === "maintain-on-save"
 		).length;
-		if (!count) return "No folders or vault scope";
+		if (!count) return "No managed folders";
 		const entireVaultArea = this.plugin.settings.studyAreas.find((area) =>
 			isEntireVaultStudyArea(area)
 		);
@@ -915,13 +915,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					if (!normalized && !isEntireVaultSelection) return;
 					if (isEntireVaultSelection && hasStudyAreas) {
 						new Notice(
-							`CueCraft: remove folder scopes before using ${vaultScopeLabel}.`
+							`CueCraft: remove folder coverage before using ${vaultScopeLabel}.`
 						);
 						this.display();
 						return;
 					}
 					if (assignedFolderPaths.has(normalized)) {
-						new Notice("CueCraft: that scope already exists.");
+						new Notice("CueCraft: that managed folder already exists.");
 						this.display();
 						return;
 					}
@@ -940,7 +940,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				leadingOption: canChooseEntireVault
 					? normalizeStringId(vaultScopeLabel)
 					: undefined,
-				suggestionsLabel: "scope suggestions",
+				suggestionsLabel: "folder suggestions",
 			});
 		}
 
@@ -974,7 +974,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			}
 		}
 		if (this.plugin.settings.disabledStudyAreas.length) {
-			new Setting(containerEl).setName("Scopes needing attention").setHeading();
+			new Setting(containerEl).setName("Folders needing attention").setHeading();
 			const recoveryEl = containerEl.createDiv({ cls: "cuecraft-settings-flow" });
 			for (const area of this.plugin.settings.disabledStudyAreas) {
 				this.renderDisabledStudyAreaRow(recoveryEl, area);
@@ -1149,7 +1149,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			if (state.scanToken !== token || state.phase !== "scanning") return;
 			state.plan = plan;
 			state.phase = plan ? "ready" : "failure";
-			state.message = plan ? null : "This scope no longer exists.";
+			state.message = plan ? null : "This managed folder no longer exists.";
 		} catch {
 			if (state.scanToken !== token || state.phase !== "scanning") return;
 			state.phase = "failure";
@@ -1237,7 +1237,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		exclusions.createDiv({
 			cls: "cuecraft-study-area-help",
-			text: "Notes inherit coverage from this scope. Excluding a note or nested folder is the only per-note opt-out.",
+			text: "Notes inherit coverage from this managed folder. Excluding a note or nested folder is the only per-note opt-out.",
 		});
 		for (const path of area.excludedPaths) {
 			const row = exclusions.createDiv({ cls: "cuecraft-study-area-exclusion-row" });
@@ -1261,7 +1261,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const options = this.studyAreaExclusionPaths(area);
 		const picker = new Setting(exclusions)
 			.setName("Exclude a note or nested folder")
-			.setDesc("Type to search paths inside this scope.");
+			.setDesc("Type to search paths inside this managed folder.");
 		renderModelCombobox({
 			containerEl: picker.controlEl,
 			value: "",
@@ -1276,7 +1276,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					new Notice(
 						reason === "duplicate-path"
 							? "CueCraft: that path is already excluded."
-							: "CueCraft: choose an existing note or nested folder inside this scope."
+							: "CueCraft: choose an existing note or nested folder inside this managed folder."
 					);
 					return;
 				}
@@ -1308,14 +1308,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			.setName(scope)
 			.setDesc(
 				conflictLabel
-					? `${scope} is disabled because it conflicts with ${conflictLabel}. It does not cover or update notes.`
-					: `${scope} is disabled and does not cover notes. Its previous conflict is gone.`
+					? `${scope} is disabled because it conflicts with ${conflictLabel}. It does not update notes.`
+					: `${scope} is disabled and does not update notes. Its previous conflict is gone.`
 			);
 		setting.settingEl.addClass("cuecraft-study-area-row", "is-disabled");
 		setting.settingEl.setAttr("aria-disabled", "true");
 		setting.addButton((button) =>
 			button
-				.setButtonText(conflictLabel ? `Remove ${conflictLabel} and recover` : "Recover scope")
+				.setButtonText(conflictLabel ? `Remove ${conflictLabel} and recover` : "Recover managed folder")
 				.onClick(async () => {
 					await this.plugin.recoverDisabledStudyArea(area.id, conflict?.id);
 					this.studyAreaUi.delete(area.id);
@@ -1334,7 +1334,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const noteBriefCard = this.createArtifactCard(
 			containerEl,
 			"Note Brief",
-			"A whole-note overview with fixed Core idea, Review first, and Self-test cards."
+			"A whole-note overview with Summary, Recall question, and Key terms."
 		);
 
 		new Setting(noteBriefCard)

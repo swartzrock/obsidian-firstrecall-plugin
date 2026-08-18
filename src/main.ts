@@ -1314,7 +1314,7 @@ export default class CueCraftPlugin extends Plugin {
 		});
 		this.addCommand({
 			id: "manage-study-areas",
-			name: "Manage folders & automatic updates",
+			name: "Folders & automatic updates",
 			callback: () => this.openStudyAreaManager(),
 		});
 		this.addCommand({
@@ -2047,12 +2047,12 @@ export default class CueCraftPlugin extends Plugin {
 		reason: ReturnType<typeof validateStudyAreaScope>["reason"]
 	): string {
 		if (reason === "duplicate-path") {
-			return "CueCraft: that automatic-update scope already exists.";
+			return "CueCraft: that managed folder coverage already exists.";
 		}
 		if (reason === "entire-vault-conflict") {
-			return "CueCraft: remove the conflicting Entire vault or folder scope first.";
+			return "CueCraft: remove the conflicting Entire vault or folder coverage first.";
 		}
-		return "CueCraft: parent and descendant folder scopes cannot overlap.";
+		return "CueCraft: parent and descendant managed folders cannot overlap.";
 	}
 
 	async removeStudyArea(areaId: string): Promise<void> {
@@ -2117,7 +2117,7 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const area = this.findStudyArea(areaId);
 		if (!area) {
-			new Notice("CueCraft: automatic-update scope no longer exists.");
+			new Notice("CueCraft: that managed folder no longer exists.");
 			return null;
 		}
 		const plan = await this.buildStudyAreaPlan(
@@ -2129,8 +2129,8 @@ export default class CueCraftPlugin extends Plugin {
 			if (!opts.automatic) {
 				new Notice(
 					mode === "retry-failed"
-						? "CueCraft: no failed updates to retry in this scope."
-						: "CueCraft: study material in this scope is already up to date."
+						? "CueCraft: no failed updates to retry in this managed folder."
+						: "CueCraft: study material in this managed folder is already up to date."
 				);
 			}
 			return summarizeStudyAreaRun(plan, {});
