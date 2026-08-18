@@ -28,10 +28,9 @@ flowchart TD
 
 **Managed folders** defines which notes are available for bulk generation and optional
 automatic updates. Select one or more non-overlapping folders, or select **Entire vault**.
-A note or nested-folder exclusion is the only opt-out inside a selected scope.
 
 Adding a scope only scans it. The scan is read-only, makes no provider requests, and reports
-missing, outdated, ready, excluded, and failed work. **Bring study material up to date** is
+missing, outdated, ready, and failed work. **Bring study material up to date** is
 the explicit action that generates missing material and refreshes outdated material.
 
 **Update automatically** is off for every new scope. When enabled, CueCraft waits until
@@ -41,9 +40,8 @@ sections, and preserves unchanged cards.
 
 | Term | Meaning |
 | --- | --- |
-| **Automatic coverage** | The note belongs to an enabled, unpaused scope and is not excluded. CueCraft keeps its study material current after edits. |
+| **Automatic coverage** | The note belongs to an enabled, unpaused scope. CueCraft keeps its study material current after edits. |
 | **Manual coverage** | CueCraft updates the note only after an explicit update, retry, or command. |
-| **Exclusion** | An explicit note or nested-folder opt-out within a scope. |
 | **Current** | Generated material reflects the latest source note. |
 | **Outdated** | The source changed after the affected study material was generated. |
 | **Updating** | CueCraft is generating the work needed for the latest source. |

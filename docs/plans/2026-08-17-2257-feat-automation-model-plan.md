@@ -45,6 +45,7 @@ The observed problem in current use is uncertainty about coverage and freshness,
 - **Keep visibility independent from maintenance** (session-settled: user-approved — chosen over treating hidden generated material as an automation opt-out: presentation controls should not create hidden scope exceptions). Governs R21-R22.
 - **Preserve existing material when generation fails** (session-settled: user-directed — chosen over hiding content or reporting failure only in a temporary notice: outdated material can remain useful when its status is explicit). Governs R23-R24.
 - **Ship automation and vocabulary as one release** (session-settled: user-directed — chosen over implementing automation now and postponing the approved vocabulary deck: Settings must describe the behavior users actually receive). Governs R26.
+- **Defer the Exclusions editor** (session-settled: user-directed — chosen to simplify Managed folders for the initial release: persisted exclusions remain honored, but Settings does not expose controls to add or remove them). Governs R22 and U4.
 
 <!-- ce-section: work-relationships -->
 ### How This Work Fits Together
@@ -62,7 +63,7 @@ The vocabulary authority makes the same product model legible everywhere a learn
 
 - R1. Automatic maintenance has one source of truth: the enabled entries under **Managed folders**.
 - R2. The scope list contains either one **Entire vault** entry or one or more folder entries, never both.
-- R3. Parent and descendant folder entries cannot overlap; users express narrower exceptions through explicit note or folder exclusions.
+- R3. Parent and descendant folder entries cannot overlap; persisted note or folder exclusions remain honored as narrower exceptions.
 - R4. Notes outside enabled entries, notes under paused entries, and excluded notes never invoke automatic generation.
 
 **Catch-up and consent**
@@ -111,7 +112,7 @@ flowchart TB
 **Visibility and exclusions**
 
 - R21. Note-level generated-material visibility, component visibility, card collapse state, and Study Mode reveal state never change automatic-maintenance eligibility.
-- R22. Explicit exclusions are the only per-note or nested-folder opt-out within an enabled scope.
+- R22. Persisted explicit exclusions remain honored as per-note or nested-folder opt-outs, but their Settings editor is deferred from this release.
 
 **Failure behavior**
 
@@ -211,7 +212,7 @@ flowchart TB
 - AE9. Selecting Entire vault
   - **Covers R2-R4, R22.**
   - **Given:** No folder entries exist.
-  - **When:** The user adds Entire vault and excludes Templates.
+  - **When:** An existing Entire vault scope already excludes Templates.
   - **Then:** CueCraft can maintain eligible notes outside Templates, and Settings prevents adding a separate folder entry.
 
 - AE10. Recovering from failure
@@ -511,7 +512,7 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
   1. Use the approved introduction and Settings order: AI model, Generation, Managed folders, Content shown in notes, Appearance, and Study Mode.
   2. Keep Recall question style and visible instruction templates under Generation; move the quiet-delay control into Managed folders with the automation controls.
   3. Present mutually exclusive Entire vault or folder entries, readiness counts, **Bring study material up to date**, and per-entry **Update automatically**.
-  4. Give each configured scope an Exclusions block with a searchable note-or-folder picker, inherited-coverage explanation, duplicate prevention, and removable excluded-path rows.
+  4. Keep persisted exclusions active in coverage resolution, but do not render the Exclusions editor in this release.
   5. Show invalid legacy paths as recovery-only rows that name the Entire vault, parent, or descendant conflict and offer a direct remove-conflicting-entry action; keep each recovery row disabled and excluded from coverage until its named conflicting path is removed.
   6. Define initial, scanning, running, success, partial-failure, and failure states for scan, catch-up, update, and Retry controls; disable duplicate activation, announce state changes, and refresh counts and note surfaces from the shared outcome. During scanning, replace the scan action with a named **Cancel scan** control; cancellation discards partial counts, leaves the scope paused, and returns the row to **Scan again**.
   7. Keep scanning available before provider setup. When no provider and model are ready, disable **Bring study material up to date**, **Update study material**, and **Retry update**, and show an inline **Configure AI model** action that opens AI model settings; restore generation actions when setup becomes ready.
@@ -523,9 +524,9 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
   3. Adding a scope displays scan counts and never invokes catch-up or toggles automatic updates on.
   4. **Bring study material up to date** invokes the shared explicit operation for missing, outdated, and failed work.
   5. Toggling **Update automatically** affects future edits only.
-  6. Entire vault, folder overlap, exclusions, removal, and paused states remain legible and keyboard accessible.
+  6. Entire vault, folder overlap, removal, and paused states remain legible and keyboard accessible.
   7. Visibility controls use Note Brief, Section card, summary, recall question, and key terms language and do not imply generation eligibility.
-  8. Users can add and remove note and nested-folder exclusions, while duplicates and paths outside the configured scope are rejected without changing coverage.
+  8. Settings renders no Exclusions editor and does not alter persisted exclusions.
   9. Invalid legacy scope rows identify the conflicting entry and remain disabled until the user removes a conflicting path.
   10. Repeated activation while a scan, catch-up, update, or Retry is running does not start duplicate work; completion and partial failure refresh counts and actions.
   11. Cancelling a scan discards partial counts, keeps the scope paused, and exposes **Scan again** without invoking a provider.
@@ -592,7 +593,7 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 - **Approach:**
   1. Rewrite the README and metadata descriptions around active-recall study material, Note Briefs, section study cards, and source-Markdown safety.
   2. Replace the glossary's exception-heavy vocabulary specification with the approved Note → Note Brief + Section study cards model and a compact definition of automatic updates.
-  3. Document automatic/manual coverage, explicit scope exclusions, visibility independence, outdated state, Retry behavior, and provider-call consent at user-relevant depth.
+  3. Document automatic/manual coverage, visibility independence, outdated state, Retry behavior, and provider-call consent at user-relevant depth without advertising the deferred Exclusions editor.
   4. Keep historical ideation and plan documents unchanged and distinguish intentional internal terminology from current user-facing copy during the final audit.
 - **Patterns to follow:** Current README command/verification section, manifest description conventions, and the Mermaid concept map in `docs/CueCraft-Glossary.md`.
 - **Test scenarios:** Test expectation: none — this unit changes documentation and metadata; terminology, JSON validation, production build, and manual rendered-document review provide the evidence.
@@ -611,7 +612,7 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 | Editing and Reading parity | U5 | The same note state produces equivalent banner, badge, dismissal, update, and retry outcomes in both views. |
 | Source-safety audit | U3, U6, U7 | Integration and export tests compare source Markdown before and after every provider-incurring action. |
 | User-facing terminology audit | U4, U6, U7 | Search current user-facing sources, tests, and built output for superseded terms; classify remaining internal or historical matches explicitly. |
-| Manual Obsidian smoke review | U4-U7 | Review Settings navigation, Entire vault/folder exclusions, automatic/manual status, banners, badges, hidden material, Study Mode, commands, and Reading/Editing mode switches in a test vault. |
+| Manual Obsidian smoke review | U4-U7 | Review Settings navigation, Entire vault/folder scopes, automatic/manual status, banners, badges, hidden material, Study Mode, commands, and Reading/Editing mode switches in a test vault. |
 
 ---
 

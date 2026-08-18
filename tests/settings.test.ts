@@ -999,40 +999,31 @@ describe("folders and automatic updates settings", () => {
 		expect(plugin.runStudyArea).not.toHaveBeenCalled();
 	});
 
-	it("adds and removes nested exclusions", async () => {
+	it("keeps managed-folder rows concise and hides exclusions", async () => {
 		const { tab, plugin } = await setupSettingsTab({
 			loadedFiles: [
-				{ path: "Courses/Biology/Drafts", folder: true },
-				{ path: "Courses/Biology/Cells.md", extension: "md" },
+				{ path: "Claudes/Drafts", folder: true },
+				{ path: "Claudes/Notes.md", extension: "md" },
 			],
 		});
-		plugin.settings.studyAreas = [studyArea({ excludedPaths: ["Courses/Biology/Drafts"] })];
+		plugin.settings.studyAreas = [studyArea({
+			name: "Claudes",
+			parentPath: "Claudes",
+			excludedPaths: ["Claudes/Drafts"],
+		})];
 		tab.display();
 		openSettingsCard(tab, "Managed folders");
 		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
-		const group = tab.containerEl.querySelector<HTMLElement>(
-			'[role="group"][aria-label="Exclusions for Courses/Biology"]'
+		const text = settingText(tab.containerEl);
+		expect(text).not.toContain("Covered notes");
+		expect(text).not.toContain("Automatic updates affect future edits only");
+		expect(text).not.toContain("Exclusions");
+		expect(tab.containerEl.querySelector("[aria-label^='Exclusions for']")).toBeNull();
+		const row = tab.containerEl.querySelector<HTMLElement>(
+			".cuecraft-study-area-row"
 		)!;
-		const input = group.querySelector<HTMLInputElement>("[role='combobox']")!;
-		input.dispatchEvent(new window.Event("focus"));
-		const note = [...group.querySelectorAll<HTMLButtonElement>("[role='option']")]
-			.find((candidate) => candidate.textContent === "Courses/Biology/Cells.md")!;
-		note.dispatchEvent(
-			new window.MouseEvent("mousedown", { bubbles: true, cancelable: true })
-		);
-		await vi.waitFor(() => expect(plugin.updateStudyArea).toHaveBeenCalledWith(
-			expect.objectContaining({
-				excludedPaths: ["Courses/Biology/Drafts", "Courses/Biology/Cells.md"],
-			})
-		));
-
-		const remove = tab.containerEl.querySelector<HTMLButtonElement>(
-			'button[aria-label="Remove exclusion Courses/Biology/Drafts"]'
-		)!;
-		remove.click();
-		await vi.waitFor(() => expect(plugin.updateStudyArea).toHaveBeenCalledWith(
-			expect.objectContaining({ excludedPaths: ["Courses/Biology/Cells.md"] })
-		));
+		expect(row.textContent?.match(/Claudes/g)).toHaveLength(1);
+		expect(plugin.updateStudyArea).not.toHaveBeenCalled();
 	});
 
 	it("names a legacy conflict and offers direct recovery", async () => {

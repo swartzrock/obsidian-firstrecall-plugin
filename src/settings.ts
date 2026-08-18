@@ -134,6 +134,7 @@ const CLI_DEFAULT_MODEL_OPTION: ModelOption = {
 	id: "",
 	label: "CLI Default",
 };
+const SHOW_STUDY_AREA_EXCLUSIONS = false;
 const SVG_NS = "http://www.w3.org/2000/svg";
 const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 	"clip-rule",
@@ -965,7 +966,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			});
 
 		if (hasStudyAreas) {
-			new Setting(containerEl).setName("Covered notes").setHeading();
 			const manageEl = containerEl.createDiv({
 				cls: "cuecraft-settings-flow",
 			});
@@ -986,15 +986,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const state = this.studyAreaState(area.id);
 		const providerReady = this.plugin.isProviderConfigured();
 		const busy = state.phase === "scanning" || state.phase === "running";
+		const entireVault = isEntireVaultStudyArea(area);
+		const scopeLabel = studyAreaScopeLabel(area.parentPath);
 		const setting = new Setting(containerEl).setName(
-			isEntireVaultStudyArea(area) ? ENTIRE_VAULT_STUDY_AREA_LABEL : area.name
+			entireVault ? ENTIRE_VAULT_STUDY_AREA_LABEL : area.name
 		);
 		setting.settingEl.addClass("cuecraft-study-area-row");
 		setting.descEl.empty();
-		if (!isEntireVaultStudyArea(area)) {
+		if (!entireVault && scopeLabel !== area.name) {
 			setting.descEl.createDiv({
 				cls: "cuecraft-study-area-path",
-				text: studyAreaScopeLabel(area.parentPath),
+				text: scopeLabel,
 			});
 		}
 		setting.descEl.createDiv({
@@ -1002,18 +1004,20 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			text: this.studyAreaCountsText(state),
 			attr: { role: "status", "aria-live": "polite" },
 		});
-		setting.descEl.createDiv({
-			cls: "cuecraft-study-area-status",
-			text: state.message ?? this.studyAreaStatusText(state),
-			attr: { role: "status", "aria-live": "polite" },
-		});
-		setting.descEl.createDiv({
-			cls: "cuecraft-study-area-help",
-			text:
-				area.maintenanceMode === "maintain-on-save"
-					? "New and changed study material updates automatically after the wait above. Existing outdated material changes only when you use the explicit action."
-					: "Automatic updates are off. Scanning never invokes your AI provider.",
-		});
+		const statusText = state.message ?? this.studyAreaStatusText(state);
+		if (statusText) {
+			setting.descEl.createDiv({
+				cls: "cuecraft-study-area-status",
+				text: statusText,
+				attr: { role: "status", "aria-live": "polite" },
+			});
+		}
+		if (area.maintenanceMode === "maintain-on-save") {
+			setting.descEl.createDiv({
+				cls: "cuecraft-study-area-help",
+				text: "New and changed study material updates automatically after the wait above.",
+			});
+		}
 
 		setting.controlEl.addClass("cuecraft-study-area-controls");
 		setting.controlEl.createSpan({
@@ -1096,7 +1100,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 
 		if (!providerReady) this.renderProviderSetupAction(containerEl);
-		this.renderStudyAreaExclusions(containerEl, area);
+		if (SHOW_STUDY_AREA_EXCLUSIONS) {
+			this.renderStudyAreaExclusions(containerEl, area);
+		}
 		if (!state.hasScanned && state.phase === "initial") {
 			void this.scanStudyArea(area.id);
 		}
@@ -1115,14 +1121,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 	}
 
-	private studyAreaStatusText(state: StudyAreaUiState): string {
+	private studyAreaStatusText(state: StudyAreaUiState): string | null {
 		if (state.phase === "scanning") return "Scanning without using your AI provider.";
 		if (state.phase === "running") return "Update in progress.";
 		if (state.phase === "success") return "Study material is up to date.";
 		if (state.phase === "partial-failure") return "Update finished with some failures.";
 		if (state.phase === "failure") return "Scan or update failed. Try again.";
 		if (state.plan && !state.plan.items.length) return "Study material is up to date.";
-		return "Automatic updates affect future edits only.";
+		return null;
 	}
 
 	private async scanStudyArea(areaId: string): Promise<void> {

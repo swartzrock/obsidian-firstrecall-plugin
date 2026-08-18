@@ -22,17 +22,15 @@ material in Obsidian's plugin data and never modifies your source Markdown.
 
 Use **Managed folders** to generate and refresh study material in bulk for selected folders
 or **Entire vault**. Turn on automatic updates for the folders you want CueCraft to keep
-current. Folder choices and Entire vault are mutually exclusive; use exclusions to omit
-individual notes or nested folders.
+current. Folder choices and Entire vault are mutually exclusive.
 
 Adding a scope runs a read-only, provider-free scan. The scan reports missing, outdated,
-ready, excluded, and failed study material. Choose **Bring study material up to date** to
+ready, and failed study material. Choose **Bring study material up to date** to
 explicitly generate missing material and refresh outdated material.
 
 **Update automatically** is off for every new scope. When enabled, CueCraft waits until
 editing pauses, then creates study material for new content and refreshes only the affected
-section cards plus the Note Brief. Explicit note or nested-folder exclusions are the only
-opt-out inside an enabled scope.
+section cards plus the Note Brief.
 
 Coverage and freshness are separate:
 
