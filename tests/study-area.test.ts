@@ -380,6 +380,32 @@ describe("study area generation planning", () => {
 		]);
 	});
 
+	it("queues durable retry work when initial generation left no cache", () => {
+		const sectionId = parseSections(NOTE)[0].id;
+		const plan = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Failed.md",
+				cache: null,
+				currentSections: parseSections(NOTE),
+				failedComponents: {
+					noteBrief: true,
+					sectionIds: [sectionId],
+				},
+			},
+		], "retry-failed");
+
+		expect(plan.counts.failed).toBe(1);
+		expect(plan.items).toEqual([
+			{
+				path: "Courses/Biology/Failed.md",
+				action: "retry-failed-sections",
+				sectionIds: [sectionId],
+				readiness: "failed",
+				sectionCount: 1,
+			},
+		]);
+	});
+
 	it("plans edited and structural changes as incremental refreshes", () => {
 		const cache = buildCache();
 		const editedOnly = planStudyAreaGeneration(area(), [

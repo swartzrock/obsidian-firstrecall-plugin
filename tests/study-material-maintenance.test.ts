@@ -74,6 +74,7 @@ function createHarness(initial: Record<string, string> = { "notes/note.md": ORIG
 	let failHeading: string | null = null;
 	let failBrief = false;
 	let supportsBrief = true;
+	let commitGate: ReturnType<typeof deferred<void>> | null = null;
 	const provider: CueCraftCueProviderRuntime = {
 		id: "test",
 		label: "Test",
@@ -129,6 +130,7 @@ function createHarness(initial: Record<string, string> = { "notes/note.md": ORIG
 			else delete caches[path];
 			if (state) states[path] = state;
 			else delete states[path];
+			if (commitGate) await commitGate.promise;
 		},
 		renamePath: async (from, to) => {
 			if (caches[from]) caches[to] = caches[from];
@@ -174,6 +176,9 @@ function createHarness(initial: Record<string, string> = { "notes/note.md": ORIG
 		setSupportsBrief(value: boolean) {
 			supportsBrief = value;
 		},
+		setCommitGate(next: ReturnType<typeof deferred<void>> | null) {
+			commitGate = next;
+		},
 		maxActiveProviders: () => maxActiveProviders,
 	};
 }
@@ -212,6 +217,20 @@ describe("study material maintenance planning", () => {
 				}).components
 			).toEqual({ noteBrief: true, sectionIds: [] });
 		}
+	});
+
+	it("plans a matching cached error for retry without maintenance state", () => {
+		const cache = cacheFor();
+		cache.sections[0] = { ...cache.sections[0], error: "provider failed" };
+
+		expect(
+			planStudyMaterialMaintenance({
+				source: source("note.md", ORIGINAL),
+				cache,
+				state: null,
+				kind: "retry",
+			}).components
+		).toEqual({ noteBrief: true, sectionIds: [cache.sections[0].id] });
 	});
 });
 
@@ -328,6 +347,68 @@ describe("study material maintenance execution", () => {
 		expect(harness.states["notes/note.md"].sourceRevision).not.toBe(
 			createCurrentMaintenanceState("Note", ORIGINAL, cacheFor()).sourceRevision
 		);
+	});
+
+	it("queues a same-revision section command not covered by the active run", async () => {
+		const harness = createHarness();
+		const cache = cacheFor();
+		harness.caches["notes/note.md"] = cache;
+		harness.states["notes/note.md"] = createCurrentMaintenanceState(
+			"Note",
+			ORIGINAL,
+			cache
+		);
+		const gate = deferred<void>();
+		harness.setGate(gate);
+
+		const alpha = harness.maintenance.request({
+			path: "notes/note.md",
+			kind: "command",
+			sectionIds: [cache.sections[0].id],
+		});
+		await vi.waitFor(() => expect(harness.cueInputs).toHaveLength(1));
+		const beta = harness.maintenance.request({
+			path: "notes/note.md",
+			kind: "command",
+			sectionIds: [cache.sections[1].id],
+		});
+		harness.setGate(null);
+		gate.resolve();
+
+		await Promise.all([alpha, beta]);
+		expect(harness.cueInputs.map((input) => input.heading)).toEqual([
+			"Alpha",
+			"Beta",
+		]);
+		expect(harness.makeProvider).toHaveBeenCalledTimes(2);
+	});
+
+	it("cancels started automatic state when scope is revoked before provider work", async () => {
+		const harness = createHarness();
+		harness.automaticPaths.add("notes/note.md");
+		const commitGate = deferred<void>();
+		harness.setCommitGate(commitGate);
+
+		const run = harness.maintenance.request({
+			path: "notes/note.md",
+			kind: "automatic",
+		});
+		await vi.waitFor(() =>
+			expect(harness.states["notes/note.md"]?.updating.sectionIds).toHaveLength(2)
+		);
+		harness.automaticPaths.delete("notes/note.md");
+		harness.setCommitGate(null);
+		commitGate.resolve();
+
+		expect(await run).toMatchObject({
+			status: "skipped",
+			reason: "not-authorized",
+		});
+		expect(harness.makeProvider).not.toHaveBeenCalled();
+		expect(harness.states["notes/note.md"].updating).toEqual({
+			noteBrief: false,
+			sectionIds: [],
+		});
 	});
 
 	it("detects and retries a newer source revision even before another event requests it", async () => {

@@ -2156,6 +2156,9 @@ export default class CueCraftPlugin extends Plugin {
 			const outcome = await this.maintenance.request({
 				path: item.path,
 				kind,
+				...(item.action === "generate-note"
+					? {}
+					: { sectionIds: item.sectionIds }),
 			});
 			if (outcome.status === "completed" ||
 				(outcome.status === "skipped" && outcome.reason === "no-work")) {
@@ -2269,7 +2272,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		this.endStudyForPath(file.path);
-		await this.cacheStore.delete(file.path);
+		await this.maintenance.delete(file.path);
 		new Notice("CueCraft: cleared generated study material for this note.");
 		await this.updateStatusForFile(file);
 		this.renderCues(file);

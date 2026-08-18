@@ -356,6 +356,82 @@ it("keeps stable command IDs while using the approved vocabulary", async () => {
 });
 
 describe("Study plugin orchestration", () => {
+	it("routes clear through maintenance lifecycle invalidation", async () => {
+		const harness = createHarness();
+		await harness.plugin.onload();
+		const maintenance = (
+			harness.plugin as unknown as { maintenance: StudyMaterialMaintenance }
+		).maintenance;
+		const remove = vi.spyOn(maintenance, "delete");
+
+		await harness.commands.get("clear-cues")?.callback();
+
+		expect(remove).toHaveBeenCalledWith(harness.noteFile.path);
+		expect(harness.data.caches).not.toHaveProperty(harness.noteFile.path);
+	});
+
+	it("passes planned section targets into scope maintenance requests", async () => {
+		const harness = createHarness();
+		await harness.plugin.onload();
+		const sectionId = harness.data.caches[harness.noteFile.path].sections[0].id;
+		const plugin = harness.plugin as unknown as {
+			settings: typeof harness.data.settings;
+			isConfigured(): boolean;
+			buildStudyAreaPlan(): Promise<{
+				mode: "retry-failed";
+				readiness: Array<{ path: string; readiness: "failed"; reason: null }>;
+				counts: { ready: number; uncued: number; stale: number; failed: number; skipped: number };
+				items: Array<{
+					path: string;
+					action: "retry-failed-sections";
+					sectionIds: string[];
+					readiness: "failed";
+					sectionCount: number;
+				}>;
+			}>;
+			runStudyArea(areaId: string, mode: "retry-failed"): Promise<unknown>;
+		};
+		plugin.settings.studyAreas = [{
+			id: "biology",
+			name: "Biology",
+			parentPath: "notes",
+			excludedPaths: [],
+			maintenanceMode: "paused",
+			createdAt: "2026-08-18T00:00:00.000Z",
+		}];
+		plugin.isConfigured = () => true;
+		plugin.buildStudyAreaPlan = async () => ({
+			mode: "retry-failed",
+			readiness: [{ path: harness.otherFile.path, readiness: "failed", reason: null }],
+			counts: { ready: 0, uncued: 0, stale: 0, failed: 1, skipped: 0 },
+			items: [{
+				path: harness.otherFile.path,
+				action: "retry-failed-sections",
+				sectionIds: [sectionId],
+				readiness: "failed",
+				sectionCount: 1,
+			}],
+		});
+		const maintenance = (
+			harness.plugin as unknown as { maintenance: StudyMaterialMaintenance }
+		).maintenance;
+		const request = vi.spyOn(maintenance, "request").mockResolvedValue({
+			status: "completed",
+			path: harness.otherFile.path,
+			revision: "revision",
+			components: { noteBrief: true, sectionIds: [sectionId] },
+			errors: [],
+		});
+
+		await plugin.runStudyArea("biology", "retry-failed");
+
+		expect(request).toHaveBeenCalledWith({
+			path: harness.otherFile.path,
+			kind: "retry",
+			sectionIds: [sectionId],
+		});
+	});
+
 	it("keeps failed material and routes the banner Retry through the shared runner", async () => {
 		const harness = createHarness();
 		Object.assign(harness.plugin as unknown as Record<string, unknown>, {

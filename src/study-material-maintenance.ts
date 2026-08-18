@@ -101,11 +101,13 @@ interface QueuedRequest {
 	request: MaintenanceRequest;
 	source: MaintenanceSource;
 	epoch: number;
+	components: ComponentSet;
 	waiters: Array<(outcome: MaintenanceOutcome) => void>;
 }
 
 interface ActiveRequest {
 	revision: string;
+	components: ComponentSet;
 	promise: Promise<MaintenanceOutcome>;
 }
 
@@ -116,6 +118,35 @@ interface InternalOutcome {
 
 function unique(values: readonly string[]): string[] {
 	return [...new Set(values)];
+}
+
+function mergeComponents(a: ComponentSet, b: ComponentSet): ComponentSet {
+	return {
+		noteBrief: a.noteBrief || b.noteBrief,
+		sectionIds: unique([...a.sectionIds, ...b.sectionIds]),
+	};
+}
+
+function subtractComponents(a: ComponentSet, b: ComponentSet): ComponentSet {
+	const removed = new Set(b.sectionIds);
+	return {
+		noteBrief: a.noteBrief && !b.noteBrief,
+		sectionIds: a.sectionIds.filter((id) => !removed.has(id)),
+	};
+}
+
+function preferredRequestKind(
+	a: MaintenanceOperationKind,
+	b: MaintenanceOperationKind
+): MaintenanceOperationKind {
+	const priority: MaintenanceOperationKind[] = [
+		"retry",
+		"command",
+		"update",
+		"catch-up",
+		"automatic",
+	];
+	return priority.indexOf(a) <= priority.indexOf(b) ? a : b;
 }
 
 function componentErrorMessages(results: readonly SectionResult[]): string[] {
@@ -138,7 +169,7 @@ function sourceComponents(
 	const changedIds = eligible
 		.filter((section) => {
 			const cached = cachedById.get(section.id);
-			return !cached || cached.contentHash !== section.contentHash;
+			return !cached || cached.error || cached.contentHash !== section.contentHash;
 		})
 		.map((section) => section.id);
 	const sectionIds = forcedSectionIds
@@ -345,8 +376,14 @@ export class StudyMaterialMaintenance {
 		source: MaintenanceSource
 	): Promise<MaintenanceOutcome> {
 		const revision = noteSourceRevision(source.noteTitle, source.markdown);
+		const components = this.componentsFor(request, source);
 		const active = this.active.get(request.path);
-		if (active?.revision === revision) return active.promise;
+		const remaining = active?.revision === revision
+			? subtractComponents(components, active.components)
+			: components;
+		if (active?.revision === revision && !hasMaintenanceComponents(remaining)) {
+			return active.promise;
+		}
 		if (active) {
 			return new Promise((resolve) => {
 				const existing = this.queued.get(request.path);
@@ -354,16 +391,25 @@ export class StudyMaterialMaintenance {
 					existing.source.noteTitle,
 					existing.source.markdown
 				) === revision) {
-					existing.request = request;
+					existing.components = mergeComponents(existing.components, remaining);
+					existing.request = {
+						path: request.path,
+						kind: preferredRequestKind(existing.request.kind, request.kind),
+						sectionIds: existing.components.sectionIds,
+					};
 					existing.waiters.push(resolve);
 					return;
 				}
 				const waiters = existing?.waiters ?? [];
 				waiters.push(resolve);
 				this.queued.set(request.path, {
-					request,
+					request: {
+						...request,
+						sectionIds: remaining.sectionIds,
+					},
 					source,
 					epoch: this.epoch(request.path),
+					components: remaining,
 					waiters,
 				});
 			});
@@ -373,10 +419,24 @@ export class StudyMaterialMaintenance {
 			request,
 			source,
 			epoch: this.epoch(request.path),
+			components,
 			waiters: [],
 		});
-		this.active.set(request.path, { revision, promise });
+		this.active.set(request.path, { revision, components, promise });
 		return promise;
+	}
+
+	private componentsFor(
+		request: MaintenanceRequest,
+		source: MaintenanceSource
+	): ComponentSet {
+		return planStudyMaterialMaintenance({
+			source,
+			cache: this.deps.getCache(request.path),
+			state: this.deps.getState(request.path),
+			kind: request.kind,
+			sectionIds: request.sectionIds,
+		}).components;
 	}
 
 	private start(item: QueuedRequest): Promise<MaintenanceOutcome> {
@@ -397,10 +457,15 @@ export class StudyMaterialMaintenance {
 						queued.source.noteTitle,
 						queued.source.markdown
 					) !== latestRevision) {
+						const components = this.componentsFor(
+							item.request,
+							outcome.latestSource
+						);
 						this.queued.set(item.request.path, {
 							request: item.request,
 							source: outcome.latestSource,
 							epoch: item.epoch,
+							components,
 							waiters: queued?.waiters ?? [],
 						});
 					}
@@ -420,6 +485,7 @@ export class StudyMaterialMaintenance {
 				);
 				this.active.set(item.request.path, {
 					revision: nextRevision,
+					components: next.components,
 					promise: nextPromise,
 				});
 				void nextPromise.then((outcome) => {
@@ -506,10 +572,29 @@ export class StudyMaterialMaintenance {
 			revision: plan.revision,
 			components: plan.components,
 		});
-		if (!await this.canCommit(item, plan.revision)) {
+		if (!await this.canCommitSource(item, plan.revision)) {
 			return { public: { status: "stale", path: request.path } };
 		}
+		if (request.kind === "automatic" && !this.deps.isAutomaticAllowed(request.path)) {
+			return {
+				public: {
+					status: "skipped",
+					path: request.path,
+					reason: "not-authorized",
+				},
+			};
+		}
 		await this.deps.commit(request.path, cache, state);
+		if (request.kind === "automatic" && !this.deps.isAutomaticAllowed(request.path)) {
+			await this.cancelStartedUpdate(item, plan.revision, plan.components);
+			return {
+				public: {
+					status: "skipped",
+					path: request.path,
+					reason: "not-authorized",
+				},
+			};
+		}
 
 		let provider: CueCraftCueProviderRuntime | null;
 		try {
@@ -624,11 +709,21 @@ export class StudyMaterialMaintenance {
 			...(briefError ? [briefError] : []),
 		];
 
-		if (!await this.canCommit(item, plan.revision)) {
+		if (!await this.canCommitSource(item, plan.revision)) {
 			const latestSource = await this.deps.readSource(request.path);
 			return {
 				public: { status: "stale", path: request.path },
 				latestSource: latestSource ?? undefined,
+			};
+		}
+		if (request.kind === "automatic" && !this.deps.isAutomaticAllowed(request.path)) {
+			await this.cancelStartedUpdate(item, plan.revision, plan.components);
+			return {
+				public: {
+					status: "skipped",
+					path: request.path,
+					reason: "not-authorized",
+				},
 			};
 		}
 		const nextCacheRevision = nextCache ? cacheContentRevision(nextCache) : null;
@@ -704,18 +799,46 @@ export class StudyMaterialMaintenance {
 	}
 
 	private async canCommit(item: QueuedRequest, revision: string): Promise<boolean> {
-		if (this.epoch(item.request.path) !== item.epoch) return false;
 		if (
 			item.request.kind === "automatic" &&
 			!this.deps.isAutomaticAllowed(item.request.path)
 		) {
 			return false;
 		}
+		return this.canCommitSource(item, revision);
+	}
+
+	private async canCommitSource(
+		item: QueuedRequest,
+		revision: string
+	): Promise<boolean> {
+		if (this.epoch(item.request.path) !== item.epoch) return false;
 		const latest = await this.deps.readSource(item.request.path);
 		return Boolean(
 			latest &&
 			latest.path === item.request.path &&
-			noteSourceRevision(latest.noteTitle, latest.markdown) === revision
+				noteSourceRevision(latest.noteTitle, latest.markdown) === revision
 		);
+	}
+
+	private async cancelStartedUpdate(
+		item: QueuedRequest,
+		revision: string,
+		components: ComponentSet
+	): Promise<void> {
+		if (!await this.canCommitSource(item, revision)) return;
+		const current = this.deps.getState(item.request.path);
+		if (!current || current.sourceRevision !== revision) return;
+		const canceled = reduceMaintenanceState(current, {
+			type: "update-canceled",
+			revision,
+			components,
+		});
+		await this.deps.commit(
+			item.request.path,
+			this.deps.getCache(item.request.path),
+			canceled
+		);
+		await this.deps.onCommitted?.(item.request.path);
 	}
 }

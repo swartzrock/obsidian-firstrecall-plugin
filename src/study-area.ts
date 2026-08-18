@@ -261,15 +261,15 @@ export function classifyStudyAreaNote(
 	if (!cueEligibleSections(note.currentSections).length) {
 		return { path: note.path, readiness: "skipped", reason: "empty" };
 	}
-	if (!note.cache) {
-		return { path: note.path, readiness: "uncued", reason: null };
-	}
 	if (
-		note.cache.sections.some((section) => section.error) ||
+		note.cache?.sections.some((section) => section.error) ||
 		note.failedComponents?.noteBrief ||
 		note.failedComponents?.sectionIds.length
 	) {
 		return { path: note.path, readiness: "failed", reason: null };
+	}
+	if (!note.cache) {
+		return { path: note.path, readiness: "uncued", reason: null };
 	}
 	if (
 		!note.cache.noteBrief ||
@@ -443,11 +443,14 @@ function planQueueItem(
 			sectionCount: sectionIds.length,
 		};
 	}
-	if (readiness === "failed" && note.cache) {
+	if (readiness === "failed") {
+		const currentIds = new Set(eligibleSections.map((section) => section.id));
 		const sectionIds = uniqueSectionIds([
-			...failedSectionIds(note.cache, note.currentSections),
+			...(note.cache
+				? failedSectionIds(note.cache, note.currentSections)
+				: []),
 			...(note.failedComponents?.sectionIds ?? []),
-		]);
+		]).filter((id) => currentIds.has(id));
 		if (!sectionIds.length && !note.failedComponents?.noteBrief) return null;
 		return {
 			path: note.path,
