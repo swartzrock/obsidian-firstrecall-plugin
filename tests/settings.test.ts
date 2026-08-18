@@ -824,7 +824,7 @@ describe("folders and automatic updates settings", () => {
 		const ordered = [
 			"AI model",
 			"Generation",
-			"Folders & automatic updates",
+			"Managed folders",
 			"Content shown in notes",
 			"Appearance",
 			"Study Mode",
@@ -846,14 +846,16 @@ describe("folders and automatic updates settings", () => {
 			return area;
 		});
 		tab.display();
-		openSettingsCard(tab, "Folders & automatic updates");
+		openSettingsCard(tab, "Managed folders");
 		const settingsText = settingText(tab.containerEl);
-		expect(settingsText).not.toContain("Scan a folder");
-		expect(settingsText.indexOf("Add coverage")).toBeLessThan(
+		expect(settingsText).toContain(
+			"Add a folder—or your entire vault—to generate and refresh study material in bulk. Turn on automatic updates when you want CueCraft to keep future changes current."
+		);
+		expect(settingsText.indexOf("Add folder or vault")).toBeLessThan(
 			settingsText.indexOf("Wait after typing")
 		);
 		const input = tab.containerEl.querySelector<HTMLInputElement>(
-			'input[placeholder="Choose Entire vault or a folder..."]'
+			'input[placeholder="Choose a folder or Entire vault..."]'
 		)!;
 		input.dispatchEvent(new window.Event("focus"));
 		const listbox = tab.containerEl.querySelector<HTMLElement>("[role='listbox']")!;
@@ -895,7 +897,7 @@ describe("folders and automatic updates settings", () => {
 			}],
 		}) as never);
 		tab.display();
-		openSettingsCard(tab, "Folders & automatic updates");
+		openSettingsCard(tab, "Managed folders");
 
 		await vi.waitFor(() => {
 			expect(settingText(tab.containerEl)).toContain("1 note failed · 1 note excluded");
@@ -947,7 +949,7 @@ describe("folders and automatic updates settings", () => {
 			() => new Promise((resolve) => { finishRun = resolve; })
 		);
 		tab.display();
-		openSettingsCard(tab, "Folders & automatic updates");
+		openSettingsCard(tab, "Managed folders");
 		await vi.waitFor(() =>
 			expect(tab.containerEl.querySelector<HTMLButtonElement>("button.mod-cta")?.disabled).toBe(false)
 		);
@@ -966,7 +968,7 @@ describe("folders and automatic updates settings", () => {
 		const { tab, plugin } = await setupSettingsTab({ providerConfigured: true });
 		plugin.settings.studyAreas = [studyArea()];
 		tab.display();
-		openSettingsCard(tab, "Folders & automatic updates");
+		openSettingsCard(tab, "Managed folders");
 		const toggle = tab.containerEl.querySelector<HTMLInputElement>(
 			'input[aria-label="Update automatically for Courses/Biology"]'
 		) as HTMLInputElement & { __onChange?: (value: boolean) => Promise<void> };
@@ -986,7 +988,7 @@ describe("folders and automatic updates settings", () => {
 			() => new Promise((resolve) => { finishScan = resolve; })
 		);
 		tab.display();
-		openSettingsCard(tab, "Folders & automatic updates");
+		openSettingsCard(tab, "Managed folders");
 		await vi.waitFor(() => expect(settingText(tab.containerEl)).toContain("Cancel scan"));
 		await clickSettingButton(tab.containerEl, "Cancel scan");
 		expect(settingText(tab.containerEl)).toContain("Scan canceled");
@@ -1006,7 +1008,7 @@ describe("folders and automatic updates settings", () => {
 		});
 		plugin.settings.studyAreas = [studyArea({ excludedPaths: ["Courses/Biology/Drafts"] })];
 		tab.display();
-		openSettingsCard(tab, "Folders & automatic updates");
+		openSettingsCard(tab, "Managed folders");
 		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
 		const group = tab.containerEl.querySelector<HTMLElement>(
 			'[role="group"][aria-label="Exclusions for Courses/Biology"]'
@@ -1043,7 +1045,7 @@ describe("folders and automatic updates settings", () => {
 			disabledReason: "overlapping-path",
 		}) as never];
 		tab.display();
-		openSettingsCard(tab, "Folders & automatic updates");
+		openSettingsCard(tab, "Managed folders");
 
 		expect(settingText(tab.containerEl)).toContain(
 			"Courses/Biology/Year 1 is disabled because it conflicts with Courses/Biology"
@@ -1056,7 +1058,7 @@ describe("folders and automatic updates settings", () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.studyAreas = [studyArea()];
 		tab.display();
-		openSettingsCard(tab, "Folders & automatic updates");
+		openSettingsCard(tab, "Managed folders");
 		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
 		const scan = [...tab.containerEl.querySelectorAll<HTMLButtonElement>("button")]
 			.find((button) => button.textContent === "Scan again");

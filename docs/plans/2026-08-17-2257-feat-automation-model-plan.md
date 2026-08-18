@@ -49,7 +49,7 @@ The observed problem in current use is uncertainty about coverage and freshness,
 <!-- ce-section: work-relationships -->
 ### How This Work Fits Together
 
-The automatic-maintenance contract makes **Folders & automatic updates** truthful.
+The automatic-maintenance contract makes **Managed folders** truthful.
 The vocabulary authority makes the same product model legible everywhere a learner encounters it.
 
 - **Automation authority:** R1-R25 replace the slideshow's earlier “Off / Notes already generated / Selected folders / Entire vault” sketch.
@@ -60,7 +60,7 @@ The vocabulary authority makes the same product model legible everywhere a learn
 
 **Scope and eligibility**
 
-- R1. Automatic maintenance has one source of truth: the enabled entries under **Folders & automatic updates**.
+- R1. Automatic maintenance has one source of truth: the enabled entries under **Managed folders**.
 - R2. The scope list contains either one **Entire vault** entry or one or more folder entries, never both.
 - R3. Parent and descendant folder entries cannot overlap; users express narrower exceptions through explicit note or folder exclusions.
 - R4. Notes outside enabled entries, notes under paused entries, and excluded notes never invoke automatic generation.
@@ -129,7 +129,7 @@ flowchart TB
 ### Key Flows
 
 - F1. Add and catch up a scope
-  - **Trigger:** A user adds a folder or Entire vault under **Folders & automatic updates**.
+  - **Trigger:** A user adds a folder or Entire vault under **Managed folders**.
   - **Steps:** CueCraft scans without provider calls, reports the work by freshness state, and waits for the user to choose **Bring study material up to date**.
   - **Outcome:** Catch-up establishes current study material while ongoing maintenance remains off.
   - **Covers:** R2-R7.
@@ -154,7 +154,7 @@ flowchart TB
 
 - F5. Move through one vocabulary system
   - **Trigger:** A learner configures CueCraft, generates material, studies a note, invokes a command, or reads documentation.
-  - **Steps:** Each surface uses Note Brief, section study card, Summary, Recall question, Key terms, Generation, Folders & automatic updates, and Content shown in notes according to the vocabulary authority.
+  - **Steps:** Each surface uses Note Brief, section study card, Summary, Recall question, Key terms, Generation, Managed folders, and Content shown in notes according to the vocabulary authority.
   - **Outcome:** The learner can understand the product without translating obsolete interface nouns.
   - **Covers:** R26.
 
@@ -508,8 +508,8 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 - **Dependencies:** U1, U3.
 - **Files:** `src/settings.ts`, `src/main.ts`, `styles.css`, `tests/settings.test.ts`, `tests/settings-css.test.ts`, `tests/study-area.test.ts`.
 - **Approach:**
-  1. Use the approved introduction and Settings order: AI model, Generation, Folders & automatic updates, Content shown in notes, Appearance, and Study Mode.
-  2. Keep Recall question style and visible instruction templates under Generation; move the quiet-delay control into Folders & automatic updates with the automation controls.
+  1. Use the approved introduction and Settings order: AI model, Generation, Managed folders, Content shown in notes, Appearance, and Study Mode.
+  2. Keep Recall question style and visible instruction templates under Generation; move the quiet-delay control into Managed folders with the automation controls.
   3. Present mutually exclusive Entire vault or folder entries, readiness counts, **Bring study material up to date**, and per-entry **Update automatically**.
   4. Give each configured scope an Exclusions block with a searchable note-or-folder picker, inherited-coverage explanation, duplicate prevention, and removable excluded-path rows.
   5. Show invalid legacy paths as recovery-only rows that name the Entire vault, parent, or descendant conflict and offer a direct remove-conflicting-entry action; keep each recovery row disabled and excluded from coverage until its named conflicting path is removed.
@@ -576,7 +576,7 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 - **Patterns to follow:** Existing centralized option labels, notice formatting, command registration, export path helpers, and read-only instruction-template rendering.
 - **Test scenarios:**
   1. Covers AE11. Commands, notices, tooltips, aria labels, status copy, and visible cards use the approved terms.
-  2. Settings and appearance labels use Generation, Folders & automatic updates, Content shown in notes, Section card layout, and study text language.
+  2. Settings and appearance labels use Generation, Managed folders, Content shown in notes, Section card layout, and study text language.
   3. Visible instruction templates describe section study cards, recall questions, and key terms while returning the existing structured keys expected by providers.
   4. Markdown and Anki exports use approved headings, notices, and output filenames and never overwrite the source note.
   5. Stable command IDs and current persisted/schema keys remain unchanged where the change is copy-only.

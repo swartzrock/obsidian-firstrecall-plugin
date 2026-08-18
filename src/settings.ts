@@ -275,8 +275,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			case "study-areas":
 				this.renderSubpageHeader(
 					containerEl,
-					"Folders & automatic updates",
-					"Choose which notes CueCraft should maintain and when automatic updates run."
+					"Managed folders",
+					"Add a folder—or your entire vault—to generate and refresh study material in bulk. Turn on automatic updates when you want CueCraft to keep future changes current."
 				);
 				this.renderStudyAreasSection(containerEl, false);
 				break;
@@ -314,8 +314,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			onOpen: () => this.openSubpage("cue-generation"),
 		});
 		this.renderSettingsNavCard(navEl, {
-			title: "Folders & automatic updates",
-			description: "Choose which notes stay current and when updates happen.",
+			title: "Managed folders",
+			description: "Generate and refresh study material in bulk, with optional automatic updates.",
 			summary: this.studyAreasSummary(),
 			onOpen: () => this.openSubpage("study-areas"),
 		});
@@ -851,13 +851,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	): void {
 		if (showHeading) {
 			new Setting(containerEl)
-				.setName("Folders & automatic updates")
+				.setName("Managed folders")
 				.setHeading();
 		}
-		containerEl.createEl("p", {
-			cls: "cuecraft-study-area-intro",
-			text: "When you add Entire vault or a folder, CueCraft checks what needs attention without using your AI provider. Nothing is generated until you choose Bring up to date, and automatic updates start off.",
-		});
 		const folderPaths = this.studyAreaFolderPaths();
 		const assignedFolderPaths = new Set(
 			this.plugin.settings.studyAreas.map((area) =>
@@ -884,7 +880,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			.setName(
 				hasEntireVaultArea
 					? `${vaultScopeLabel} is already covered`
-					: "Add coverage"
+					: "Add folder or vault"
 			)
 			.setDesc(
 				hasEntireVaultArea
@@ -901,7 +897,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				value: "",
 				options: normalizeModelIds(availableFolderPaths),
 				placeholder: hasAvailableScope
-					? "Choose Entire vault or a folder..."
+					? "Choose a folder or Entire vault..."
 					: "No unassigned folders",
 				emptyMessage: hasAvailableScope
 					? "No matching folders."

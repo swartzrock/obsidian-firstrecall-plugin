@@ -26,9 +26,9 @@ flowchart TD
 
 ## Coverage and automatic updates
 
-**Folders & automatic updates** defines which notes CueCraft can keep current. Select one or
-more non-overlapping folders, or select **Entire vault**. A note or nested-folder exclusion
-is the only opt-out inside a selected scope.
+**Managed folders** defines which notes are available for bulk generation and optional
+automatic updates. Select one or more non-overlapping folders, or select **Entire vault**.
+A note or nested-folder exclusion is the only opt-out inside a selected scope.
 
 Adding a scope only scans it. The scan is read-only, makes no provider requests, and reports
 missing, outdated, ready, excluded, and failed work. **Bring study material up to date** is

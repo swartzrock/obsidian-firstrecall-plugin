@@ -18,11 +18,12 @@ material in Obsidian's plugin data and never modifies your source Markdown.
 4. Run **CueCraft: Toggle Study Mode** to practice recalling each section before revealing
    its answer.
 
-## Folders & automatic updates
+## Managed folders
 
-Use **Folders & automatic updates** to cover selected folders or **Entire vault**. These
-scope choices are mutually exclusive: use folder scopes for selected areas, or use Entire
-vault for broad coverage with exclusions.
+Use **Managed folders** to generate and refresh study material in bulk for selected folders
+or **Entire vault**. Turn on automatic updates for the folders you want CueCraft to keep
+current. Folder choices and Entire vault are mutually exclusive; use exclusions to omit
+individual notes or nested folders.
 
 Adding a scope runs a read-only, provider-free scan. The scan reports missing, outdated,
 ready, excluded, and failed study material. Choose **Bring study material up to date** to
