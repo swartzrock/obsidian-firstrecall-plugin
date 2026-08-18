@@ -666,6 +666,24 @@ function cacheFrom(
 }
 
 describe("buildCueLineData", () => {
+	it("passes per-section freshness without marking unaffected cards", () => {
+		const cache = cacheFrom();
+		const [first, second] = cache.sections;
+		const cues = buildCueLineData(cache, parseSections(NOTE), {
+			sectionFreshness: new Map([
+				[first.id, "outdated"],
+				[second.id, "current"],
+			]),
+		});
+
+		expect(cues.find((cue) => cue.sectionId === first.id)?.freshness).toBe(
+			"outdated"
+		);
+		expect(cues.find((cue) => cue.sectionId === second.id)?.freshness).toBe(
+			"current"
+		);
+	});
+
 	it("maps every successful section to its current heading line", () => {
 		const cache = cacheFrom();
 		const cues = buildCueLineData(cache, parseSections(NOTE));
@@ -821,6 +839,26 @@ function createEditorCueWidthController(committedWidthPx: number | null = 240) {
 }
 
 describe("renderCueElement", () => {
+	it("shows Outdated only on an affected section card in both editor layouts", () => {
+		withDocument(() => {
+			for (const display of ["inline-cues", "cornell"] as const) {
+				const outdated = renderCueElement(
+					cue({ freshness: "outdated" }),
+					display
+				);
+				const current = renderCueElement(
+					cue({ freshness: "current" }),
+					display
+				);
+
+				expect(
+					outdated.querySelector(".cuecraft-freshness-badge")?.textContent
+				).toBe("Outdated");
+				expect(current.querySelector(".cuecraft-freshness-badge")).toBeNull();
+			}
+		});
+	});
+
 	it("coalesces live width previews into one rail layout event per frame", () => {
 		withDocument(() => {
 			const callbacks: FrameRequestCallback[] = [];
@@ -1732,6 +1770,18 @@ describe("renderCueElement", () => {
 });
 
 describe("renderNoteBriefElement", () => {
+	it("shows an Outdated badge only when the Note Brief needs an update", () => {
+		withDocument(() => {
+			const outdated = renderNoteBriefElement(NOTE_BRIEF, "editor", "outdated");
+			const current = renderNoteBriefElement(NOTE_BRIEF, "editor", "current");
+
+			expect(
+				outdated.querySelector(".cuecraft-freshness-badge")?.textContent
+			).toBe("Outdated");
+			expect(current.querySelector(".cuecraft-freshness-badge")).toBeNull();
+		});
+	});
+
 	it("renders the overview and structured review cards", () => {
 		withDocument(() => {
 			const el = renderNoteBriefElement(NOTE_BRIEF, "editor");

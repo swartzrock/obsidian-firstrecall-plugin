@@ -46,7 +46,6 @@ import {
 import { parseSections, type Section } from "./parser";
 import {
 	hasUsableCues,
-	isStale,
 	normalizeCacheMap,
 	type NoteCache,
 } from "./cache";
@@ -54,7 +53,9 @@ import {
 	StudyMaterialStore,
 	classifyStudyMaterial,
 	normalizeMaintenanceStateMap,
+	reduceMaintenanceState,
 	type MaintenanceStateMap,
+	type StudyMaterialClassification,
 } from "./study-material-state";
 import {
 	StudyMaterialMaintenance,
@@ -108,7 +109,16 @@ import {
 	type CueSectionCollapseMap,
 } from "./cue-section-collapse";
 import { type CueGenerationOptions } from "./cue-generation";
-import { statusLabel, type CueStatus } from "./status";
+import {
+	projectStudyMaterialStatus,
+	statusLabel,
+	type CueStatus,
+	type StudyMaterialStatusProjection,
+} from "./status";
+import {
+	removeStudyMaterialBanner,
+	syncStudyMaterialBanner,
+} from "./study-material-banner";
 import { formatCueCraftNotice } from "./notice";
 import { parsePersistedCueCraftSettings } from "./persisted-settings";
 import {
@@ -186,6 +196,11 @@ export default class CueCraftPlugin extends Plugin {
 	private readonly studySession = new StudySessionController();
 	private readonly studyHeaderActions = new WeakMap<MarkdownView, HTMLElement>();
 	private readonly studyHeaderActionElements = new Set<HTMLElement>();
+	private readonly studyMaterialBannerContainers = new Set<HTMLElement>();
+	private readonly studyMaterialBannerContainerByView = new WeakMap<
+		MarkdownView,
+		HTMLElement
+	>();
 	private projectedStudySurface: {
 		view: MarkdownView;
 		mode: StudyProjectionMode;
@@ -391,6 +406,10 @@ export default class CueCraftPlugin extends Plugin {
 		this.endStudySession({ refresh: false, updateIdleStatus: false });
 		for (const action of this.studyHeaderActionElements) action.remove();
 		this.studyHeaderActionElements.clear();
+		for (const container of this.studyMaterialBannerContainers) {
+			removeStudyMaterialBanner(container);
+		}
+		this.studyMaterialBannerContainers.clear();
 		this.flushEditorCueWidthPreview(null);
 		this.editorCueWidthPreviewScheduler = null;
 		this.maintenance?.dispose();
@@ -475,37 +494,63 @@ export default class CueCraftPlugin extends Plugin {
 		this.refreshStudyEntryStates();
 	}
 
-	/** Sets the idle status pill based on the active note's cache (ready/stale/setup). */
+	private studyMaterialProjection(
+		file: TFile,
+		markdown: string
+	): {
+		classification: StudyMaterialClassification;
+		projection: StudyMaterialStatusProjection;
+	} {
+		const classification = classifyStudyMaterial({
+			noteTitle: file.basename,
+			markdown,
+			currentSections: parseSections(markdown),
+			cache: this.cacheStore.get(file.path),
+			state: this.cacheStore.getState(file.path),
+		});
+		return {
+			classification,
+			projection: projectStudyMaterialStatus({
+				coverage: findMaintainedStudyAreaForPath(
+					this.settings.studyAreas,
+					file.path
+				)
+					? "automatic"
+					: "manual",
+				classification,
+				providerConfigured: this.isConfigured(),
+			}),
+		};
+	}
+
+	private async setUpdatingStatusForFile(file: TFile): Promise<void> {
+		if (this.app.workspace.getActiveFile()?.path !== file.path) return;
+		const markdown = await this.app.vault.cachedRead(file);
+		if (this.app.workspace.getActiveFile()?.path !== file.path) return;
+		const projection = this.studyMaterialProjection(file, markdown).projection;
+		this.setStudyMaterialStatus({
+			...projection,
+			freshness: "updating",
+			statusLabel: `${projection.coverage === "automatic" ? "Automatic" : "Manual"} · updating`,
+			banner: null,
+		});
+	}
+
+	/** Sets the primary status from note coverage and generated-material freshness. */
 	private async updateStatusForFile(file: TFile | null): Promise<void> {
-		if (this.studySession.snapshot().active) {
-			this.setStatus("study");
-			return;
-		}
-		if (!this.isConfigured()) {
-			this.setStatus("setup");
-			return;
-		}
 		if (!file) {
-			this.setStatus("ready");
-			return;
-		}
-		if (this.visibility.isHidden(file.path)) {
-			this.setStatus("hidden");
-			return;
-		}
-		const cache = this.cacheStore.get(file.path);
-		if (!cache) {
-			this.setStatus("ready");
+			this.setStatus(this.isConfigured() ? "ready" : "setup");
 			return;
 		}
 		const markdown = await this.app.vault.cachedRead(file);
 		if (
-			this.studySession.snapshot().active ||
 			this.app.workspace.getActiveFile()?.path !== file.path
 		) {
 			return;
 		}
-		this.setStatus(isStale(cache, parseSections(markdown)) ? "stale" : "ready");
+		this.setStudyMaterialStatus(
+			this.studyMaterialProjection(file, markdown).projection
+		);
 	}
 
 	/** Refresh both the status pill and the rendered cues for a note. */
@@ -542,11 +587,24 @@ export default class CueCraftPlugin extends Plugin {
 		allowStudyProjection = true
 	): void {
 		const file = view.file;
-		if (!file) return;
+		if (!file) {
+			const container = this.studyControlsContainer(view);
+			removeStudyMaterialBanner(container);
+			this.studyMaterialBannerContainers.delete(container);
+			return;
+		}
 		const cm = (view.editor as unknown as { cm?: EditorView }).cm;
 		if (!cm) return;
 
 		const cache = this.cacheStore.get(file.path);
+		const markdown = view.editor.getValue();
+		const material = this.studyMaterialProjection(file, markdown);
+		this.syncStudyMaterialBannerForView(
+			this.studyControlsContainer(view),
+			file,
+			material.projection,
+			view
+		);
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (
 			allowStudyProjection &&
@@ -562,10 +620,16 @@ export default class CueCraftPlugin extends Plugin {
 				: null;
 		const cues =
 			cache && (!this.visibility.isHidden(file.path) || Boolean(study))
-				? buildCueLineData(cache, parseSections(view.editor.getValue()), {
+				? buildCueLineData(cache, parseSections(markdown), {
 						showSummary: this.settings.showSummary,
 						showQuestion: this.settings.showQuestion || Boolean(study),
 						showTerms: this.settings.showTerms,
+						sectionFreshness: new Map(
+							material.classification.sections.map((section) => [
+								section.id,
+								section.freshness,
+							])
+						),
 					})
 				: [];
 		cm.dom.dataset.cuecraftEditorDisplay = this.settings.editorCueDisplay;
@@ -599,6 +663,7 @@ export default class CueCraftPlugin extends Plugin {
 					!this.visibility.isHidden(file.path)
 						? cache.noteBrief
 						: null,
+				noteBriefFreshness: material.classification.noteBrief,
 			}),
 		});
 		if (!study &&
@@ -686,6 +751,69 @@ export default class CueCraftPlugin extends Plugin {
 		);
 	}
 
+	private syncStudyMaterialBannerForView(
+		container: HTMLElement,
+		file: TFile,
+		projection: StudyMaterialStatusProjection,
+		view?: MarkdownView
+	): void {
+		const previous = view
+			? this.studyMaterialBannerContainerByView.get(view)
+			: undefined;
+		if (previous && previous !== container) {
+			removeStudyMaterialBanner(previous);
+			this.studyMaterialBannerContainers.delete(previous);
+		}
+		if (view) this.studyMaterialBannerContainerByView.set(view, container);
+		this.studyMaterialBannerContainers.add(container);
+		syncStudyMaterialBanner(container, projection.banner, {
+			onUpdate: () => this.runBannerMaintenance(file, "update", projection),
+			onRetry: () => this.runBannerMaintenance(file, "retry", projection),
+			onDismiss: (revision) => this.dismissStudyMaterialBanner(file, revision),
+		});
+	}
+
+	private async runBannerMaintenance(
+		file: TFile,
+		kind: "update" | "retry",
+		projection: StudyMaterialStatusProjection
+	): Promise<void> {
+		if (!this.isConfigured()) {
+			new Notice("CueCraft: set up your AI provider in Settings first.");
+			this.openSettings();
+			return;
+		}
+		this.setStudyMaterialStatus({
+			...projection,
+			freshness: "updating",
+			statusLabel: `${projection.coverage === "automatic" ? "Automatic" : "Manual"} · updating`,
+			banner: null,
+		});
+		const outcome = await this.maintenance.request({ path: file.path, kind });
+		this.noticeForMaintenanceOutcome(outcome);
+		this.refreshGeneratedSurfaces(file);
+		await this.updateStatusForFile(this.app.workspace.getActiveFile());
+	}
+
+	private async dismissStudyMaterialBanner(
+		file: TFile,
+		revision: string
+	): Promise<void> {
+		let state = this.cacheStore.getState(file.path);
+		if (!state || state.sourceRevision !== revision) {
+			await this.maintenance.observe(file.path);
+			state = this.cacheStore.getState(file.path);
+		}
+		if (!state || state.sourceRevision !== revision) return;
+		const dismissed = reduceMaintenanceState(state, {
+			type: "banner-dismissed",
+			revision,
+		});
+		await this.cacheStore.commit(file.path, this.cacheStore.get(file.path), dismissed);
+		this.refreshGeneratedSurfaces(file);
+		await this.updateStatusForFile(this.app.workspace.getActiveFile());
+	}
+
 	private reconcileStudyForSource(
 		path: string,
 		markdown: string,
@@ -703,7 +831,12 @@ export default class CueCraftPlugin extends Plugin {
 			return null;
 		}
 		const snapshot = this.studySession.reconcile(path, descriptors);
-		this.setStatus("study");
+		const activeFile = this.app.workspace.getActiveFile();
+		if (activeFile?.path === path) {
+			this.setStudyMaterialStatus(
+				this.studyMaterialProjection(activeFile, markdown).projection
+			);
+		}
 		return snapshot.active ? snapshot : null;
 	}
 
@@ -869,7 +1002,9 @@ export default class CueCraftPlugin extends Plugin {
 			this.endStudySession({ refresh: false, updateIdleStatus: false });
 		}
 		this.studySession.start(file.path, descriptors);
-		this.setStatus("study");
+		this.setStudyMaterialStatus(
+			this.studyMaterialProjection(file, view.editor.getValue()).projection
+		);
 		this.refreshStudyEntryStates();
 		this.refreshStudyProjections();
 	}
@@ -1061,8 +1196,33 @@ export default class CueCraftPlugin extends Plugin {
 				: `CueCraft: ${statusLabel(status)}`;
 		this.statusBarEl.setText(label);
 		this.statusBarEl.dataset.status = status;
+		delete this.statusBarEl.dataset.coverage;
+		delete this.statusBarEl.dataset.freshness;
+		delete this.statusBarEl.dataset.providerSetupRequired;
+		this.statusBarEl.setAttribute("role", status === "generating" ? "status" : "button");
+		this.statusBarEl.setAttribute("aria-live", "polite");
 		this.statusBarEl.style.cursor =
 			pillAction(status) === "none" ? "default" : "pointer";
+	}
+
+	private setStudyMaterialStatus(
+		projection: StudyMaterialStatusProjection
+	): void {
+		if (!this.statusBarEl) return;
+		const setup = projection.providerSetupRequired ? " · AI setup needed" : "";
+		this.statusBarEl.setText(`CueCraft: ${projection.statusLabel}${setup}`);
+		this.statusBarEl.dataset.status = projection.freshness ?? "manual";
+		this.statusBarEl.dataset.coverage = projection.coverage;
+		this.statusBarEl.dataset.freshness = projection.freshness ?? "none";
+		this.statusBarEl.dataset.providerSetupRequired = String(
+			projection.providerSetupRequired
+		);
+		this.statusBarEl.setAttribute("role", "status");
+		this.statusBarEl.setAttribute("aria-live", "polite");
+		this.statusBarEl.setAttribute("aria-atomic", "true");
+		this.statusBarEl.style.cursor = projection.providerSetupRequired
+			? "pointer"
+			: "default";
 	}
 
 	/** Open Settings on the CueCraft tab. */
@@ -1088,6 +1248,11 @@ export default class CueCraftPlugin extends Plugin {
 	/** Status-pill click: open settings when unconfigured, else toggle visibility. */
 	private onPillClick(): void {
 		const status = this.statusBarEl?.dataset.status ?? "";
+		if (this.statusBarEl?.dataset.providerSetupRequired === "true") {
+			this.openSettings();
+			return;
+		}
+		if (this.statusBarEl?.dataset.coverage) return;
 		const action = pillAction(status);
 		if (action === "open-settings") {
 			this.openSettings();
@@ -1265,7 +1430,9 @@ export default class CueCraftPlugin extends Plugin {
 			this.endStudySession({ refresh: false, updateIdleStatus: false });
 		}
 		this.studySession.start(file.path, descriptors);
-		this.setStatus("study");
+		this.setStudyMaterialStatus(
+			this.studyMaterialProjection(file, view.editor.getValue()).projection
+		);
 		this.refreshStudyEntryStates();
 		this.refreshStudyProjections();
 	}
@@ -1290,6 +1457,7 @@ export default class CueCraftPlugin extends Plugin {
 	private readingCueMemo: ReadingCueVisibility & {
 		path: string;
 		text: string;
+		freshnessKey: string;
 		map: Map<number, CueLineData>;
 	} | null = null;
 
@@ -1320,6 +1488,13 @@ export default class CueCraftPlugin extends Plugin {
 		const firstInfo = headings
 			.map((heading) => ctx.getSectionInfo(heading))
 			.find((info) => info !== null);
+		const sourceFile = activeView?.file?.path === path ? activeView.file : null;
+		const sourceMarkdown =
+			firstInfo?.text ??
+			(activeView?.file?.path === path ? activeView.editor?.getValue() : undefined);
+		const material = sourceFile && sourceMarkdown !== undefined
+			? this.studyMaterialProjection(sourceFile, sourceMarkdown)
+			: null;
 		const study = cache
 			? this.readingStudyProjection(path, firstInfo?.text, cache)
 			: null;
@@ -1353,6 +1528,17 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const readingContainer = this.activeReadingContainer(path, el);
 		if (readingContainer) {
+			if (material && sourceFile) {
+				this.syncStudyMaterialBannerForView(
+					readingContainer,
+					sourceFile,
+					material.projection,
+					activeView ?? undefined
+				);
+			} else {
+				removeStudyMaterialBanner(readingContainer);
+				this.studyMaterialBannerContainers.delete(readingContainer);
+			}
 			syncReadingStudyControls(
 				readingContainer,
 				study,
@@ -1371,13 +1557,20 @@ export default class CueCraftPlugin extends Plugin {
 		for (const heading of headings) {
 			const info = ctx.getSectionInfo(heading);
 			if (!info) continue;
-			const map = this.readingMapFor(path, info.text, cache, cueVisibility);
+			const map = this.readingMapFor(
+				path,
+				info.text,
+				cache,
+				cueVisibility,
+				material?.classification.sections ?? []
+			);
 			if (noteBriefState.showNoteBrief) {
 				this.maybeInsertReadingNoteBriefEl(
 					cache,
 					noteBriefAnchorLine,
 					info,
-					heading
+					heading,
+					material?.classification.noteBrief ?? "current"
 				);
 			}
 			if (!displayState.showInlineCues) {
@@ -1462,12 +1655,17 @@ export default class CueCraftPlugin extends Plugin {
 		path: string,
 		text: string,
 		cache: NoteCache,
-		visibility: ReadingCueVisibility
+		visibility: ReadingCueVisibility,
+		sectionFreshness: StudyMaterialClassification["sections"]
 	): Map<number, CueLineData> {
+		const freshnessKey = sectionFreshness
+			.map((section) => `${section.id}:${section.freshness}`)
+			.join("\u0001");
 		if (
 			this.readingCueMemo &&
 			this.readingCueMemo.path === path &&
 			this.readingCueMemo.text === text &&
+			this.readingCueMemo.freshnessKey === freshnessKey &&
 			this.readingCueMemo.showSummary === visibility.showSummary &&
 			this.readingCueMemo.showQuestion === visibility.showQuestion &&
 			this.readingCueMemo.showTerms === visibility.showTerms
@@ -1476,10 +1674,14 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const map = buildReadingCueMap(cache, text, {
 			...visibility,
+			sectionFreshness: new Map(
+				sectionFreshness.map((section) => [section.id, section.freshness])
+			),
 		});
 		this.readingCueMemo = {
 			path,
 			text,
+			freshnessKey,
 			...visibility,
 			map,
 		};
@@ -1490,18 +1692,26 @@ export default class CueCraftPlugin extends Plugin {
 		cache: NoteCache,
 		firstCueLine: number | undefined,
 		info: ReturnType<MarkdownPostProcessorContext["getSectionInfo"]>,
-		heading: HTMLElement
+		heading: HTMLElement,
+		freshness: StudyMaterialClassification["noteBrief"]
 	): boolean {
 		if (!info || !this.settings.showNoteBrief || !cache.noteBrief) return false;
 		if (firstCueLine !== info.lineStart + 1) return false;
+		const rendered = renderNoteBriefElement(cache.noteBrief, "reading", freshness);
 		const previous = heading.previousElementSibling;
-		if (previous && previous.hasClass("cuecraft-note-brief")) return false;
+		if (previous && previous.hasClass("cuecraft-note-brief")) {
+			previous.replaceWith(rendered);
+			return true;
+		}
 		const parent = heading.parentElement;
-		if (parent?.querySelector(":scope > .cuecraft-note-brief")) return false;
-		heading.insertAdjacentElement(
-			"beforebegin",
-			renderNoteBriefElement(cache.noteBrief, "reading")
+		const existing = parent?.querySelector<HTMLElement>(
+			":scope > .cuecraft-note-brief"
 		);
+		if (existing) {
+			existing.replaceWith(rendered);
+			return true;
+		}
+		heading.insertAdjacentElement("beforebegin", rendered);
 		return true;
 	}
 
@@ -1514,6 +1724,16 @@ export default class CueCraftPlugin extends Plugin {
 		root.addClass(cueFontSizeClass(this.settings.cueFontSize));
 		root.dataset.cuecraftSectionId = cue.sectionId;
 		root.setAttr("role", "note");
+		if (
+			cue.freshness === "missing" ||
+			cue.freshness === "outdated" ||
+			cue.freshness === "failed"
+		) {
+			const badge = root.ownerDocument.createElement("span");
+			badge.className = "cuecraft-freshness-badge";
+			badge.textContent = "Outdated";
+			root.appendChild(badge);
+		}
 		if (cue.error) {
 			root.addClass("cuecraft-cue-error");
 			root.setAttr("title", cue.error);
@@ -1706,7 +1926,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 
-		this.setStatus("generating", { done: 0, total: 1 });
+		await this.setUpdatingStatusForFile(file);
 		const outcome = await this.maintenance.request({
 			path: file.path,
 			kind: "command",
@@ -1739,7 +1959,7 @@ export default class CueCraftPlugin extends Plugin {
 			}
 			return;
 		}
-		this.setStatus("generating", { done: 0, total: 0 });
+		await this.setUpdatingStatusForFile(file);
 		const outcome = await this.maintenance.request({
 			path: file.path,
 			kind: opts.automatic ? "automatic" : "update",
@@ -1924,11 +2144,16 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const completed: string[] = [];
 		const failed: string[] = [];
-		this.setStatus("generating", {
-			done: 0,
-			total: plan.items.reduce((total, item) => total + item.sectionCount, 0),
-			unit: "section",
-		});
+		const activeFile = this.app.workspace.getActiveFile();
+		if (activeFile && plan.items.some((item) => item.path === activeFile.path)) {
+			await this.setUpdatingStatusForFile(activeFile);
+		} else {
+			this.setStatus("generating", {
+				done: 0,
+				total: plan.items.reduce((total, item) => total + item.sectionCount, 0),
+				unit: "section",
+			});
+		}
 		const kind: MaintenanceOperationKind = opts.automatic
 			? "automatic"
 			: mode === "retry-failed"
@@ -2000,6 +2225,9 @@ export default class CueCraftPlugin extends Plugin {
 		this.renderCues(file);
 		this.refreshActiveReadingView(file);
 		this.refreshStudyEntryStates();
+		if (this.app.workspace.getActiveFile()?.path === file.path) {
+			void this.updateStatusForFile(file);
+		}
 	}
 
 	private studyAreaSummaryNotice(
@@ -2028,7 +2256,7 @@ export default class CueCraftPlugin extends Plugin {
 			}
 			return;
 		}
-		this.setStatus("generating", { done: 0, total: 0 });
+		await this.setUpdatingStatusForFile(file);
 		const outcome = await this.maintenance.request({
 			path: file.path,
 			kind: opts.automatic ? "automatic" : "command",

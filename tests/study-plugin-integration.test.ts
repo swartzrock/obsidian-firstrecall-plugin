@@ -27,6 +27,11 @@ vi.mock("obsidian", async (importOriginal) => {
 import { TFile } from "obsidian";
 import CueCraftPlugin from "../src/main";
 import type { StudySessionController } from "../src/study-session";
+import {
+	createCurrentMaintenanceState,
+	reduceMaintenanceState,
+} from "../src/study-material-state";
+import type { StudyMaterialMaintenance } from "../src/study-material-maintenance";
 
 const NOTE = "# Agents\nAgents use tools.";
 const OTHER_NOTE = "# Memory\nRetrieval strengthens memory.";
@@ -252,6 +257,7 @@ function createHarness() {
 			[noteFile.path]: cacheFor(NOTE),
 			[otherFile.path]: cacheFor(OTHER_NOTE),
 		},
+		maintenanceStates: {},
 		hidden: {},
 		cueSectionCollapse: {},
 	};
@@ -326,6 +332,88 @@ beforeEach(() => {
 });
 
 describe("Study plugin orchestration", () => {
+	it("keeps failed material and routes the banner Retry through the shared runner", async () => {
+		const harness = createHarness();
+		Object.assign(harness.plugin as unknown as Record<string, unknown>, {
+			isConfigured: () => true,
+		});
+		await harness.plugin.onload();
+		const cache = harness.data.caches[harness.noteFile.path];
+		const base = createCurrentMaintenanceState(
+			harness.noteFile.basename,
+			NOTE,
+			cache
+		);
+		const failed = reduceMaintenanceState(base, {
+			type: "update-failed",
+			revision: base.sourceRevision,
+			components: {
+				noteBrief: true,
+				sectionIds: [cache.sections[0].id],
+			},
+			message: "provider failed",
+		});
+		await (
+			harness.plugin as unknown as {
+				cacheStore: {
+					commit(
+						path: string,
+						cache: NoteCache,
+						state: typeof failed
+					): Promise<void>;
+				};
+			}
+		).cacheStore.commit(harness.noteFile.path, cache, failed);
+		const maintenance = (
+			harness.plugin as unknown as { maintenance: StudyMaterialMaintenance }
+		).maintenance;
+		const request = vi.spyOn(maintenance, "request").mockResolvedValue({
+			status: "skipped",
+			path: harness.noteFile.path,
+			reason: "no-work",
+		});
+
+		harness.plugin.refreshEditorCues();
+		const retry = harness.firstView.contentEl.querySelector<HTMLButtonElement>(
+			"[data-banner-action='retry']"
+		)!;
+		expect(retry.textContent).toBe("Retry update");
+		retry.click();
+		await vi.waitFor(() =>
+			expect(request).toHaveBeenCalledWith({
+				path: harness.noteFile.path,
+				kind: "retry",
+			})
+		);
+		expect(harness.data.caches[harness.noteFile.path]).toBe(cache);
+	});
+
+	it("dismisses an outdated legacy cache after creating revision state", async () => {
+		const harness = createHarness();
+		Object.assign(harness.plugin as unknown as Record<string, unknown>, {
+			isConfigured: () => true,
+		});
+		await harness.plugin.onload();
+		harness.plugin.refreshEditorCues();
+		const dismiss = harness.firstView.contentEl.querySelector<HTMLButtonElement>(
+			"[data-banner-action='dismiss']"
+		)!;
+		expect(dismiss).not.toBeNull();
+		dismiss.click();
+
+		await vi.waitFor(() => {
+			expect(
+				harness.data.maintenanceStates[harness.noteFile.path]
+					?.bannerDismissedRevision
+			).toBeTruthy();
+			expect(
+				harness.firstView.contentEl.querySelector(
+					".cuecraft-study-material-banner"
+				)
+			).toBeNull();
+		});
+	});
+
 	it("schedules covered Markdown creation without provider work before the quiet delay and keeps hidden material hidden", async () => {
 		const harness = createHarness();
 		delete harness.data.caches[harness.noteFile.path];
@@ -481,8 +569,12 @@ describe("Study plugin orchestration", () => {
 			path: harness.noteFile.path,
 			revealedCount: 0,
 		});
-		expect(harness.statusBar.dataset.status).toBe("study");
-		expect(harness.statusBar.textContent).toBe("CueCraft: study");
+		expect(harness.statusBar.dataset.coverage).toBe("manual");
+		expect(harness.statusBar.dataset.freshness).toBe("outdated");
+		expect(harness.statusBar.textContent).toContain("Manual · outdated");
+		expect(harness.statusBar.textContent).not.toContain("study");
+		expect(harness.statusBar.getAttribute("role")).toBe("status");
+		expect(harness.statusBar.getAttribute("aria-live")).toBe("polite");
 		expect(harness.openedFiles).toEqual([]);
 		const studyPayload = harness.dispatches.at(-1)?.payload.study as {
 			snapshot: { sections: Array<{ sectionId: string }> };
@@ -539,8 +631,9 @@ describe("Study plugin orchestration", () => {
 		await Promise.resolve();
 		await Promise.resolve();
 
-		expect(harness.statusBar.dataset.status).toBe("study");
-		expect(harness.statusBar.textContent).toBe("CueCraft: study");
+		expect(harness.statusBar.dataset.coverage).toBe("manual");
+		expect(harness.statusBar.dataset.freshness).toBe("outdated");
+		expect(harness.statusBar.textContent).toContain("Manual · outdated");
 	});
 
 	it("opens a requested Markdown target for fresh review without opening Cornell", async () => {

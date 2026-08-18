@@ -17,6 +17,7 @@ import {
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { setIcon, setTooltip } from "obsidian";
 import type { NoteCache } from "./cache";
+import type { ComponentFreshness } from "./study-material-state";
 import type { EditorCueDisplay } from "./editor-cue-display";
 import {
 	cueFontSizeClass,
@@ -69,12 +70,15 @@ export interface CueLineData {
 	summary: SectionSummary | null;
 	/** Generation error message, when this section failed. */
 	error: string | null;
+	/** Freshness of this generated card for the current source revision. */
+	freshness: ComponentFreshness;
 }
 
 export interface CueLineDataOptions {
 	showSummary?: boolean;
 	showQuestion?: boolean;
 	showTerms?: boolean;
+	sectionFreshness?: ReadonlyMap<string, ComponentFreshness>;
 }
 
 export interface CueEditorRenderState {
@@ -84,6 +88,7 @@ export interface CueEditorRenderState {
 	notePath?: string;
 	collapseController?: CueSectionCollapseController;
 	noteBrief?: NoteBriefOutput | null;
+	noteBriefFreshness?: ComponentFreshness;
 	showSummary?: boolean;
 	showQuestion?: boolean;
 	showTerms?: boolean;
@@ -165,6 +170,7 @@ export function buildCueLineData(
 			keywords: failed || !showTerms ? [] : sec.keywords ?? [],
 			summary: failed || !showSummary ? null : sec.summary ?? null,
 			error: failed ? sec.error ?? "Generation failed" : null,
+			freshness: options.sectionFreshness?.get(sec.id) ?? "current",
 		};
 		if (
 			cue.error ||
@@ -200,7 +206,8 @@ class CueWidget extends WidgetType {
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			summaryKey(other.cue.summary) === summaryKey(this.cue.summary) &&
-			other.cue.error === this.cue.error
+			other.cue.error === this.cue.error &&
+			other.cue.freshness === this.cue.freshness
 		);
 	}
 
@@ -242,16 +249,20 @@ class CueWidget extends WidgetType {
 }
 
 class NoteBriefWidget extends WidgetType {
-	constructor(private readonly noteBrief: NoteBriefOutput) {
+	constructor(
+		private readonly noteBrief: NoteBriefOutput,
+		private readonly freshness: ComponentFreshness = "current"
+	) {
 		super();
 	}
 
 	override eq(other: NoteBriefWidget): boolean {
-		return noteBriefKey(other.noteBrief) === noteBriefKey(this.noteBrief);
+		return noteBriefKey(other.noteBrief) === noteBriefKey(this.noteBrief) &&
+			other.freshness === this.freshness;
 	}
 
 	toDOM(): HTMLElement {
-		return renderNoteBriefElement(this.noteBrief, "editor");
+		return renderNoteBriefElement(this.noteBrief, "editor", this.freshness);
 	}
 }
 
@@ -298,7 +309,8 @@ class CueGutterMarker extends GutterMarker {
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			summaryKey(other.cue.summary) === summaryKey(this.cue.summary) &&
-			other.cue.error === this.cue.error
+			other.cue.error === this.cue.error &&
+			other.cue.freshness === this.cue.freshness
 		);
 	}
 
@@ -336,8 +348,26 @@ export function renderCueElement(
 	const element = isCornellEditorDisplay(display)
 		? renderCornellCueElement(cue, options)
 		: renderInlineCueElement(cue, options);
+	appendFreshnessBadge(element, cue.freshness);
 	applyEditorStudyCueInteraction(element, options.study);
 	return element;
+}
+
+function appendFreshnessBadge(
+	parent: HTMLElement,
+	freshness: ComponentFreshness
+): void {
+	if (
+		freshness !== "missing" &&
+		freshness !== "outdated" &&
+		freshness !== "failed"
+	) {
+		return;
+	}
+	const badge = parent.ownerDocument.createElement("span");
+	badge.className = "cuecraft-freshness-badge";
+	badge.textContent = "Outdated";
+	parent.prepend(badge);
 }
 
 function applyEditorStudyCueInteraction(
@@ -1200,7 +1230,8 @@ function noteBriefTitleWithoutRepeatedLabel(title: string, label: string): strin
 
 export function renderNoteBriefElement(
 	noteBrief: NoteBriefOutput,
-	variant: "editor" | "reading" = "editor"
+	variant: "editor" | "reading" = "editor",
+	freshness: ComponentFreshness = "current"
 ): HTMLElement {
 	const doc = cueDocument();
 	const root = doc.createElement("section");
@@ -1211,6 +1242,7 @@ export function renderNoteBriefElement(
 	label.className = "cuecraft-note-brief-label";
 	appendLabelIcon(label, "sparkles");
 	appendLabelText(label, "Note Brief");
+	appendFreshnessBadge(label, freshness);
 	root.appendChild(label);
 
 	const overview = doc.createElement("p");
@@ -1355,7 +1387,10 @@ export function buildCueWidgetDecorations(
 	if (payload.noteBrief && doc.lines >= 1) {
 		ranges.push(
 			Decoration.widget({
-				widget: new NoteBriefWidget(payload.noteBrief),
+				widget: new NoteBriefWidget(
+					payload.noteBrief,
+					payload.noteBriefFreshness
+				),
 				block: true,
 				side: 0,
 			}).range(noteBriefAnchor(state))

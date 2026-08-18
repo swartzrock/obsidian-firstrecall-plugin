@@ -79,6 +79,19 @@ function studySnapshot(): StudySessionSnapshot {
 }
 
 describe("buildReadingCueMap", () => {
+	it("carries affected-section freshness into Reading without marking peers", () => {
+		const cache = cacheFrom();
+		const map = buildReadingCueMap(cache, NOTE, {
+			sectionFreshness: new Map([
+				[cache.sections[0].id, "outdated"],
+				[cache.sections[1].id, "current"],
+			]),
+		});
+
+		expect(map.get(1)?.freshness).toBe("outdated");
+		expect(map.get(3)?.freshness).toBe("current");
+	});
+
 	it("indexes cues by their current heading line", () => {
 		const map = buildReadingCueMap(cacheFrom(), NOTE);
 		expect([...map.keys()].sort((a, b) => a - b)).toEqual([1, 3, 5]);
@@ -212,6 +225,52 @@ describe("readingCueDisplayState", () => {
 				},
 			})
 		).toEqual({ showInlineCues: false });
+	});
+});
+
+describe("Reading freshness memoization", () => {
+	it("invalidates a same-source cue map when component freshness changes", () => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const cache = cacheFrom();
+		const read = plugin as unknown as {
+			readingMapFor(
+				path: string,
+				text: string,
+				cache: ReturnType<typeof cacheFrom>,
+				visibility: {
+					showSummary: boolean;
+					showQuestion: boolean;
+					showTerms: boolean;
+				},
+				freshness: Array<{ id: string; freshness: "current" | "outdated" }>
+			): Map<number, { freshness: string }>;
+		};
+		const visibility = {
+			showSummary: true,
+			showQuestion: true,
+			showTerms: true,
+		};
+		const current = cache.sections.map((section) => ({
+			id: section.id,
+			freshness: "current" as const,
+		}));
+		const outdated = current.map((section, index) => ({
+			...section,
+			freshness: index === 0 ? "outdated" as const : section.freshness,
+		}));
+
+		const first = read.readingMapFor("notes/example.md", NOTE, cache, visibility, current);
+		const second = read.readingMapFor(
+			"notes/example.md",
+			NOTE,
+			cache,
+			visibility,
+			outdated
+		);
+
+		expect(first.get(1)?.freshness).toBe("current");
+		expect(second.get(1)?.freshness).toBe("outdated");
+		expect(second).not.toBe(first);
 	});
 });
 
@@ -508,13 +567,14 @@ describe("Reading postprocessor Study plumbing", () => {
 				showTerms: false,
 			},
 			app: {
+				vault: { cachedRead: async () => NOTE },
 				workspace: {
 					getActiveFile: () => ({ path }),
 					getActiveViewOfType: () => view,
 					iterateAllLeaves: () => undefined,
 				},
 			},
-			cacheStore: { get: () => cache },
+			cacheStore: { get: () => cache, getState: () => null },
 			visibility: { isHidden: () => true },
 			refreshReadingModeSurface: vi.fn(),
 			refreshEditorCues: vi.fn(),
@@ -562,6 +622,9 @@ describe("Reading postprocessor Study plumbing", () => {
 			(plugin as unknown as { visibility: { isHidden(path: string): boolean } })
 				.visibility.isHidden(path)
 		).toBe(true);
+		expect(
+			container.querySelector(".cuecraft-study-material-banner")?.textContent
+		).toContain("out of date");
 
 		const firstCueSelector =
 			`[data-cuecraft-section-id="${cache.sections[0].id}"]`;
