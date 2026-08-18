@@ -1,8 +1,5 @@
 import { z } from "zod/v3";
-import {
-	reconcileCacheSections,
-	type NoteCache,
-} from "./cache";
+import type { NoteCache } from "./cache";
 import {
 	cueEligibleSections,
 	lightHash,
@@ -30,7 +27,6 @@ export const noteMaintenanceStateSchema = z.object({
 	affected: componentSetSchema,
 	updating: componentSetSchema,
 	failure: maintenanceFailureSchema.nullable(),
-	retryable: z.boolean(),
 	bannerDismissedRevision: z.string().nullable(),
 });
 
@@ -76,7 +72,7 @@ function subtractComponents(a: ComponentSet, b: ComponentSet): ComponentSet {
 	};
 }
 
-function hasComponents(components: ComponentSet): boolean {
+export function hasMaintenanceComponents(components: ComponentSet): boolean {
 	return components.noteBrief || components.sectionIds.length > 0;
 }
 
@@ -109,7 +105,6 @@ export function createCurrentMaintenanceState(
 		affected: { ...EMPTY_COMPONENTS },
 		updating: { ...EMPTY_COMPONENTS },
 		failure: null,
-		retryable: false,
 		bannerDismissedRevision: null,
 	};
 }
@@ -132,7 +127,6 @@ export function createMissingMaintenanceState(
 		},
 		updating: { ...EMPTY_COMPONENTS },
 		failure: null,
-		retryable: false,
 		bannerDismissedRevision: null,
 	};
 }
@@ -191,7 +185,6 @@ export function reduceMaintenanceState(
 			affected: normalizeComponents(event.affected),
 			updating: { ...EMPTY_COMPONENTS },
 			failure: null,
-			retryable: false,
 			bannerDismissedRevision: null,
 		};
 	}
@@ -205,7 +198,6 @@ export function reduceMaintenanceState(
 			...state,
 			updating: normalizeComponents(event.components),
 			failure: null,
-			retryable: false,
 		};
 	}
 	if (event.type === "update-failed") {
@@ -215,7 +207,6 @@ export function reduceMaintenanceState(
 			affected: unionComponents(state.affected, failed),
 			updating: { ...EMPTY_COMPONENTS },
 			failure: { components: failed, message: event.message },
-			retryable: true,
 		};
 	}
 	if (event.type === "update-canceled") {
@@ -232,7 +223,7 @@ export function reduceMaintenanceState(
 				components: subtractComponents(state.failure.components, completed),
 			}
 		: null;
-	const remainingFailure = failure && hasComponents(failure.components)
+	const remainingFailure = failure && hasMaintenanceComponents(failure.components)
 		? failure
 		: null;
 	return {
@@ -244,7 +235,6 @@ export function reduceMaintenanceState(
 		affected: subtractComponents(state.affected, completed),
 		updating: subtractComponents(state.updating, completed),
 		failure: remainingFailure,
-		retryable: remainingFailure !== null,
 	};
 }
 
@@ -346,9 +336,7 @@ export function classifyStudyMaterial(params: {
 		freshness,
 		noteBrief,
 		sections: classifiedSections,
-		retryable: Boolean(
-			stateMatchesSource && params.state?.retryable && params.state.failure
-		),
+		retryable: Boolean(stateMatchesSource && params.state?.failure),
 		bannerDismissed:
 			params.state?.bannerDismissedRevision === sourceRevision,
 		hasGeneratedMaterial: Boolean(
@@ -371,7 +359,6 @@ function conservativeState(
 		},
 		updating: { ...EMPTY_COMPONENTS },
 		failure: null,
-		retryable: false,
 		bannerDismissedRevision: null,
 	};
 }
@@ -379,7 +366,7 @@ function conservativeState(
 function recoverInterruptedUpdate(
 	state: NoteMaintenanceState
 ): NoteMaintenanceState {
-	if (!hasComponents(state.updating)) return state;
+	if (!hasMaintenanceComponents(state.updating)) return state;
 	return {
 		...state,
 		affected: unionComponents(state.affected, state.updating),
@@ -433,7 +420,6 @@ export function normalizeMaintenanceStateMap(
 				),
 				updating: { ...EMPTY_COMPONENTS },
 				failure: null,
-				retryable: false,
 				bannerDismissedRevision: null,
 			};
 		}
@@ -441,20 +427,6 @@ export function normalizeMaintenanceStateMap(
 		if (JSON.stringify(states[path]) !== JSON.stringify(value)) changed = true;
 	}
 	return { states, changed };
-}
-
-export function reconcileTerminalStudyMaterial(
-	cache: NoteCache,
-	state: NoteMaintenanceState | null,
-	currentSections: readonly Section[]
-): { cache: NoteCache | null; state: NoteMaintenanceState | null } {
-	if (cueEligibleSections(currentSections).length === 0) {
-		return { cache: null, state: null };
-	}
-	return {
-		cache: reconcileCacheSections(cache, [...currentSections]),
-		state,
-	};
 }
 
 export type PersistStudyMaterialFn = (
@@ -486,18 +458,6 @@ export class StudyMaterialStore {
 
 	has(path: string): boolean {
 		return path in this.caches;
-	}
-
-	async set(path: string, cache: NoteCache): Promise<void> {
-		if (cache.sections.length === 0 && cache.noteBrief === null) {
-			if (!(path in this.caches) && !(path in this.states)) return;
-			delete this.caches[path];
-			delete this.states[path];
-			await this.persistSnapshots();
-			return;
-		}
-		this.caches[path] = cache;
-		await this.persistSnapshots();
 	}
 
 	async commit(

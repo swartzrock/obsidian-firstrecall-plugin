@@ -369,7 +369,7 @@ describe("study material maintenance execution", () => {
 		expect(result.status).toBe("failed");
 		expect(harness.caches["notes/note.md"].sections[0]).toEqual(cache.sections[0]);
 		expect(harness.caches["notes/note.md"].noteBrief).toEqual(BRIEF);
-		expect(harness.states["notes/note.md"]).toMatchObject({ retryable: true });
+		expect(harness.states["notes/note.md"].failure).not.toBeNull();
 		expect(harness.states["notes/note.md"].failure?.components).toEqual({
 			noteBrief: true,
 			sectionIds: ["alpha"],
@@ -390,7 +390,7 @@ describe("study material maintenance execution", () => {
 		expect(harness.caches["notes/note.md"].sections[0].question).toBe("New:Alpha");
 		expect(harness.caches["notes/note.md"].noteBrief).toEqual(BRIEF);
 		expect(harness.states["notes/note.md"].affected.noteBrief).toBe(true);
-		expect(harness.states["notes/note.md"].retryable).toBe(false);
+		expect(harness.states["notes/note.md"].failure).toBeNull();
 	});
 
 	it("removes generated material when the final eligible section disappears", async () => {

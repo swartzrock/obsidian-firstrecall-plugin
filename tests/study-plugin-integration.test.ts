@@ -658,9 +658,11 @@ describe("Study plugin orchestration", () => {
 
 		await (
 			harness.plugin as unknown as {
-				cacheStore: { set(path: string, cache: NoteCache): Promise<void> };
+				cacheStore: {
+					commit(path: string, cache: NoteCache, state: null): Promise<void>;
+				};
 			}
-		).cacheStore.set(renamedFile.path, cacheFor(NOTE));
+		).cacheStore.commit(renamedFile.path, cacheFor(NOTE), null);
 		await (
 			harness.plugin as unknown as {
 				reviewThisNote(target: TFile): Promise<void>;

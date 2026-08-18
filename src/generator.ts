@@ -205,6 +205,10 @@ export async function generateSectionCueBatch(
 	params: GenerateSectionBatchParams
 ): Promise<SectionResult[]> {
 	const { sections, provider, signal } = params;
+	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
+	const noteContext = params.noteContext
+		? clampText(extractStudyableText(params.noteContext), maxCtx)
+		: undefined;
 	const generateCues = provider.generateCues?.bind(provider);
 	if (!generateCues) {
 		return Promise.all(
@@ -213,7 +217,7 @@ export async function generateSectionCueBatch(
 					section,
 					provider,
 					options: params.options,
-					noteContext: params.noteContext,
+					noteContext,
 					maxContextChars: params.maxContextChars,
 					signal,
 				})
@@ -221,7 +225,6 @@ export async function generateSectionCueBatch(
 		);
 	}
 	const options = resolveGenerationOptions(params.options);
-	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	const results = sections.map(emptySectionResult);
 	const eligible = sections.flatMap((section, index) => {
 		const content = extractStudyableText(section.content);
@@ -233,9 +236,7 @@ export async function generateSectionCueBatch(
 			eligible.map(({ content, section }) => ({
 				heading: section.heading,
 				content: clampText(content, maxCtx),
-				noteContext: params.noteContext
-					? clampText(extractStudyableText(params.noteContext), maxCtx)
-					: undefined,
+				noteContext,
 				options,
 			})),
 			signal

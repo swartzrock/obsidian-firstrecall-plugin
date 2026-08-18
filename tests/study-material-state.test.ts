@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	buildNoteCache,
-	reconcileCacheSections,
 	type NoteCache,
 } from "../src/cache";
 import { parseSections } from "../src/parser";
@@ -13,7 +12,6 @@ import {
 	createMissingMaintenanceState,
 	noteSourceRevision,
 	normalizeMaintenanceStateMap,
-	reconcileTerminalStudyMaterial,
 	reduceMaintenanceState,
 	type ComponentSet,
 } from "../src/study-material-state";
@@ -199,7 +197,7 @@ describe("maintenance attempts", () => {
 		await store.commit("note.md", cache, failed);
 
 		expect(store.get("note.md")).toEqual(cache);
-		expect(store.getState("note.md")?.retryable).toBe(true);
+		expect(store.getState("note.md")?.failure).not.toBeNull();
 		expect(persist).toHaveBeenCalledTimes(1);
 		expect(persist).toHaveBeenCalledWith(
 			{ "note.md": cache },
@@ -315,7 +313,6 @@ describe("load reconciliation and terminal state", () => {
 		expect(normalized.states).not.toHaveProperty("malformed.md");
 		expect(normalized.states["note.md"]).toMatchObject({
 			noteBriefRevision: null,
-			retryable: false,
 			bannerDismissedRevision: null,
 		});
 		expect(normalized.states["note.md"].affected.sectionIds).toEqual(
@@ -345,7 +342,7 @@ describe("load reconciliation and terminal state", () => {
 
 		expect(normalized.changed).toBe(false);
 		expect(normalized.states["new.md"]?.cacheRevision).toBeNull();
-		expect(normalized.states["new.md"]?.retryable).toBe(true);
+		expect(normalized.states["new.md"]?.failure).not.toBeNull();
 		const classification = classifyStudyMaterial({
 			noteTitle: "New",
 			markdown: MARKDOWN,
@@ -361,17 +358,12 @@ describe("load reconciliation and terminal state", () => {
 		const cache = cacheFor();
 		const state = {
 			...createCurrentMaintenanceState("Note", MARKDOWN, cache),
-			retryable: true,
+			failure: {
+				components: components(true),
+				message: "provider unavailable",
+			},
 			bannerDismissedRevision: noteSourceRevision("Note", MARKDOWN),
 		};
-
-		expect(
-			reconcileTerminalStudyMaterial(
-				cache,
-				state,
-				parseSections("# Empty heading\n")
-			)
-		).toEqual({ cache: null, state: null });
 
 		const persist = vi.fn(async () => {});
 		const store = new StudyMaterialStore(
@@ -379,10 +371,7 @@ describe("load reconciliation and terminal state", () => {
 			{ "note.md": state },
 			persist
 		);
-		await store.set(
-			"note.md",
-			reconcileCacheSections(cache, parseSections("# Empty heading\n"))
-		);
+		await store.commit("note.md", null, null);
 		expect(store.get("note.md")).toBeNull();
 		expect(store.getState("note.md")).toBeNull();
 		expect(persist).toHaveBeenCalledWith({}, {});

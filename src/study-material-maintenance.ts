@@ -16,6 +16,7 @@ import {
 	cacheContentRevision,
 	createCurrentMaintenanceState,
 	createMissingMaintenanceState,
+	hasMaintenanceComponents,
 	noteSourceRevision,
 	reduceMaintenanceState,
 	type ComponentSet,
@@ -117,10 +118,6 @@ function unique(values: readonly string[]): string[] {
 	return [...new Set(values)];
 }
 
-function hasComponents(components: ComponentSet): boolean {
-	return components.noteBrief || components.sectionIds.length > 0;
-}
-
 function componentErrorMessages(results: readonly SectionResult[]): string[] {
 	return unique(
 		results.flatMap((result) => result.error ? [result.error] : [])
@@ -128,12 +125,12 @@ function componentErrorMessages(results: readonly SectionResult[]): string[] {
 }
 
 function sourceComponents(
-	source: MaintenanceSource,
+	eligible: readonly Section[],
+	revision: string,
 	cache: NoteCache | null,
 	state: NoteMaintenanceState | null,
 	forcedSectionIds?: readonly string[]
 ): ComponentSet {
-	const eligible = cueEligibleSections(parseSections(source.markdown));
 	const currentIds = new Set(eligible.map((section) => section.id));
 	const cachedById = new Map(
 		(cache?.sections ?? []).map((section) => [section.id, section])
@@ -147,7 +144,6 @@ function sourceComponents(
 	const sectionIds = forcedSectionIds
 		? unique(forcedSectionIds.filter((id) => currentIds.has(id)))
 		: changedIds;
-	const revision = noteSourceRevision(source.noteTitle, source.markdown);
 	const cacheIds = (cache?.sections ?? []).map((section) => section.id);
 	const currentOrder = eligible.map((section) => section.id);
 	const structureChanged =
@@ -194,7 +190,8 @@ export function planStudyMaterialMaintenance(params: {
 		forced = params.state.failure.components.sectionIds;
 	}
 	const components = sourceComponents(
-		params.source,
+		eligible,
+		revision,
 		params.cache,
 		params.state,
 		forced
@@ -300,7 +297,7 @@ export class StudyMaterialMaintenance {
 			await this.deps.commit(from, null, null);
 		}
 		const transferred = this.deps.getState(to);
-		if (transferred && hasComponents(transferred.updating)) {
+		if (transferred && hasMaintenanceComponents(transferred.updating)) {
 			const recovered = reduceMaintenanceState(transferred, {
 				type: "update-canceled",
 				revision: transferred.sourceRevision,
@@ -489,7 +486,7 @@ export class StudyMaterialMaintenance {
 				},
 			};
 		}
-		if (!hasComponents(plan.components)) {
+		if (!hasMaintenanceComponents(plan.components)) {
 			return {
 				public: { status: "skipped", path: request.path, reason: "no-work" },
 			};
@@ -563,14 +560,7 @@ export class StudyMaterialMaintenance {
 		const failed = generated.filter((result) => Boolean(result.error));
 		const metadata = this.deps.providerMetadata();
 		let nextCache = cache;
-		if (nextCache) {
-			nextCache = reconcileCacheSections(
-				nextCache,
-				plan.sections,
-				successful,
-				{ noteModifiedAt: source.modifiedAt }
-			);
-		} else if (successful.length) {
+		if (!nextCache && successful.length) {
 			nextCache = buildNoteCache({
 				result: {
 					sections: successful,
@@ -580,6 +570,8 @@ export class StudyMaterialMaintenance {
 				...metadata,
 				noteModifiedAt: source.modifiedAt,
 			});
+		}
+		if (nextCache) {
 			nextCache = reconcileCacheSections(
 				nextCache,
 				plan.sections,
@@ -640,7 +632,7 @@ export class StudyMaterialMaintenance {
 			};
 		}
 		const nextCacheRevision = nextCache ? cacheContentRevision(nextCache) : null;
-		if (hasComponents(successfulComponents)) {
+		if (hasMaintenanceComponents(successfulComponents)) {
 			state = reduceMaintenanceState(state, {
 				type: "update-succeeded",
 				revision: plan.revision,
@@ -648,7 +640,7 @@ export class StudyMaterialMaintenance {
 				cacheRevision: nextCacheRevision,
 			});
 		}
-		if (hasComponents(failedComponents)) {
+		if (hasMaintenanceComponents(failedComponents)) {
 			state = reduceMaintenanceState(state, {
 				type: "update-failed",
 				revision: plan.revision,
@@ -656,7 +648,7 @@ export class StudyMaterialMaintenance {
 				message: errors.join("; "),
 			});
 		}
-		if (hasComponents(unresolvedComponents)) {
+		if (hasMaintenanceComponents(unresolvedComponents)) {
 			state = reduceMaintenanceState(state, {
 				type: "update-canceled",
 				revision: plan.revision,

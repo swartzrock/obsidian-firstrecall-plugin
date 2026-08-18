@@ -221,17 +221,6 @@ describe("CacheStore", () => {
 		expect(store.snapshot()).toEqual({ "seed.md": cache });
 	});
 
-	it("moves a cache across a rename", async () => {
-		const cache = build();
-		const persist = vi.fn(async () => {});
-		const store = new CacheStore({ "old.md": cache }, persist);
-
-		await store.rename("old.md", "new.md");
-
-		expect(store.get("old.md")).toBeNull();
-		expect(store.get("new.md")).toEqual(cache);
-		expect(persist).toHaveBeenCalledTimes(1);
-	});
 });
 
 describe("sectionIdsNeedingGeneration", () => {

@@ -259,13 +259,6 @@ export class CacheStore {
 		}
 	}
 
-	async rename(from: string, to: string): Promise<void> {
-		if (!(from in this.map) || from === to) return;
-		this.map[to] = this.map[from];
-		delete this.map[from];
-		await this.persist(this.map);
-	}
-
 	snapshot(): Record<string, NoteCache> {
 		return { ...this.map };
 	}
