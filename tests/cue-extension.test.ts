@@ -757,6 +757,37 @@ describe("buildCueLineData", () => {
 		expect(cues.map((cue) => cue.heading)).toEqual(["Prefix Sum"]);
 	});
 
+	it("skips a previously cached cue when the section is now image-only", () => {
+		const sections = parseSections("# A Picture Of Tonks\n![[tonks.jpg]]");
+		const section = sections[0];
+		const cache = buildNoteCache({
+			result: {
+				sections: [
+					{
+						id: section.id,
+						heading: section.heading,
+						level: section.level,
+						lineNumber: section.lineNumber,
+						contentHash: section.contentHash,
+						keywords: ["fabricated", "terms"],
+						question: "What fabricated idea does this image show?",
+						summary: SECTION_SUMMARY,
+						error: null,
+					},
+				],
+				noteBrief: null,
+				canceled: false,
+			},
+			provider: "ollama",
+			model: "m",
+			preset: "conceptual",
+			generationMode: "whole-note-context",
+			noteModifiedAt: 1,
+		});
+
+		expect(buildCueLineData(cache, sections)).toEqual([]);
+	});
+
 	it("re-resolves cue lines after content shifts the heading down", () => {
 		const cache = cacheFrom();
 		// Prepend lines so headings move; ids stay stable (hash of body).

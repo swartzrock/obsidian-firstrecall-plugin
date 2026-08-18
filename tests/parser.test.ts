@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
 	cueEligibleSections,
+	extractStudyableText,
 	isCueEligibleSection,
 	parseSections,
 	lightHash,
@@ -75,6 +76,55 @@ describe("parseSections", () => {
 		expect(cueEligibleSections(sections).map((section) => section.heading)).toEqual([
 			"Prefix Sum",
 		]);
+	});
+
+	it("does not treat an Obsidian image embed as cue-worthy source material", () => {
+		const [section] = parseSections("# A Picture Of Tonks\n![[tonks.jpg]]");
+
+		expect(isCueEligibleSection(section)).toBe(false);
+	});
+
+	it("does not treat a Markdown image as cue-worthy source material", () => {
+		const [section] = parseSections("# A Picture Of Tonks\n![](tonks.jpg)");
+
+		expect(isCueEligibleSection(section)).toBe(false);
+	});
+
+	it("does not treat an HTML image as cue-worthy source material", () => {
+		const [section] = parseSections(
+			'# A Picture Of Tonks\n<img src="tonks.jpg">'
+		);
+
+		expect(isCueEligibleSection(section)).toBe(false);
+	});
+
+	it("keeps an explicit Obsidian image caption as studyable text", () => {
+		expect(
+			extractStudyableText("![[tonks.jpg|Tonks running through a park]]")
+		).toBe("Tonks running through a park");
+	});
+
+	it.each([
+		["Obsidian resize", "![[tonks.jpg|300x200]]"],
+		["Obsidian filename", "![[tonks.jpg|tonks.jpg]]"],
+		["Markdown filename", "![tonks.jpg](tonks.jpg)"],
+		["HTML filename", '<img src="tonks.jpg" alt="tonks.jpg">'],
+	])("does not treat %s metadata as a caption", (_name, markup) => {
+		expect(extractStudyableText(markup)).toBe("");
+	});
+
+	it("keeps explicit Markdown image alt text", () => {
+		expect(
+			extractStudyableText("![Tonks running through a park](tonks.jpg)")
+		).toBe("Tonks running through a park");
+	});
+
+	it("keeps explicit HTML image alt text", () => {
+		expect(
+			extractStudyableText(
+				'<img src="tonks.jpg" alt="Tonks running through a park">'
+			)
+		).toBe("Tonks running through a park");
 	});
 });
 

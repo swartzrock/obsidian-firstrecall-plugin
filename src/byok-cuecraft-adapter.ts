@@ -44,12 +44,14 @@ import {
 	SUMMARY_JSON_SCHEMA,
 } from "./study-material-instructions";
 import {
-	cueGenerationSchema,
+	cueGenerationResponseSchema,
 	cueOutputSchema,
 	formatZodError,
+	INSUFFICIENT_SOURCE_ERROR,
+	isInsufficientSource,
 	noteBriefGenerationSchema,
 	noteBriefOutputSchema,
-	validateCue,
+	validateCueResponse,
 	validateNoteBrief,
 	type CueOutput,
 	type NoteBriefOutput,
@@ -96,7 +98,7 @@ export interface CueCraftAppliedModelRefresh {
 	message: string;
 }
 
-const CUE_JSON_SCHEMA = JSON.stringify({
+const CUE_OUTPUT_JSON_SCHEMA = {
 	type: "object",
 	properties: {
 		question: { type: "string" },
@@ -110,6 +112,19 @@ const CUE_JSON_SCHEMA = JSON.stringify({
 	},
 	required: ["question", "keywords", "summary"],
 	additionalProperties: false,
+};
+
+const INSUFFICIENT_SOURCE_JSON_SCHEMA = {
+	type: "object",
+	properties: {
+		insufficientSource: { const: true },
+	},
+	required: ["insufficientSource"],
+	additionalProperties: false,
+};
+
+const CUE_JSON_SCHEMA = JSON.stringify({
+	oneOf: [CUE_OUTPUT_JSON_SCHEMA, INSUFFICIENT_SOURCE_JSON_SCHEMA],
 });
 
 const NOTE_BRIEF_SCHEMA = JSON.stringify(NOTE_BRIEF_JSON_SCHEMA);
@@ -214,9 +229,18 @@ async function generateCueFromObjectProvider(
 		throw cueCraftProviderError("Provider does not support structured output.");
 	}
 	const raw = await runtime.generateObject({
-		schema: cueGenerationSchema,
+		schema: cueGenerationResponseSchema,
 		prompt: buildSectionCuePrompt(input),
 	}, signal);
+	const response = cueGenerationResponseSchema.safeParse(raw);
+	if (!response.success) {
+		throw cueCraftProviderError(
+			`Model output could not be validated: ${formatZodError(response.error)}`
+		);
+	}
+	if (isInsufficientSource(response.data)) {
+		throw cueCraftProviderError(INSUFFICIENT_SOURCE_ERROR);
+	}
 	const parsed = cueOutputSchema.safeParse(raw);
 	if (!parsed.success) {
 		throw cueCraftProviderError(
@@ -240,7 +264,7 @@ async function generateCueFromTextProvider(
 		},
 		signal
 	);
-	let result = validateCue(raw.text);
+	let result = validateCueResponse(raw.text);
 	if (!result.ok) {
 		debugModelTextFailure("cue", "initial", raw.text, result.error);
 		const repairPrompt =
@@ -256,13 +280,16 @@ async function generateCueFromTextProvider(
 			},
 			signal
 		);
-		result = validateCue(retry.text);
+		result = validateCueResponse(retry.text);
 		if (!result.ok) {
 			debugModelTextFailure("cue", "repair", retry.text, result.error);
 		}
 	}
 	if (!result.ok) {
 		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
+	}
+	if (isInsufficientSource(result.value)) {
+		throw cueCraftProviderError(INSUFFICIENT_SOURCE_ERROR);
 	}
 	return result.value;
 }
@@ -347,7 +374,9 @@ async function generateCueBatchFromTextProvider(
 	let result = parseCueBatch(raw.text, inputs.length);
 	const itemErrors = (batch: Exclude<typeof result, string>) =>
 		batch.results.flatMap((item, index) =>
-			item.error ? [`section ${index + 1}: ${item.error}`] : []
+			item.error && item.error !== INSUFFICIENT_SOURCE_ERROR
+				? [`section ${index + 1}: ${item.error}`]
+				: []
 		);
 	const initialError =
 		typeof result === "string" ? result : itemErrors(result).join("; ");

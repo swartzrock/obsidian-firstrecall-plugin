@@ -213,6 +213,36 @@ describe("local CLI cue batch prompt", () => {
 		expect(calls[1].prompt).toContain("Previous reply:");
 	});
 
+	it("keeps an insufficient-source abstention without repairing it", async () => {
+		const calls: ByokTextGenerationInput[] = [];
+		const runtime: ByokProviderRuntime = {
+			id: "codex-cli",
+			label: "Fake Codex CLI",
+			requiresNetwork: true,
+			requiresDownload: false,
+			testConnection: async () => ({ ok: true, message: "Connected." }),
+			listModels: async () => [],
+			generateText: async (input) => {
+				calls.push(input);
+				return { text: JSON.stringify({ cues: [{ insufficientSource: true }] }) };
+			},
+		};
+		const provider = wrapCueCraftByokRuntime(runtime);
+
+		await expect(
+			provider.generateCues?.([
+				{
+					heading: "A Picture Of Tonks",
+					content: "Tonks",
+					options: { questionType: "conceptual" },
+				},
+			])
+		).resolves.toEqual([
+			{ error: "Insufficient source content for a faithful cue." },
+		]);
+		expect(calls).toHaveLength(1);
+	});
+
 	it("requests only the current cue fields", () => {
 		const prompt = buildCueBatchPrompt([
 				{
@@ -233,10 +263,13 @@ describe("local CLI cue batch prompt", () => {
 
 	it("requires every current cue field in the JSON schema", () => {
 		const schema = JSON.parse(cueBatchJsonSchema(1));
-		expect(schema.properties.cues.items.required).toEqual([
+		expect(schema.properties.cues.items.oneOf[0].required).toEqual([
 			"question",
 			"keywords",
 			"summary",
+		]);
+		expect(schema.properties.cues.items.oneOf[1].required).toEqual([
+			"insufficientSource",
 		]);
 	});
 

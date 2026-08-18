@@ -1,4 +1,8 @@
-import { cueEligibleSections, parseSections } from "./parser";
+import {
+	cueEligibleSections,
+	extractStudyableText,
+	parseSections,
+} from "./parser";
 import {
 	questionTypeInfo,
 	type CueGenerationOptions,
@@ -169,13 +173,15 @@ export async function generateSectionCue(
 	const options = resolveGenerationOptions(params.options);
 	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	const result = emptySectionResult(section);
+	const content = extractStudyableText(section.content);
+	if (!content) return result;
 	try {
 		const cue = await provider.generateCue(
 			{
 				heading: section.heading,
-				content: clampText(section.content, maxCtx),
+				content: clampText(content, maxCtx),
 				noteContext: params.noteContext
-					? clampText(params.noteContext, maxCtx)
+					? clampText(extractStudyableText(params.noteContext), maxCtx)
 					: undefined,
 				options,
 			},
@@ -210,23 +216,30 @@ export async function generateSectionCueBatch(
 	const options = resolveGenerationOptions(params.options);
 	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	const results = sections.map(emptySectionResult);
+	const eligible = sections.flatMap((section, index) => {
+		const content = extractStudyableText(section.content);
+		return content ? [{ content, index, section }] : [];
+	});
+	if (!eligible.length) return results;
 	try {
 		const batch = await generateCues(
-			sections.map((section) => ({
+			eligible.map(({ content, section }) => ({
 				heading: section.heading,
-				content: clampText(section.content, maxCtx),
+				content: clampText(content, maxCtx),
 				noteContext: params.noteContext
-					? clampText(params.noteContext, maxCtx)
+					? clampText(extractStudyableText(params.noteContext), maxCtx)
 					: undefined,
 				options,
 			})),
 			signal
 		);
-		results.forEach((result, index) => applyCueResult(result, batch[index]));
+		eligible.forEach(({ index }, batchIndex) =>
+			applyCueResult(results[index], batch[batchIndex])
+		);
 	} catch (e) {
 		const message = e instanceof Error ? e.message : String(e);
-		results.forEach((result) => {
-			result.error = message;
+		eligible.forEach(({ index }) => {
+			results[index].error = message;
 		});
 	}
 	return results;
@@ -250,7 +263,10 @@ export async function generateNoteBriefForSections(
 		const noteBrief = await generateNoteBrief(
 			{
 				noteTitle: params.noteTitle,
-				fullText: clampText(params.markdown, maxContextChars),
+				fullText: clampText(
+					extractStudyableText(params.markdown),
+					maxContextChars
+				),
 				sections,
 			},
 			params.signal
@@ -278,7 +294,7 @@ export async function generateNote(
 		provider
 	);
 	const wholeNoteContext = params.useWholeNoteContext
-		? clampText(markdown, maxContextChars)
+		? clampText(extractStudyableText(markdown), maxContextChars)
 		: undefined;
 	const sections = cueEligibleSections(parseSections(markdown));
 	const includesNoteBrief = sections.length > 0 && Boolean(provider.generateNoteBrief);
