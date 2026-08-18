@@ -2337,9 +2337,6 @@ export default class CueCraftPlugin extends Plugin {
 			} else if (failed) {
 				new Notice(`CueCraft: auto-generation finished with ${failed} failed section(s).`);
 			}
-			// Rendering/caching of `result` lands with the cue-extension + cache modules.
-			const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-			console.debug(`CueCraft generation result (${elapsed}s)`, result);
 		} catch (e) {
 			console.error("CueCraft generation failed", e);
 			new Notice("CueCraft: generation failed. See console for details.");

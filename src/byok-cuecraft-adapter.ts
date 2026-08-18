@@ -115,16 +115,6 @@ const CUE_JSON_SCHEMA = JSON.stringify({
 
 const NOTE_BRIEF_SCHEMA = JSON.stringify(NOTE_BRIEF_JSON_SCHEMA);
 
-type InstructionArtifact = "Section cue" | "Section cue batch" | "Note Brief";
-
-function logInstructionTemplate(
-	artifact: InstructionArtifact,
-	instructions: string
-): void {
-	// eslint-disable-next-line obsidianmd/rule-custom-message -- User-requested prompt diagnostics in Obsidian DevTools.
-	console.info(`[CueCraft BYOK] ${artifact} instructions\n${instructions}`);
-}
-
 function cueCraftProviderError(message: string): ByokProviderError {
 	return new ByokProviderError(message);
 }
@@ -182,10 +172,6 @@ function normalizeOllamaJsonResponse(response: Awaited<ReturnType<ByokHttpClient
 		thinkingText.trim()
 	) {
 		const json = { ...record, response: thinkingText };
-		console.debug("[CueCraft BYOK] Recovered Ollama JSON response from thinking output", {
-			thinkingLength: thinkingText.length,
-			thinkingPreview: thinkingText.slice(0, 300),
-		});
 		return { ...response, json, text: JSON.stringify(json) };
 	}
 	if (typeof generatedText === "string" && generatedText.trim() === "") {
@@ -210,14 +196,7 @@ function cueCraftProviderDeps(
 		...deps,
 		http: async (request) => {
 			const body = normalizeOllamaJsonRequestBody(request.body);
-			const requestSummary = describeOllamaJsonRequest(body);
 			const response = await deps.http({ ...request, body });
-			if (requestSummary.format !== undefined) {
-				console.debug("[CueCraft BYOK] Ollama JSON request completed", {
-					...requestSummary,
-					status: response.status,
-				});
-			}
 			return normalizeOllamaJsonResponse(response);
 		},
 	};
@@ -410,16 +389,11 @@ export function wrapCueCraftByokRuntime(
 		testConnection: () => runtime.testConnection(),
 		listModels: () => runtime.listModels(),
 		generateCue: (input, signal) => {
-			logInstructionTemplate(
-				"Section cue",
-				buildSectionCueInstructionsTemplate(input.options.questionType, "single")
-			);
 			return generateFromObject
 				? generateCueFromObjectProvider(runtime, input, signal)
 				: generateCueFromTextProvider(runtime, input, signal);
 		},
 		generateNoteBrief: (input, signal) => {
-			logInstructionTemplate("Note Brief", buildNoteBriefInstructionsTemplate());
 			return generateFromObject
 				? generateNoteBriefFromObjectProvider(runtime, input, signal)
 				: generateNoteBriefFromTextProvider(runtime, input, signal);
@@ -427,13 +401,6 @@ export function wrapCueCraftByokRuntime(
 	};
 	if (runtime.id === "codex-cli" || runtime.id === "claude-cli") {
 		cueRuntime.generateCues = (inputs, signal) => {
-			logInstructionTemplate(
-				"Section cue batch",
-				buildSectionCueInstructionsTemplate(
-					inputs[0]?.options.questionType ?? DEFAULT_QUESTION_TYPE,
-					"batch"
-				)
-			);
 			return generateCueBatchFromTextProvider(runtime, inputs, signal);
 		};
 	}
