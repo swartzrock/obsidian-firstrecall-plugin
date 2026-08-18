@@ -1,5 +1,5 @@
 /**
- * Reading-mode (preview) Section cue display. Obsidian renders reading view through
+ * Reading-mode (preview) section card display. Obsidian renders reading view through
  * Markdown post-processors that hand us one rendered block at a time, so we
  * resolve the cached cues to current document lines (reusing the same
  * {@link buildCueLineData} logic as the editor) and key them by heading line.
@@ -26,7 +26,9 @@ export interface ReadingCueDisplayState {
 	showInlineCues: boolean;
 }
 
-export type ReadingCueVisibility = Required<CueLineDataOptions>;
+export type ReadingCueVisibility = Required<
+	Pick<CueLineDataOptions, "showSummary" | "showQuestion" | "showTerms">
+>;
 
 export interface ReadingNoteBriefDisplayState {
 	showNoteBrief: boolean;
@@ -193,7 +195,7 @@ export function projectReadingStudyBlock(
 		toggle.type = "button";
 		toggle.className = "cuecraft-study-section-toggle";
 		toggle.dataset.revealed = String(section.revealed);
-		const label = section.revealed ? "Hide section" : "Show section";
+		const label = section.revealed ? "Hide answer" : "Show answer";
 		toggle.setAttribute("aria-label", label);
 		toggle.setAttribute("aria-pressed", String(section.revealed));
 		setIcon(toggle, section.revealed ? "eye-off" : "eye");
@@ -266,10 +268,10 @@ export function syncReadingStudyControls(
 		helpCopy.className = "cuecraft-study-help-copy";
 		const helpTitle = doc.createElement("span");
 		helpTitle.className = "cuecraft-study-help-title";
-		helpTitle.textContent = "Show or hide sections";
+		helpTitle.textContent = "Show or hide answers";
 		const helpDetail = doc.createElement("span");
 		helpDetail.className = "cuecraft-study-help-detail";
-		helpDetail.textContent = "Click the eye icon on any Section cue card.";
+		helpDetail.textContent = "Click the eye icon on any section card.";
 		helpCopy.append(helpTitle, helpDetail);
 		help.append(helpCopy);
 
@@ -281,7 +283,7 @@ export function syncReadingStudyControls(
 		progressTrack.className = "cuecraft-study-progress-track";
 		progressTrack.setAttribute("role", "progressbar");
 		progressTrack.setAttribute("aria-valuemin", "0");
-		progressTrack.setAttribute("aria-label", "Sections revealed");
+		progressTrack.setAttribute("aria-label", "Answers revealed");
 		const progressFill = doc.createElement("div");
 		progressFill.className = "cuecraft-study-progress-fill";
 		progressTrack.append(progressFill);
@@ -291,14 +293,14 @@ export function syncReadingStudyControls(
 		showAll.className =
 			"cuecraft-study-action cuecraft-reading-study-show-all";
 		setIcon(showAll, "eye");
-		showAll.append("Show All Sections");
+		showAll.append("Show All Answers");
 
 		const hideAll = doc.createElement("button");
 		hideAll.type = "button";
 		hideAll.className =
 			"cuecraft-study-action cuecraft-reading-study-hide-all";
 		setIcon(hideAll, "eye-off");
-		hideAll.append("Hide All Sections");
+		hideAll.append("Hide All Answers");
 
 		const exit = doc.createElement("button");
 		exit.type = "button";
@@ -343,7 +345,7 @@ export function syncReadingStudyControls(
 		".cuecraft-reading-study-progress"
 	);
 	if (progress) {
-		progress.textContent = `${projection.snapshot.revealedCount} / ${projection.snapshot.total} revealed`;
+		progress.textContent = `${projection.snapshot.revealedCount} / ${projection.snapshot.total} answers revealed`;
 	}
 	const progressTrack = host.querySelector<HTMLElement>(
 		".cuecraft-study-progress-track"

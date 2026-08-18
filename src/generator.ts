@@ -29,6 +29,7 @@ export interface SectionResult {
 export interface NoteGenerationResult {
 	sections: SectionResult[];
 	noteBrief: NoteBriefOutput | null;
+	noteBriefOutcome?: NoteBriefGenerationOutcome;
 	/** True if generation was cancelled before completing all current artifacts. */
 	canceled: boolean;
 }
@@ -66,7 +67,7 @@ export interface GenerateNoteParams {
 	useWholeNoteContext?: boolean;
 	/** Cap (in chars) on note text injected into prompts; keeps requests within model context limits. */
 	maxContextChars?: number;
-	/** Maximum number of section cue requests running at once. */
+	/** Maximum number of section-card requests running at once. */
 	sectionConcurrency?: number;
 	signal?: AbortSignal;
 	onProgress?: (done: number, total: number) => void;
@@ -87,6 +88,12 @@ export interface GenerateNoteBriefParams {
 	maxContextChars?: number;
 	signal?: AbortSignal;
 }
+
+export type NoteBriefGenerationOutcome =
+	| { status: "success"; noteBrief: NoteBriefOutput }
+	| { status: "skipped" }
+	| { status: "canceled" }
+	| { status: "failed"; error: string };
 
 /** Default budget for note text injected into a single prompt. */
 export const DEFAULT_MAX_CONTEXT_CHARS = 8000;
@@ -145,7 +152,7 @@ function applyCueResult(
 	item: CueCraftCueBatchResult | undefined
 ): void {
 	if (!item) {
-		result.error = "Provider returned no Section cue for this section.";
+		result.error = "Provider returned no section study card for this section.";
 		return;
 	}
 	if (item.error) {
@@ -153,7 +160,7 @@ function applyCueResult(
 		return;
 	}
 	if (!item.cue) {
-		result.error = "Provider returned no Section cue for this section.";
+		result.error = "Provider returned no section study card for this section.";
 		return;
 	}
 	result.keywords = item.cue.keywords;
@@ -198,6 +205,10 @@ export async function generateSectionCueBatch(
 	params: GenerateSectionBatchParams
 ): Promise<SectionResult[]> {
 	const { sections, provider, signal } = params;
+	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
+	const noteContext = params.noteContext
+		? clampText(extractStudyableText(params.noteContext), maxCtx)
+		: undefined;
 	const generateCues = provider.generateCues?.bind(provider);
 	if (!generateCues) {
 		return Promise.all(
@@ -206,7 +217,7 @@ export async function generateSectionCueBatch(
 					section,
 					provider,
 					options: params.options,
-					noteContext: params.noteContext,
+					noteContext,
 					maxContextChars: params.maxContextChars,
 					signal,
 				})
@@ -214,7 +225,6 @@ export async function generateSectionCueBatch(
 		);
 	}
 	const options = resolveGenerationOptions(params.options);
-	const maxCtx = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	const results = sections.map(emptySectionResult);
 	const eligible = sections.flatMap((section, index) => {
 		const content = extractStudyableText(section.content);
@@ -226,9 +236,7 @@ export async function generateSectionCueBatch(
 			eligible.map(({ content, section }) => ({
 				heading: section.heading,
 				content: clampText(content, maxCtx),
-				noteContext: params.noteContext
-					? clampText(extractStudyableText(params.noteContext), maxCtx)
-					: undefined,
+				noteContext,
 				options,
 			})),
 			signal
@@ -247,9 +255,9 @@ export async function generateSectionCueBatch(
 
 export async function generateNoteBriefForSections(
 	params: GenerateNoteBriefParams
-): Promise<NoteBriefOutput | null> {
+): Promise<NoteBriefGenerationOutcome> {
 	const generateNoteBrief = params.provider.generateNoteBrief?.bind(params.provider);
-	if (!generateNoteBrief) return null;
+	if (!generateNoteBrief) return { status: "skipped" };
 	const sections = params.sections
 		.filter((section) => !section.error && section.question)
 		.map((section) => ({
@@ -257,7 +265,8 @@ export async function generateNoteBriefForSections(
 			question: section.question as string,
 			keywords: section.keywords ?? [],
 		}));
-	if (!sections.length || params.signal?.aborted) return null;
+	if (params.signal?.aborted) return { status: "canceled" };
+	if (!sections.length) return { status: "skipped" };
 	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	try {
 		const noteBrief = await generateNoteBrief(
@@ -271,9 +280,14 @@ export async function generateNoteBriefForSections(
 			},
 			params.signal
 		);
-		return noteBrief;
-	} catch {
-		return null;
+		if (params.signal?.aborted) return { status: "canceled" };
+		return { status: "success", noteBrief };
+	} catch (error) {
+		if (params.signal?.aborted) return { status: "canceled" };
+		return {
+			status: "failed",
+			error: error instanceof Error ? error.message : String(error),
+		};
 	}
 }
 
@@ -354,6 +368,7 @@ export async function generateNote(
 	}
 
 	let noteBrief: NoteBriefOutput | null = null;
+	let noteBriefOutcome: NoteBriefGenerationOutcome = { status: "skipped" };
 	const completedResults = results.filter(
 		(r): r is SectionResult => Boolean(r)
 	);
@@ -362,6 +377,7 @@ export async function generateNote(
 		return {
 			sections: completedResults,
 			noteBrief,
+			noteBriefOutcome: { status: "canceled" },
 			canceled: true,
 		};
 	}
@@ -374,10 +390,10 @@ export async function generateNote(
 			done++;
 			onProgress?.(done, total);
 		}
-		return { sections: completedResults, noteBrief, canceled };
+		return { sections: completedResults, noteBrief, noteBriefOutcome, canceled };
 	}
 	if (!signal?.aborted) {
-		noteBrief = await generateNoteBriefForSections({
+		noteBriefOutcome = await generateNoteBriefForSections({
 			noteTitle,
 			markdown,
 			provider,
@@ -385,6 +401,9 @@ export async function generateNote(
 			maxContextChars,
 			signal,
 		});
+		if (noteBriefOutcome.status === "success") {
+			noteBrief = noteBriefOutcome.noteBrief;
+		}
 		if (includesNoteBrief) {
 			done++;
 			onProgress?.(done, total);
@@ -392,5 +411,6 @@ export async function generateNote(
 	}
 	if (signal?.aborted) canceled = true;
 
-	return { sections: completedResults, noteBrief, canceled };
+	if (signal?.aborted) noteBriefOutcome = { status: "canceled" };
+	return { sections: completedResults, noteBrief, noteBriefOutcome, canceled };
 }

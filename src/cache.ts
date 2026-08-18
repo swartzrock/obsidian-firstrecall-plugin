@@ -167,11 +167,21 @@ export function reconcileCacheSections(
 	generatedSections: readonly CachedSection[] = [],
 	opts: ReconcileCacheSectionsOptions = {}
 ): NoteCache {
+	const eligibleSections = cueEligibleSections(currentSections);
+	if (eligibleSections.length === 0) {
+		return {
+			...cache,
+			generatedAt: opts.generatedAt ?? new Date().toISOString(),
+			noteModifiedAt: opts.noteModifiedAt ?? cache.noteModifiedAt,
+			sections: [],
+			noteBrief: null,
+		};
+	}
 	const cached = new Map(cache.sections.map((s) => [s.id, s]));
 	const generated = new Map(generatedSections.map((s) => [s.id, s]));
-	const sections = cueEligibleSections(currentSections).flatMap((live) => {
+	const sections = eligibleSections.flatMap((live) => {
 		const updated = generated.get(live.id);
-		if (updated) return [updated];
+		if (updated && !updated.error) return [updated];
 		const existing = cached.get(live.id);
 		if (!existing) return [];
 		return [{
@@ -179,7 +189,6 @@ export function reconcileCacheSections(
 			heading: live.heading,
 			level: live.level,
 			lineNumber: live.lineNumber,
-			contentHash: live.contentHash,
 		}];
 	});
 
@@ -202,6 +211,7 @@ export function replaceSection(
 	updated: CachedSection,
 	generatedAt?: string
 ): NoteCache {
+	if (updated.error) return cache;
 	const idx = cache.sections.findIndex((s) => s.id === updated.id);
 	if (idx === -1) return cache;
 	const sections = cache.sections.slice();

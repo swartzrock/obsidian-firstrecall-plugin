@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import CueCraftPlugin from "../src/main";
 import { CACHE_SCHEMA_VERSION } from "../src/cache";
+import {
+	cacheContentRevision,
+	createCurrentMaintenanceState,
+} from "../src/study-material-state";
 import { normalizeCueCraftProviderSettings } from "../src/byok-cuecraft-adapter";
 import { DEFAULT_SETTINGS } from "../src/settings";
 import type { SecureCredentialStore } from "../src/secure-credential-store";
@@ -49,6 +53,7 @@ describe("plugin data loading", () => {
 		const loaded = {
 			settings: currentSettings,
 			caches: { "notes/current.md": currentCache() },
+			maintenanceStates: {},
 			hidden: { "notes/current.md": true as const },
 			cueSectionCollapse: {
 				"notes/current.md": {
@@ -111,6 +116,80 @@ describe("plugin data loading", () => {
 
 		expect(plugin.settings.showSummary).toBe(false);
 		expect(plugin.settings).not.toHaveProperty("unusedSetting");
+		expect(saveData).toHaveBeenCalledTimes(1);
+	});
+
+	it("does not turn a legacy global automatic-generation setting into coverage", async () => {
+		const saveData = vi.fn(async () => {});
+		const makeProvider = vi.fn();
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: { autoGenerateOnSave: true },
+			})),
+			saveData,
+			makeProvider,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings).not.toHaveProperty("autoGenerateOnSave");
+		expect(plugin.settings.studyAreas).toEqual([]);
+		expect(makeProvider).not.toHaveBeenCalled();
+		expect(saveData).toHaveBeenCalledTimes(1);
+	});
+
+	it("quarantines ambiguous legacy scopes without invoking a provider", async () => {
+		const saveData = vi.fn(async () => {});
+		const makeProvider = vi.fn();
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: {
+					studyAreas: [
+						{
+							id: "biology",
+							name: "Biology",
+							parentPath: "Courses/Biology",
+							excludedPaths: [],
+							maintenanceMode: "maintain-on-save",
+							createdAt: "2026-06-21T00:00:00.000Z",
+						},
+						{
+							id: "year-one",
+							name: "Year 1",
+							parentPath: "Courses/Biology/Year 1",
+							excludedPaths: [],
+							maintenanceMode: "maintain-on-save",
+							createdAt: "2026-06-21T00:00:00.000Z",
+						},
+					],
+				},
+			})),
+			saveData,
+			makeProvider,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.studyAreas.map((area) => area.id)).toEqual([
+			"biology",
+		]);
+		expect(plugin.settings.disabledStudyAreas).toMatchObject([
+			{
+				id: "year-one",
+				parentPath: "Courses/Biology/Year 1",
+				maintenanceMode: "paused",
+				disabledReason: "overlapping-path",
+			},
+		]);
+		expect(makeProvider).not.toHaveBeenCalled();
 		expect(saveData).toHaveBeenCalledTimes(1);
 	});
 
@@ -222,6 +301,73 @@ describe("plugin data loading", () => {
 		expect(persisted.settings.showQuestion).toBe(false);
 	});
 
+	it("loads malformed maintenance state as empty without discarding caches", async () => {
+		const cache = currentCache();
+		const saveData = vi.fn(async () => {});
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: {},
+				caches: { "notes/current.md": cache },
+				maintenanceStates: "updating",
+			})),
+			saveData,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		const data = (plugin as unknown as {
+			data: {
+				caches: Record<string, unknown>;
+				maintenanceStates: Record<string, unknown>;
+			};
+		}).data;
+		expect(data.caches["notes/current.md"]).toEqual(cache);
+		expect(data.maintenanceStates).toEqual({});
+		expect(saveData).toHaveBeenCalledTimes(1);
+	});
+
+	it("downgrades a cache/state mismatch without discarding last-good content", async () => {
+		const cache = currentCache();
+		const state = createCurrentMaintenanceState("Current", "# Current\ntext", cache);
+		const saveData = vi.fn(async () => {});
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: {},
+				caches: { "notes/current.md": cache },
+				maintenanceStates: {
+					"notes/current.md": { ...state, cacheRevision: "mismatch" },
+				},
+			})),
+			saveData,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		const data = (plugin as unknown as {
+			data: {
+				caches: Record<string, unknown>;
+				maintenanceStates: Record<
+					string,
+					{ cacheRevision: string; noteBriefRevision: string | null }
+				>;
+			};
+		}).data;
+		expect(data.caches["notes/current.md"]).toEqual(cache);
+		expect(data.maintenanceStates["notes/current.md"]).toMatchObject({
+			cacheRevision: cacheContentRevision(cache),
+			noteBriefRevision: null,
+		});
+		expect(saveData).toHaveBeenCalledTimes(1);
+	});
+
 	it("loads a current cache without discarding an invalid cache entry", async () => {
 		const cache = currentCache();
 		const invalid = { schemaVersion: 99, sections: ["unknown"] };
@@ -269,10 +415,57 @@ describe("plugin data loading", () => {
 	});
 });
 
+describe("study area creation", () => {
+	it("creates non-overlapping scopes paused without provider work", async () => {
+		const makeProvider = vi.fn();
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			settings: structuredClone(DEFAULT_SETTINGS),
+			saveSettings: vi.fn(async () => {}),
+			makeProvider,
+		});
+
+		const created = await plugin.createStudyArea("Courses/Biology");
+
+		expect(created).toMatchObject({
+			parentPath: "Courses/Biology",
+			maintenanceMode: "paused",
+		});
+		expect(makeProvider).not.toHaveBeenCalled();
+	});
+
+	it("rejects overlapping scopes in either direction", async () => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			settings: {
+				...structuredClone(DEFAULT_SETTINGS),
+				studyAreas: [
+					{
+						id: "biology",
+						name: "Biology",
+						parentPath: "Courses/Biology",
+						excludedPaths: [],
+						maintenanceMode: "paused",
+						createdAt: "2026-06-21T00:00:00.000Z",
+					},
+				],
+			},
+			saveSettings: vi.fn(async () => {}),
+		});
+
+		expect(
+			await plugin.createStudyArea("Courses/Biology/Year 1")
+		).toBeNull();
+		plugin.settings.studyAreas[0].parentPath = "Courses/Biology/Year 1";
+		expect(await plugin.createStudyArea("Courses/Biology")).toBeNull();
+	});
+});
+
 interface PluginPersistenceHarness {
 	data: {
 		settings: Record<string, unknown>;
 		caches: Record<string, unknown>;
+		maintenanceStates: Record<string, unknown>;
 		hidden: Record<string, true>;
 		cueSectionCollapse: CueSectionCollapseMap;
 	};
@@ -287,6 +480,7 @@ function persistenceHarness(
 		data: {
 			settings: { marker: "before" },
 			caches: {},
+			maintenanceStates: {},
 			hidden: {},
 			cueSectionCollapse: {},
 		},

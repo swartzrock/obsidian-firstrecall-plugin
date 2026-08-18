@@ -38,7 +38,7 @@ describe("note brief prompt", () => {
 		expect(prompt).toContain(
 			"NOTE_SOURCE_SENTINEL: Agents use tools."
 		);
-		expect(prompt.indexOf("Successful Section cues:")).toBeLessThan(
+		expect(prompt.indexOf("Successful section study cards:")).toBeLessThan(
 			prompt.indexOf("CUE_SOURCE_SENTINEL")
 		);
 		expect(prompt.indexOf("CUE_SOURCE_SENTINEL")).toBeLessThan(
@@ -63,7 +63,7 @@ describe("note brief prompt", () => {
 			],
 		});
 		const sectionSource =
-			"Section 1: Planning\nQuestion: How do plans guide tool use?\nTerms: plans, tools";
+			"Section 1: Planning\nRecall question: How do plans guide tool use?\nKey terms: plans, tools";
 
 		expect(template).toContain(NOTE_TITLE_PLACEHOLDER);
 		expect(template).toContain(FULL_NOTE_SOURCE_PLACEHOLDER);

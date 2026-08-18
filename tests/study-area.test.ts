@@ -10,11 +10,15 @@ import {
 	isEntireVaultStudyArea,
 	isExcludedPath,
 	isStudyAreaPath,
+	loadStudyAreaSettings,
 	loadStudyAreas,
 	planStudyAreaGeneration,
 	studyAreaNameForParentPath,
 	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
+	validateStudyAreaScope,
+	validateStudyAreaExclusion,
+	findConflictingStudyArea,
 	type StudyArea,
 } from "../src/study-area";
 import type { NoteGenerationResult } from "../src/generator";
@@ -24,6 +28,28 @@ const NOTE = "# A\nalpha\n## B\nbeta";
 describe("study area defaults", () => {
 	it("starts with no study areas", () => {
 		expect(DEFAULT_STUDY_AREAS).toEqual([]);
+	});
+});
+
+describe("study area exclusion and recovery validation", () => {
+	it("accepts only unique nested exclusion paths", () => {
+		const biology = area({ excludedPaths: ["Courses/Biology/Drafts"] });
+		expect(validateStudyAreaExclusion(biology, "Courses/Biology/Cells.md"))
+			.toEqual({ valid: true, reason: null });
+		expect(validateStudyAreaExclusion(biology, "Courses/Biology/Drafts"))
+			.toEqual({ valid: false, reason: "duplicate-path" });
+		expect(validateStudyAreaExclusion(biology, "Courses/Chemistry"))
+			.toEqual({ valid: false, reason: "outside-scope" });
+		expect(validateStudyAreaExclusion(biology, "Courses/Biology"))
+			.toEqual({ valid: false, reason: "outside-scope" });
+	});
+
+	it("names the active scope responsible for a disabled legacy conflict", () => {
+		const parent = area({ id: "parent" });
+		expect(
+			findConflictingStudyArea([parent], "Courses/Biology/Year 1")?.id
+		).toBe("parent");
+		expect(findConflictingStudyArea([parent], "Courses/Chemistry")).toBeNull();
 	});
 });
 
@@ -39,12 +65,9 @@ describe("study area labels", () => {
 					stale: 1,
 					failed: 0,
 					skipped: 2,
-				},
-				{
-					cueSectionCount: 25,
 				}
 			)
-		).toBe("4 notes ready · 3 notes (25 sections) need Section cues");
+		).toBe("4 notes ready · 2 notes missing study material · 1 note outdated");
 		expect(
 			formatStudyAreaReadinessCounts({
 				ready: 0,
@@ -53,7 +76,7 @@ describe("study area labels", () => {
 				failed: 0,
 				skipped: 1,
 			})
-		).toBe("3 notes need Section cues");
+		).toBe("3 notes missing study material");
 		expect(
 			formatStudyAreaReadinessCounts({
 				ready: 0,
@@ -100,7 +123,12 @@ function buildCache(markdown = NOTE): NoteCache {
 	}));
 	const result: NoteGenerationResult = {
 		sections,
-		noteBrief: null,
+		noteBrief: {
+			overview: "A and B",
+			whatMatters: { title: "Both", detail: "Both matter." },
+			reviewFirst: { title: "A", detail: "Start with A." },
+			sayItBack: { title: "Explain", detail: "Explain both." },
+		},
 		canceled: false,
 	};
 	return buildNoteCache({
@@ -168,7 +196,7 @@ describe("study area maintenance matching", () => {
 		).toBeNull();
 	});
 
-	it("skips hidden and excluded notes", () => {
+	it("uses explicit exclusions without treating hidden state as an opt-out", () => {
 		const maintained = area({
 			maintenanceMode: "maintain-on-save",
 			excludedPaths: ["Courses/Biology/Drafts"],
@@ -182,15 +210,14 @@ describe("study area maintenance matching", () => {
 		expect(
 			findMaintainedStudyAreaForPath(
 				[maintained],
-				"Courses/Biology/Public/a.md",
-				true
+				"Courses/Biology/Public/a.md"
 			)
-		).toBeNull();
+		).toEqual(maintained);
 	});
 });
 
 describe("study area readiness", () => {
-	it("classifies hidden and excluded notes as skipped", () => {
+	it("classifies exclusions as skipped without using hidden presentation state", () => {
 		const studyArea = area({ excludedPaths: ["Courses/Biology/private.md"] });
 		expect(classifyStudyAreaNote(studyArea, {
 			path: "Courses/Biology/private.md",
@@ -201,12 +228,15 @@ describe("study area readiness", () => {
 			readiness: "skipped",
 			reason: "excluded",
 		});
-		expect(classifyStudyAreaNote(studyArea, {
+		const hiddenPresentationState = {
 			path: "Courses/Biology/Public.md",
 			cache: null,
-			currentSections: [],
+			currentSections: parseSections(NOTE),
 			hidden: true,
-		}).readiness).toBe("skipped");
+		};
+		expect(
+			classifyStudyAreaNote(studyArea, hiddenPresentationState).readiness
+		).toBe("uncued");
 	});
 
 	it("classifies uncached notes as uncued", () => {
@@ -255,6 +285,12 @@ describe("study area readiness", () => {
 
 describe("study area generation planning", () => {
 	it("previews readiness counts and queues uncued notes without generation", () => {
+		const hiddenPresentationState = {
+			path: "Courses/Biology/Hidden.md",
+			cache: null,
+			currentSections: parseSections(NOTE),
+			hidden: true,
+		};
 		const plan = planStudyAreaGeneration(area(), [
 			{
 				path: "Courses/Biology/Ready.md",
@@ -266,23 +302,25 @@ describe("study area generation planning", () => {
 				cache: null,
 				currentSections: parseSections(NOTE),
 			},
-			{
-				path: "Courses/Biology/Hidden.md",
-				cache: null,
-				currentSections: parseSections(NOTE),
-				hidden: true,
-			},
+			hiddenPresentationState,
 		]);
 		expect(plan.counts).toEqual({
 			ready: 1,
-			uncued: 1,
+			uncued: 2,
 			stale: 0,
 			failed: 0,
-			skipped: 1,
+			skipped: 0,
 		});
 		expect(plan.items).toEqual([
 			{
 				path: "Courses/Biology/Uncued.md",
+				action: "generate-note",
+				sectionIds: [],
+				readiness: "uncued",
+				sectionCount: 2,
+			},
+			{
+				path: "Courses/Biology/Hidden.md",
 				action: "generate-note",
 				sectionIds: [],
 				readiness: "uncued",
@@ -336,6 +374,32 @@ describe("study area generation planning", () => {
 				path: "Courses/Biology/Failed.md",
 				action: "retry-failed-sections",
 				sectionIds: [cache.sections[1].id],
+				readiness: "failed",
+				sectionCount: 1,
+			},
+		]);
+	});
+
+	it("queues durable retry work when initial generation left no cache", () => {
+		const sectionId = parseSections(NOTE)[0].id;
+		const plan = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Failed.md",
+				cache: null,
+				currentSections: parseSections(NOTE),
+				failedComponents: {
+					noteBrief: true,
+					sectionIds: [sectionId],
+				},
+			},
+		], "retry-failed");
+
+		expect(plan.counts.failed).toBe(1);
+		expect(plan.items).toEqual([
+			{
+				path: "Courses/Biology/Failed.md",
+				action: "retry-failed-sections",
+				sectionIds: [sectionId],
 				readiness: "failed",
 				sectionCount: 1,
 			},
@@ -397,7 +461,53 @@ describe("study area generation planning", () => {
 		]);
 	});
 
+	it("queues Note Brief-only catch-up and Retry work without section calls", () => {
+		const cache = buildCache();
+		const missingBrief = { ...cache, noteBrief: null };
+		const catchUp = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Missing brief.md",
+				cache: missingBrief,
+				currentSections: parseSections(NOTE),
+				noteBriefNeedsRefresh: true,
+			},
+		]);
+		expect(catchUp.items).toEqual([
+			{
+				path: "Courses/Biology/Missing brief.md",
+				action: "refresh-stale-sections",
+				sectionIds: [],
+				readiness: "stale",
+				sectionCount: 0,
+			},
+		]);
+
+		const retry = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Failed brief.md",
+				cache,
+				currentSections: parseSections(NOTE),
+				failedComponents: { noteBrief: true, sectionIds: [] },
+			},
+		], "retry-failed");
+		expect(retry.items).toEqual([
+			{
+				path: "Courses/Biology/Failed brief.md",
+				action: "retry-failed-sections",
+				sectionIds: [],
+				readiness: "failed",
+				sectionCount: 0,
+			},
+		]);
+	});
+
 	it("summarizes completed, failed, skipped, and remaining work", () => {
+		const hiddenPresentationState = {
+			path: "Courses/Biology/Hidden.md",
+			cache: null,
+			currentSections: parseSections(NOTE),
+			hidden: true,
+		};
 		const plan = planStudyAreaGeneration(area(), [
 			{
 				path: "Courses/Biology/One.md",
@@ -409,25 +519,57 @@ describe("study area generation planning", () => {
 				cache: null,
 				currentSections: parseSections(NOTE),
 			},
-			{
-				path: "Courses/Biology/Hidden.md",
-				cache: null,
-				currentSections: parseSections(NOTE),
-				hidden: true,
-			},
+			hiddenPresentationState,
 		]);
 		expect(summarizeStudyAreaRun(plan, {
 			completedPaths: ["Courses/Biology/One.md"],
 			failedPaths: [],
 			canceled: true,
 		})).toEqual({
-			total: 2,
+			total: 3,
 			completed: 1,
 			failed: 0,
-			skipped: 1,
-			remaining: 1,
+			skipped: 0,
+			remaining: 2,
 			canceled: true,
 		});
+	});
+});
+
+describe("study area scope invariants", () => {
+	it("rejects Entire vault mixed with folders", () => {
+		expect(validateStudyAreaScope([area()], "")).toEqual({
+			valid: false,
+			reason: "entire-vault-conflict",
+		});
+		expect(
+			validateStudyAreaScope(
+				[area({ parentPath: "" })],
+				"Courses/Biology"
+			)
+		).toEqual({ valid: false, reason: "entire-vault-conflict" });
+	});
+
+	it("rejects parent, descendant, and duplicate folder scopes", () => {
+		expect(
+			validateStudyAreaScope([area()], "Courses/Biology/Year 1")
+		).toEqual({ valid: false, reason: "overlapping-path" });
+		expect(
+			validateStudyAreaScope(
+				[area({ parentPath: "Courses/Biology/Year 1" })],
+				"Courses/Biology"
+			)
+		).toEqual({ valid: false, reason: "overlapping-path" });
+		expect(validateStudyAreaScope([area()], "/Courses/Biology/")).toEqual({
+			valid: false,
+			reason: "duplicate-path",
+		});
+	});
+
+	it("accepts non-overlapping sibling folder scopes", () => {
+		expect(
+			validateStudyAreaScope([area()], "Courses/Chemistry")
+		).toEqual({ valid: true, reason: null });
 	});
 });
 
@@ -477,6 +619,34 @@ describe("loadStudyAreas", () => {
 				excludedPaths: [],
 				maintenanceMode: "maintain-on-save",
 				createdAt: "2026-06-21T00:00:00.000Z",
+			},
+		]);
+	});
+
+	it("quarantines conflicting legacy paths outside active coverage", () => {
+		const loaded = loadStudyAreaSettings([
+			area({ id: "bio", parentPath: "Courses/Biology" }),
+			area({ id: "year", parentPath: "Courses/Biology/Year 1" }),
+			area({ id: "chem", parentPath: "Courses/Chemistry" }),
+			area({ id: "vault", parentPath: "" }),
+		]);
+
+		expect(loaded.studyAreas.map((studyArea) => studyArea.id)).toEqual([
+			"bio",
+			"chem",
+		]);
+		expect(loaded.disabledStudyAreas).toMatchObject([
+			{
+				id: "year",
+				parentPath: "Courses/Biology/Year 1",
+				maintenanceMode: "paused",
+				disabledReason: "overlapping-path",
+			},
+			{
+				id: "vault",
+				parentPath: "",
+				maintenanceMode: "paused",
+				disabledReason: "entire-vault-conflict",
 			},
 		]);
 	});

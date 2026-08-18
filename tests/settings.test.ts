@@ -207,6 +207,25 @@ function createObsidianMock() {
 		}
 	}
 
+	class MockModal {
+		readonly contentEl: HTMLElement;
+
+		constructor(_app: unknown) {
+			this.contentEl = document.createElement("div");
+			this.contentEl.className = "modal-content";
+		}
+
+		open(): void {
+			document.body.appendChild(this.contentEl);
+			(this as MockModal & { onOpen?: () => void }).onOpen?.();
+		}
+
+		close(): void {
+			this.contentEl.remove();
+			(this as MockModal & { onClose?: () => void }).onClose?.();
+		}
+	}
+
 	class MockButton {
 		constructor(private button: HTMLButtonElement) {}
 
@@ -227,7 +246,7 @@ function createObsidianMock() {
 
 	return {
 		App: class {},
-		Modal: class {},
+		Modal: MockModal,
 		Notice: class {},
 		PluginSettingTab: MockPluginSettingTab,
 		Setting: MockSetting,
@@ -266,6 +285,13 @@ type MockPlugin = {
 	refreshReadingModeSurface: ReturnType<typeof vi.fn>;
 	noteCueSettingsChanged: ReturnType<typeof vi.fn>;
 	promptForCueSettingsRegeneration: ReturnType<typeof vi.fn>;
+	isProviderConfigured: ReturnType<typeof vi.fn>;
+	createStudyArea: ReturnType<typeof vi.fn>;
+	updateStudyArea: ReturnType<typeof vi.fn>;
+	removeStudyArea: ReturnType<typeof vi.fn>;
+	recoverDisabledStudyArea: ReturnType<typeof vi.fn>;
+	previewStudyArea: ReturnType<typeof vi.fn>;
+	runStudyArea: ReturnType<typeof vi.fn>;
 	registerDomEvent: (
 		el: HTMLElement,
 		type: string,
@@ -299,7 +325,10 @@ function appendElement(
 	return child;
 }
 
-async function setupSettingsTab(): Promise<{
+async function setupSettingsTab(opts: {
+	providerConfigured?: boolean;
+	loadedFiles?: Array<{ path: string; extension?: string; folder?: boolean }>;
+} = {}): Promise<{
 	tab: CueCraftSettingTab;
 	plugin: MockPlugin;
 }> {
@@ -351,6 +380,31 @@ async function setupSettingsTab(): Promise<{
 		refreshReadingModeSurface: vi.fn(),
 		noteCueSettingsChanged: vi.fn(),
 		promptForCueSettingsRegeneration: vi.fn(),
+		isProviderConfigured: vi.fn(() => opts.providerConfigured ?? false),
+		createStudyArea: vi.fn(async () => null),
+		updateStudyArea: vi.fn(async (
+			area: CueCraftSettings["studyAreas"][number]
+		) => {
+			plugin.settings.studyAreas = plugin.settings.studyAreas.map((current) =>
+				current.id === area.id ? area : current
+			);
+		}),
+		removeStudyArea: vi.fn(async () => undefined),
+		recoverDisabledStudyArea: vi.fn(async () => undefined),
+		previewStudyArea: vi.fn(async () => ({
+			mode: "backfill",
+			readiness: [],
+			counts: { ready: 0, uncued: 0, stale: 0, failed: 0, skipped: 0 },
+			items: [],
+		})),
+		runStudyArea: vi.fn(async () => ({
+			total: 0,
+			completed: 0,
+			failed: 0,
+			skipped: 0,
+			remaining: 0,
+			canceled: false,
+		})),
 		registerDomEvent: (el, type, handler) => {
 			el.addEventListener(type, handler);
 		},
@@ -358,6 +412,10 @@ async function setupSettingsTab(): Promise<{
 	const app = {
 		vault: {
 			getName: () => "CueCraft",
+			getAllLoadedFiles: () =>
+				(opts.loadedFiles ?? []).map((file) =>
+					file.folder ? { path: file.path, children: [] } : file
+				),
 		},
 	};
 	const tab = new CueCraftSettingTab(app as never, plugin as never);
@@ -413,6 +471,45 @@ async function changeDropdown(
 	await dropdown.__onChange(value);
 }
 
+async function clickSettingButton(
+	containerEl: HTMLElement,
+	label: string
+): Promise<void> {
+	const button = [...containerEl.querySelectorAll<HTMLButtonElement>("button")]
+		.find((candidate) => candidate.textContent === label) as
+		| (HTMLButtonElement & { __onClick?: () => void | Promise<void> })
+		| undefined;
+	if (!button) throw new Error(`Missing button: ${label}`);
+	if (button.__onClick) {
+		await button.__onClick();
+	} else {
+		button.click();
+		await Promise.resolve();
+	}
+}
+
+function studyArea(overrides: Record<string, unknown> = {}) {
+	return {
+		id: "biology",
+		name: "Biology",
+		parentPath: "Courses/Biology",
+		excludedPaths: [],
+		maintenanceMode: "paused" as const,
+		createdAt: "2026-08-18T00:00:00.000Z",
+		...overrides,
+	};
+}
+
+function studyAreaPlan(overrides: Record<string, unknown> = {}) {
+	return {
+		mode: "backfill" as const,
+		readiness: [],
+		counts: { ready: 0, uncued: 0, stale: 0, failed: 0, skipped: 0 },
+		items: [],
+		...overrides,
+	};
+}
+
 async function clickThumbnail(
 	containerEl: HTMLElement,
 	name: string,
@@ -453,7 +550,7 @@ describe("settings defaults", () => {
 		});
 	});
 
-	it("uses one Question type and canonical artifact visibility defaults", async () => {
+	it("uses one recall-question style and canonical content visibility defaults", async () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
 		expect(DEFAULT_SETTINGS).toMatchObject({
@@ -471,12 +568,12 @@ describe("settings defaults", () => {
 		tab.display();
 
 		expect(settingText(tab.containerEl)).toContain(
-			"Select an AI provider to generate cues"
+			"Select an AI provider to generate study material"
 		);
-		openSettingsCard(tab, "AI Provider & Settings");
+		openSettingsCard(tab, "AI model");
 
 		expect(settingText(tab.containerEl)).toContain(
-			"Select an AI provider to generate cues"
+			"Select an AI provider to generate study material"
 		);
 		const providerOptions = [
 			...tab.containerEl.querySelectorAll('[role="radio"]'),
@@ -528,7 +625,7 @@ describe("settings defaults", () => {
 		]);
 	});
 
-	it("defaults editor Cue display to Cornell", () => {
+	it("defaults the editor section card layout to Cornell", () => {
 		expect(DEFAULT_EDITOR_CUE_DISPLAY).toBe("cornell");
 		expect(editorCueDisplayOption(DEFAULT_EDITOR_CUE_DISPLAY).label).toBe(
 			"Cornell"
@@ -565,26 +662,26 @@ describe("settings defaults", () => {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}
 	});
-	it("maps main-page controls to visible Note Brief and Section cue components", async () => {
+	it("maps main-page controls to visible Note Brief and section card components", async () => {
 		const { tab } = await setupSettingsTab();
 		tab.display();
 
 		const text = settingText(tab.containerEl);
-		expect(text).toContain("Study aids");
+		expect(text).toContain("Content shown in notes");
 		expect(text).not.toContain("Generated components");
 		expect(text).toContain("Appearance");
 		expect(text).not.toContain("Editing View");
 		expect(text).not.toContain("Note format");
-		for (const groupName of ["Note Brief", "Section cue"]) {
+		for (const groupName of ["Note Brief", "Section study card"]) {
 			expect(
 				tab.containerEl.querySelector(`[role="group"][aria-label="${groupName}"]`)
 			).not.toBeNull();
 		}
 		for (const label of [
 			"Show Note Brief",
-			"Show Summary",
-			"Show Question",
-			"Show Terms",
+			"Show summary",
+			"Show recall question",
+			"Show key terms",
 		]) {
 			expect(tab.containerEl.querySelector(`[aria-label="${label}"]`)).not.toBeNull();
 		}
@@ -602,9 +699,9 @@ describe("settings defaults", () => {
 
 		for (const label of [
 			"Show Note Brief",
-			"Show Summary",
-			"Show Question",
-			"Show Terms",
+			"Show summary",
+			"Show recall question",
+			"Show key terms",
 		]) {
 			await changeToggle(tab.containerEl, label, false);
 		}
@@ -624,35 +721,35 @@ describe("settings defaults", () => {
 		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
 	});
 
-	it("keeps Cue display Editing-only and cue font size shared", async () => {
+	it("keeps section card layout Editing-only and study text size shared", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 
-		expect(settingText(tab.containerEl)).toContain("Changes Section cue layout in Editing only; Reading remains inline.");
+		expect(settingText(tab.containerEl)).toContain("Changes section card layout in Editing only; Reading remains inline.");
 		expect(settingText(tab.containerEl)).toContain("Applies in Editing and Reading.");
-		await clickThumbnail(tab.containerEl, "Cue display", "inline-cues");
+		await clickThumbnail(tab.containerEl, "Section card layout", "inline-cues");
 		expect(plugin.saveSettings).toHaveBeenLastCalledWith({
 			refreshReviewSurfaces: false,
 		});
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshReadingModeSurface).not.toHaveBeenCalled();
 
-		await clickThumbnail(tab.containerEl, "Cue font size", "large");
+		await clickThumbnail(tab.containerEl, "Study text size", "large");
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledTimes(1);
 		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
 	});
 
-	it("shows one Question type control and exact read-only Advanced templates", async () => {
+	it("shows one recall-question style control and exact read-only Advanced templates", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
-		openSettingsCard(tab, "Cue Generation");
+		openSettingsCard(tab, "Generation");
 
 		const text = settingText(tab.containerEl);
-		expect(text).toContain("Question type");
-		expect(text).toContain("Auto-generate on save");
+		expect(text).toContain("Recall question style");
+		expect(text).not.toContain("Automatic update delay");
 		const select = tab.containerEl.querySelector<HTMLSelectElement>(
-			'[data-setting-name="Question type"] select'
+			'[data-setting-name="Recall question style"] select'
 		);
 		expect([...select!.options].map((option) => option.textContent)).toEqual(
 			QUESTION_TYPES.map((type) => type.label)
@@ -668,7 +765,7 @@ describe("settings defaults", () => {
 			"cuecraft-generation-instructions"
 		);
 		const section = advanced.querySelector<HTMLTextAreaElement>(
-			'textarea[aria-label="Section cue instructions"]'
+			'textarea[aria-label="Section study card instructions"]'
 		)!;
 		const brief = advanced.querySelector<HTMLTextAreaElement>(
 			'textarea[aria-label="Note Brief instructions"]'
@@ -688,14 +785,14 @@ describe("settings defaults", () => {
 		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
 	});
 
-	it("uses the selected provider route in Section cue instructions", async () => {
+	it("uses the selected provider route in section study card instructions", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.byok.selectedProvider = "codex-cli";
 		tab.display();
-		openSettingsCard(tab, "Cue Generation");
+		openSettingsCard(tab, "Generation");
 
 		const section = tab.containerEl.querySelector<HTMLTextAreaElement>(
-			'textarea[aria-label="Section cue instructions"]'
+			'textarea[aria-label="Section study card instructions"]'
 		)!;
 		expect(section.value).toBe(
 			buildSectionCueInstructionsTemplate(plugin.settings.questionType, "batch")
@@ -703,32 +800,323 @@ describe("settings defaults", () => {
 		expect(section.value).toContain("{{section_list}}");
 	});
 
-	it("updates Question type explanation and template before save completes", async () => {
+	it("updates recall-question explanation and template before save completes", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		let finishSave: (() => void) | undefined;
 		plugin.saveSettings.mockImplementationOnce(
 			() => new Promise<void>((resolve) => { finishSave = resolve; })
 		);
 		tab.display();
-		openSettingsCard(tab, "Cue Generation");
+		openSettingsCard(tab, "Generation");
 
-		const change = changeDropdown(tab.containerEl, "Question type", "exam-practice");
+		const change = changeDropdown(tab.containerEl, "Recall question style", "exam-practice");
 		await vi.waitFor(() => expect(plugin.saveSettings).toHaveBeenCalledTimes(1));
 		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
 		expect(settingText(tab.containerEl)).toContain("Uses precise wording similar to an exam prompt.");
 		expect(settingText(tab.containerEl)).not.toContain(
-			"newly generated or regenerated Questions only"
+			"newly generated or regenerated recall questions only"
 		);
 		expect(settingText(tab.containerEl)).toContain(
-			"Questions will change after regeneration."
+			"Recall questions will change after regeneration."
 		);
 		expect(
 			tab.containerEl.querySelector<HTMLTextAreaElement>(
-				'textarea[aria-label="Section cue instructions"]'
+				'textarea[aria-label="Section study card instructions"]'
 			)?.value
 		).toBe(buildSectionCueInstructionsTemplate("exam-practice", "single"));
 
 		finishSave?.();
 		await change;
+	});
+});
+
+describe("folders and automatic updates settings", () => {
+	it("renders the approved introduction and settings order", async () => {
+		const { tab } = await setupSettingsTab();
+		tab.display();
+
+		const text = settingText(tab.containerEl);
+		expect(text).toContain(
+			"CueCraft turns your notes into active-recall study material: a Note Brief for the whole note and a study card for each section. Choose an AI provider and model to get started. Your Markdown files are never modified."
+		);
+		expect(text).not.toContain("Ollama");
+		const ordered = [
+			"AI model",
+			"Generation",
+			"Managed folders",
+			"Content shown in notes",
+			"Appearance",
+			"Study Mode",
+		].map((label) => text.indexOf(label));
+		expect(ordered.every((position) => position >= 0)).toBe(true);
+		expect(ordered).toEqual([...ordered].sort((a, b) => a - b));
+	});
+
+	it("creates a paused scope, scans it, and never starts generation", async () => {
+		const { tab, plugin } = await setupSettingsTab({
+			loadedFiles: [
+				{ path: "Courses/Biology", folder: true },
+				{ path: "Courses/Chemistry", folder: true },
+			],
+		});
+		plugin.createStudyArea.mockImplementationOnce(async (parentPath: string) => {
+			const area = studyArea({ parentPath });
+			plugin.settings.studyAreas = [area];
+			return area;
+		});
+		tab.display();
+		openSettingsCard(tab, "Managed folders");
+		const settingsText = settingText(tab.containerEl);
+		expect(settingsText).toContain(
+			"Add a folder—or your entire vault—to generate and refresh study material in bulk. Turn on automatic updates when you want CueCraft to keep future changes current."
+		);
+		expect(settingsText.indexOf("Add folder or vault")).toBeLessThan(
+			settingsText.indexOf("Automatic update delay")
+		);
+		expect(settingsText).toContain(
+			"After you stop typing in an automatically-updated note, CueCraft waits this long before updating its study material. Longer delays reduce repeated AI requests."
+		);
+		const input = tab.containerEl.querySelector<HTMLInputElement>(
+			'input[placeholder="Choose a folder or Entire vault..."]'
+		)!;
+		input.dispatchEvent(new window.Event("focus"));
+		const listbox = tab.containerEl.querySelector<HTMLElement>("[role='listbox']")!;
+		expect(
+			[...listbox.querySelectorAll<HTMLElement>("[role='option']")].map(
+				(candidate) => candidate.textContent
+			)
+		).toEqual(["Entire vault", "Courses/Biology", "Courses/Chemistry"]);
+		expect(listbox.children[1]?.getAttribute("role")).toBe("separator");
+		const option = [...tab.containerEl.querySelectorAll<HTMLButtonElement>(
+			"[role='option']"
+		)].find((candidate) => candidate.textContent === "Courses/Biology")!;
+		option.dispatchEvent(
+			new window.MouseEvent("mousedown", { bubbles: true, cancelable: true })
+		);
+
+		await vi.waitFor(() => expect(plugin.createStudyArea).toHaveBeenCalledWith("Courses/Biology"));
+		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalledWith("biology"));
+		expect(plugin.settings.studyAreas[0]?.maintenanceMode).toBe("paused");
+		expect(plugin.runStudyArea).not.toHaveBeenCalled();
+		expect(plugin.updateStudyArea).not.toHaveBeenCalled();
+	});
+
+	it("shows excluded and failed scan counts without requiring a provider", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.studyAreas = [studyArea()];
+		plugin.previewStudyArea.mockResolvedValueOnce(studyAreaPlan({
+			readiness: [
+				{ path: "Courses/Biology/Skip.md", readiness: "skipped", reason: "excluded" },
+				{ path: "Courses/Biology/Fail.md", readiness: "failed", reason: null },
+			],
+			counts: { ready: 0, uncued: 0, stale: 0, failed: 1, skipped: 1 },
+			items: [{
+				path: "Courses/Biology/Fail.md",
+				action: "retry-failed-sections",
+				sectionIds: ["a"],
+				readiness: "failed",
+				sectionCount: 1,
+			}],
+		}) as never);
+		tab.display();
+		openSettingsCard(tab, "Managed folders");
+
+		await vi.waitFor(() => {
+			expect(settingText(tab.containerEl)).toContain("1 note failed · 1 note excluded");
+		});
+		expect(settingText(tab.containerEl)).toContain("Configure AI model");
+		expect(
+			tab.containerEl.querySelector<HTMLButtonElement>("button.mod-cta")?.disabled
+		).toBe(true);
+		expect(plugin.runStudyArea).not.toHaveBeenCalled();
+	});
+
+	it("runs explicit catch-up once and reports partial failure", async () => {
+		const { tab, plugin } = await setupSettingsTab({ providerConfigured: true });
+		plugin.settings.studyAreas = [studyArea()];
+		const plan = studyAreaPlan({
+			readiness: [
+				{ path: "Courses/Biology/Missing.md", readiness: "uncued", reason: null },
+				{ path: "Courses/Biology/Outdated.md", readiness: "stale", reason: null },
+				{ path: "Courses/Biology/Failed.md", readiness: "failed", reason: null },
+			],
+			counts: { ready: 0, uncued: 1, stale: 1, failed: 1, skipped: 0 },
+			items: [
+				{
+					path: "Courses/Biology/Missing.md",
+					action: "generate-note",
+					sectionIds: [],
+					readiness: "uncued",
+					sectionCount: 2,
+				},
+				{
+					path: "Courses/Biology/Outdated.md",
+					action: "refresh-stale-sections",
+					sectionIds: ["old"],
+					readiness: "stale",
+					sectionCount: 1,
+				},
+				{
+					path: "Courses/Biology/Failed.md",
+					action: "retry-failed-sections",
+					sectionIds: ["failed"],
+					readiness: "failed",
+					sectionCount: 1,
+				},
+			],
+		});
+		plugin.previewStudyArea.mockResolvedValue(plan as never);
+		let finishRun!: (value: unknown) => void;
+		plugin.runStudyArea.mockImplementationOnce(
+			() => new Promise((resolve) => { finishRun = resolve; })
+		);
+		tab.display();
+		openSettingsCard(tab, "Managed folders");
+		await vi.waitFor(() =>
+			expect(tab.containerEl.querySelector<HTMLButtonElement>("button.mod-cta")?.disabled).toBe(false)
+		);
+		const button = tab.containerEl.querySelector<HTMLButtonElement>("button.mod-cta")!;
+		button.click();
+		button.click();
+		await vi.waitFor(() => {
+			expect(
+				settingText(tab.containerEl).match(/Updating study material\.\.\./g)
+			).toHaveLength(1);
+		});
+		expect(plugin.runStudyArea).toHaveBeenCalledTimes(1);
+		expect(plugin.runStudyArea).toHaveBeenCalledWith("biology", "backfill");
+		finishRun({ total: 2, completed: 1, failed: 1, skipped: 0, remaining: 0, canceled: false });
+		await vi.waitFor(() => {
+			expect(settingText(tab.containerEl)).toContain("1 updated · 1 failed");
+		});
+	});
+
+	it("makes automatic updates future-only", async () => {
+		const { tab, plugin } = await setupSettingsTab({ providerConfigured: true });
+		plugin.settings.studyAreas = [studyArea()];
+		tab.display();
+		openSettingsCard(tab, "Managed folders");
+		const toggle = tab.containerEl.querySelector<HTMLInputElement>(
+			'input[aria-label="Update automatically for Courses/Biology"]'
+		) as HTMLInputElement & { __onChange?: (value: boolean) => Promise<void> };
+		await toggle.__onChange?.(true);
+
+		expect(plugin.updateStudyArea).toHaveBeenCalledWith(
+			expect.objectContaining({ maintenanceMode: "maintain-on-save" })
+		);
+		expect(settingText(tab.containerEl)).toContain(
+			"CueCraft automatically updates new and changed study material after the selected delay."
+		);
+		expect(settingText(tab.containerEl)).not.toContain("the wait above");
+		expect(plugin.runStudyArea).not.toHaveBeenCalled();
+	});
+
+	it("cancels a scan, discards its result, and exposes Scan again", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.studyAreas = [studyArea()];
+		let finishScan!: (value: unknown) => void;
+		plugin.previewStudyArea.mockImplementationOnce(
+			() => new Promise((resolve) => { finishScan = resolve; })
+		);
+		tab.display();
+		openSettingsCard(tab, "Managed folders");
+		await vi.waitFor(() => expect(settingText(tab.containerEl)).toContain("Cancel scan"));
+		await clickSettingButton(tab.containerEl, "Cancel scan");
+		expect(settingText(tab.containerEl)).toContain("Scan canceled");
+		expect(settingText(tab.containerEl)).toContain("Scan again");
+		finishScan(studyAreaPlan({ counts: { ready: 9, uncued: 0, stale: 0, failed: 0, skipped: 0 } }));
+		await Promise.resolve();
+		expect(settingText(tab.containerEl)).not.toContain("9 notes ready");
+		expect(plugin.runStudyArea).not.toHaveBeenCalled();
+	});
+
+	it("keeps managed-folder rows concise and hides exclusions", async () => {
+		const { tab, plugin } = await setupSettingsTab({
+			loadedFiles: [
+				{ path: "Claudes/Drafts", folder: true },
+				{ path: "Claudes/Notes.md", extension: "md" },
+			],
+		});
+		plugin.settings.studyAreas = [studyArea({
+			name: "Claudes",
+			parentPath: "Claudes",
+			excludedPaths: ["Claudes/Drafts"],
+		})];
+		tab.display();
+		openSettingsCard(tab, "Managed folders");
+		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
+		const text = settingText(tab.containerEl);
+		expect(text).not.toContain("Covered notes");
+		expect(text).not.toContain("Automatic updates affect future edits only");
+		expect(text).not.toContain("Exclusions");
+		expect(tab.containerEl.querySelector("[aria-label^='Exclusions for']")).toBeNull();
+		const row = tab.containerEl.querySelector<HTMLElement>(
+			".cuecraft-study-area-row"
+		)!;
+		expect(row.textContent?.match(/Claudes/g)).toHaveLength(1);
+		expect(plugin.updateStudyArea).not.toHaveBeenCalled();
+	});
+
+	it("describes removal as leaving Managed folders when automatic updates are off", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.studyAreas = [studyArea({
+			name: "Claudes",
+			parentPath: "Claudes",
+			maintenanceMode: "paused",
+		})];
+		tab.display();
+		openSettingsCard(tab, "Managed folders");
+		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
+
+		tab.containerEl.querySelector<HTMLButtonElement>(
+			'.cuecraft-study-area-remove[aria-label="Remove Claudes"]'
+		)?.click();
+
+		const modal = document.body.querySelector<HTMLElement>(".modal-content")!;
+		expect(modal.querySelector("h2")?.textContent).toBe("Remove managed folder?");
+		expect(modal.querySelector("p")?.textContent).toBe(
+			'Remove "Claudes" from Managed folders? Existing study material will remain available.'
+		);
+		expect(modal.textContent).not.toContain("automatic updates");
+	});
+
+	it("names a legacy conflict and offers direct recovery", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.studyAreas = [studyArea({ id: "parent" })];
+		plugin.settings.disabledStudyAreas = [studyArea({
+			id: "child",
+			name: "Year 1",
+			parentPath: "Courses/Biology/Year 1",
+			disabledReason: "overlapping-path",
+		}) as never];
+		tab.display();
+		openSettingsCard(tab, "Managed folders");
+
+		expect(settingText(tab.containerEl)).toContain(
+			"Courses/Biology/Year 1 is disabled because it conflicts with Courses/Biology"
+		);
+		await clickSettingButton(tab.containerEl, "Remove Courses/Biology and recover");
+		expect(plugin.recoverDisabledStudyArea).toHaveBeenCalledWith("child", "parent");
+	});
+
+	it("keeps scanning available while provider-gated actions open AI setup", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.studyAreas = [studyArea()];
+		tab.display();
+		openSettingsCard(tab, "Managed folders");
+		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
+		const scan = [...tab.containerEl.querySelectorAll<HTMLButtonElement>("button")]
+			.find((button) => button.textContent === "Scan again");
+		expect(scan?.disabled).toBe(false);
+		await clickSettingButton(tab.containerEl, "Configure AI model");
+		expect(settingText(tab.containerEl)).toContain("Select an AI provider");
+	});
+
+	it("describes hidden study material as presentation-only", async () => {
+		const { tab } = await setupSettingsTab();
+		tab.display();
+		expect(settingText(tab.containerEl)).toContain(
+			"Hiding generated material never disables automatic maintenance."
+		);
 	});
 });

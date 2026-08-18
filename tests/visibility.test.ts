@@ -24,12 +24,12 @@ describe("pillAction", () => {
 });
 
 describe("visibilityMenuLabel", () => {
-	it("offers to enable when hidden and hide when shown", () => {
+	it("offers to show when hidden and hide when shown", () => {
 		expect(visibilityMenuLabel(true)).toBe(
-			"CueCraft: Enable generated study material for this note"
+			"CueCraft: Show generated content for this note"
 		);
 		expect(visibilityMenuLabel(false)).toBe(
-			"CueCraft: Hide generated study material for this note"
+			"CueCraft: Hide generated content for this note"
 		);
 	});
 });

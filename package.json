@@ -1,7 +1,7 @@
 {
 	"name": "cuecraft",
 	"version": "0.1.0",
-	"description": "AI-powered active-recall Section cues for Obsidian.",
+	"description": "Create active-recall Note Briefs and section study cards in Obsidian without modifying source Markdown.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
@@ -17,7 +17,6 @@
 		"obsidian-plugin",
 		"study",
 		"active-recall",
-		"spaced-repetition",
 		"ai"
 	],
 	"author": "swartzrock",

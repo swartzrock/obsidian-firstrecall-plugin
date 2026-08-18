@@ -22,11 +22,43 @@ export interface StudyArea {
 	createdAt: string;
 }
 
+export type StudyAreaScopeConflictReason =
+	| "duplicate-path"
+	| "entire-vault-conflict"
+	| "overlapping-path";
+
+export type StudyAreaScopeValidation =
+	| { valid: true; reason: null }
+	| { valid: false; reason: StudyAreaScopeConflictReason };
+
+export type StudyAreaExclusionConflictReason =
+	| "empty-path"
+	| "outside-scope"
+	| "duplicate-path";
+
+export type StudyAreaExclusionValidation =
+	| { valid: true; reason: null }
+	| { valid: false; reason: StudyAreaExclusionConflictReason };
+
+export interface DisabledStudyArea extends StudyArea {
+	maintenanceMode: "paused";
+	disabledReason: StudyAreaScopeConflictReason;
+}
+
+export interface LoadedStudyAreaSettings {
+	studyAreas: StudyArea[];
+	disabledStudyAreas: DisabledStudyArea[];
+}
+
 export interface StudyAreaNoteSnapshot {
 	path: string;
 	cache: NoteCache | null;
 	currentSections: Section[];
-	hidden?: boolean;
+	noteBriefNeedsRefresh?: boolean;
+	failedComponents?: {
+		noteBrief: boolean;
+		sectionIds: string[];
+	};
 }
 
 export interface StudyAreaReadinessResult {
@@ -102,27 +134,20 @@ export function studyAreaNameForParentPath(parentPath: string): string {
 
 export function formatStudyAreaReadinessCounts(
 	counts: StudyAreaReadinessCounts,
-	opts: { cueSectionCount?: number } = {}
+	opts: { excludedCount?: number } = {}
 ): string {
 	const noteLabel = (count: number): string =>
 		`${count} note${count === 1 ? "" : "s"}`;
-	const sectionLabel = (count: number): string =>
-		`${count} section${count === 1 ? "" : "s"}`;
 	const parts: string[] = [];
 	if (counts.ready) parts.push(`${noteLabel(counts.ready)} ready`);
-	const notesNeedingCues = counts.uncued + counts.stale;
-	if (notesNeedingCues) {
-		const sectionCount =
-			opts.cueSectionCount && opts.cueSectionCount > 0
-				? ` (${sectionLabel(opts.cueSectionCount)})`
-				: "";
-		parts.push(
-			`${noteLabel(notesNeedingCues)}${sectionCount} ${
-				notesNeedingCues === 1 ? "needs" : "need"
-			} Section cues`
-		);
+	if (counts.uncued) {
+		parts.push(`${noteLabel(counts.uncued)} missing study material`);
 	}
+	if (counts.stale) parts.push(`${noteLabel(counts.stale)} outdated`);
 	if (counts.failed) parts.push(`${noteLabel(counts.failed)} failed`);
+	if (opts.excludedCount) {
+		parts.push(`${noteLabel(opts.excludedCount)} excluded`);
+	}
 	return parts.length
 		? parts.join(" · ")
 		: counts.skipped
@@ -135,6 +160,53 @@ export function isDescendantPath(path: string, parentPath: string): boolean {
 	const normalizedParent = normalizeVaultPath(parentPath);
 	if (!normalizedParent) return Boolean(normalizedPath);
 	return normalizedPath.startsWith(`${normalizedParent}/`);
+}
+
+export function validateStudyAreaScope(
+	areas: readonly Pick<StudyArea, "parentPath">[],
+	parentPath: string
+): StudyAreaScopeValidation {
+	const normalized = normalizeVaultPath(parentPath);
+	for (const area of areas) {
+		const existing = normalizeVaultPath(area.parentPath);
+		if (existing === normalized) {
+			return { valid: false, reason: "duplicate-path" };
+		}
+		if (!existing || !normalized) {
+			return { valid: false, reason: "entire-vault-conflict" };
+		}
+		if (
+			isDescendantPath(normalized, existing) ||
+			isDescendantPath(existing, normalized)
+		) {
+			return { valid: false, reason: "overlapping-path" };
+		}
+	}
+	return { valid: true, reason: null };
+}
+
+export function findConflictingStudyArea(
+	areas: readonly StudyArea[],
+	parentPath: string
+): StudyArea | null {
+	return areas.find(
+		(area) => !validateStudyAreaScope([area], parentPath).valid
+	) ?? null;
+}
+
+export function validateStudyAreaExclusion(
+	area: Pick<StudyArea, "parentPath" | "excludedPaths">,
+	path: string
+): StudyAreaExclusionValidation {
+	const normalized = normalizeVaultPath(path);
+	if (!normalized) return { valid: false, reason: "empty-path" };
+	if (area.excludedPaths.some((entry) => normalizeVaultPath(entry) === normalized)) {
+		return { valid: false, reason: "duplicate-path" };
+	}
+	if (!isDescendantPath(normalized, area.parentPath)) {
+		return { valid: false, reason: "outside-scope" };
+	}
+	return { valid: true, reason: null };
 }
 
 export function isExcludedPath(path: string, excludedPaths: readonly string[]): boolean {
@@ -161,10 +233,9 @@ export function isStudyAreaPath(
 
 export function findMaintainedStudyAreaForPath(
 	areas: readonly StudyArea[],
-	path: string,
-	hidden = false
+	path: string
 ): StudyArea | null {
-	if (hidden || !isMarkdownPath(path)) return null;
+	if (!isMarkdownPath(path)) return null;
 	return (
 		areas.find(
 			(area) =>
@@ -187,19 +258,24 @@ export function classifyStudyAreaNote(
 	if (isExcludedPath(note.path, area.excludedPaths)) {
 		return { path: note.path, readiness: "skipped", reason: "excluded" };
 	}
-	if (note.hidden) {
-		return { path: note.path, readiness: "skipped", reason: "hidden" };
-	}
 	if (!cueEligibleSections(note.currentSections).length) {
 		return { path: note.path, readiness: "skipped", reason: "empty" };
+	}
+	if (
+		note.cache?.sections.some((section) => section.error) ||
+		note.failedComponents?.noteBrief ||
+		note.failedComponents?.sectionIds.length
+	) {
+		return { path: note.path, readiness: "failed", reason: null };
 	}
 	if (!note.cache) {
 		return { path: note.path, readiness: "uncued", reason: null };
 	}
-	if (note.cache.sections.some((section) => section.error)) {
-		return { path: note.path, readiness: "failed", reason: null };
-	}
-	if (isStale(note.cache, note.currentSections)) {
+	if (
+		!note.cache.noteBrief ||
+		note.noteBriefNeedsRefresh ||
+		isStale(note.cache, note.currentSections)
+	) {
 		return { path: note.path, readiness: "stale", reason: null };
 	}
 	return { path: note.path, readiness: "ready", reason: null };
@@ -251,34 +327,81 @@ export function summarizeStudyAreaRun(
 }
 
 export function loadStudyAreas(raw: unknown): StudyArea[] {
+	return loadStudyAreaSettings(raw).studyAreas;
+}
+
+export function loadStudyAreaSettings(
+	raw: unknown,
+	rawDisabled: unknown = []
+): LoadedStudyAreaSettings {
+	const studyAreas: StudyArea[] = [];
+	const disabledStudyAreas = loadDisabledStudyAreas(rawDisabled);
+	for (const area of parseStudyAreas(raw)) {
+		const validation = validateStudyAreaScope(studyAreas, area.parentPath);
+		if (validation.valid) {
+			studyAreas.push(area);
+			continue;
+		}
+		disabledStudyAreas.push({
+			...area,
+			maintenanceMode: "paused",
+			disabledReason: validation.reason,
+		});
+	}
+	return { studyAreas, disabledStudyAreas };
+}
+
+function parseStudyAreas(raw: unknown): StudyArea[] {
 	if (!Array.isArray(raw)) return [];
 	return raw.flatMap((item): StudyArea[] => {
-		if (!item || typeof item !== "object") return [];
-		const candidate = item as Record<string, unknown>;
-		const id = typeof candidate.id === "string" ? candidate.id.trim() : "";
-		if (!id || typeof candidate.parentPath !== "string") return [];
-		const parentPath = normalizeVaultPath(candidate.parentPath);
-		const name =
-			typeof candidate.name === "string" && candidate.name.trim()
-				? candidate.name.trim()
-				: studyAreaNameForParentPath(parentPath);
-		const rawExcluded = Array.isArray(candidate.excludedPaths)
-			? candidate.excludedPaths
-			: [];
-		const excludedPaths = rawExcluded
-			.filter((path): path is string => typeof path === "string")
-			.map(normalizeVaultPath)
-			.filter(Boolean);
-		const maintenanceMode = MAINTENANCE_MODES.has(
-			candidate.maintenanceMode as StudyAreaMaintenanceMode
-		)
-			? (candidate.maintenanceMode as StudyAreaMaintenanceMode)
-			: "paused";
-		const createdAt =
-			typeof candidate.createdAt === "string" && candidate.createdAt.trim()
-				? candidate.createdAt
-				: new Date(0).toISOString();
-		return [{ id, name, parentPath, excludedPaths, maintenanceMode, createdAt }];
+		const area = parseStudyArea(item);
+		return area ? [area] : [];
+	});
+}
+
+function parseStudyArea(raw: unknown): StudyArea | null {
+	if (!raw || typeof raw !== "object") return null;
+	const candidate = raw as Record<string, unknown>;
+	const id = typeof candidate.id === "string" ? candidate.id.trim() : "";
+	if (!id || typeof candidate.parentPath !== "string") return null;
+	const parentPath = normalizeVaultPath(candidate.parentPath);
+	const name =
+		typeof candidate.name === "string" && candidate.name.trim()
+			? candidate.name.trim()
+			: studyAreaNameForParentPath(parentPath);
+	const rawExcluded = Array.isArray(candidate.excludedPaths)
+		? candidate.excludedPaths
+		: [];
+	const excludedPaths = rawExcluded
+		.filter((path): path is string => typeof path === "string")
+		.map(normalizeVaultPath)
+		.filter(Boolean);
+	const maintenanceMode = MAINTENANCE_MODES.has(
+		candidate.maintenanceMode as StudyAreaMaintenanceMode
+	)
+		? (candidate.maintenanceMode as StudyAreaMaintenanceMode)
+		: "paused";
+	const createdAt =
+		typeof candidate.createdAt === "string" && candidate.createdAt.trim()
+			? candidate.createdAt
+			: new Date(0).toISOString();
+	return { id, name, parentPath, excludedPaths, maintenanceMode, createdAt };
+}
+
+function loadDisabledStudyAreas(raw: unknown): DisabledStudyArea[] {
+	if (!Array.isArray(raw)) return [];
+	return raw.flatMap((item): DisabledStudyArea[] => {
+		const area = parseStudyArea(item);
+		if (!area || !item || typeof item !== "object") return [];
+		const reason = (item as Record<string, unknown>).disabledReason;
+		if (
+			reason !== "duplicate-path" &&
+			reason !== "entire-vault-conflict" &&
+			reason !== "overlapping-path"
+		) {
+			return [];
+		}
+		return [{ ...area, maintenanceMode: "paused", disabledReason: reason }];
 	});
 }
 
@@ -320,9 +443,15 @@ function planQueueItem(
 			sectionCount: sectionIds.length,
 		};
 	}
-	if (readiness === "failed" && note.cache) {
-		const sectionIds = failedSectionIds(note.cache, note.currentSections);
-		if (!sectionIds.length) return null;
+	if (readiness === "failed") {
+		const currentIds = new Set(eligibleSections.map((section) => section.id));
+		const sectionIds = uniqueSectionIds([
+			...(note.cache
+				? failedSectionIds(note.cache, note.currentSections)
+				: []),
+			...(note.failedComponents?.sectionIds ?? []),
+		]).filter((id) => currentIds.has(id));
+		if (!sectionIds.length && !note.failedComponents?.noteBrief) return null;
 		return {
 			path: note.path,
 			action: "retry-failed-sections",
@@ -332,6 +461,10 @@ function planQueueItem(
 		};
 	}
 	return null;
+}
+
+function uniqueSectionIds(ids: readonly string[]): string[] {
+	return [...new Set(ids)];
 }
 
 function failedSectionIds(

@@ -3,7 +3,7 @@
 	"name": "CueCraft",
 	"version": "0.1.0",
 	"minAppVersion": "1.11.4",
-	"description": "Turn notes and study folders into in-note active-recall sessions with Section cues and optional Note Briefs. Your Markdown is never modified.",
+	"description": "Create active-recall Note Briefs and section study cards in Obsidian without modifying source Markdown.",
 	"author": "swartzrock",
 	"authorUrl": "https://github.com/swartzrock",
 	"isDesktopOnly": true

@@ -45,7 +45,7 @@ function cacheFrom(
 }
 
 describe("selectExportableQuestions", () => {
-	it("keeps usable Questions in document order", () => {
+	it("keeps usable recall questions in document order", () => {
 		const questions = selectExportableQuestions(cacheFrom());
 		expect(questions.map((question) => question.heading)).toEqual(["A", "B", "C"]);
 		expect(questions[0]).toEqual({
@@ -67,23 +67,23 @@ describe("selectExportableQuestions", () => {
 });
 
 describe("questionsAndTermsToMarkdown", () => {
-	it("renders a heading, Question, and Terms per section", () => {
+	it("renders a heading, recall question, and key terms per section", () => {
 		const md = questionsAndTermsToMarkdown("My Note", selectExportableQuestions(cacheFrom()));
-		expect(md).toContain("# Questions and Terms — My Note");
+		expect(md).toContain("# Recall Questions and Key Terms — My Note");
 		expect(md).toContain("## A");
-		expect(md).toContain("**Question:** Q:A");
-		expect(md).toContain("_Terms:_ k1 · k2");
+		expect(md).toContain("**Recall question:** Q:A");
+		expect(md).toContain("_Key terms:_ k1 · k2");
 	});
 
 	it("notes when there is nothing to export", () => {
 		expect(questionsAndTermsToMarkdown("Empty", [])).toContain(
-			"No generated Questions and Terms to export"
+			"No generated recall questions and key terms to export"
 		);
 	});
 });
 
 describe("questionsAndTermsToAnki", () => {
-	it("emits question<TAB>answer rows, one per Question", () => {
+	it("emits question<TAB>answer rows, one per recall question", () => {
 		const tsv = questionsAndTermsToAnki(selectExportableQuestions(cacheFrom()));
 		const rows = tsv.split("\n");
 		expect(rows).toHaveLength(3);
@@ -91,7 +91,7 @@ describe("questionsAndTermsToAnki", () => {
 		for (const row of rows) expect(row.split("\t")).toHaveLength(2);
 	});
 
-	it("falls back to the heading when a Question has no Terms", () => {
+	it("falls back to the heading when a recall question has no key terms", () => {
 		const questions: ExportQuestion[] = [{ heading: "Topic", question: "Why?", keywords: [] }];
 		expect(questionsAndTermsToAnki(questions)).toBe("Why?\tTopic");
 	});
@@ -109,13 +109,13 @@ describe("questionsAndTermsToAnki", () => {
 describe("exportFilePath", () => {
 	it("returns the Markdown export path", () => {
 		expect(exportFilePath("folder/", "Note", "markdown")).toBe(
-			"folder/Note (questions-and-terms).md"
+			"folder/Note (recall-questions-and-key-terms).md"
 		);
 	});
 
 	it("returns the Anki export path", () => {
 		expect(exportFilePath("", "Note", "anki")).toBe(
-			"Note (questions-and-terms.anki).txt"
+			"Note (recall-questions-and-key-terms.anki).txt"
 		);
 	});
 });

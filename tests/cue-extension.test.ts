@@ -323,10 +323,10 @@ describe("Editing View Study projection", () => {
 			const toggle = studyCue.querySelector<HTMLButtonElement>(
 				".cuecraft-study-section-toggle"
 			)!;
-			expect(toggle.getAttribute("aria-label")).toBe("Show section");
+			expect(toggle.getAttribute("aria-label")).toBe("Show answer");
 			expect(toggle.getAttribute("aria-pressed")).toBe("false");
 			expect(toggle.dataset.icon).toBe("eye");
-			expect(toggle.dataset.tooltip).toBe("Show section");
+			expect(toggle.dataset.tooltip).toBe("Show answer");
 			expect(toggle.dataset.tooltipPlacement).toBe("right");
 			studyCue.click();
 			studyCue.dispatchEvent(
@@ -372,7 +372,7 @@ describe("Editing View Study projection", () => {
 			const hideToggle = revealedCue.querySelector<HTMLButtonElement>(
 				".cuecraft-study-section-toggle"
 			)!;
-			expect(hideToggle.getAttribute("aria-label")).toBe("Hide section");
+			expect(hideToggle.getAttribute("aria-label")).toBe("Hide answer");
 			expect(hideToggle.getAttribute("aria-pressed")).toBe("true");
 			expect(hideToggle.dataset.icon).toBe("eye-off");
 		});
@@ -461,16 +461,16 @@ describe("Editing View Study projection", () => {
 				const controls = controlsContainer.querySelector<HTMLElement>(
 					".cuecraft-editor-study-controls"
 				)!;
-				expect(controls.textContent).toContain("0 / 1 revealed");
+				expect(controls.textContent).toContain("0 / 1 answers revealed");
 				const help = controls.firstElementChild as HTMLElement;
 				expect(help.classList.contains("cuecraft-study-help")).toBe(true);
 				expect(help.dataset.icon).toBe("eye");
 				expect(
 					help.querySelector(".cuecraft-study-help-title")?.textContent
-				).toBe("Show or hide sections");
+				).toBe("Show or hide answers");
 				expect(
 					help.querySelector(".cuecraft-study-help-detail")?.textContent
-				).toBe("Click the eye icon on any Section cue card.");
+				).toBe("Click the eye icon on any section card.");
 				expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
 					2
 				);
@@ -491,8 +491,8 @@ describe("Editing View Study projection", () => {
 				).toBe("0%");
 				const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
 				expect([...buttons].map((button) => button.textContent)).toEqual([
-					"Show All Sections",
-					"Hide All Sections",
+					"Show All Answers",
+					"Hide All Answers",
 					"Exit Study Mode",
 				]);
 				expect([...buttons].map((button) => button.dataset.icon)).toEqual([
@@ -666,6 +666,24 @@ function cacheFrom(
 }
 
 describe("buildCueLineData", () => {
+	it("passes per-section freshness without marking unaffected cards", () => {
+		const cache = cacheFrom();
+		const [first, second] = cache.sections;
+		const cues = buildCueLineData(cache, parseSections(NOTE), {
+			sectionFreshness: new Map([
+				[first.id, "outdated"],
+				[second.id, "current"],
+			]),
+		});
+
+		expect(cues.find((cue) => cue.sectionId === first.id)?.freshness).toBe(
+			"outdated"
+		);
+		expect(cues.find((cue) => cue.sectionId === second.id)?.freshness).toBe(
+			"current"
+		);
+	});
+
 	it("maps every successful section to its current heading line", () => {
 		const cache = cacheFrom();
 		const cues = buildCueLineData(cache, parseSections(NOTE));
@@ -821,6 +839,26 @@ function createEditorCueWidthController(committedWidthPx: number | null = 240) {
 }
 
 describe("renderCueElement", () => {
+	it("shows Outdated only on an affected section card in both editor layouts", () => {
+		withDocument(() => {
+			for (const display of ["inline-cues", "cornell"] as const) {
+				const outdated = renderCueElement(
+					cue({ freshness: "outdated" }),
+					display
+				);
+				const current = renderCueElement(
+					cue({ freshness: "current" }),
+					display
+				);
+
+				expect(
+					outdated.querySelector(".cuecraft-freshness-badge")?.textContent
+				).toBe("Outdated");
+				expect(current.querySelector(".cuecraft-freshness-badge")).toBeNull();
+			}
+		});
+	});
+
 	it("coalesces live width previews into one rail layout event per frame", () => {
 		withDocument(() => {
 			const callbacks: FrameRequestCallback[] = [];
@@ -877,7 +915,7 @@ describe("renderCueElement", () => {
 				const gripLabel = card.querySelector<HTMLElement>(
 					".cuecraft-editor-cue-width-grip-label"
 				);
-				expect(gripLabel?.textContent).toContain("cue rail width");
+				expect(gripLabel?.textContent).toContain("section card rail width");
 				expect(grip?.getAttribute("aria-labelledby")).toBe(gripLabel?.id);
 				expect(grip?.getAttribute("aria-valuemin")).toBe("96");
 				expect(grip?.getAttribute("aria-valuemax")).toBe("512");
@@ -1572,7 +1610,7 @@ describe("renderCueElement", () => {
 			await Promise.resolve();
 
 			expect(consoleError).toHaveBeenCalledWith(
-				"CueCraft Section cue collapse persistence failed",
+				"CueCraft section card collapse persistence failed",
 				error
 			);
 			expect(summary?.getAttribute("aria-expanded")).toBe("true");
@@ -1732,6 +1770,18 @@ describe("renderCueElement", () => {
 });
 
 describe("renderNoteBriefElement", () => {
+	it("shows an Outdated badge only when the Note Brief needs an update", () => {
+		withDocument(() => {
+			const outdated = renderNoteBriefElement(NOTE_BRIEF, "editor", "outdated");
+			const current = renderNoteBriefElement(NOTE_BRIEF, "editor", "current");
+
+			expect(
+				outdated.querySelector(".cuecraft-freshness-badge")?.textContent
+			).toBe("Outdated");
+			expect(current.querySelector(".cuecraft-freshness-badge")).toBeNull();
+		});
+	});
+
 	it("renders the overview and structured review cards", () => {
 		withDocument(() => {
 			const el = renderNoteBriefElement(NOTE_BRIEF, "editor");

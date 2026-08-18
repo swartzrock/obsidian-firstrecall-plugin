@@ -76,7 +76,7 @@ export function parseCueBatch(raw: string, expectedCount: number): ParsedCueBatc
 	const result = validateCueBatch(raw, expectedCount);
 	if (!result.ok) return result.error;
 	const results = result.value.map<CueCraftCueBatchResult>((item) =>
-		item.value ? { cue: item.value } : { error: item.error ?? "Invalid Section cue." }
+		item.value ? { cue: item.value } : { error: item.error ?? "Invalid section study card." }
 	);
 	return {
 		results,

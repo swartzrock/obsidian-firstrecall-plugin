@@ -17,6 +17,7 @@ import {
 import type { DecorationSet, ViewUpdate } from "@codemirror/view";
 import { setIcon, setTooltip } from "obsidian";
 import type { NoteCache } from "./cache";
+import type { ComponentFreshness } from "./study-material-state";
 import type { EditorCueDisplay } from "./editor-cue-display";
 import {
 	cueFontSizeClass,
@@ -69,12 +70,15 @@ export interface CueLineData {
 	summary: SectionSummary | null;
 	/** Generation error message, when this section failed. */
 	error: string | null;
+	/** Freshness of this generated card for the current source revision. */
+	freshness: ComponentFreshness;
 }
 
 export interface CueLineDataOptions {
 	showSummary?: boolean;
 	showQuestion?: boolean;
 	showTerms?: boolean;
+	sectionFreshness?: ReadonlyMap<string, ComponentFreshness>;
 }
 
 export interface CueEditorRenderState {
@@ -84,6 +88,7 @@ export interface CueEditorRenderState {
 	notePath?: string;
 	collapseController?: CueSectionCollapseController;
 	noteBrief?: NoteBriefOutput | null;
+	noteBriefFreshness?: ComponentFreshness;
 	showSummary?: boolean;
 	showQuestion?: boolean;
 	showTerms?: boolean;
@@ -165,6 +170,7 @@ export function buildCueLineData(
 			keywords: failed || !showTerms ? [] : sec.keywords ?? [],
 			summary: failed || !showSummary ? null : sec.summary ?? null,
 			error: failed ? sec.error ?? "Generation failed" : null,
+			freshness: options.sectionFreshness?.get(sec.id) ?? "current",
 		};
 		if (
 			cue.error ||
@@ -200,7 +206,8 @@ class CueWidget extends WidgetType {
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			summaryKey(other.cue.summary) === summaryKey(this.cue.summary) &&
-			other.cue.error === this.cue.error
+			other.cue.error === this.cue.error &&
+			other.cue.freshness === this.cue.freshness
 		);
 	}
 
@@ -242,16 +249,20 @@ class CueWidget extends WidgetType {
 }
 
 class NoteBriefWidget extends WidgetType {
-	constructor(private readonly noteBrief: NoteBriefOutput) {
+	constructor(
+		private readonly noteBrief: NoteBriefOutput,
+		private readonly freshness: ComponentFreshness = "current"
+	) {
 		super();
 	}
 
 	override eq(other: NoteBriefWidget): boolean {
-		return noteBriefKey(other.noteBrief) === noteBriefKey(this.noteBrief);
+		return noteBriefKey(other.noteBrief) === noteBriefKey(this.noteBrief) &&
+			other.freshness === this.freshness;
 	}
 
 	toDOM(): HTMLElement {
-		return renderNoteBriefElement(this.noteBrief, "editor");
+		return renderNoteBriefElement(this.noteBrief, "editor", this.freshness);
 	}
 }
 
@@ -298,7 +309,8 @@ class CueGutterMarker extends GutterMarker {
 			other.cue.question === this.cue.question &&
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			summaryKey(other.cue.summary) === summaryKey(this.cue.summary) &&
-			other.cue.error === this.cue.error
+			other.cue.error === this.cue.error &&
+			other.cue.freshness === this.cue.freshness
 		);
 	}
 
@@ -336,8 +348,26 @@ export function renderCueElement(
 	const element = isCornellEditorDisplay(display)
 		? renderCornellCueElement(cue, options)
 		: renderInlineCueElement(cue, options);
+	appendFreshnessBadge(element, cue.freshness);
 	applyEditorStudyCueInteraction(element, options.study);
 	return element;
+}
+
+export function appendFreshnessBadge(
+	parent: HTMLElement,
+	freshness: ComponentFreshness
+): void {
+	if (
+		freshness !== "missing" &&
+		freshness !== "outdated" &&
+		freshness !== "failed"
+	) {
+		return;
+	}
+	const badge = parent.ownerDocument.createElement("span");
+	badge.className = "cuecraft-freshness-badge";
+	badge.textContent = "Outdated";
+	parent.prepend(badge);
 }
 
 function applyEditorStudyCueInteraction(
@@ -353,7 +383,7 @@ function applyEditorStudyCueInteraction(
 	toggle.type = "button";
 	toggle.className = "cuecraft-study-section-toggle";
 	toggle.dataset.revealed = String(study.revealed);
-	const label = study.revealed ? "Hide section" : "Show section";
+	const label = study.revealed ? "Hide answer" : "Show answer";
 	toggle.setAttribute("aria-label", label);
 	toggle.setAttribute("aria-pressed", String(study.revealed));
 	setIcon(toggle, study.revealed ? "eye-off" : "eye");
@@ -612,7 +642,7 @@ function finalizeRailCard(
 	const gripLabel = root.ownerDocument.createElement("span");
 	gripLabel.id = `${root.id}-width-grip-label`;
 	gripLabel.className = "cuecraft-editor-cue-width-grip-label";
-	gripLabel.textContent = "Cornell Section cue rail width";
+	gripLabel.textContent = "Cornell section card rail width";
 	grip.appendChild(gripLabel);
 	grip.setAttribute("aria-labelledby", gripLabel.id);
 	grip.setAttribute("aria-valuemin", String(EDITOR_CUE_WIDTH_MIN_PX));
@@ -1099,7 +1129,14 @@ function appendEditorHookDisclosure(
 	sectionLabel.className = "cuecraft-editor-hook-section-label";
 	sectionLabel.dataset.section = kind;
 	appendLabelIcon(sectionLabel, CUE_SECTION_ICON_CANDIDATES[kind]);
-	appendLabelText(sectionLabel, kind.toUpperCase());
+	appendLabelText(
+		sectionLabel,
+		kind === "question"
+			? "RECALL QUESTION"
+			: kind === "terms"
+				? "KEY TERMS"
+				: "SUMMARY"
+	);
 
 	const chevron = doc.createElement("span");
 	chevron.className = "cuecraft-editor-hook-section-chevron";
@@ -1157,7 +1194,7 @@ function appendEditorHookDisclosure(
 				)
 				.catch((error: unknown) => {
 					console.error(
-						"CueCraft Section cue collapse persistence failed",
+						"CueCraft section card collapse persistence failed",
 						error
 					);
 				});
@@ -1200,7 +1237,8 @@ function noteBriefTitleWithoutRepeatedLabel(title: string, label: string): strin
 
 export function renderNoteBriefElement(
 	noteBrief: NoteBriefOutput,
-	variant: "editor" | "reading" = "editor"
+	variant: "editor" | "reading" = "editor",
+	freshness: ComponentFreshness = "current"
 ): HTMLElement {
 	const doc = cueDocument();
 	const root = doc.createElement("section");
@@ -1211,6 +1249,7 @@ export function renderNoteBriefElement(
 	label.className = "cuecraft-note-brief-label";
 	appendLabelIcon(label, "sparkles");
 	appendLabelText(label, "Note Brief");
+	appendFreshnessBadge(label, freshness);
 	root.appendChild(label);
 
 	const overview = doc.createElement("p");
@@ -1355,7 +1394,10 @@ export function buildCueWidgetDecorations(
 	if (payload.noteBrief && doc.lines >= 1) {
 		ranges.push(
 			Decoration.widget({
-				widget: new NoteBriefWidget(payload.noteBrief),
+				widget: new NoteBriefWidget(
+					payload.noteBrief,
+					payload.noteBriefFreshness
+				),
 				block: true,
 				side: 0,
 			}).range(noteBriefAnchor(state))
@@ -1923,17 +1965,17 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			helpCopy.className = "cuecraft-study-help-copy";
 			const helpTitle = doc.createElement("span");
 			helpTitle.className = "cuecraft-study-help-title";
-			helpTitle.textContent = "Show or hide sections";
+			helpTitle.textContent = "Show or hide answers";
 			const helpDetail = doc.createElement("span");
 			helpDetail.className = "cuecraft-study-help-detail";
-			helpDetail.textContent = "Click the eye icon on any Section cue card.";
+			helpDetail.textContent = "Click the eye icon on any section card.";
 			helpCopy.append(helpTitle, helpDetail);
 			help.append(helpCopy);
 
 			const progress = doc.createElement("span");
 			progress.className = "cuecraft-editor-study-progress";
 			progress.setAttribute("aria-live", "polite");
-			progress.textContent = `${snapshot.revealedCount} / ${snapshot.total} revealed`;
+			progress.textContent = `${snapshot.revealedCount} / ${snapshot.total} answers revealed`;
 
 			const progressTrack = doc.createElement("div");
 			progressTrack.className = "cuecraft-study-progress-track";
@@ -1944,7 +1986,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 				"aria-valuenow",
 				String(snapshot.revealedCount)
 			);
-			progressTrack.setAttribute("aria-label", "Sections revealed");
+			progressTrack.setAttribute("aria-label", "Answers revealed");
 			const progressFill = doc.createElement("div");
 			progressFill.className = "cuecraft-study-progress-fill";
 			progressFill.style.width = `${
@@ -1959,7 +2001,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			showAll.className =
 				"cuecraft-study-action cuecraft-editor-study-show-all";
 			setIcon(showAll, "eye");
-			showAll.append("Show All Sections");
+			showAll.append("Show All Answers");
 			showAll.disabled = snapshot.revealedCount === snapshot.total;
 
 			const hideAll = doc.createElement("button");
@@ -1967,7 +2009,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			hideAll.className =
 				"cuecraft-study-action cuecraft-editor-study-hide-all";
 			setIcon(hideAll, "eye-off");
-			hideAll.append("Hide All Sections");
+			hideAll.append("Hide All Answers");
 			hideAll.disabled = snapshot.revealedCount === 0;
 
 			const exit = doc.createElement("button");

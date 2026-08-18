@@ -12,7 +12,24 @@ export class ItemView {}
 
 export class FuzzySuggestModal<_T> {}
 
-export class Modal {}
+export class Modal {
+	readonly contentEl: HTMLElement;
+
+	constructor(_app: unknown) {
+		this.contentEl = document.createElement("div");
+		this.contentEl.className = "modal-content";
+	}
+
+	open(): void {
+		document.body.appendChild(this.contentEl);
+		(this as Modal & { onOpen?: () => void }).onOpen?.();
+	}
+
+	close(): void {
+		this.contentEl.remove();
+		(this as Modal & { onClose?: () => void }).onClose?.();
+	}
+}
 
 export class Notice {}
 

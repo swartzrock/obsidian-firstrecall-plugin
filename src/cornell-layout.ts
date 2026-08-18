@@ -11,17 +11,17 @@ export const CUE_FONT_SIZES: readonly LayoutOptionInfo<CueFontSize>[] = [
 	{
 		id: "small",
 		label: "Small",
-		description: "Compact Section cue text to fit more on screen.",
+		description: "Compact study text to fit more on screen.",
 	},
 	{
 		id: "medium",
 		label: "Medium",
-		description: "Default Section cue text size.",
+		description: "Default study text size.",
 	},
 	{
 		id: "large",
 		label: "Large",
-		description: "Larger, easier-to-read Section cue text.",
+		description: "Larger, easier-to-read study text.",
 	},
 ] as const;
 

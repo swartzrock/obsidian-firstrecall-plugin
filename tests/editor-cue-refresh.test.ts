@@ -5,6 +5,11 @@ import { DEFAULT_SETTINGS } from "../src/settings";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import { resolveStudySections, type StudySessionController } from "../src/study-session";
+import { createCurrentMaintenanceState } from "../src/study-material-state";
+import {
+	removeStudyMaterialBanner,
+	syncStudyMaterialBanner,
+} from "../src/study-material-banner";
 
 const STUDY_NOTE = "# Agents\nAgents use tools.";
 
@@ -86,7 +91,7 @@ describe("Editing View cue refresh", () => {
 						visit({ view: markdownView }),
 				},
 			},
-			cacheStore: { get: () => null },
+			cacheStore: { get: () => null, getState: () => null },
 			visibility: { isHidden: () => false },
 			cueSectionCollapse: {},
 			updateEditorHookLayout: vi.fn(),
@@ -100,6 +105,78 @@ describe("Editing View cue refresh", () => {
 		};
 		expect(effect.value.display).toBe("cornell");
 		expect(editorDom.dataset.cuecraftEditorDisplay).toBe("cornell");
+	});
+
+	it("projects outdated maintenance into the Editing banner and affected cards", () => {
+		const document = new JSDOM(
+			"<main class='view-content'><div class='cm-editor'></div></main>"
+		).window.document;
+		const editorDom = document.querySelector<HTMLElement>(".cm-editor")!;
+		const contentEl = document.querySelector<HTMLElement>("main")!;
+		const dispatch = vi.fn();
+		const file = { path: "notes/agents.md", basename: "agents" };
+		const changed = "# Agents\nAgents use tools and memory.";
+		const cache = studyCache();
+		const state = createCurrentMaintenanceState("agents", STUDY_NOTE, cache);
+		const markdownView = {
+			getViewType: () => "markdown",
+			getMode: () => "source",
+			file,
+			contentEl,
+			addAction: () => document.createElement("button"),
+			editor: {
+				cm: { dom: editorDom, dispatch },
+				getValue: () => changed,
+			},
+		};
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		plugin.settings = {
+			...structuredClone(DEFAULT_SETTINGS),
+			studyAreas: [
+				{
+					id: "notes",
+					name: "Notes",
+					parentPath: "notes",
+					excludedPaths: [],
+					maintenanceMode: "maintain-on-save",
+					createdAt: "2026-08-18T00:00:00.000Z",
+				},
+			],
+		};
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			app: {
+				workspace: {
+					getActiveFile: () => file,
+					getActiveViewOfType: () => markdownView,
+					iterateAllLeaves: (
+						visit: (leaf: { view: typeof markdownView }) => void
+					) => visit({ view: markdownView }),
+				},
+			},
+			cacheStore: {
+				get: () => cache,
+				getState: () => state,
+			},
+			visibility: { isHidden: () => false },
+			cueSectionCollapse: {},
+			isConfigured: () => true,
+			updateEditorHookLayout: vi.fn(),
+		});
+
+		plugin.refreshEditorCues();
+
+		const payload = dispatch.mock.calls[0]?.[0].effects.value as {
+			cues: Array<{ freshness: string }>;
+		};
+		expect(payload.cues[0].freshness).toBe("outdated");
+		expect(
+			contentEl.querySelector(".cuecraft-study-material-banner")?.textContent
+		).toContain("out of date");
+		expect(contentEl.querySelectorAll(".cuecraft-study-material-banner")).toHaveLength(1);
+
+		(markdownView as { file: typeof file | null }).file = null;
+		plugin.refreshEditorCues();
+		expect(contentEl.querySelector(".cuecraft-study-material-banner")).toBeNull();
 	});
 
 	it("projects Study and hidden cues into only the active same-path editor", () => {
@@ -145,7 +222,7 @@ describe("Editing View cue refresh", () => {
 					},
 				},
 			},
-			cacheStore: { get: () => cache },
+			cacheStore: { get: () => cache, getState: () => null },
 			visibility: { isHidden: () => true },
 			cueSectionCollapse: {},
 			updateEditorHookLayout: vi.fn(),
@@ -231,5 +308,83 @@ describe("Editing View cue refresh", () => {
 		});
 
 		expect(() => plugin.refreshReadingModeSurface()).not.toThrow();
+	});
+});
+
+describe("study material banner", () => {
+	it("keeps one semantic host and routes named update and Retry actions", async () => {
+		const document = new JSDOM("<main><button id='before'>Before</button></main>")
+			.window.document;
+		const container = document.querySelector<HTMLElement>("main")!;
+		const onUpdate = vi.fn(async () => undefined);
+		const onRetry = vi.fn(async () => undefined);
+		const onDismiss = vi.fn(async () => undefined);
+
+		const firstHost = syncStudyMaterialBanner(
+			container,
+			{ revision: "one", kind: "outdated", action: "update" },
+			{ onUpdate, onRetry, onDismiss }
+		);
+		const latestUpdate = vi.fn(async () => undefined);
+		const secondHost = syncStudyMaterialBanner(
+			container,
+			{ revision: "one", kind: "outdated", action: "update" },
+			{ onUpdate: latestUpdate, onRetry, onDismiss }
+		);
+		expect(secondHost).toBe(firstHost);
+		expect(container.querySelectorAll(".cuecraft-study-material-banner")).toHaveLength(1);
+		const update = container.querySelector<HTMLButtonElement>(
+			"[data-banner-action='update']"
+		)!;
+		expect(update.textContent).toBe("Update study material");
+		expect(update.closest("[role='status']")?.getAttribute("aria-live")).toBe(
+			"polite"
+		);
+		update.click();
+		await vi.waitFor(() => expect(latestUpdate).toHaveBeenCalledTimes(1));
+		expect(onUpdate).not.toHaveBeenCalled();
+
+		syncStudyMaterialBanner(
+			container,
+			{ revision: "one", kind: "failed", action: "retry" },
+			{ onUpdate, onRetry, onDismiss }
+		);
+		const retry = container.querySelector<HTMLButtonElement>(
+			"[data-banner-action='retry']"
+		)!;
+		expect(retry.textContent).toBe("Retry update");
+		expect(retry.closest("[role='alert']")?.getAttribute("aria-live")).toBe(
+			"assertive"
+		);
+		retry.click();
+		await vi.waitFor(() => expect(onRetry).toHaveBeenCalledTimes(1));
+	});
+
+	it("dismisses one revision, preserves focus, and cleans listeners and hosts", async () => {
+		const document = new JSDOM("<main></main>").window.document;
+		const container = document.querySelector<HTMLElement>("main")!;
+		const onDismiss = vi.fn(async () => {
+			removeStudyMaterialBanner(container);
+		});
+		syncStudyMaterialBanner(
+			container,
+			{ revision: "revision-2", kind: "outdated", action: "update" },
+			{
+				onUpdate: vi.fn(),
+				onRetry: vi.fn(),
+				onDismiss,
+			}
+		);
+		const dismiss = container.querySelector<HTMLButtonElement>(
+			"[data-banner-action='dismiss']"
+		)!;
+		dismiss.focus();
+		dismiss.click();
+		await vi.waitFor(() => expect(onDismiss).toHaveBeenCalledWith("revision-2"));
+
+		expect(container.querySelector(".cuecraft-study-material-banner")).toBeNull();
+		expect(document.activeElement).toBe(container);
+		removeStudyMaterialBanner(container);
+		expect(onDismiss).toHaveBeenCalledTimes(1);
 	});
 });

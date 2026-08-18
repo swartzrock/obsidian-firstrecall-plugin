@@ -9,7 +9,7 @@ import {
 	WHOLE_NOTE_CONTEXT_PLACEHOLDER,
 } from "../src/cue-instructions";
 
-describe("Section cue instructions", () => {
+describe("section study card instructions", () => {
 	it("builds an inspectable template with the production single-section composer", () => {
 		const template = buildSectionCueInstructionsTemplate("exam-practice", "single");
 		const runtime = buildSectionCuePrompt({
@@ -34,18 +34,18 @@ describe("Section cue instructions", () => {
 		).toBe(runtime);
 	});
 
-	it.each(QUESTION_TYPES)("uses one coherent $label instruction only for Question", (type) => {
+	it.each(QUESTION_TYPES)("uses one coherent $label instruction only for the recall question", (type) => {
 		const prompt = buildSectionCueInstructionsTemplate(type.id, "single");
 		const questionLine = prompt
 			.split("\n")
-			.find((line) => line.startsWith("Question:"));
+			.find((line) => line.startsWith("Recall question:"));
 
 		expect(questionLine).toContain(type.guidance);
 		for (const other of QUESTION_TYPES) {
 			if (other.id !== type.id) expect(prompt).not.toContain(other.guidance);
 		}
 		expect(prompt).toContain("Summary:");
-		expect(prompt).toContain("Terms:");
+		expect(prompt).toContain("Key terms:");
 		expect(prompt).not.toMatch(/preset|density|question style/i);
 	});
 

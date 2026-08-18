@@ -60,8 +60,8 @@ function formatNoteBriefSectionSource(input: CueCraftNoteBriefInput): string {
 				: "none";
 			return (
 				`Section ${index + 1}: ${section.heading || "(untitled)"}\n` +
-				`Question: ${section.question}\n` +
-				`Terms: ${terms}`
+				`Recall question: ${section.question}\n` +
+				`Key terms: ${terms}`
 			);
 		})
 		.join("\n---\n");
@@ -78,7 +78,7 @@ function composeNoteBriefPrompt(source: {
 		`Prefer concrete claims, memorable language, and active recall over generic summary.\n` +
 		`${NOTE_BRIEF_PROMPT}\n` +
 		`\nNote title: ${source.noteTitle}\n` +
-		`\nSuccessful Section cues:\n${source.sectionCues}\n` +
+		`\nSuccessful section study cards:\n${source.sectionCues}\n` +
 		`\nFull note source:\n${source.fullText}\n`
 	);
 }

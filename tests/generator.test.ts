@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import {
 	generateNote,
+	generateNoteBriefForSections,
 	generateSectionCue,
 	generateSectionCueBatch,
 	clampText,
@@ -638,6 +639,75 @@ describe("generateSectionCueBatch", () => {
 			provider.batchInputs.map((batch) => batch.map((item) => item.heading))
 		).toEqual([["Text"]]);
 		expect(results.map((result) => result.question)).toEqual([null, "Q:Text"]);
+	});
+});
+
+describe("generateNoteBriefForSections", () => {
+	const sections = [
+		{
+			heading: "Terms",
+			question: "What is a queue?",
+			keywords: ["queue"],
+			error: null,
+		},
+	];
+
+	it("distinguishes success, skipped, canceled, and failed outcomes", async () => {
+		const success = await generateNoteBriefForSections({
+			noteTitle: "Queues",
+			markdown: "# Terms\nQueues are FIFO.",
+			provider: mockProvider(),
+			sections,
+		});
+		expect(success).toMatchObject({
+			status: "success",
+			noteBrief: { overview: "the note brief" },
+		});
+
+		const unsupportedProvider = mockProvider();
+		unsupportedProvider.generateNoteBrief = undefined;
+		expect(
+			await generateNoteBriefForSections({
+				noteTitle: "Queues",
+				markdown: "# Terms\nQueues are FIFO.",
+				provider: unsupportedProvider,
+				sections,
+			})
+		).toEqual({ status: "skipped" });
+
+		const controller = new AbortController();
+		controller.abort();
+		expect(
+			await generateNoteBriefForSections({
+				noteTitle: "Queues",
+				markdown: "# Terms\nQueues are FIFO.",
+				provider: mockProvider(),
+				sections,
+				signal: controller.signal,
+			})
+		).toEqual({ status: "canceled" });
+
+		expect(
+			await generateNoteBriefForSections({
+				noteTitle: "Queues",
+				markdown: "# Terms\nQueues are FIFO.",
+				provider: mockProvider({ failNoteBrief: true }),
+				sections,
+			})
+		).toEqual({ status: "failed", error: "note brief boom" });
+	});
+
+	it("skips when no successful section can support a Note Brief", async () => {
+		const provider = mockProvider();
+		expect(
+			await generateNoteBriefForSections({
+				noteTitle: "Queues",
+				markdown: "# Terms\nQueues are FIFO.",
+				provider,
+				sections: [{ ...sections[0], question: null }],
+			})
+		).toEqual({ status: "skipped" });
+		expect(provider.noteBriefCalls).toBe(0);
 	});
 });
 
