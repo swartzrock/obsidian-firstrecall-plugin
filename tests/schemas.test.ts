@@ -3,6 +3,7 @@ import {
 	extractJson,
 	validateCue,
 	validateCueBatch,
+	validateCueResponse,
 	validateNoteBrief,
 } from "../src/schemas";
 
@@ -120,6 +121,15 @@ describe("validateCue", () => {
 	});
 });
 
+describe("validateCueResponse", () => {
+	it("accepts a model abstention when the source is insufficient", () => {
+		expect(validateCueResponse('{"insufficientSource":true}')).toEqual({
+			ok: true,
+			value: { insufficientSource: true },
+		});
+	});
+});
+
 describe("validateCueBatch", () => {
 	it("accepts a cue array", () => {
 		const r = validateCueBatch(
@@ -156,6 +166,20 @@ describe("validateCueBatch", () => {
 			expect(r.value[0].value?.question).toBe("Q1?");
 			expect(r.value[1].error).toMatch(/question/);
 			expect(r.value[2].error).toMatch(/missing Section cue/i);
+		}
+	});
+
+	it("turns an insufficient-source abstention into an item error", () => {
+		const result = validateCueBatch(
+			JSON.stringify({ cues: [{ insufficientSource: true }] }),
+			1
+		);
+
+		expect(result.ok).toBe(true);
+		if (result.ok) {
+			expect(result.value).toEqual([
+				{ value: null, error: "Insufficient source content for a faithful cue." },
+			]);
 		}
 	});
 });

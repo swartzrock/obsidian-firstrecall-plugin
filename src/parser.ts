@@ -148,7 +148,43 @@ export function parseSections(markdown: string): Section[] {
 export function isCueEligibleSection(
 	section: Pick<Section, "heading" | "content">
 ): boolean {
-	return section.heading.trim().length > 0 && section.content.trim().length > 0;
+	return (
+		section.heading.trim().length > 0 &&
+		extractStudyableText(section.content).length > 0
+	);
+}
+
+function meaningfulImageCaption(value: string | undefined): string {
+	const caption = value?.trim() ?? "";
+	if (/^\d+(?:\s*x\s*\d+)?$/i.test(caption)) return "";
+	if (
+		/(?:^|[\\/])[^\\/]+\.(?:avif|bmp|gif|heic|heif|ico|jpe?g|png|svg|tiff?|webp)$/i.test(
+			caption
+		)
+	) {
+		return "";
+	}
+	return caption;
+}
+
+/** Return section text that can ground a text-only cue provider. */
+export function extractStudyableText(markdown: string): string {
+	return markdown
+		.replace(/!\[\[([^\]]+)\]\]/g, (_match, embed: string) => {
+			const caption = embed.split("|", 2)[1];
+			return meaningfulImageCaption(caption);
+		})
+		.replace(
+			/!\[([^\]]*)\]\((?:\\.|[^()\\]|\([^()]*\))*\)/g,
+			(_match, altText: string) => meaningfulImageCaption(altText)
+		)
+		.replace(/<img\b[^>]*>/gi, (tag: string) => {
+			const alt = /(?:^|\s)alt\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/i.exec(
+				tag
+			);
+			return meaningfulImageCaption(alt?.[1] ?? alt?.[2] ?? alt?.[3]);
+		})
+		.trim();
 }
 
 export function cueEligibleSections<T extends Pick<Section, "heading" | "content">>(

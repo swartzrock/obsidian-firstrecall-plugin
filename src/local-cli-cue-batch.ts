@@ -20,13 +20,24 @@ const CUE_BATCH_ITEM_SCHEMA = {
 	additionalProperties: false,
 };
 
+const INSUFFICIENT_SOURCE_ITEM_SCHEMA = {
+	type: "object",
+	properties: {
+		insufficientSource: { const: true },
+	},
+	required: ["insufficientSource"],
+	additionalProperties: false,
+};
+
 export function cueBatchJsonSchema(count: number): string {
 	return JSON.stringify({
 		type: "object",
 		properties: {
 			cues: {
 				type: "array",
-				items: CUE_BATCH_ITEM_SCHEMA,
+				items: {
+					oneOf: [CUE_BATCH_ITEM_SCHEMA, INSUFFICIENT_SOURCE_ITEM_SCHEMA],
+				},
 				minItems: count,
 				maxItems: count,
 			},

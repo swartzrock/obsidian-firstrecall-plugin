@@ -323,6 +323,33 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(body.prompt).not.toContain("intervals");
 	});
 
+	it("accepts a text provider abstention without asking it to fabricate a repair", async () => {
+		const calls: Array<{ body?: string }> = [];
+		const provider = makeCueCraftByokProvider(
+			settings({ selectedProvider: "ollama" }),
+			{
+				transport: async (request) => {
+					calls.push({ body: await request.clone().text() });
+					return new Response(
+						JSON.stringify({
+							response: JSON.stringify({ insufficientSource: true }),
+						}),
+						{ status: 200, headers: { "content-type": "application/json" } }
+					);
+				},
+			}
+		);
+
+		await expect(
+			provider.generateCue({
+				heading: "A Picture Of Tonks",
+				content: "Tonks",
+				options: { questionType: "conceptual" },
+			})
+		).rejects.toThrow("Insufficient source content for a faithful cue.");
+		expect(calls).toHaveLength(1);
+	});
+
 	it("uses the current structured-object cue fields", async () => {
 		const calls: Array<{ body?: string }> = [];
 		const provider = makeCueCraftByokProvider(
@@ -403,6 +430,43 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			'Respond with ONLY a valid JSON object matching this schema'
 		);
 		expect(promptMessage.content).toContain("Agents can plan and use tools.");
+	});
+
+	it("accepts a structured-object provider abstention", async () => {
+		const provider = makeCueCraftByokProvider(
+			settings({
+				selectedProvider: "openai",
+				selectedProviderSettings: {
+					credential: "test-key",
+					model: "gpt-4o-mini",
+				},
+			}),
+			{
+				transport: async () =>
+					new Response(
+						JSON.stringify({
+							choices: [
+								{
+									message: {
+										content: JSON.stringify({
+											insufficientSource: true,
+										}),
+									},
+								},
+							],
+						}),
+						{ status: 200, headers: { "content-type": "application/json" } }
+					),
+			}
+		);
+
+		await expect(
+			provider.generateCue({
+				heading: "A Picture Of Tonks",
+				content: "Tonks",
+				options: { questionType: "conceptual" },
+			})
+		).rejects.toThrow("Insufficient source content for a faithful cue.");
 	});
 
 	it("uses the shared Note Brief template for structured requests", async () => {

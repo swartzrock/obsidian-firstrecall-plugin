@@ -37,6 +37,13 @@ export const cueOutputSchema = z.object({
 	),
 });
 
+export const insufficientSourceSchema = z.object({
+	insufficientSource: z.literal(true),
+});
+
+export const INSUFFICIENT_SOURCE_ERROR =
+	"Insufficient source content for a faithful cue.";
+
 const noteBriefCardSchema = z.object({
 	title: z.string().trim().min(1, "title is required"),
 	detail: z.string().trim().min(1, "detail is required"),
@@ -69,6 +76,11 @@ export const cueGenerationSchema = z.object({
 		.describe("A compact Summary for this section."),
 });
 
+export const cueGenerationResponseSchema = z.union([
+	cueGenerationSchema,
+	insufficientSourceSchema,
+]);
+
 const noteBriefCardGenerationSchema = z.object({
 	title: z.string().describe("Short, specific card title."),
 	detail: z.string().describe("One concise sentence explaining the card."),
@@ -90,6 +102,7 @@ export const noteBriefGenerationSchema = z.object({
 });
 
 export type CueOutput = z.infer<typeof cueOutputSchema>;
+export type InsufficientSource = z.infer<typeof insufficientSourceSchema>;
 export type SectionSummary = z.infer<typeof sectionSummarySchema>;
 export type NoteBriefOutput = z.infer<typeof noteBriefOutputSchema>;
 
@@ -201,6 +214,26 @@ export function validateCue(raw: string): ValidationResult<CueOutput> {
 	return { ok: true, value: parsed.data };
 }
 
+export function validateCueResponse(
+	raw: string
+): ValidationResult<CueOutput | InsufficientSource> {
+	const json = extractJson(raw);
+	if (json === null) {
+		return { ok: false, error: "response was not valid JSON" };
+	}
+	const parsed = z.union([cueOutputSchema, insufficientSourceSchema]).safeParse(json);
+	if (!parsed.success) {
+		return { ok: false, error: formatZodError(parsed.error) };
+	}
+	return { ok: true, value: parsed.data };
+}
+
+export function isInsufficientSource(
+	value: CueOutput | InsufficientSource
+): value is InsufficientSource {
+	return "insufficientSource" in value;
+}
+
 export function validateCueBatch(
 	raw: string,
 	expectedCount: number
@@ -223,6 +256,10 @@ export function validateCueBatch(
 		const value = cues[i];
 		if (value === undefined) {
 			items.push({ value: null, error: `missing Section cue for section ${i + 1}` });
+			continue;
+		}
+		if (insufficientSourceSchema.safeParse(value).success) {
+			items.push({ value: null, error: INSUFFICIENT_SOURCE_ERROR });
 			continue;
 		}
 		const parsed = cueOutputSchema.safeParse(value);

@@ -350,6 +350,54 @@ describe("generateNote", () => {
 		expect(result.sections).toEqual([]);
 	});
 
+	it("does not call the provider for an image-only section", async () => {
+		const provider = mockProvider();
+		const result = await generateNote({
+			noteTitle: "A Picture Of Tonks",
+			markdown: "# A Picture Of Tonks\n![[tonks.jpg]]",
+			provider,
+			useWholeNoteContext: true,
+		});
+
+		expect(provider.cueInputs).toEqual([]);
+		expect(provider.noteBriefCalls).toBe(0);
+		expect(result.sections).toEqual([]);
+	});
+
+	it("removes unsupported image markup from all generated source text", async () => {
+		const provider = mockProvider();
+		await generateNote({
+			noteTitle: "Dogs",
+			markdown: "# Dogs\nBefore\n![[tonks.jpg]]\nAfter",
+			provider,
+			useWholeNoteContext: true,
+		});
+
+		expect(provider.cueInputs[0].content).toBe("Before\n\nAfter");
+		expect(provider.cueInputs[0].noteContext).toBe(
+			"# Dogs\nBefore\n\nAfter"
+		);
+		expect(provider.lastNoteBriefInput?.fullText).toBe(
+			"# Dogs\nBefore\n\nAfter"
+		);
+	});
+
+	it("uses an explicit image caption as source text", async () => {
+		const provider = mockProvider();
+		const result = await generateNote({
+			noteTitle: "Dogs",
+			markdown: "# Dogs\n![[tonks.jpg|Tonks running through a park]]",
+			provider,
+			useWholeNoteContext: true,
+		});
+
+		expect(result.sections).toHaveLength(1);
+		expect(provider.cueInputs[0].content).toBe("Tonks running through a park");
+		expect(provider.cueInputs[0].noteContext).toBe(
+			"# Dogs\nTonks running through a park"
+		);
+	});
+
 	it("caps whole-note context injected into each prompt (avoids context-overflow errors)", async () => {
 		const provider = mockProvider();
 		const big = "# H\n" + "x".repeat(50_000);
@@ -502,6 +550,17 @@ describe("generateSectionCue", () => {
 		expect(result.question).toBeNull();
 	});
 
+	it("does not call the provider for an image-only section", async () => {
+		const provider = mockProvider();
+		const result = await generateSectionCue({
+			section: { ...section, content: "![[tonks.jpg]]" },
+			provider,
+		});
+
+		expect(provider.cueInputs).toEqual([]);
+		expect(result).toMatchObject({ question: null, keywords: null, error: null });
+	});
+
 	it("passes noteContext when supplied", async () => {
 		const provider = mockProvider();
 		await generateSectionCue({
@@ -549,6 +608,36 @@ describe("generateSectionCueBatch", () => {
 			"vocabulary-check"
 		);
 		expect(result[0].question).toBe("Q:Queues");
+	});
+
+	it("omits image-only sections from a provider batch", async () => {
+		const provider = mockProvider({ batch: true });
+		const results = await generateSectionCueBatch({
+			sections: [
+				{
+					id: "image",
+					heading: "Image",
+					level: 1,
+					lineNumber: 1,
+					content: "![[tonks.jpg]]",
+					contentHash: "image-hash",
+				},
+				{
+					id: "text",
+					heading: "Text",
+					level: 1,
+					lineNumber: 3,
+					content: "Actual study text.",
+					contentHash: "text-hash",
+				},
+			],
+			provider,
+		});
+
+		expect(
+			provider.batchInputs.map((batch) => batch.map((item) => item.heading))
+		).toEqual([["Text"]]);
+		expect(results.map((result) => result.question)).toEqual([null, "Q:Text"]);
 	});
 });
 

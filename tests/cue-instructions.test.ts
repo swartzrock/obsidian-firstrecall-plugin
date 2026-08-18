@@ -48,4 +48,21 @@ describe("Section cue instructions", () => {
 		expect(prompt).toContain("Terms:");
 		expect(prompt).not.toMatch(/preset|density|question style/i);
 	});
+
+	it.each(["single", "batch"] as const)(
+		"lets the %s route abstain instead of inventing unsupported details",
+		(route) => {
+			const prompt = buildSectionCueInstructionsTemplate("exam-practice", route);
+
+			expect(prompt).toContain('{"insufficientSource":true}');
+			expect(prompt).toContain(
+				route === "single"
+					? 'Return ONLY either {"insufficientSource":true} or a JSON object'
+					: 'Each array entry must be either {"insufficientSource":true} or an object'
+			);
+			expect(prompt).toContain(
+				"Do not infer facts from headings, filenames, links, image markup, or layout metadata."
+			);
+		}
+	);
 });
