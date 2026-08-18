@@ -410,7 +410,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		expect(promptMessage.role).toBe("user");
 		expect(instructionContent).toContain(buildSectionCuePrompt(input));
 		expect(instructionContent).toContain(
-			"Question: Ask one precise exam-style question"
+			"Recall question: Ask one precise exam-style question"
 		);
 		expect(instructionContent).not.toMatch(/preset|density|question style/i);
 		for (const field of [
