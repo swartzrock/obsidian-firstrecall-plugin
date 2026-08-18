@@ -20,18 +20,11 @@ import {
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
 import { cueFontSizeClass } from "./cornell-layout";
 import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
-import { scheduleAutoGenerationTimer } from "./auto-generation-delay";
 import {
 	type ByokProviderId,
 	type ByokTransport,
 } from "@swartzrock/byok-runtime";
 import { byokProviderDefinition } from "./byok-provider-metadata";
-import {
-	generateNote,
-	generateNoteBriefForSections,
-	generateSectionCueBatch,
-	type SectionResult,
-} from "./generator";
 import {
 	cueCraftProviderCredential,
 	cueCraftProviderCredentialSaved,
@@ -52,21 +45,22 @@ import {
 } from "./secure-credential-store";
 import { parseSections, type Section } from "./parser";
 import {
-	buildNoteCache,
 	hasUsableCues,
 	isStale,
 	normalizeCacheMap,
-	replaceSection,
-	reconcileCacheSections,
-	sectionIdsNeedingGeneration,
-	type CachedSection,
 	type NoteCache,
 } from "./cache";
 import {
 	StudyMaterialStore,
+	classifyStudyMaterial,
 	normalizeMaintenanceStateMap,
 	type MaintenanceStateMap,
 } from "./study-material-state";
+import {
+	StudyMaterialMaintenance,
+	type MaintenanceOperationKind,
+	type MaintenanceOutcome,
+} from "./study-material-maintenance";
 import {
 	applyEditorCueWidthPreview,
 	appendSummary,
@@ -133,7 +127,6 @@ import {
 	type StudyArea,
 	type StudyAreaGenerationPlan,
 	type StudyAreaPlanMode,
-	type StudyAreaQueueItem,
 	type StudyAreaRunSummary,
 } from "./study-area";
 
@@ -197,8 +190,7 @@ export default class CueCraftPlugin extends Plugin {
 		view: MarkdownView;
 		mode: StudyProjectionMode;
 	} | null = null;
-	private currentRun: AbortController | null = null;
-	private studyAreaMaintenanceTimers = new Map<string, number>();
+	private maintenance!: StudyMaterialMaintenance;
 	private editorLayoutFrame: number | null = null;
 	private editorCueWidthPreviewScheduler: EditorCueWidthPreviewScheduler | null =
 		null;
@@ -254,6 +246,40 @@ export default class CueCraftPlugin extends Plugin {
 			await this.persistPluginData();
 			}
 		);
+		this.maintenance = new StudyMaterialMaintenance({
+			readSource: async (path) => {
+				const file = this.app.vault.getAbstractFileByPath(path);
+				if (!(file instanceof TFile) || file.extension !== "md") return null;
+				return {
+					path: file.path,
+					noteTitle: file.basename,
+					markdown: await this.app.vault.cachedRead(file),
+					modifiedAt: file.stat.mtime,
+				};
+			},
+			isAutomaticAllowed: (path) => Boolean(
+				findMaintainedStudyAreaForPath(this.settings.studyAreas, path)
+			),
+			getCache: (path) => this.cacheStore.get(path),
+			getState: (path) => this.cacheStore.getState(path),
+			commit: (path, cache, state) => this.cacheStore.commit(path, cache, state),
+			renamePath: (from, to) => this.cacheStore.rename(from, to),
+			deletePath: (path) => this.cacheStore.delete(path),
+			makeProvider: (automatic) => this.makeProviderForRun({ automatic }),
+			providerMetadata: () => ({
+				provider: cueCraftSelectedProvider(this.settings) ?? "",
+				model: this.selectedModelName(),
+				preset: this.settings.questionType,
+				generationMode: "whole-note-context",
+			}),
+			generationOptions: () => this.generationOptions(),
+			sectionConcurrency: () => this.settings.sectionConcurrency,
+			timerApi: window,
+			onCommitted: (path) => {
+				const file = this.app.vault.getAbstractFileByPath(path);
+				if (file instanceof TFile) this.refreshGeneratedSurfaces(file);
+			},
+		});
 		this.visibility = new VisibilityStore(this.data.hidden, async (map) => {
 			this.data.hidden = map;
 			await this.persistPluginData();
@@ -311,15 +337,24 @@ export default class CueCraftPlugin extends Plugin {
 			this.app.vault.on("rename", (file, oldPath) => {
 				this.endStudyForPath(oldPath);
 				if (file instanceof TFile) {
-					void this.cacheStore.rename(oldPath, file.path);
-					void this.visibility.rename(oldPath, file.path);
+					void (async () => {
+						await this.maintenance.rename(oldPath, file.path);
+						await this.visibility.rename(oldPath, file.path);
+						await this.maintenance.observe(file.path);
+						this.scheduleStudyAreaMaintenance(file);
+					})();
 				}
 			})
 		);
 		this.registerEvent(
 			this.app.vault.on("delete", (file) => {
 				this.endStudyForPath(file.path);
-				void this.cacheStore.delete(file.path);
+				void this.maintenance.delete(file.path);
+			})
+		);
+		this.registerEvent(
+			this.app.vault.on("create", (file) => {
+				if (file instanceof TFile) this.scheduleAutoGenerate(file);
 			})
 		);
 		this.registerEvent(
@@ -358,15 +393,11 @@ export default class CueCraftPlugin extends Plugin {
 		this.studyHeaderActionElements.clear();
 		this.flushEditorCueWidthPreview(null);
 		this.editorCueWidthPreviewScheduler = null;
-		for (const timer of this.studyAreaMaintenanceTimers.values()) {
-			window.clearTimeout(timer);
-		}
-		this.studyAreaMaintenanceTimers.clear();
+		this.maintenance?.dispose();
 		if (this.editorLayoutFrame !== null) {
 			window.cancelAnimationFrame(this.editorLayoutFrame);
 			this.editorLayoutFrame = null;
 		}
-		this.currentRun?.abort();
 	}
 
 	private async loadPluginData(): Promise<void> {
@@ -1519,7 +1550,7 @@ export default class CueCraftPlugin extends Plugin {
 			return;
 		}
 		new RegenerateSettingsModal(this.app, file.basename, () => {
-			void this.generateCuesForFile(file, { automatic: true });
+			void this.generateCuesForFile(file);
 		}).open();
 	}
 
@@ -1610,6 +1641,7 @@ export default class CueCraftPlugin extends Plugin {
 
 	private scheduleAutoGenerate(file: TFile): void {
 		if (file.extension !== "md") return;
+		void this.maintenance.observe(file.path);
 		this.scheduleStudyAreaMaintenance(file);
 	}
 
@@ -1619,23 +1651,10 @@ export default class CueCraftPlugin extends Plugin {
 			file.path
 		);
 		if (!area) return;
-		scheduleAutoGenerationTimer({
-			timers: this.studyAreaMaintenanceTimers,
-			key: file.path,
-			delaySeconds: this.settings.autoGenerationSettleDelaySeconds,
-			timerApi: window,
-			onRun: () => {
-				const currentArea = findMaintainedStudyAreaForPath(
-					this.settings.studyAreas,
-					file.path
-				);
-				if (!currentArea) return;
-				void this.runStudyArea(currentArea.id, "maintain-note", {
-					automatic: true,
-					targetFile: file,
-				});
-			},
-		});
+		this.maintenance.scheduleAutomatic(
+			file.path,
+			this.settings.autoGenerationSettleDelaySeconds
+		);
 	}
 
 	/** Open a fuzzy picker listing the active note's sections, then regen. */
@@ -1670,10 +1689,6 @@ export default class CueCraftPlugin extends Plugin {
 	 * cache. Public so callers can target an explicit note and section.
 	 */
 	async regenerateSection(file: TFile, sectionId: string): Promise<void> {
-		if (this.currentRun) {
-			new Notice("CueCraft: generation already in progress.");
-			return;
-		}
 		if (!this.isConfigured()) {
 			new Notice("CueCraft: set up your AI provider in Settings first.");
 			return;
@@ -1683,57 +1698,26 @@ export default class CueCraftPlugin extends Plugin {
 			new Notice("CueCraft: no cache for this note \u2014 run Generate first.");
 			return;
 		}
-		const markdown = await this.app.vault.cachedRead(file);
-		const section = parseSections(markdown).find((s) => s.id === sectionId);
+		const section = parseSections(await this.app.vault.cachedRead(file)).find(
+			(s) => s.id === sectionId
+		);
 		if (!section) {
 			new Notice("CueCraft: section no longer exists in the note.");
 			return;
 		}
 
-		const provider = await this.makeProviderForRun();
-		if (!provider) return;
-
-		const controller = new AbortController();
-		this.currentRun = controller;
 		this.setStatus("generating", { done: 0, total: 1 });
-
-		try {
-			const [result] = await generateSectionCueBatch({
-				sections: [section],
-				provider,
-				options: this.generationOptions(),
-				noteContext: markdown,
-				signal: controller.signal,
-			});
-			if (!result) throw new Error("Provider returned no Section cue for this section.");
-			if (controller.signal.aborted && result.error) return;
-
-			let updated = replaceSection(cache, toCachedSection(result));
-			if (!controller.signal.aborted) {
-				updated = await this.refreshNoteBriefForCache(
-					file,
-					markdown,
-					updated,
-					provider,
-					controller.signal
-				);
-			}
-			await this.cacheStore.set(file.path, updated);
-			await this.visibility.show(file.path);
-
-			if (result.error) {
-				new Notice(`CueCraft: regeneration failed \u2014 ${result.error}`);
-			} else {
-				new Notice(`CueCraft: regenerated Section cue for "${section.heading}".`);
-			}
-		} catch (e) {
-			console.error("CueCraft section regen failed", e);
-			new Notice("CueCraft: section regeneration failed. See console.");
-		} finally {
-			this.currentRun = null;
-			await this.updateStatusForFile(this.app.workspace.getActiveFile());
-			this.renderCues(file);
+		const outcome = await this.maintenance.request({
+			path: file.path,
+			kind: "command",
+			sectionIds: [sectionId],
+		});
+		if (outcome.status === "failed") {
+			new Notice(`CueCraft: regeneration failed \u2014 ${outcome.errors.join("; ")}`);
+		} else if (outcome.status === "completed") {
+			new Notice(`CueCraft: regenerated Section cue for "${section.heading}".`);
 		}
+		await this.updateStatusForFile(this.app.workspace.getActiveFile());
 	}
 
 	/**
@@ -1749,113 +1733,28 @@ export default class CueCraftPlugin extends Plugin {
 			if (!opts.automatic) new Notice("CueCraft: open a note first.");
 			return;
 		}
-		if (this.currentRun) {
-			if (opts.automatic) return;
-			new Notice("CueCraft: generation already in progress.");
-			return;
-		}
 		if (!this.isConfigured()) {
 			if (!opts.automatic) {
 				new Notice("CueCraft: set up your AI provider in Settings first.");
 			}
 			return;
 		}
-		const cache = this.cacheStore.get(file.path);
-		if (!cache) {
-			if (!opts.automatic) {
-				new Notice("CueCraft: no cache for this note \u2014 run Generate first.");
-			}
-			return;
-		}
-		const markdown = await this.app.vault.cachedRead(file);
-		const sections = parseSections(markdown);
-		const sectionIds = sectionIdsNeedingGeneration(cache, sections);
-		if (!sectionIds.length) {
-			const updated = reconcileCacheSections(cache, sections, [], {
-				noteModifiedAt: file.stat.mtime,
-			});
-			await this.cacheStore.set(file.path, updated);
-			await this.visibility.show(file.path);
-			await this.updateStatusForFile(this.app.workspace.getActiveFile());
-			this.renderCues(file);
-			if (!opts.automatic) {
-				new Notice("CueCraft: no sections need regeneration.");
-			}
-			return;
-		}
+		this.setStatus("generating", { done: 0, total: 0 });
+		const outcome = await this.maintenance.request({
+			path: file.path,
+			kind: opts.automatic ? "automatic" : "update",
+		});
+		if (!opts.automatic) this.noticeForMaintenanceOutcome(outcome);
+		await this.updateStatusForFile(this.app.workspace.getActiveFile());
+	}
 
-		const provider = await this.makeProviderForRun(opts);
-		if (!provider) return;
-		const byId = new Map(sections.map((s) => [s.id, s]));
-
-		const controller = new AbortController();
-		this.currentRun = controller;
-
-		const generated: CachedSection[] = [];
-		let done = 0;
-		let failed = 0;
-		try {
-			const concurrency = this.settings.sectionConcurrency;
-			for (let start = 0; start < sectionIds.length; start += concurrency) {
-				if (controller.signal.aborted) break;
-				const batch = sectionIds
-					.slice(start, start + concurrency)
-					.map((id) => byId.get(id))
-					.filter((s): s is Section => Boolean(s));
-				this.setStatus("generating", { done, total: sectionIds.length });
-				const results = await generateSectionCueBatch({
-					sections: batch,
-					provider,
-					options: this.generationOptions(),
-					noteContext: markdown,
-					signal: controller.signal,
-				});
-				for (const result of results) {
-					if (controller.signal.aborted && result.error) continue;
-					generated.push(toCachedSection(result));
-					if (result.error) failed++;
-					done++;
-					this.setStatus("generating", { done, total: sectionIds.length });
-				}
-				const working = reconcileCacheSections(cache, sections, generated, {
-					noteModifiedAt: file.stat.mtime,
-				});
-				await this.cacheStore.set(file.path, working);
-				if (controller.signal.aborted) break;
-			}
-			if (!controller.signal.aborted) {
-				const working = reconcileCacheSections(cache, sections, generated, {
-					noteModifiedAt: file.stat.mtime,
-				});
-				await this.cacheStore.set(
-					file.path,
-					await this.refreshNoteBriefForCache(
-						file,
-						markdown,
-						working,
-						provider,
-						controller.signal
-					)
-				);
-			}
-			await this.visibility.show(file.path);
-			const ok = done - failed;
-			if (!opts.automatic || failed) {
-				new Notice(
-					`CueCraft: refreshed ${ok} section${ok === 1 ? "" : "s"}` +
-						(failed ? `, ${failed} failed` : "") +
-						"."
-				);
-			}
-		} catch (e) {
-			console.error("CueCraft stale refresh failed", e);
-			if (!opts.automatic) {
-				new Notice("CueCraft: stale refresh failed. See console.");
-			}
-		} finally {
-			this.currentRun = null;
-			await this.updateStatusForFile(this.app.workspace.getActiveFile());
-			this.renderCues(file);
+	private noticeForMaintenanceOutcome(outcome: MaintenanceOutcome): void {
+		if (outcome.status === "failed") {
+			new Notice(`CueCraft: update failed \u2014 ${outcome.errors.join("; ")}`);
+		} else if (outcome.status === "completed") {
+			new Notice("CueCraft: study material is up to date.");
+		} else if (outcome.status === "skipped" && outcome.reason === "no-work") {
+			new Notice("CueCraft: study material is already up to date.");
 		}
 	}
 
@@ -1955,12 +1854,6 @@ export default class CueCraftPlugin extends Plugin {
 		mode: StudyAreaPlanMode = "backfill",
 		opts: { automatic?: boolean; targetFile?: TFile } = {}
 	): Promise<StudyAreaRunSummary | null> {
-		if (this.currentRun) {
-			if (opts.automatic) return null;
-			this.currentRun.abort();
-			new Notice("CueCraft: cancelling generation...");
-			return null;
-		}
 		if (!this.isConfigured()) {
 			if (!opts.automatic) {
 				new Notice("CueCraft: set up your AI provider in Settings first.");
@@ -1987,74 +1880,37 @@ export default class CueCraftPlugin extends Plugin {
 			}
 			return summarizeStudyAreaRun(plan, {});
 		}
-
-		const provider = await this.makeProviderForRun(opts);
-		if (!provider) return null;
-		const controller = new AbortController();
-		this.currentRun = controller;
 		const completed: string[] = [];
 		const failed: string[] = [];
-		const totalSections = plan.items.reduce(
-			(total, item) => total + item.sectionCount,
-			0
-		);
-		let completedSections = 0;
-		const advanceSections = (count: number): void => {
-			if (count <= 0) return;
-			completedSections = Math.min(totalSections, completedSections + count);
-			this.setStatus("generating", {
-				done: completedSections,
-				total: totalSections,
-				unit: "section",
-			});
-		};
 		this.setStatus("generating", {
 			done: 0,
-			total: totalSections,
+			total: plan.items.reduce((total, item) => total + item.sectionCount, 0),
 			unit: "section",
 		});
-		let summary: StudyAreaRunSummary | null = null;
-
-		try {
-			for (const item of plan.items) {
-				if (controller.signal.aborted) break;
-				const file = this.app.vault.getAbstractFileByPath(item.path);
-				if (!(file instanceof TFile)) {
-					failed.push(item.path);
-					advanceSections(item.sectionCount);
-					continue;
-				}
-				let itemSectionsDone = 0;
-				const result = await this.runStudyAreaQueueItem(
-					file,
-					item,
-					provider,
-					controller,
-					(count) => {
-						itemSectionsDone += count;
-						advanceSections(count);
-					}
-				);
-				if (result === "completed") completed.push(item.path);
-				if (result === "failed") failed.push(item.path);
-				if (result !== "canceled" && itemSectionsDone < item.sectionCount) {
-					advanceSections(item.sectionCount - itemSectionsDone);
-				}
-			}
-		} catch (e) {
-			console.error("CueCraft study area run failed", e);
-			new Notice("CueCraft: study area run failed. See console.");
-		} finally {
-			summary = summarizeStudyAreaRun(plan, {
-				completedPaths: completed,
-				failedPaths: failed,
-				canceled: controller.signal.aborted,
+		const kind: MaintenanceOperationKind = opts.automatic
+			? "automatic"
+			: mode === "retry-failed"
+				? "retry"
+				: "catch-up";
+		for (const item of plan.items) {
+			const outcome = await this.maintenance.request({
+				path: item.path,
+				kind,
 			});
-			this.currentRun = null;
-			await this.updateStatusForFile(this.app.workspace.getActiveFile());
-			if (!opts.automatic || summary.failed) {
-				new Notice(this.studyAreaSummaryNotice(area, summary));
+			if (outcome.status === "completed" ||
+				(outcome.status === "skipped" && outcome.reason === "no-work")) {
+				completed.push(item.path);
+			} else if (outcome.status === "failed") {
+				failed.push(item.path);
 			}
+		}
+		const summary = summarizeStudyAreaRun(plan, {
+			completedPaths: completed,
+			failedPaths: failed,
+		});
+		await this.updateStatusForFile(this.app.workspace.getActiveFile());
+		if (!opts.automatic || summary.failed) {
+			new Notice(this.studyAreaSummaryNotice(area, summary));
 		}
 		return summary;
 	}
@@ -2076,159 +1932,26 @@ export default class CueCraftPlugin extends Plugin {
 		const snapshots = await Promise.all(
 			files.map(async (file) => {
 				const markdown = await this.app.vault.cachedRead(file);
+				const cache = this.cacheStore.get(file.path);
+				const state = this.cacheStore.getState(file.path);
+				const currentSections = parseSections(markdown);
+				const classification = classifyStudyMaterial({
+					noteTitle: file.basename,
+					markdown,
+					currentSections,
+					cache,
+					state,
+				});
 				return {
 					path: file.path,
-					cache: this.cacheStore.get(file.path),
-					currentSections: parseSections(markdown),
+					cache,
+					currentSections,
+					noteBriefNeedsRefresh: classification.noteBrief !== "current",
+					failedComponents: state?.failure?.components,
 				};
 			})
 		);
 		return planStudyAreaGeneration(area, snapshots, mode);
-	}
-
-	private async runStudyAreaQueueItem(
-		file: TFile,
-		item: StudyAreaQueueItem,
-		provider: CueCraftByokRuntime,
-		controller: AbortController,
-		onProgress?: (completedSections: number) => void
-	): Promise<"completed" | "failed" | "canceled"> {
-		const markdown = await this.app.vault.cachedRead(file);
-		if (item.action === "generate-note") {
-			let previousDone = 0;
-			const result = await generateNote({
-				noteTitle: file.basename,
-				markdown,
-				provider,
-				options: this.generationOptions(),
-				sectionConcurrency: this.settings.sectionConcurrency,
-				useWholeNoteContext: true,
-				signal: controller.signal,
-				onProgress: (done) => {
-					onProgress?.(done - previousDone);
-					previousDone = done;
-				},
-			});
-			if (result.sections.length) {
-				await this.cacheStore.set(
-					file.path,
-					buildNoteCache({
-						result,
-						provider: provider.id,
-						model: this.selectedModelName(),
-						preset: this.settings.questionType,
-						generationMode: "whole-note-context",
-						noteModifiedAt: file.stat.mtime,
-					})
-				);
-				await this.visibility.show(file.path);
-				this.refreshGeneratedSurfaces(file);
-			}
-			if (result.canceled || controller.signal.aborted) return "canceled";
-			return result.sections.some((section) => section.error)
-				? "failed"
-				: "completed";
-		}
-
-		const status = await this.regenerateQueuedSections(
-			file,
-			markdown,
-			item.sectionIds,
-			provider,
-			controller,
-			onProgress
-		);
-		if (status !== "canceled") this.refreshGeneratedSurfaces(file);
-		return status;
-	}
-
-	private async regenerateQueuedSections(
-		file: TFile,
-		markdown: string,
-		sectionIds: readonly string[],
-		provider: CueCraftByokRuntime,
-		controller: AbortController,
-		onProgress?: (completedSections: number) => void
-	): Promise<"completed" | "failed" | "canceled"> {
-		const cache = this.cacheStore.get(file.path);
-		if (!cache) return "failed";
-		const sections = parseSections(markdown);
-		const byId = new Map(sections.map((section) => [section.id, section]));
-		const generated: CachedSection[] = [];
-		let failed = 0;
-		let completed = 0;
-		const concurrency = this.settings.sectionConcurrency;
-		if (!sectionIds.length) {
-			const working = reconcileCacheSections(cache, sections, [], {
-				noteModifiedAt: file.stat.mtime,
-			});
-			await this.cacheStore.set(file.path, working);
-			await this.visibility.show(file.path);
-			return controller.signal.aborted ? "canceled" : "completed";
-		}
-		for (let start = 0; start < sectionIds.length; start += concurrency) {
-			if (controller.signal.aborted) break;
-			const batch = sectionIds
-				.slice(start, start + concurrency)
-				.map((id) => byId.get(id))
-				.filter((section): section is Section => Boolean(section));
-			const results = await generateSectionCueBatch({
-				sections: batch,
-				provider,
-				options: this.generationOptions(),
-				noteContext: markdown,
-				signal: controller.signal,
-			});
-			for (const result of results) {
-				if (controller.signal.aborted && result.error) continue;
-				generated.push(toCachedSection(result));
-				if (result.error) failed++;
-				else completed++;
-				onProgress?.(1);
-			}
-			const working = reconcileCacheSections(cache, sections, generated, {
-				noteModifiedAt: file.stat.mtime,
-			});
-			await this.cacheStore.set(file.path, working);
-			if (controller.signal.aborted) break;
-		}
-		if (!controller.signal.aborted) {
-			const working = reconcileCacheSections(cache, sections, generated, {
-				noteModifiedAt: file.stat.mtime,
-			});
-			await this.cacheStore.set(
-				file.path,
-				await this.refreshNoteBriefForCache(
-					file,
-					markdown,
-					working,
-					provider,
-					controller.signal
-				)
-			);
-		}
-		await this.visibility.show(file.path);
-		if (controller.signal.aborted) return "canceled";
-		return failed || completed < sectionIds.length ? "failed" : "completed";
-	}
-
-		private async refreshNoteBriefForCache(
-			file: TFile,
-			markdown: string,
-			cache: NoteCache,
-			provider: CueCraftByokRuntime,
-			signal?: AbortSignal
-		): Promise<NoteCache> {
-		return {
-			...cache,
-			noteBrief: await generateNoteBriefForSections({
-				noteTitle: file.basename,
-				markdown,
-				provider,
-				sections: cache.sections,
-				signal,
-			}),
-		};
 	}
 
 	private refreshGeneratedSurfaces(file: TFile): void {
@@ -2253,13 +1976,6 @@ export default class CueCraftPlugin extends Plugin {
 		file: TFile | null,
 		opts: { automatic?: boolean } = {}
 	): Promise<void> {
-		// A second invocation while running acts as cancel (AC C3.2).
-		if (this.currentRun) {
-			if (opts.automatic) return;
-			this.currentRun.abort();
-			new Notice("CueCraft: cancelling generation...");
-			return;
-		}
 		if (!file) {
 			if (!opts.automatic) new Notice("CueCraft: open a note first.");
 			return;
@@ -2270,62 +1986,13 @@ export default class CueCraftPlugin extends Plugin {
 			}
 			return;
 		}
-
-		const markdown = await this.app.vault.cachedRead(file);
-		const provider = await this.makeProviderForRun(opts);
-		if (!provider) return;
-
-		const controller = new AbortController();
-		this.currentRun = controller;
 		this.setStatus("generating", { done: 0, total: 0 });
-
-		try {
-			const result = await generateNote({
-				noteTitle: file.basename,
-				markdown,
-				provider,
-				options: this.generationOptions(),
-				sectionConcurrency: this.settings.sectionConcurrency,
-				useWholeNoteContext: true,
-				signal: controller.signal,
-				onProgress: (done, total) =>
-					this.setStatus("generating", { done, total }),
-			});
-
-			const cache = buildNoteCache({
-				result,
-				provider: provider.id,
-				model: this.selectedModelName(),
-				preset: this.settings.questionType,
-				generationMode: "whole-note-context",
-				noteModifiedAt: file.stat.mtime,
-			});
-			await this.cacheStore.set(file.path, cache);
-			// Generating for a note implies you want to see its Section cues.
-			await this.visibility.show(file.path);
-
-			const ok = result.sections.filter((s) => !s.error).length;
-			const failed = result.sections.length - ok;
-			if (result.canceled) {
-				new Notice(`CueCraft: cancelled - kept ${ok} section(s).`);
-			} else if (!opts.automatic) {
-				const sectionCueCount = `${ok} Section ${ok === 1 ? "cue" : "cues"}`;
-				new Notice(
-					`CueCraft: generated ${sectionCueCount}` +
-						(failed ? `, ${failed} failed` : "") +
-						(result.noteBrief ? " + Note Brief." : ".")
-				);
-			} else if (failed) {
-				new Notice(`CueCraft: auto-generation finished with ${failed} failed section(s).`);
-			}
-		} catch (e) {
-			console.error("CueCraft generation failed", e);
-			new Notice("CueCraft: generation failed. See console for details.");
-		} finally {
-			this.currentRun = null;
-			await this.updateStatusForFile(this.app.workspace.getActiveFile());
-			this.renderCues(file);
-		}
+		const outcome = await this.maintenance.request({
+			path: file.path,
+			kind: opts.automatic ? "automatic" : "command",
+		});
+		if (!opts.automatic) this.noticeForMaintenanceOutcome(outcome);
+		await this.updateStatusForFile(this.app.workspace.getActiveFile());
 	}
 
 	private async clearCues(): Promise<void> {
@@ -2370,21 +2037,6 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		this.refreshStudyEntryStates();
 	}
-}
-
-/** Map a generation result into the cache's persisted section shape. */
-function toCachedSection(result: SectionResult): CachedSection {
-	return {
-		id: result.id,
-		heading: result.heading,
-		level: result.level,
-		lineNumber: result.lineNumber,
-		contentHash: result.contentHash,
-		keywords: result.keywords,
-		question: result.question,
-		summary: result.summary,
-		error: result.error,
-	};
 }
 
 class RegenerateSettingsModal extends Modal {

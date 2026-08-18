@@ -102,7 +102,12 @@ function buildCache(markdown = NOTE): NoteCache {
 	}));
 	const result: NoteGenerationResult = {
 		sections,
-		noteBrief: null,
+		noteBrief: {
+			overview: "A and B",
+			whatMatters: { title: "Both", detail: "Both matter." },
+			reviewFirst: { title: "A", detail: "Start with A." },
+			sayItBack: { title: "Explain", detail: "Explain both." },
+		},
 		canceled: false,
 	};
 	return buildNoteCache({
@@ -404,6 +409,46 @@ describe("study area generation planning", () => {
 				action: "refresh-stale-sections",
 				sectionIds: [],
 				readiness: "stale",
+				sectionCount: 0,
+			},
+		]);
+	});
+
+	it("queues Note Brief-only catch-up and Retry work without section calls", () => {
+		const cache = buildCache();
+		const missingBrief = { ...cache, noteBrief: null };
+		const catchUp = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Missing brief.md",
+				cache: missingBrief,
+				currentSections: parseSections(NOTE),
+				noteBriefNeedsRefresh: true,
+			},
+		]);
+		expect(catchUp.items).toEqual([
+			{
+				path: "Courses/Biology/Missing brief.md",
+				action: "refresh-stale-sections",
+				sectionIds: [],
+				readiness: "stale",
+				sectionCount: 0,
+			},
+		]);
+
+		const retry = planStudyAreaGeneration(area(), [
+			{
+				path: "Courses/Biology/Failed brief.md",
+				cache,
+				currentSections: parseSections(NOTE),
+				failedComponents: { noteBrief: true, sectionIds: [] },
+			},
+		], "retry-failed");
+		expect(retry.items).toEqual([
+			{
+				path: "Courses/Biology/Failed brief.md",
+				action: "retry-failed-sections",
+				sectionIds: [],
+				readiness: "failed",
 				sectionCount: 0,
 			},
 		]);

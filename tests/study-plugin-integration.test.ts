@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildNoteCache, type NoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import { DEFAULT_SETTINGS } from "../src/settings";
+import type {
+	CueCraftCueInput,
+	CueCraftNoteBriefInput,
+} from "../src/cue-provider";
 
 const { notices } = vi.hoisted(() => ({ notices: [] as string[] }));
 
@@ -235,7 +239,9 @@ function createHarness() {
 				return {};
 			},
 			cachedRead: (target: TFile) => cachedRead(target),
-			getAbstractFileByPath: () => null,
+			getAbstractFileByPath: (path: string) =>
+				[noteFile, otherFile].find((target) => target.path === path) ?? null,
+			getMarkdownFiles: () => [noteFile, otherFile],
 		},
 	};
 	const plugin = new CueCraftPlugin(app as never, {} as never);
@@ -275,6 +281,7 @@ function createHarness() {
 
 	return {
 		plugin,
+		data,
 		controller,
 		noteFile,
 		otherFile,
@@ -319,6 +326,117 @@ beforeEach(() => {
 });
 
 describe("Study plugin orchestration", () => {
+	it("schedules covered Markdown creation without provider work before the quiet delay and keeps hidden material hidden", async () => {
+		const harness = createHarness();
+		delete harness.data.caches[harness.noteFile.path];
+		harness.data.hidden[harness.noteFile.path] = true;
+		harness.data.settings.studyAreas = [
+			{
+				id: "notes",
+				name: "Notes",
+				parentPath: "notes",
+				excludedPaths: [],
+				maintenanceMode: "maintain-on-save",
+				createdAt: "2026-08-18T00:00:00.000Z",
+			},
+		];
+		const cueInputs: CueCraftCueInput[] = [];
+		const noteBriefInputs: CueCraftNoteBriefInput[] = [];
+		const makeProvider = vi.fn(async () => ({
+			id: "test",
+			label: "Test",
+			requiresNetwork: false,
+			requiresDownload: false,
+			async testConnection() { return { ok: true, message: "ok" }; },
+			async listModels() { return []; },
+			async generateCue(input: CueCraftCueInput) {
+				cueInputs.push(input);
+				return { question: `Q:${input.heading}`, keywords: [input.heading] };
+			},
+			async generateNoteBrief(input: CueCraftNoteBriefInput) {
+				noteBriefInputs.push(input);
+				return {
+					overview: "Brief",
+					whatMatters: { title: "Main", detail: "Main idea" },
+					reviewFirst: { title: "First", detail: "Start here" },
+					sayItBack: { title: "Explain", detail: "Explain it" },
+				};
+			},
+		}));
+		Object.assign(harness.plugin as unknown as Record<string, unknown>, {
+			makeProvider,
+			isConfigured: () => true,
+		});
+		let scheduled: (() => void) | null = null;
+		const setTimeoutSpy = vi.spyOn(window, "setTimeout").mockImplementation(
+			((callback: TimerHandler) => {
+				scheduled = callback as () => void;
+				return 1;
+			}) as typeof window.setTimeout
+		);
+		await harness.plugin.onload();
+		const before = harness.markdownByPath.get(harness.noteFile.path);
+
+		harness.vaultEvents.get("create")?.(harness.noteFile as never);
+		expect(makeProvider).not.toHaveBeenCalled();
+		expect(scheduled).not.toBeNull();
+		(scheduled as (() => void))();
+		await vi.waitFor(() => expect(makeProvider).toHaveBeenCalledTimes(1));
+
+		expect(cueInputs.map((input) => input.heading)).toEqual(["Agents"]);
+		expect(noteBriefInputs).toHaveLength(1);
+		expect(harness.markdownByPath.get(harness.noteFile.path)).toBe(before);
+		expect(
+			(harness.plugin as unknown as {
+				visibility: { isHidden(path: string): boolean };
+			}).visibility.isHidden(harness.noteFile.path)
+		).toBe(true);
+		setTimeoutSpy.mockRestore();
+	});
+
+	it("lets the generate command run outside automatic scope without changing hidden visibility", async () => {
+		const harness = createHarness();
+		delete harness.data.caches[harness.noteFile.path];
+		harness.data.hidden[harness.noteFile.path] = true;
+		const generateCue = vi.fn(async (input: CueCraftCueInput) => ({
+			question: `Q:${input.heading}`,
+			keywords: [input.heading],
+		}));
+		Object.assign(harness.plugin as unknown as Record<string, unknown>, {
+			isConfigured: () => true,
+			makeProvider: vi.fn(async () => ({
+				id: "test",
+				label: "Test",
+				requiresNetwork: false,
+				requiresDownload: false,
+				async testConnection() { return { ok: true, message: "ok" }; },
+				async listModels() { return []; },
+				generateCue,
+				async generateNoteBrief() {
+					return {
+						overview: "Brief",
+						whatMatters: { title: "Main", detail: "Main idea" },
+						reviewFirst: { title: "First", detail: "Start here" },
+						sayItBack: { title: "Explain", detail: "Explain it" },
+					};
+				},
+			})),
+		});
+		await harness.plugin.onload();
+		const before = harness.markdownByPath.get(harness.noteFile.path);
+
+		await harness.commands.get("generate-cues")?.callback();
+
+		expect(generateCue).toHaveBeenCalledTimes(1);
+		expect(harness.data.settings.studyAreas).toEqual([]);
+		expect(harness.markdownByPath.get(harness.noteFile.path)).toBe(before);
+		expect(
+			(harness.plugin as unknown as {
+				visibility: { isHidden(path: string): boolean };
+			}).visibility.isHidden(harness.noteFile.path)
+		).toBe(true);
+	});
+
 	it("keeps one enabled or aria-disabled Study action in every Markdown header and a distinct ribbon shortcut", async () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
@@ -510,19 +628,44 @@ describe("Study plugin orchestration", () => {
 		secondView.file = harness.noteFile;
 		harness.setActiveView(secondView, harness.noteFile);
 		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		const renamedFile = file("notes/renamed.md");
 		await assertRestoreBeforeClear(() =>
 			harness.vaultEvents.get("rename")?.(
-				Object.assign(file("notes/renamed.md"), { path: "notes/renamed.md" }) as never,
+				renamedFile as never,
 				harness.noteFile.path as never
 			)
 		);
+		await vi.waitFor(() =>
+			expect(
+				(harness.plugin as unknown as { cacheStore: { has(path: string): boolean } })
+					.cacheStore.has(renamedFile.path)
+			).toBe(true)
+		);
+		harness.markdownByPath.set(renamedFile.path, NOTE);
+		secondView.file = renamedFile;
+		harness.setActiveView(secondView, renamedFile);
+		harness.workspaceEvents.get("active-leaf-change")?.({ view: secondView } as never);
 
-		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		await (
+			harness.plugin as unknown as {
+				reviewThisNote(target: TFile): Promise<void>;
+			}
+		).reviewThisNote(renamedFile);
+		expect(harness.controller().snapshot().active).toBe(true);
 		await assertRestoreBeforeClear(() =>
-			harness.vaultEvents.get("delete")?.(harness.noteFile as never)
+			harness.vaultEvents.get("delete")?.(renamedFile as never)
 		);
 
-		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		await (
+			harness.plugin as unknown as {
+				cacheStore: { set(path: string, cache: NoteCache): Promise<void> };
+			}
+		).cacheStore.set(renamedFile.path, cacheFor(NOTE));
+		await (
+			harness.plugin as unknown as {
+				reviewThisNote(target: TFile): Promise<void>;
+			}
+		).reviewThisNote(renamedFile);
 		await assertRestoreBeforeClear(() =>
 			harness.commands.get("clear-cues")?.callback()
 		);

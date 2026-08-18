@@ -153,13 +153,18 @@ export type MaintenanceStateEvent =
 			type: "update-succeeded";
 			revision: string;
 			components: ComponentSet;
-			cacheRevision: string;
+			cacheRevision: string | null;
 	  }
 	| {
 			type: "update-failed";
 			revision: string;
 			components: ComponentSet;
 			message: string;
+	  }
+	| {
+			type: "update-canceled";
+			revision: string;
+			components: ComponentSet;
 	  }
 	| { type: "banner-dismissed"; revision: string }
 	| { type: "clear" };
@@ -211,6 +216,12 @@ export function reduceMaintenanceState(
 			updating: { ...EMPTY_COMPONENTS },
 			failure: { components: failed, message: event.message },
 			retryable: true,
+		};
+	}
+	if (event.type === "update-canceled") {
+		return {
+			...state,
+			updating: subtractComponents(state.updating, event.components),
 		};
 	}
 

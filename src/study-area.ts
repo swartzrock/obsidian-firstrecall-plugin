@@ -45,6 +45,11 @@ export interface StudyAreaNoteSnapshot {
 	path: string;
 	cache: NoteCache | null;
 	currentSections: Section[];
+	noteBriefNeedsRefresh?: boolean;
+	failedComponents?: {
+		noteBrief: boolean;
+		sectionIds: string[];
+	};
 }
 
 export interface StudyAreaReadinessResult {
@@ -233,10 +238,18 @@ export function classifyStudyAreaNote(
 	if (!note.cache) {
 		return { path: note.path, readiness: "uncued", reason: null };
 	}
-	if (note.cache.sections.some((section) => section.error)) {
+	if (
+		note.cache.sections.some((section) => section.error) ||
+		note.failedComponents?.noteBrief ||
+		note.failedComponents?.sectionIds.length
+	) {
 		return { path: note.path, readiness: "failed", reason: null };
 	}
-	if (isStale(note.cache, note.currentSections)) {
+	if (
+		!note.cache.noteBrief ||
+		note.noteBriefNeedsRefresh ||
+		isStale(note.cache, note.currentSections)
+	) {
 		return { path: note.path, readiness: "stale", reason: null };
 	}
 	return { path: note.path, readiness: "ready", reason: null };
@@ -405,8 +418,11 @@ function planQueueItem(
 		};
 	}
 	if (readiness === "failed" && note.cache) {
-		const sectionIds = failedSectionIds(note.cache, note.currentSections);
-		if (!sectionIds.length) return null;
+		const sectionIds = uniqueSectionIds([
+			...failedSectionIds(note.cache, note.currentSections),
+			...(note.failedComponents?.sectionIds ?? []),
+		]);
+		if (!sectionIds.length && !note.failedComponents?.noteBrief) return null;
 		return {
 			path: note.path,
 			action: "retry-failed-sections",
@@ -416,6 +432,10 @@ function planQueueItem(
 		};
 	}
 	return null;
+}
+
+function uniqueSectionIds(ids: readonly string[]): string[] {
+	return [...new Set(ids)];
 }
 
 function failedSectionIds(

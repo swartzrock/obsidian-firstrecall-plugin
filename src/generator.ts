@@ -29,6 +29,7 @@ export interface SectionResult {
 export interface NoteGenerationResult {
 	sections: SectionResult[];
 	noteBrief: NoteBriefOutput | null;
+	noteBriefOutcome?: NoteBriefGenerationOutcome;
 	/** True if generation was cancelled before completing all current artifacts. */
 	canceled: boolean;
 }
@@ -87,6 +88,12 @@ export interface GenerateNoteBriefParams {
 	maxContextChars?: number;
 	signal?: AbortSignal;
 }
+
+export type NoteBriefGenerationOutcome =
+	| { status: "success"; noteBrief: NoteBriefOutput }
+	| { status: "skipped" }
+	| { status: "canceled" }
+	| { status: "failed"; error: string };
 
 /** Default budget for note text injected into a single prompt. */
 export const DEFAULT_MAX_CONTEXT_CHARS = 8000;
@@ -247,9 +254,9 @@ export async function generateSectionCueBatch(
 
 export async function generateNoteBriefForSections(
 	params: GenerateNoteBriefParams
-): Promise<NoteBriefOutput | null> {
+): Promise<NoteBriefGenerationOutcome> {
 	const generateNoteBrief = params.provider.generateNoteBrief?.bind(params.provider);
-	if (!generateNoteBrief) return null;
+	if (!generateNoteBrief) return { status: "skipped" };
 	const sections = params.sections
 		.filter((section) => !section.error && section.question)
 		.map((section) => ({
@@ -257,7 +264,8 @@ export async function generateNoteBriefForSections(
 			question: section.question as string,
 			keywords: section.keywords ?? [],
 		}));
-	if (!sections.length || params.signal?.aborted) return null;
+	if (params.signal?.aborted) return { status: "canceled" };
+	if (!sections.length) return { status: "skipped" };
 	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	try {
 		const noteBrief = await generateNoteBrief(
@@ -271,9 +279,14 @@ export async function generateNoteBriefForSections(
 			},
 			params.signal
 		);
-		return noteBrief;
-	} catch {
-		return null;
+		if (params.signal?.aborted) return { status: "canceled" };
+		return { status: "success", noteBrief };
+	} catch (error) {
+		if (params.signal?.aborted) return { status: "canceled" };
+		return {
+			status: "failed",
+			error: error instanceof Error ? error.message : String(error),
+		};
 	}
 }
 
@@ -354,6 +367,7 @@ export async function generateNote(
 	}
 
 	let noteBrief: NoteBriefOutput | null = null;
+	let noteBriefOutcome: NoteBriefGenerationOutcome = { status: "skipped" };
 	const completedResults = results.filter(
 		(r): r is SectionResult => Boolean(r)
 	);
@@ -362,6 +376,7 @@ export async function generateNote(
 		return {
 			sections: completedResults,
 			noteBrief,
+			noteBriefOutcome: { status: "canceled" },
 			canceled: true,
 		};
 	}
@@ -374,10 +389,10 @@ export async function generateNote(
 			done++;
 			onProgress?.(done, total);
 		}
-		return { sections: completedResults, noteBrief, canceled };
+		return { sections: completedResults, noteBrief, noteBriefOutcome, canceled };
 	}
 	if (!signal?.aborted) {
-		noteBrief = await generateNoteBriefForSections({
+		noteBriefOutcome = await generateNoteBriefForSections({
 			noteTitle,
 			markdown,
 			provider,
@@ -385,6 +400,9 @@ export async function generateNote(
 			maxContextChars,
 			signal,
 		});
+		if (noteBriefOutcome.status === "success") {
+			noteBrief = noteBriefOutcome.noteBrief;
+		}
 		if (includesNoteBrief) {
 			done++;
 			onProgress?.(done, total);
@@ -392,5 +410,6 @@ export async function generateNote(
 	}
 	if (signal?.aborted) canceled = true;
 
-	return { sections: completedResults, noteBrief, canceled };
+	if (signal?.aborted) noteBriefOutcome = { status: "canceled" };
+	return { sections: completedResults, noteBrief, noteBriefOutcome, canceled };
 }
