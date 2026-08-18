@@ -10,11 +10,13 @@ import {
 	isEntireVaultStudyArea,
 	isExcludedPath,
 	isStudyAreaPath,
+	loadStudyAreaSettings,
 	loadStudyAreas,
 	planStudyAreaGeneration,
 	studyAreaNameForParentPath,
 	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
+	validateStudyAreaScope,
 	type StudyArea,
 } from "../src/study-area";
 import type { NoteGenerationResult } from "../src/generator";
@@ -168,7 +170,7 @@ describe("study area maintenance matching", () => {
 		).toBeNull();
 	});
 
-	it("skips hidden and excluded notes", () => {
+	it("uses explicit exclusions without treating hidden state as an opt-out", () => {
 		const maintained = area({
 			maintenanceMode: "maintain-on-save",
 			excludedPaths: ["Courses/Biology/Drafts"],
@@ -182,15 +184,14 @@ describe("study area maintenance matching", () => {
 		expect(
 			findMaintainedStudyAreaForPath(
 				[maintained],
-				"Courses/Biology/Public/a.md",
-				true
+				"Courses/Biology/Public/a.md"
 			)
-		).toBeNull();
+		).toEqual(maintained);
 	});
 });
 
 describe("study area readiness", () => {
-	it("classifies hidden and excluded notes as skipped", () => {
+	it("classifies exclusions as skipped without using hidden presentation state", () => {
 		const studyArea = area({ excludedPaths: ["Courses/Biology/private.md"] });
 		expect(classifyStudyAreaNote(studyArea, {
 			path: "Courses/Biology/private.md",
@@ -201,12 +202,15 @@ describe("study area readiness", () => {
 			readiness: "skipped",
 			reason: "excluded",
 		});
-		expect(classifyStudyAreaNote(studyArea, {
+		const hiddenPresentationState = {
 			path: "Courses/Biology/Public.md",
 			cache: null,
-			currentSections: [],
+			currentSections: parseSections(NOTE),
 			hidden: true,
-		}).readiness).toBe("skipped");
+		};
+		expect(
+			classifyStudyAreaNote(studyArea, hiddenPresentationState).readiness
+		).toBe("uncued");
 	});
 
 	it("classifies uncached notes as uncued", () => {
@@ -255,6 +259,12 @@ describe("study area readiness", () => {
 
 describe("study area generation planning", () => {
 	it("previews readiness counts and queues uncued notes without generation", () => {
+		const hiddenPresentationState = {
+			path: "Courses/Biology/Hidden.md",
+			cache: null,
+			currentSections: parseSections(NOTE),
+			hidden: true,
+		};
 		const plan = planStudyAreaGeneration(area(), [
 			{
 				path: "Courses/Biology/Ready.md",
@@ -266,23 +276,25 @@ describe("study area generation planning", () => {
 				cache: null,
 				currentSections: parseSections(NOTE),
 			},
-			{
-				path: "Courses/Biology/Hidden.md",
-				cache: null,
-				currentSections: parseSections(NOTE),
-				hidden: true,
-			},
+			hiddenPresentationState,
 		]);
 		expect(plan.counts).toEqual({
 			ready: 1,
-			uncued: 1,
+			uncued: 2,
 			stale: 0,
 			failed: 0,
-			skipped: 1,
+			skipped: 0,
 		});
 		expect(plan.items).toEqual([
 			{
 				path: "Courses/Biology/Uncued.md",
+				action: "generate-note",
+				sectionIds: [],
+				readiness: "uncued",
+				sectionCount: 2,
+			},
+			{
+				path: "Courses/Biology/Hidden.md",
 				action: "generate-note",
 				sectionIds: [],
 				readiness: "uncued",
@@ -398,6 +410,12 @@ describe("study area generation planning", () => {
 	});
 
 	it("summarizes completed, failed, skipped, and remaining work", () => {
+		const hiddenPresentationState = {
+			path: "Courses/Biology/Hidden.md",
+			cache: null,
+			currentSections: parseSections(NOTE),
+			hidden: true,
+		};
 		const plan = planStudyAreaGeneration(area(), [
 			{
 				path: "Courses/Biology/One.md",
@@ -409,25 +427,57 @@ describe("study area generation planning", () => {
 				cache: null,
 				currentSections: parseSections(NOTE),
 			},
-			{
-				path: "Courses/Biology/Hidden.md",
-				cache: null,
-				currentSections: parseSections(NOTE),
-				hidden: true,
-			},
+			hiddenPresentationState,
 		]);
 		expect(summarizeStudyAreaRun(plan, {
 			completedPaths: ["Courses/Biology/One.md"],
 			failedPaths: [],
 			canceled: true,
 		})).toEqual({
-			total: 2,
+			total: 3,
 			completed: 1,
 			failed: 0,
-			skipped: 1,
-			remaining: 1,
+			skipped: 0,
+			remaining: 2,
 			canceled: true,
 		});
+	});
+});
+
+describe("study area scope invariants", () => {
+	it("rejects Entire vault mixed with folders", () => {
+		expect(validateStudyAreaScope([area()], "")).toEqual({
+			valid: false,
+			reason: "entire-vault-conflict",
+		});
+		expect(
+			validateStudyAreaScope(
+				[area({ parentPath: "" })],
+				"Courses/Biology"
+			)
+		).toEqual({ valid: false, reason: "entire-vault-conflict" });
+	});
+
+	it("rejects parent, descendant, and duplicate folder scopes", () => {
+		expect(
+			validateStudyAreaScope([area()], "Courses/Biology/Year 1")
+		).toEqual({ valid: false, reason: "overlapping-path" });
+		expect(
+			validateStudyAreaScope(
+				[area({ parentPath: "Courses/Biology/Year 1" })],
+				"Courses/Biology"
+			)
+		).toEqual({ valid: false, reason: "overlapping-path" });
+		expect(validateStudyAreaScope([area()], "/Courses/Biology/")).toEqual({
+			valid: false,
+			reason: "duplicate-path",
+		});
+	});
+
+	it("accepts non-overlapping sibling folder scopes", () => {
+		expect(
+			validateStudyAreaScope([area()], "Courses/Chemistry")
+		).toEqual({ valid: true, reason: null });
 	});
 });
 
@@ -477,6 +527,34 @@ describe("loadStudyAreas", () => {
 				excludedPaths: [],
 				maintenanceMode: "maintain-on-save",
 				createdAt: "2026-06-21T00:00:00.000Z",
+			},
+		]);
+	});
+
+	it("quarantines conflicting legacy paths outside active coverage", () => {
+		const loaded = loadStudyAreaSettings([
+			area({ id: "bio", parentPath: "Courses/Biology" }),
+			area({ id: "year", parentPath: "Courses/Biology/Year 1" }),
+			area({ id: "chem", parentPath: "Courses/Chemistry" }),
+			area({ id: "vault", parentPath: "" }),
+		]);
+
+		expect(loaded.studyAreas.map((studyArea) => studyArea.id)).toEqual([
+			"bio",
+			"chem",
+		]);
+		expect(loaded.disabledStudyAreas).toMatchObject([
+			{
+				id: "year",
+				parentPath: "Courses/Biology/Year 1",
+				maintenanceMode: "paused",
+				disabledReason: "overlapping-path",
+			},
+			{
+				id: "vault",
+				parentPath: "",
+				maintenanceMode: "paused",
+				disabledReason: "entire-vault-conflict",
 			},
 		]);
 	});

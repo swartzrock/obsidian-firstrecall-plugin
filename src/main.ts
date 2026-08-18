@@ -120,12 +120,12 @@ import {
 import {
 	findMaintainedStudyAreaForPath,
 	isDescendantPath,
-	isEntireVaultStudyArea,
 	normalizeVaultPath,
 	planStudyAreaGeneration,
 	studyAreaNameForParentPath,
 	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
+	validateStudyAreaScope,
 	type StudyArea,
 	type StudyAreaGenerationPlan,
 	type StudyAreaPlanMode,
@@ -193,7 +193,6 @@ export default class CueCraftPlugin extends Plugin {
 		mode: StudyProjectionMode;
 	} | null = null;
 	private currentRun: AbortController | null = null;
-	private autoGenerateTimers = new Map<string, number>();
 	private studyAreaMaintenanceTimers = new Map<string, number>();
 	private editorLayoutFrame: number | null = null;
 	private editorCueWidthPreviewScheduler: EditorCueWidthPreviewScheduler | null =
@@ -342,10 +341,6 @@ export default class CueCraftPlugin extends Plugin {
 		this.studyHeaderActionElements.clear();
 		this.flushEditorCueWidthPreview(null);
 		this.editorCueWidthPreviewScheduler = null;
-		for (const timer of this.autoGenerateTimers.values()) {
-			window.clearTimeout(timer);
-		}
-		this.autoGenerateTimers.clear();
 		for (const timer of this.studyAreaMaintenanceTimers.values()) {
 			window.clearTimeout(timer);
 		}
@@ -1586,36 +1581,14 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private scheduleAutoGenerate(file: TFile): void {
-		if (file.extension !== "md") {
-			return;
-		}
-		const hidden = this.visibility.isHidden(file.path);
-		if (this.settings.autoGenerateOnSave && !hidden) {
-			scheduleAutoGenerationTimer({
-				timers: this.autoGenerateTimers,
-				key: file.path,
-				delaySeconds: this.settings.autoGenerationSettleDelaySeconds,
-				timerApi: window,
-				shouldRun: () =>
-					this.settings.autoGenerateOnSave &&
-					!this.visibility.isHidden(file.path),
-				onRun: () => {
-					if (this.cacheStore.has(file.path)) {
-						void this.regenerateStaleSections(file, { automatic: true });
-					} else {
-						void this.generateCuesForFile(file, { automatic: true });
-					}
-				},
-			});
-		}
-		this.scheduleStudyAreaMaintenance(file, hidden);
+		if (file.extension !== "md") return;
+		this.scheduleStudyAreaMaintenance(file);
 	}
 
-	private scheduleStudyAreaMaintenance(file: TFile, hidden: boolean): void {
+	private scheduleStudyAreaMaintenance(file: TFile): void {
 		const area = findMaintainedStudyAreaForPath(
 			this.settings.studyAreas,
-			file.path,
-			hidden
+			file.path
 		);
 		if (!area) return;
 		scheduleAutoGenerationTimer({
@@ -1626,8 +1599,7 @@ export default class CueCraftPlugin extends Plugin {
 			onRun: () => {
 				const currentArea = findMaintainedStudyAreaForPath(
 					this.settings.studyAreas,
-					file.path,
-					this.visibility.isHidden(file.path)
+					file.path
 				);
 				if (!currentArea) return;
 				void this.runStudyArea(currentArea.id, "maintain-note", {
@@ -1895,25 +1867,12 @@ export default class CueCraftPlugin extends Plugin {
 
 	async createStudyArea(parentPath: string): Promise<StudyArea | null> {
 		const normalized = normalizeVaultPath(parentPath);
-		if (
-			this.settings.studyAreas.some(
-				(area) => normalizeVaultPath(area.parentPath) === normalized
-			)
-		) {
-			new Notice("CueCraft: that study area already exists.");
-			return null;
-		}
-		if (!normalized && this.settings.studyAreas.length) {
-			new Notice(
-				"CueCraft: remove folder study areas before using Entire vault."
-			);
-			return null;
-		}
-		if (
-			normalized &&
-			this.settings.studyAreas.some((area) => isEntireVaultStudyArea(area))
-		) {
-			new Notice("CueCraft: remove Entire vault before adding folder study areas.");
+		const validation = validateStudyAreaScope(
+			this.settings.studyAreas,
+			normalized
+		);
+		if (!validation.valid) {
+			new Notice(this.studyAreaScopeConflictNotice(validation.reason));
 			return null;
 		}
 		const area: StudyArea = {
@@ -1921,7 +1880,7 @@ export default class CueCraftPlugin extends Plugin {
 			name: studyAreaNameForParentPath(normalized),
 			parentPath: normalized,
 			excludedPaths: [],
-			maintenanceMode: "maintain-on-save",
+			maintenanceMode: "paused",
 			createdAt: new Date().toISOString(),
 		};
 		this.settings.studyAreas = [...this.settings.studyAreas, area];
@@ -1930,10 +1889,30 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	async updateStudyArea(updated: StudyArea): Promise<void> {
+		const validation = validateStudyAreaScope(
+			this.settings.studyAreas.filter((area) => area.id !== updated.id),
+			updated.parentPath
+		);
+		if (!validation.valid) {
+			new Notice(this.studyAreaScopeConflictNotice(validation.reason));
+			return;
+		}
 		this.settings.studyAreas = this.settings.studyAreas.map((area) =>
 			area.id === updated.id ? updated : area
 		);
 		await this.saveSettings();
+	}
+
+	private studyAreaScopeConflictNotice(
+		reason: ReturnType<typeof validateStudyAreaScope>["reason"]
+	): string {
+		if (reason === "duplicate-path") {
+			return "CueCraft: that study area already exists.";
+		}
+		if (reason === "entire-vault-conflict") {
+			return "CueCraft: remove the conflicting Entire vault or folder study area first.";
+		}
+		return "CueCraft: parent and descendant study areas cannot overlap.";
 	}
 
 	async removeStudyArea(areaId: string): Promise<void> {
@@ -2073,7 +2052,6 @@ export default class CueCraftPlugin extends Plugin {
 					path: file.path,
 					cache: this.cacheStore.get(file.path),
 					currentSections: parseSections(markdown),
-					hidden: this.visibility.isHidden(file.path),
 				};
 			})
 		);

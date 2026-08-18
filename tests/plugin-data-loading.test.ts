@@ -114,6 +114,80 @@ describe("plugin data loading", () => {
 		expect(saveData).toHaveBeenCalledTimes(1);
 	});
 
+	it("does not turn a legacy global automatic-generation setting into coverage", async () => {
+		const saveData = vi.fn(async () => {});
+		const makeProvider = vi.fn();
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: { autoGenerateOnSave: true },
+			})),
+			saveData,
+			makeProvider,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings).not.toHaveProperty("autoGenerateOnSave");
+		expect(plugin.settings.studyAreas).toEqual([]);
+		expect(makeProvider).not.toHaveBeenCalled();
+		expect(saveData).toHaveBeenCalledTimes(1);
+	});
+
+	it("quarantines ambiguous legacy scopes without invoking a provider", async () => {
+		const saveData = vi.fn(async () => {});
+		const makeProvider = vi.fn();
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({
+				settings: {
+					studyAreas: [
+						{
+							id: "biology",
+							name: "Biology",
+							parentPath: "Courses/Biology",
+							excludedPaths: [],
+							maintenanceMode: "maintain-on-save",
+							createdAt: "2026-06-21T00:00:00.000Z",
+						},
+						{
+							id: "year-one",
+							name: "Year 1",
+							parentPath: "Courses/Biology/Year 1",
+							excludedPaths: [],
+							maintenanceMode: "maintain-on-save",
+							createdAt: "2026-06-21T00:00:00.000Z",
+						},
+					],
+				},
+			})),
+			saveData,
+			makeProvider,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.studyAreas.map((area) => area.id)).toEqual([
+			"biology",
+		]);
+		expect(plugin.settings.disabledStudyAreas).toMatchObject([
+			{
+				id: "year-one",
+				parentPath: "Courses/Biology/Year 1",
+				maintenanceMode: "paused",
+				disabledReason: "overlapping-path",
+			},
+		]);
+		expect(makeProvider).not.toHaveBeenCalled();
+		expect(saveData).toHaveBeenCalledTimes(1);
+	});
+
 	it("normalizes invalid current settings to their defaults", async () => {
 		const saveData = vi.fn(async () => {});
 		const plugin = new CueCraftPlugin({} as never, {} as never);
@@ -266,6 +340,52 @@ describe("plugin data loading", () => {
 				"retrieval-practice": { summary: true },
 			},
 		});
+	});
+});
+
+describe("study area creation", () => {
+	it("creates non-overlapping scopes paused without provider work", async () => {
+		const makeProvider = vi.fn();
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			settings: structuredClone(DEFAULT_SETTINGS),
+			saveSettings: vi.fn(async () => {}),
+			makeProvider,
+		});
+
+		const created = await plugin.createStudyArea("Courses/Biology");
+
+		expect(created).toMatchObject({
+			parentPath: "Courses/Biology",
+			maintenanceMode: "paused",
+		});
+		expect(makeProvider).not.toHaveBeenCalled();
+	});
+
+	it("rejects overlapping scopes in either direction", async () => {
+		const plugin = new CueCraftPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			settings: {
+				...structuredClone(DEFAULT_SETTINGS),
+				studyAreas: [
+					{
+						id: "biology",
+						name: "Biology",
+						parentPath: "Courses/Biology",
+						excludedPaths: [],
+						maintenanceMode: "paused",
+						createdAt: "2026-06-21T00:00:00.000Z",
+					},
+				],
+			},
+			saveSettings: vi.fn(async () => {}),
+		});
+
+		expect(
+			await plugin.createStudyArea("Courses/Biology/Year 1")
+		).toBeNull();
+		plugin.settings.studyAreas[0].parentPath = "Courses/Biology/Year 1";
+		expect(await plugin.createStudyArea("Courses/Biology")).toBeNull();
 	});
 });
 

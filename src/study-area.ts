@@ -22,11 +22,29 @@ export interface StudyArea {
 	createdAt: string;
 }
 
+export type StudyAreaScopeConflictReason =
+	| "duplicate-path"
+	| "entire-vault-conflict"
+	| "overlapping-path";
+
+export type StudyAreaScopeValidation =
+	| { valid: true; reason: null }
+	| { valid: false; reason: StudyAreaScopeConflictReason };
+
+export interface DisabledStudyArea extends StudyArea {
+	maintenanceMode: "paused";
+	disabledReason: StudyAreaScopeConflictReason;
+}
+
+export interface LoadedStudyAreaSettings {
+	studyAreas: StudyArea[];
+	disabledStudyAreas: DisabledStudyArea[];
+}
+
 export interface StudyAreaNoteSnapshot {
 	path: string;
 	cache: NoteCache | null;
 	currentSections: Section[];
-	hidden?: boolean;
 }
 
 export interface StudyAreaReadinessResult {
@@ -137,6 +155,29 @@ export function isDescendantPath(path: string, parentPath: string): boolean {
 	return normalizedPath.startsWith(`${normalizedParent}/`);
 }
 
+export function validateStudyAreaScope(
+	areas: readonly Pick<StudyArea, "parentPath">[],
+	parentPath: string
+): StudyAreaScopeValidation {
+	const normalized = normalizeVaultPath(parentPath);
+	for (const area of areas) {
+		const existing = normalizeVaultPath(area.parentPath);
+		if (existing === normalized) {
+			return { valid: false, reason: "duplicate-path" };
+		}
+		if (!existing || !normalized) {
+			return { valid: false, reason: "entire-vault-conflict" };
+		}
+		if (
+			isDescendantPath(normalized, existing) ||
+			isDescendantPath(existing, normalized)
+		) {
+			return { valid: false, reason: "overlapping-path" };
+		}
+	}
+	return { valid: true, reason: null };
+}
+
 export function isExcludedPath(path: string, excludedPaths: readonly string[]): boolean {
 	const normalizedPath = normalizeVaultPath(path);
 	return excludedPaths.some((excludedPath) => {
@@ -161,10 +202,9 @@ export function isStudyAreaPath(
 
 export function findMaintainedStudyAreaForPath(
 	areas: readonly StudyArea[],
-	path: string,
-	hidden = false
+	path: string
 ): StudyArea | null {
-	if (hidden || !isMarkdownPath(path)) return null;
+	if (!isMarkdownPath(path)) return null;
 	return (
 		areas.find(
 			(area) =>
@@ -186,9 +226,6 @@ export function classifyStudyAreaNote(
 	}
 	if (isExcludedPath(note.path, area.excludedPaths)) {
 		return { path: note.path, readiness: "skipped", reason: "excluded" };
-	}
-	if (note.hidden) {
-		return { path: note.path, readiness: "skipped", reason: "hidden" };
 	}
 	if (!cueEligibleSections(note.currentSections).length) {
 		return { path: note.path, readiness: "skipped", reason: "empty" };
@@ -251,34 +288,81 @@ export function summarizeStudyAreaRun(
 }
 
 export function loadStudyAreas(raw: unknown): StudyArea[] {
+	return loadStudyAreaSettings(raw).studyAreas;
+}
+
+export function loadStudyAreaSettings(
+	raw: unknown,
+	rawDisabled: unknown = []
+): LoadedStudyAreaSettings {
+	const studyAreas: StudyArea[] = [];
+	const disabledStudyAreas = loadDisabledStudyAreas(rawDisabled);
+	for (const area of parseStudyAreas(raw)) {
+		const validation = validateStudyAreaScope(studyAreas, area.parentPath);
+		if (validation.valid) {
+			studyAreas.push(area);
+			continue;
+		}
+		disabledStudyAreas.push({
+			...area,
+			maintenanceMode: "paused",
+			disabledReason: validation.reason,
+		});
+	}
+	return { studyAreas, disabledStudyAreas };
+}
+
+function parseStudyAreas(raw: unknown): StudyArea[] {
 	if (!Array.isArray(raw)) return [];
 	return raw.flatMap((item): StudyArea[] => {
-		if (!item || typeof item !== "object") return [];
-		const candidate = item as Record<string, unknown>;
-		const id = typeof candidate.id === "string" ? candidate.id.trim() : "";
-		if (!id || typeof candidate.parentPath !== "string") return [];
-		const parentPath = normalizeVaultPath(candidate.parentPath);
-		const name =
-			typeof candidate.name === "string" && candidate.name.trim()
-				? candidate.name.trim()
-				: studyAreaNameForParentPath(parentPath);
-		const rawExcluded = Array.isArray(candidate.excludedPaths)
-			? candidate.excludedPaths
-			: [];
-		const excludedPaths = rawExcluded
-			.filter((path): path is string => typeof path === "string")
-			.map(normalizeVaultPath)
-			.filter(Boolean);
-		const maintenanceMode = MAINTENANCE_MODES.has(
-			candidate.maintenanceMode as StudyAreaMaintenanceMode
-		)
-			? (candidate.maintenanceMode as StudyAreaMaintenanceMode)
-			: "paused";
-		const createdAt =
-			typeof candidate.createdAt === "string" && candidate.createdAt.trim()
-				? candidate.createdAt
-				: new Date(0).toISOString();
-		return [{ id, name, parentPath, excludedPaths, maintenanceMode, createdAt }];
+		const area = parseStudyArea(item);
+		return area ? [area] : [];
+	});
+}
+
+function parseStudyArea(raw: unknown): StudyArea | null {
+	if (!raw || typeof raw !== "object") return null;
+	const candidate = raw as Record<string, unknown>;
+	const id = typeof candidate.id === "string" ? candidate.id.trim() : "";
+	if (!id || typeof candidate.parentPath !== "string") return null;
+	const parentPath = normalizeVaultPath(candidate.parentPath);
+	const name =
+		typeof candidate.name === "string" && candidate.name.trim()
+			? candidate.name.trim()
+			: studyAreaNameForParentPath(parentPath);
+	const rawExcluded = Array.isArray(candidate.excludedPaths)
+		? candidate.excludedPaths
+		: [];
+	const excludedPaths = rawExcluded
+		.filter((path): path is string => typeof path === "string")
+		.map(normalizeVaultPath)
+		.filter(Boolean);
+	const maintenanceMode = MAINTENANCE_MODES.has(
+		candidate.maintenanceMode as StudyAreaMaintenanceMode
+	)
+		? (candidate.maintenanceMode as StudyAreaMaintenanceMode)
+		: "paused";
+	const createdAt =
+		typeof candidate.createdAt === "string" && candidate.createdAt.trim()
+			? candidate.createdAt
+			: new Date(0).toISOString();
+	return { id, name, parentPath, excludedPaths, maintenanceMode, createdAt };
+}
+
+function loadDisabledStudyAreas(raw: unknown): DisabledStudyArea[] {
+	if (!Array.isArray(raw)) return [];
+	return raw.flatMap((item): DisabledStudyArea[] => {
+		const area = parseStudyArea(item);
+		if (!area || !item || typeof item !== "object") return [];
+		const reason = (item as Record<string, unknown>).disabledReason;
+		if (
+			reason !== "duplicate-path" &&
+			reason !== "entire-vault-conflict" &&
+			reason !== "overlapping-path"
+		) {
+			return [];
+		}
+		return [{ ...area, maintenanceMode: "paused", disabledReason: reason }];
 	});
 }
 

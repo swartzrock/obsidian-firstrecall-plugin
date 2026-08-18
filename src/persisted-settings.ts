@@ -8,7 +8,7 @@ import { isQuestionType } from "./cue-generation";
 import { isEditorCueDisplay } from "./editor-cue-display";
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
 import { DEFAULT_SETTINGS, type CueCraftSettings } from "./settings";
-import { loadStudyAreas } from "./study-area";
+import { loadStudyAreaSettings } from "./study-area";
 
 export interface ParsedCueCraftSettings {
 	settings: CueCraftSettings;
@@ -102,18 +102,6 @@ export function parsePersistedCueCraftSettings(
 		changed = true;
 	}
 
-	const rawAutoGenerateOnSave = record.autoGenerateOnSave;
-	const autoGenerateOnSave =
-		typeof rawAutoGenerateOnSave === "boolean"
-			? rawAutoGenerateOnSave
-			: DEFAULT_SETTINGS.autoGenerateOnSave;
-	if (
-		hasOwn(record, "autoGenerateOnSave") &&
-		typeof rawAutoGenerateOnSave !== "boolean"
-	) {
-		changed = true;
-	}
-
 	const rawSettleDelay = record.autoGenerationSettleDelaySeconds;
 	const autoGenerationSettleDelaySeconds =
 		normalizeAutoGenerationSettleDelaySeconds(rawSettleDelay);
@@ -149,8 +137,17 @@ export function parsePersistedCueCraftSettings(
 			changed = true;
 		}
 	}
-	const studyAreas = loadStudyAreas(record.studyAreas);
+	const { studyAreas, disabledStudyAreas } = loadStudyAreaSettings(
+		record.studyAreas,
+		record.disabledStudyAreas
+	);
 	if (hasOwn(record, "studyAreas") && !isJsonEqual(record.studyAreas, studyAreas)) {
+		changed = true;
+	}
+	if (
+		hasOwn(record, "disabledStudyAreas") &&
+		!isJsonEqual(record.disabledStudyAreas, disabledStudyAreas)
+	) {
 		changed = true;
 	}
 
@@ -161,9 +158,9 @@ export function parsePersistedCueCraftSettings(
 		editorCueDisplay,
 		editorCueCustomWidthPx,
 		cueFontSize,
-		autoGenerateOnSave,
 		autoGenerationSettleDelaySeconds,
 		studyAreas,
+		disabledStudyAreas,
 		sectionConcurrency,
 		showNoteBrief: firstBoolean(
 			record,

@@ -85,6 +85,8 @@ import {
 	isEntireVaultStudyArea,
 	normalizeVaultPath,
 	studyAreaScopeLabel,
+	validateStudyAreaScope,
+	type DisabledStudyArea,
 	type StudyArea,
 	type StudyAreaGenerationPlan,
 } from "./study-area";
@@ -144,9 +146,9 @@ export interface CueCraftSettings {
 	editorCueDisplay: EditorCueDisplay;
 	editorCueCustomWidthPx: number | null;
 	cueFontSize: CueFontSize;
-	autoGenerateOnSave: boolean;
 	autoGenerationSettleDelaySeconds: AutoGenerationSettleDelaySeconds;
 	studyAreas: StudyArea[];
+	disabledStudyAreas: DisabledStudyArea[];
 	sectionConcurrency: number;
 	showNoteBrief: boolean;
 	showSummary: boolean;
@@ -202,10 +204,10 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	editorCueDisplay: DEFAULT_EDITOR_CUE_DISPLAY,
 	editorCueCustomWidthPx: null,
 	cueFontSize: DEFAULT_CUE_FONT_SIZE,
-	autoGenerateOnSave: false,
 	autoGenerationSettleDelaySeconds:
 		DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
 	studyAreas: DEFAULT_STUDY_AREAS,
+	disabledStudyAreas: [],
 	sectionConcurrency: 5,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
 	showSummary: true,
@@ -397,11 +399,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private cueGenerationSummary(): string {
-		return `${questionTypeInfo(this.plugin.settings.questionType).label} · ${
-			this.plugin.settings.autoGenerateOnSave
-				? "automatic generation on"
-				: "automatic generation off"
-		}`;
+		return questionTypeInfo(this.plugin.settings.questionType).label;
 	}
 
 	private studyAreasSummary(): string {
@@ -731,18 +729,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 
 		new Setting(containerEl)
-			.setName("Auto-generate on save")
-			.setDesc("Generate Section cues and a Note Brief automatically after a note is saved.")
-			.addToggle((tg) =>
-				tg
-					.setValue(this.plugin.settings.autoGenerateOnSave)
-					.onChange(async (value) => {
-						this.plugin.settings.autoGenerateOnSave = value;
-						await this.plugin.saveSettings();
-					})
-			);
-
-		new Setting(containerEl)
 			.setName("Auto-generation delay")
 			.setDesc(
 				"Wait this long after you stop typing before CueCraft generates Section cues and a Note Brief. Longer delays reduce repeated provider requests."
@@ -842,7 +828,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			)
 		);
 		const availableFolderPaths = folderPaths.filter(
-			(path) => !assignedFolderPaths.has(path)
+			(path) =>
+				!assignedFolderPaths.has(path) &&
+				validateStudyAreaScope(this.plugin.settings.studyAreas, path).valid
 		);
 		const hasStudyAreas = this.plugin.settings.studyAreas.length > 0;
 		const hasEntireVaultArea = this.plugin.settings.studyAreas.some((area) =>
@@ -883,7 +871,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					? "Remove the existing study area above before adding a specific folder."
 					: hasStudyAreas
 						? `Type to filter existing vault folders. Remove folder study areas above to choose ${vaultScopeLabel}.`
-						: `Select ${vaultScopeLabel} or an existing folder; hidden notes are not eligible.`
+						: `Select ${vaultScopeLabel} or an existing folder; use explicit exclusions for nested opt-outs.`
 			);
 		if (hasEntireVaultArea) {
 			parentFolderSetting.controlEl.empty();
