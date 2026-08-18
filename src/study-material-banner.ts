@@ -7,6 +7,7 @@ export interface StudyMaterialBannerActions {
 }
 
 const bannerCleanup = new WeakMap<HTMLElement, () => void>();
+const bannerActions = new WeakMap<HTMLElement, StudyMaterialBannerActions>();
 
 function focusContainer(container: HTMLElement): void {
 	if (!container.hasAttribute("tabindex")) container.tabIndex = -1;
@@ -27,6 +28,7 @@ function restoreActionFocus(
 function removeHost(host: HTMLElement): void {
 	bannerCleanup.get(host)?.();
 	bannerCleanup.delete(host);
+	bannerActions.delete(host);
 	host.remove();
 }
 
@@ -62,6 +64,14 @@ export function syncStudyMaterialBanner(
 	}
 	const host = existing.shift() ?? container.ownerDocument.createElement("aside");
 	existing.forEach(removeHost);
+	const renderKey = `${state.revision}\u0000${state.kind}\u0000${state.action}`;
+	bannerActions.set(host, actions);
+	if (host.dataset.renderKey === renderKey) {
+		if (host.parentElement !== container || container.firstElementChild !== host) {
+			container.prepend(host);
+		}
+		return host;
+	}
 	const active = host.contains(host.ownerDocument.activeElement)
 		? (host.ownerDocument.activeElement as HTMLElement).dataset.bannerAction as
 				| "update"
@@ -73,6 +83,7 @@ export function syncStudyMaterialBanner(
 	host.replaceChildren();
 	host.className = `cuecraft-study-material-banner is-${state.kind}`;
 	host.dataset.revision = state.revision;
+	host.dataset.renderKey = renderKey;
 	host.setAttribute("role", state.kind === "failed" ? "alert" : "status");
 	host.setAttribute("aria-live", state.kind === "failed" ? "assertive" : "polite");
 	host.setAttribute("aria-atomic", "true");
@@ -96,8 +107,7 @@ export function syncStudyMaterialBanner(
 	}> = [];
 	const addButton = (
 		action: "update" | "retry" | "dismiss",
-		label: string,
-		callback: () => void | Promise<void>
+		label: string
 	): HTMLButtonElement => {
 		const button = container.ownerDocument.createElement("button");
 		button.type = "button";
@@ -114,7 +124,13 @@ export function syncStudyMaterialBanner(
 				host.setAttribute("aria-live", "polite");
 				message.textContent = "Updating study material…";
 			}
-			void Promise.resolve(callback()).finally(() => {
+			const currentActions = bannerActions.get(host);
+			const callback = action === "update"
+				? currentActions?.onUpdate()
+				: action === "retry"
+					? currentActions?.onRetry()
+					: currentActions?.onDismiss(host.dataset.revision ?? state.revision);
+			void Promise.resolve(callback).finally(() => {
 				host.removeAttribute("aria-busy");
 				button.disabled = false;
 				restoreActionFocus(container, action);
@@ -126,11 +142,11 @@ export function syncStudyMaterialBanner(
 		return button;
 	};
 	if (state.action === "retry") {
-		addButton("retry", "Retry update", actions.onRetry);
+		addButton("retry", "Retry update");
 	} else {
-		addButton("update", "Update study material", actions.onUpdate);
+		addButton("update", "Update study material");
 	}
-	addButton("dismiss", "Dismiss", () => actions.onDismiss(state.revision));
+	addButton("dismiss", "Dismiss");
 	bannerCleanup.set(host, () => {
 		for (const { button, listener } of listeners) {
 			button.removeEventListener("click", listener);

@@ -45,6 +45,17 @@ export interface StudyMaterialStatusProjection {
 	banner: StudyMaterialBannerState | null;
 }
 
+export function asUpdatingProjection(
+	projection: StudyMaterialStatusProjection
+): StudyMaterialStatusProjection {
+	return {
+		...projection,
+		freshness: "updating",
+		statusLabel: `${projection.coverage === "automatic" ? "Automatic" : "Manual"} · updating`,
+		banner: null,
+	};
+}
+
 function componentNeedsUpdate(freshness: ComponentFreshness): boolean {
 	return freshness === "missing" ||
 		freshness === "outdated" ||

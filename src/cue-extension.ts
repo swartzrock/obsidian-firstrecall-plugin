@@ -353,7 +353,7 @@ export function renderCueElement(
 	return element;
 }
 
-function appendFreshnessBadge(
+export function appendFreshnessBadge(
 	parent: HTMLElement,
 	freshness: ComponentFreshness
 ): void {

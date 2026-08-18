@@ -167,6 +167,19 @@ describe("source-derived component freshness", () => {
 			components(true, [cache.sections[0].id])
 		);
 	});
+
+	it("preserves state identity when an observation adds no affected components", () => {
+		const cache = cacheFor();
+		const initial = createCurrentMaintenanceState("Note", MARKDOWN, cache);
+		expect(
+			reduceMaintenanceState(initial, {
+				type: "source-observed",
+				revision: initial.sourceRevision,
+				affected: components(false),
+				hasEligibleSections: true,
+			})
+		).toBe(initial);
+	});
 });
 
 describe("maintenance attempts", () => {
@@ -276,6 +289,21 @@ describe("maintenance attempts", () => {
 		expect(store.get("new.md")).toBeNull();
 		expect(store.getState("new.md")).toBeNull();
 		expect(persist).toHaveBeenCalledTimes(2);
+	});
+
+	it("does not persist an unchanged cache and state pair", async () => {
+		const cache = cacheFor();
+		const state = createCurrentMaintenanceState("Note", MARKDOWN, cache);
+		const persist = vi.fn(async () => {});
+		const store = new StudyMaterialStore(
+			{ "note.md": cache },
+			{ "note.md": state },
+			persist
+		);
+
+		await store.commit("note.md", cache, state);
+
+		expect(persist).not.toHaveBeenCalled();
 	});
 });
 

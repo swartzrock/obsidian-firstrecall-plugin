@@ -64,6 +64,7 @@ import {
 } from "./study-material-maintenance";
 import {
 	applyEditorCueWidthPreview,
+	appendFreshnessBadge,
 	appendSummary,
 	buildCueLineData,
 	cueEditorExtension,
@@ -110,6 +111,7 @@ import {
 } from "./cue-section-collapse";
 import { type CueGenerationOptions } from "./cue-generation";
 import {
+	asUpdatingProjection,
 	projectStudyMaterialStatus,
 	statusLabel,
 	type CueStatus,
@@ -344,6 +346,7 @@ export default class CueCraftPlugin extends Plugin {
 		);
 		this.registerEvent(
 			this.app.workspace.on("layout-change", () => {
+				this.pruneStudyMaterialBannerContainers();
 				this.scheduleEditorLayoutRefresh();
 				this.refreshStudyEntryStates();
 			})
@@ -528,12 +531,7 @@ export default class CueCraftPlugin extends Plugin {
 		const markdown = await this.app.vault.cachedRead(file);
 		if (this.app.workspace.getActiveFile()?.path !== file.path) return;
 		const projection = this.studyMaterialProjection(file, markdown).projection;
-		this.setStudyMaterialStatus({
-			...projection,
-			freshness: "updating",
-			statusLabel: `${projection.coverage === "automatic" ? "Automatic" : "Manual"} · updating`,
-			banner: null,
-		});
+		this.setStudyMaterialStatus(asUpdatingProjection(projection));
 	}
 
 	/** Sets the primary status from note coverage and generated-material freshness. */
@@ -765,12 +763,21 @@ export default class CueCraftPlugin extends Plugin {
 			this.studyMaterialBannerContainers.delete(previous);
 		}
 		if (view) this.studyMaterialBannerContainerByView.set(view, container);
-		this.studyMaterialBannerContainers.add(container);
-		syncStudyMaterialBanner(container, projection.banner, {
+		const host = syncStudyMaterialBanner(container, projection.banner, {
 			onUpdate: () => this.runBannerMaintenance(file, "update", projection),
 			onRetry: () => this.runBannerMaintenance(file, "retry", projection),
 			onDismiss: (revision) => this.dismissStudyMaterialBanner(file, revision),
 		});
+		if (host) this.studyMaterialBannerContainers.add(container);
+		else this.studyMaterialBannerContainers.delete(container);
+	}
+
+	private pruneStudyMaterialBannerContainers(): void {
+		for (const container of this.studyMaterialBannerContainers) {
+			if (container.isConnected) continue;
+			removeStudyMaterialBanner(container);
+			this.studyMaterialBannerContainers.delete(container);
+		}
 	}
 
 	private async runBannerMaintenance(
@@ -783,12 +790,7 @@ export default class CueCraftPlugin extends Plugin {
 			this.openSettings();
 			return;
 		}
-		this.setStudyMaterialStatus({
-			...projection,
-			freshness: "updating",
-			statusLabel: `${projection.coverage === "automatic" ? "Automatic" : "Manual"} · updating`,
-			banner: null,
-		});
+		this.setStudyMaterialStatus(asUpdatingProjection(projection));
 		const outcome = await this.maintenance.request({ path: file.path, kind });
 		this.noticeForMaintenanceOutcome(outcome);
 		this.refreshGeneratedSurfaces(file);
@@ -1724,16 +1726,7 @@ export default class CueCraftPlugin extends Plugin {
 		root.addClass(cueFontSizeClass(this.settings.cueFontSize));
 		root.dataset.cuecraftSectionId = cue.sectionId;
 		root.setAttr("role", "note");
-		if (
-			cue.freshness === "missing" ||
-			cue.freshness === "outdated" ||
-			cue.freshness === "failed"
-		) {
-			const badge = root.ownerDocument.createElement("span");
-			badge.className = "cuecraft-freshness-badge";
-			badge.textContent = "Outdated";
-			root.appendChild(badge);
-		}
+		appendFreshnessBadge(root, cue.freshness);
 		if (cue.error) {
 			root.addClass("cuecraft-cue-error");
 			root.setAttr("title", cue.error);

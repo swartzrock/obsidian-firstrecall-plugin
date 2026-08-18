@@ -84,7 +84,6 @@ import {
 	formatStudyAreaReadinessCounts,
 	findConflictingStudyArea,
 	isEntireVaultStudyArea,
-	isDescendantPath,
 	normalizeVaultPath,
 	studyAreaScopeLabel,
 	validateStudyAreaExclusion,
@@ -441,10 +440,6 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				}`;
 		}
 		return `${count} folder${count === 1 ? "" : "s"} · ${enabled} update automatically`;
-	}
-
-	private vaultStudyAreaLabel(): string {
-		return ENTIRE_VAULT_STUDY_AREA_LABEL;
 	}
 
 	private providerDisplayName(provider: ByokProviderId): string {
@@ -827,12 +822,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						file.extension.toLowerCase() === "md")
 			)
 			.map((file) => normalizeVaultPath(file.path))
-			.filter(
-				(path) =>
-					Boolean(path) &&
-					isDescendantPath(path, area.parentPath) &&
-					validateStudyAreaExclusion(area, path).valid
-			)
+			.filter((path) => validateStudyAreaExclusion(area, path).valid)
 			.sort((a, b) => a.localeCompare(b));
 	}
 
@@ -899,7 +889,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const hasEntireVaultArea = this.plugin.settings.studyAreas.some((area) =>
 			isEntireVaultStudyArea(area)
 		);
-		const vaultScopeLabel = this.vaultStudyAreaLabel();
+		const vaultScopeLabel = ENTIRE_VAULT_STUDY_AREA_LABEL;
 		const availableScopes = hasEntireVaultArea
 			? []
 			: [
@@ -1001,7 +991,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const providerReady = this.plugin.isProviderConfigured();
 		const busy = state.phase === "scanning" || state.phase === "running";
 		const setting = new Setting(containerEl).setName(
-			isEntireVaultStudyArea(area) ? this.vaultStudyAreaLabel() : area.name
+			isEntireVaultStudyArea(area) ? ENTIRE_VAULT_STUDY_AREA_LABEL : area.name
 		);
 		setting.settingEl.addClass("cuecraft-study-area-row");
 		setting.descEl.empty();

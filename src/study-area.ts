@@ -189,19 +189,9 @@ export function findConflictingStudyArea(
 	areas: readonly StudyArea[],
 	parentPath: string
 ): StudyArea | null {
-	const normalized = normalizeVaultPath(parentPath);
-	return (
-		areas.find((area) => {
-			const existing = normalizeVaultPath(area.parentPath);
-			return (
-				existing === normalized ||
-				!existing ||
-				!normalized ||
-				isDescendantPath(normalized, existing) ||
-				isDescendantPath(existing, normalized)
-			);
-		}) ?? null
-	);
+	return areas.find(
+		(area) => !validateStudyAreaScope([area], parentPath).valid
+	) ?? null;
 }
 
 export function validateStudyAreaExclusion(

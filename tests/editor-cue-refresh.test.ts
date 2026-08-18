@@ -320,16 +320,18 @@ describe("study material banner", () => {
 		const onRetry = vi.fn(async () => undefined);
 		const onDismiss = vi.fn(async () => undefined);
 
-		syncStudyMaterialBanner(
+		const firstHost = syncStudyMaterialBanner(
 			container,
 			{ revision: "one", kind: "outdated", action: "update" },
 			{ onUpdate, onRetry, onDismiss }
 		);
-		syncStudyMaterialBanner(
+		const latestUpdate = vi.fn(async () => undefined);
+		const secondHost = syncStudyMaterialBanner(
 			container,
 			{ revision: "one", kind: "outdated", action: "update" },
-			{ onUpdate, onRetry, onDismiss }
+			{ onUpdate: latestUpdate, onRetry, onDismiss }
 		);
+		expect(secondHost).toBe(firstHost);
 		expect(container.querySelectorAll(".cuecraft-study-material-banner")).toHaveLength(1);
 		const update = container.querySelector<HTMLButtonElement>(
 			"[data-banner-action='update']"
@@ -339,7 +341,8 @@ describe("study material banner", () => {
 			"polite"
 		);
 		update.click();
-		await vi.waitFor(() => expect(onUpdate).toHaveBeenCalledTimes(1));
+		await vi.waitFor(() => expect(latestUpdate).toHaveBeenCalledTimes(1));
+		expect(onUpdate).not.toHaveBeenCalled();
 
 		syncStudyMaterialBanner(
 			container,

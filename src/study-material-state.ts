@@ -58,6 +58,10 @@ function normalizeComponents(components: ComponentSet): ComponentSet {
 }
 
 function unionComponents(a: ComponentSet, b: ComponentSet): ComponentSet {
+	const existing = new Set(a.sectionIds);
+	if ((!b.noteBrief || a.noteBrief) && b.sectionIds.every((id) => existing.has(id))) {
+		return a;
+	}
 	return {
 		noteBrief: a.noteBrief || b.noteBrief,
 		sectionIds: unique([...a.sectionIds, ...b.sectionIds]),
@@ -174,9 +178,11 @@ export function reduceMaintenanceState(
 	if (event.type === "source-observed") {
 		if (!event.hasEligibleSections) return null;
 		if (event.revision === state.sourceRevision) {
+			const affected = unionComponents(state.affected, event.affected);
+			if (affected === state.affected) return state;
 			return {
 				...state,
-				affected: unionComponents(state.affected, event.affected),
+				affected,
 			};
 		}
 		return {
@@ -465,6 +471,12 @@ export class StudyMaterialStore {
 		cache: NoteCache | null,
 		state: NoteMaintenanceState | null
 	): Promise<void> {
+		if (
+			(this.caches[path] ?? null) === cache &&
+			(this.states[path] ?? null) === state
+		) {
+			return;
+		}
 		if (cache) this.caches[path] = cache;
 		else delete this.caches[path];
 		if (state) this.states[path] = state;
