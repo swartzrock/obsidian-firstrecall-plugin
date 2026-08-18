@@ -2297,7 +2297,6 @@ export default class CueCraftPlugin extends Plugin {
 		this.currentRun = controller;
 		this.setStatus("generating", { done: 0, total: 0 });
 
-		const startTime = Date.now();
 		try {
 			const result = await generateNote({
 				noteTitle: file.basename,

@@ -23,9 +23,8 @@ import {
 	recordProviderConnectionSuccess,
 } from "./byok-setup-status";
 import { sortFetchedModelIds } from "./byok-model-options";
-import { DEFAULT_QUESTION_TYPE } from "./cue-generation";
 import {
-	buildSectionCueInstructionsTemplate,
+	
 	buildSectionCuePrompt,
 } from "./cue-instructions";
 import {
@@ -40,7 +39,7 @@ import type {
 } from "./cue-provider";
 import {
 	buildNoteBriefPrompt,
-	buildNoteBriefInstructionsTemplate,
+	
 	NOTE_BRIEF_JSON_SCHEMA,
 	SUMMARY_JSON_SCHEMA,
 } from "./study-material-instructions";
@@ -140,17 +139,6 @@ function parseJsonRecord(text: string): Record<string, unknown> | null {
 	} catch {
 		return null;
 	}
-}
-
-function describeOllamaJsonRequest(body: string | undefined): Record<string, unknown> {
-	const parsed = body ? parseJsonRecord(body) : null;
-	return {
-		bodyLength: body?.length ?? 0,
-		model: typeof parsed?.model === "string" ? parsed.model : undefined,
-		format: parsed?.format === undefined ? undefined : typeof parsed.format,
-		think: parsed?.think,
-		stream: parsed?.stream,
-	};
 }
 
 function normalizeOllamaJsonRequestBody(body: string | undefined): string | undefined {

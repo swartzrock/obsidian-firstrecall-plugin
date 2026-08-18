@@ -48,9 +48,6 @@ describe("local CLI cue batch prompt", () => {
 
 	it("uses the shared batch template for initial and repair requests", async () => {
 		const calls: ByokTextGenerationInput[] = [];
-		const instructionLog = vi
-			.spyOn(console, "info")
-			.mockImplementation(() => undefined);
 		const runtime: ByokProviderRuntime = {
 			id: "codex-cli",
 			label: "Fake Codex CLI",
@@ -137,17 +134,6 @@ describe("local CLI cue batch prompt", () => {
 		expect(calls[1].prompt).toContain("Previous reply:\nnot json");
 		expect(calls[1].prompt).toContain(
 			"Reply again with ONLY the corrected JSON object."
-		);
-		expect(instructionLog).toHaveBeenCalledOnce();
-		const inspectedTemplate = buildSectionCueInstructionsTemplate(
-			"exam-practice",
-			"batch"
-		);
-		expect(instructionLog).toHaveBeenCalledWith(
-			`[CueCraft BYOK] Section cue batch instructions\n${inspectedTemplate}`
-		);
-		expect(instructionLog.mock.calls[0]?.[0]).not.toContain(
-			"A stack removes the newest item first."
 		);
 	});
 
