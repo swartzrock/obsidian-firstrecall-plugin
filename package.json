@@ -1,6 +1,6 @@
 {
 	"name": "firstrecall",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Create active-recall Note Briefs and section study cards in Obsidian without modifying source Markdown.",
 	"main": "main.js",
 	"type": "module",
