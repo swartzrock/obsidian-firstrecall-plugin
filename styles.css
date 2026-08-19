@@ -1904,6 +1904,15 @@ html.firstrecall-editor-cue-width-resizing * {
 	padding-inline: 7px;
 }
 
+.firstrecall-study-header-menu-action {
+	font-weight: var(--font-semibold);
+}
+
+.firstrecall-study-header-action.firstrecall-has-no-material {
+	color: #aa5555;
+	background-color: #fff6f6;
+}
+
 .firstrecall-study-header-label {
 	display: inline;
 	font-size: var(--font-ui-smaller);

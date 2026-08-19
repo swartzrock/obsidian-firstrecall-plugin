@@ -184,9 +184,9 @@ async function withAbortSignal<T>(
 
 const MENU_NOTE_ICON = "graduation-cap";
 const STUDY_RIBBON_ICON = "book-open-check";
-const STUDY_READY_LABEL = "FirstRecall: Study this note";
-const STUDY_ACTIVE_LABEL = "FirstRecall: Exit Study";
+const FIRSTRECALL_HEADER_ICON = "brain";
 const STUDY_GENERATE_FIRST = "FirstRecall: generate study material for this note first.";
+const STUDY_MENU_HINT = "Generate study material for this note.";
 type StudyProjectionMode = "source" | "preview";
 
 export default class FirstRecallPlugin extends Plugin {
@@ -194,7 +194,7 @@ export default class FirstRecallPlugin extends Plugin {
 
 	private statusBarEl: HTMLElement | null = null;
 	private readonly studySession = new StudySessionController();
-	private readonly studyHeaderActions = new WeakMap<MarkdownView, HTMLElement>();
+	private readonly studyHeaderMenuActions = new WeakMap<MarkdownView, HTMLElement>();
 	private readonly studyHeaderActionElements = new Set<HTMLElement>();
 	private readonly studyMaterialBannerContainers = new Set<HTMLElement>();
 	private readonly studyMaterialBannerContainerByView = new WeakMap<
@@ -873,26 +873,96 @@ export default class FirstRecallPlugin extends Plugin {
 		return resolveStudySections(markdown, cache.sections, parseSections(markdown));
 	}
 
-	private ensureStudyHeaderAction(view: MarkdownView): HTMLElement {
-		const existing = this.studyHeaderActions.get(view);
+	private ensureFirstRecallHeaderMenuAction(view: MarkdownView): HTMLElement {
+		const existing = this.studyHeaderMenuActions.get(view);
 		if (existing) return existing;
-		const action = view.addAction(STUDY_RIBBON_ICON, STUDY_READY_LABEL, () =>
-			this.toggleStudyForView(view)
+		const action = view.addAction(FIRSTRECALL_HEADER_ICON, "FirstRecall", (event) =>
+			this.openFirstRecallMenu(view, action, event)
 		);
 		action.classList.add("firstrecall-study-header-action");
+		action.classList.add("firstrecall-study-header-menu-action");
 		const label = action.ownerDocument.createElement("span");
 		label.className = "firstrecall-study-header-label";
-		label.textContent = "Study";
+		label.textContent = "FirstRecall";
 		action.appendChild(label);
 		action.tabIndex = 0;
 		action.addEventListener("keydown", (event) => {
 			if (event.key !== "Enter" && event.key !== " ") return;
 			event.preventDefault();
-			this.toggleStudyForView(view);
+			this.openFirstRecallMenu(view, action, event);
 		});
-		this.studyHeaderActions.set(view, action);
+		this.studyHeaderMenuActions.set(view, action);
 		this.studyHeaderActionElements.add(action);
 		return action;
+	}
+
+	private openFirstRecallMenu(
+		view: MarkdownView,
+		anchor: HTMLElement,
+		event?: Event
+	): void {
+		const file = view.file;
+		if (!file) return;
+		const canStudy = this.strictStudySections(view).length > 0;
+		const hasUsableCueCache = this.hasUsableCueCache(file.path);
+		const current = this.studySession.snapshot();
+		const isStudying = current.active && current.path === file.path;
+		const hidden = this.visibility.isHidden(file.path);
+		const menu = new Menu();
+		menu.addItem((item) =>
+			item
+				.setTitle("Generate study material for this note")
+				.setIcon(MENU_NOTE_ICON)
+				.onClick(() => this.generateCuesForFile(file))
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle(isStudying ? "Exit Study" : "Study this note")
+				.setIcon(STUDY_RIBBON_ICON)
+				.setDisabled(!canStudy)
+				.onClick(() => this.toggleStudyForView(view))
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle(visibilityMenuLabel(hidden))
+				.setDisabled(!this.cacheStore.has(file.path))
+				.setIcon(MENU_NOTE_ICON)
+				.onClick(() => void this.setNoteVisibility(hidden, file))
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle("Export Recall Questions and Key Terms to Markdown")
+				.setDisabled(!hasUsableCueCache)
+				.onClick(() => void this.exportCues("markdown"))
+		);
+		menu.addItem((item) =>
+			item
+				.setTitle(
+					"Export Recall Questions and Key Terms to Anki (TSV)"
+				)
+				.setDisabled(!hasUsableCueCache)
+				.onClick(() => void this.exportCues("anki"))
+		);
+		const openEvent =
+			event instanceof MouseEvent
+				? event
+				: new MouseEvent("contextmenu", this.menuMouseEventInit(anchor));
+		menu.showAtMouseEvent(openEvent);
+	}
+
+	private menuMouseEventInit(anchor: HTMLElement): {
+		bubbles: boolean;
+		clientX: number;
+		clientY: number;
+		view: Window;
+	} {
+		const rect = anchor.getBoundingClientRect();
+		return {
+			bubbles: true,
+			clientX: rect.left + 2,
+			clientY: rect.bottom + 2,
+			view: window,
+		};
 	}
 
 	private updateStudyHeaderAction(view: MarkdownView): void {
@@ -902,12 +972,24 @@ export default class FirstRecallPlugin extends Plugin {
 		) {
 			return;
 		}
-		const action = this.ensureStudyHeaderAction(view);
-		const enabled = this.strictStudySections(view).length > 0;
+		this.ensureFirstRecallHeaderMenuAction(view);
+		const menuAction = this.studyHeaderMenuActions.get(view);
+		const file = view.file;
 		const active =
 			this.studySession.snapshot().active &&
 			this.studySession.snapshot().path === view.file?.path;
-		this.setStudyEntryState(action, enabled, active);
+		const needsMaterial =
+			!file || !this.hasUsableCueCache(file.path);
+		if (!menuAction) return;
+		menuAction.classList.toggle("firstrecall-has-no-material", needsMaterial);
+		menuAction.setAttribute(
+			"aria-label",
+			needsMaterial ? STUDY_MENU_HINT : "FirstRecall"
+		);
+		menuAction.title = needsMaterial ? STUDY_MENU_HINT : "FirstRecall";
+		menuAction.setAttribute("aria-pressed", String(active));
+		menuAction.classList.toggle("is-active", active);
+		menuAction.removeAttribute("aria-disabled");
 	}
 
 	private refreshStudyEntryStates(): void {
@@ -915,25 +997,6 @@ export default class FirstRecallPlugin extends Plugin {
 			if (leaf.view.getViewType() !== "markdown") return;
 			this.updateStudyHeaderAction(leaf.view as MarkdownView);
 		});
-	}
-
-	private setStudyEntryState(
-		entry: HTMLElement | null,
-		enabled: boolean,
-		active: boolean
-	): void {
-		if (!entry) return;
-		const label = enabled
-			? active
-				? STUDY_ACTIVE_LABEL
-				: STUDY_READY_LABEL
-			: STUDY_GENERATE_FIRST;
-		entry.title = label;
-		entry.setAttribute("aria-label", label);
-		entry.setAttribute("aria-pressed", String(active));
-		entry.classList.toggle("is-active", active);
-		if (enabled) entry.removeAttribute("aria-disabled");
-		else entry.setAttribute("aria-disabled", "true");
 	}
 
 	private toggleStudyForActiveView(): void {
