@@ -1,9 +1,9 @@
 {
-	"id": "firstrecall",
+	"id": "first-recall",
 	"name": "FirstRecall",
 	"version": "0.1.0",
 	"minAppVersion": "1.11.4",
-	"description": "Create active-recall Note Briefs and section study cards in Obsidian without modifying source Markdown.",
+	"description": "Create active-recall Note Briefs and Section Study Cards without modifying your notes.",
 	"author": "swartzrock",
 	"authorUrl": "https://github.com/swartzrock",
 	"isDesktopOnly": true
