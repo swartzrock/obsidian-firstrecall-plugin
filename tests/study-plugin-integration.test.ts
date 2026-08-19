@@ -335,17 +335,11 @@ it("keeps stable command IDs while using the approved vocabulary", async () => {
 	const harness = createHarness();
 	await harness.plugin.onload();
 
+	expect(harness.commands.get("generate-cues")?.name).toBe(
+		"Generate study material for this note"
+	);
 	expect(harness.commands.get("regenerate-section")?.name).toBe(
 		"Update a section card and Note Brief\u2026"
-	);
-	expect(harness.commands.get("regenerate-stale-sections")?.name).toBe(
-		"Update outdated study material"
-	);
-	expect(harness.commands.get("run-study-area-backfill")?.name).toBe(
-		"Bring folder or vault study material up to date\u2026"
-	);
-	expect(harness.commands.get("retry-study-area-failures")?.name).toBe(
-		"Retry folder or vault update\u2026"
 	);
 	expect(harness.commands.get("manage-study-areas")?.name).toBe(
 		"Folders & automatic updates"
@@ -625,7 +619,7 @@ describe("Study plugin orchestration", () => {
 		).toBe(true);
 	});
 
-	it("keeps one enabled or aria-disabled Study action in every Markdown header and a distinct ribbon shortcut", async () => {
+	it("keeps one enabled or aria-disabled Study action in every Markdown header", async () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
 		harness.layoutReady();
@@ -636,24 +630,18 @@ describe("Study plugin orchestration", () => {
 		expect(harness.firstView.addAction).toHaveBeenCalledTimes(1);
 		expect(headerAction.textContent).toContain("Study");
 		expect(headerAction.getAttribute("aria-disabled")).toBeNull();
-		expect(harness.ribbons.map(({ icon }) => icon)).toEqual([
-			"graduation-cap",
-			"book-open-check",
-		]);
-		expect(harness.ribbons[1].label).toContain("Study");
+		expect(harness.ribbons).toHaveLength(0);
 
 		harness.markdownByPath.set(harness.noteFile.path, "# Agents\nChanged answer.");
 		harness.workspaceEvents.get("layout-change")?.();
 		expect(harness.firstView.addAction).toHaveBeenCalledTimes(1);
 		expect(headerAction.getAttribute("aria-disabled")).toBe("true");
 		expect(headerAction.title).toBe(GENERATE_FIRST);
-		expect(harness.ribbons[1].element.getAttribute("aria-disabled")).toBe("true");
 		headerAction.click();
 		headerAction.dispatchEvent(
 			new window.KeyboardEvent("keydown", { key: "Enter", bubbles: true })
 		);
-		harness.ribbons[1].element.click();
-		expect(notices).toEqual([GENERATE_FIRST, GENERATE_FIRST, GENERATE_FIRST]);
+		expect(notices).toEqual([GENERATE_FIRST, GENERATE_FIRST]);
 	});
 
 	it("starts and toggles in-note Study while review stays idempotent", async () => {
@@ -685,12 +673,10 @@ describe("Study plugin orchestration", () => {
 		};
 		expect(studyPayload.controlsContainer).toBe(harness.firstView.contentEl);
 		studyPayload.toggleSection(studyPayload.snapshot.sections[0].sectionId);
-		await harness.commands.get("review-this-note")?.callback();
 		expect(harness.controller().snapshot().revealedCount).toBe(1);
 
-		harness.ribbons[1].element.click();
+		headerAction.click();
 		expect(harness.controller().snapshot().active).toBe(false);
-		await harness.commands.get("toggle-study-mode")?.callback();
 		expect(harness.controller().snapshot().revealedCount).toBe(0);
 
 		expect(harness.viewStates).toEqual([]);

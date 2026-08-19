@@ -1909,18 +1909,12 @@ html.firstrecall-editor-cue-width-resizing * {
 	font-size: var(--font-ui-smaller);
 }
 
-.firstrecall-study-header-action[aria-disabled="true"],
-.firstrecall-study-ribbon[aria-disabled="true"] {
+.firstrecall-study-header-action[aria-disabled="true"] {
 	opacity: 0.55;
 }
 
-.firstrecall-study-header-action.is-active,
-.firstrecall-study-ribbon.is-active {
+.firstrecall-study-header-action.is-active {
 	color: var(--interactive-accent);
-}
-
-.firstrecall-study-ribbon:not([aria-disabled="true"]) {
-	box-shadow: inset 2px 0 0 var(--interactive-accent);
 }
 
 .markdown-source-view.mod-cm6 .firstrecall-editor-study-answer.is-hidden {

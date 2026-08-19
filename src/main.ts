@@ -182,7 +182,7 @@ async function withAbortSignal<T>(
 	}
 }
 
-const RIBBON_ICON = "graduation-cap";
+const MENU_NOTE_ICON = "graduation-cap";
 const STUDY_RIBBON_ICON = "book-open-check";
 const STUDY_READY_LABEL = "FirstRecall: Study this note";
 const STUDY_ACTIVE_LABEL = "FirstRecall: Exit Study";
@@ -193,8 +193,6 @@ export default class FirstRecallPlugin extends Plugin {
 	override settings: FirstRecallSettings = DEFAULT_SETTINGS;
 
 	private statusBarEl: HTMLElement | null = null;
-	private ribbonEl: HTMLElement | null = null;
-	private studyRibbonEl: HTMLElement | null = null;
 	private readonly studySession = new StudySessionController();
 	private readonly studyHeaderActions = new WeakMap<MarkdownView, HTMLElement>();
 	private readonly studyHeaderActionElements = new Set<HTMLElement>();
@@ -315,17 +313,6 @@ export default class FirstRecallPlugin extends Plugin {
 		this.statusBarEl = this.addStatusBarItem();
 		this.statusBarEl.addClass("firstrecall-status");
 		this.statusBarEl.addEventListener("click", () => this.onPillClick());
-
-		this.ribbonEl = this.addRibbonIcon(RIBBON_ICON, "FirstRecall", () =>
-			this.onRibbonClick()
-		);
-		this.studyRibbonEl = this.addRibbonIcon(
-			STUDY_RIBBON_ICON,
-			STUDY_READY_LABEL,
-			() => this.toggleStudyForActiveView()
-		);
-		this.studyRibbonEl.classList.add("firstrecall-study-ribbon");
-		this.updateRibbonLabel();
 		this.registerCommands();
 		this.registerEditorExtension(cueEditorExtension);
 		this.registerMarkdownPostProcessor((el, ctx) =>
@@ -483,18 +470,8 @@ export default class FirstRecallPlugin extends Plugin {
 	async saveSettings(options: { refreshReviewSurfaces?: boolean } = {}): Promise<void> {
 		this.data.settings = this.settings;
 		await this.persistPluginData();
-		this.updateRibbonLabel();
 		if (options.refreshReviewSurfaces !== false) this.refreshStudyProjections();
 		void this.updateStatusForFile(this.app.workspace.getActiveFile());
-	}
-
-	/** Keep the ribbon tooltip describing what a click will do. */
-	private updateRibbonLabel(): void {
-		const generateLabel = this.isConfigured()
-			? "FirstRecall: Generate study material for this note"
-			: "FirstRecall: Set up \u2014 open settings";
-		this.ribbonEl?.setAttribute("aria-label", generateLabel);
-		this.refreshStudyEntryStates();
 	}
 
 	private studyMaterialProjection(
@@ -938,18 +915,6 @@ export default class FirstRecallPlugin extends Plugin {
 			if (leaf.view.getViewType() !== "markdown") return;
 			this.updateStudyHeaderAction(leaf.view as MarkdownView);
 		});
-		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-		const enabled = activeView
-			? this.strictStudySections(activeView).length > 0
-			: false;
-		const snapshot = this.studySession.snapshot();
-		this.setStudyEntryState(
-			this.studyRibbonEl,
-			enabled,
-			Boolean(
-				activeView && snapshot.active && snapshot.path === activeView.file?.path
-			)
-		);
 	}
 
 	private setStudyEntryState(
@@ -1238,15 +1203,6 @@ export default class FirstRecallPlugin extends Plugin {
 		this.app.setting?.openTabById?.(this.manifest.id);
 	}
 
-	private onRibbonClick(): void {
-		if (!this.isConfigured()) {
-			new Notice("FirstRecall: choose your AI provider in Settings to get started.");
-			this.openSettings();
-			return;
-		}
-		this.generateCues();
-	}
-
 	/** Status-pill click: open settings when unconfigured, else toggle visibility. */
 	private onPillClick(): void {
 		const status = this.statusBarEl?.dataset.status ?? "";
@@ -1272,14 +1228,14 @@ export default class FirstRecallPlugin extends Plugin {
 		menu.addItem((item) =>
 			item
 				.setTitle(visibilityMenuLabel(hidden))
-				.setIcon(RIBBON_ICON)
+				.setIcon(MENU_NOTE_ICON)
 				.onClick(() => void this.setNoteVisibility(hidden, file))
 		);
 		// "Review" is only meaningful once a note has usable section cards to study.
 		if (this.hasUsableCueCache(file.path)) {
 			menu.addItem((item) =>
 				item
-					.setTitle("FirstRecall: Start Study Mode for this note")
+					.setTitle("FirstRecall: Start Study Mode")
 					.setIcon(STUDY_RIBBON_ICON)
 					.onClick(() => void this.reviewThisNote(file))
 			);
@@ -1298,49 +1254,9 @@ export default class FirstRecallPlugin extends Plugin {
 			callback: () => this.pickAndRegenerateSection(),
 		});
 		this.addCommand({
-			id: "regenerate-stale-sections",
-			name: "Update outdated study material",
-			callback: () => void this.regenerateStaleSections(),
-		});
-		this.addCommand({
-			id: "run-study-area-backfill",
-			name: "Bring folder or vault study material up to date\u2026",
-			callback: () => this.pickStudyAreaAndRun("backfill"),
-		});
-		this.addCommand({
-			id: "retry-study-area-failures",
-			name: "Retry folder or vault update\u2026",
-			callback: () => this.pickStudyAreaAndRun("retry-failed"),
-		});
-		this.addCommand({
-			id: "manage-study-areas",
-			name: "Folders & automatic updates",
-			callback: () => this.openStudyAreaManager(),
-		});
-		this.addCommand({
-			id: "toggle-study-mode",
-			name: "Toggle Study Mode",
-			callback: () => this.toggleStudyForActiveView(),
-		});
-		this.addCommand({
-			id: "enable-for-note",
-			name: "Enable for This Note",
-			callback: () => this.setNoteVisibility(true),
-		});
-		this.addCommand({
-			id: "hide-for-note",
-			name: "Hide for This Note",
-			callback: () => this.setNoteVisibility(false),
-		});
-		this.addCommand({
 			id: "clear-cues",
 			name: "Clear Generated Study Material",
 			callback: () => this.clearCues(),
-		});
-		this.addCommand({
-			id: "review-this-note",
-			name: "Start Study Mode for this note",
-			callback: () => void this.reviewThisNote(),
 		});
 		this.addCommand({
 			id: "export-cues-markdown",

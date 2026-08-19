@@ -453,7 +453,6 @@ describe("settings CSS", () => {
 		expect(styles).toContain(
 			'.firstrecall-study-header-action[aria-disabled="true"]'
 		);
-		expect(styles).toContain(".firstrecall-study-ribbon.is-active");
 
 		const answerRule = ruleFor(
 			".markdown-source-view.mod-cm6 .firstrecall-editor-study-answer.is-hidden"

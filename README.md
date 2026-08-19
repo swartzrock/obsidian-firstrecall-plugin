@@ -15,7 +15,7 @@ material in Obsidian's plugin data and never modifies your source Markdown.
 2. Choose a provider, complete its setup, select a model, and run **Test connection**.
 3. Open a note with headings and run **FirstRecall: Generate study material for this note**
    from the command palette.
-4. Run **FirstRecall: Toggle Study Mode** to practice recalling each section before revealing
+4. Start **Study Mode** to practice recalling each section before revealing
    its answer.
 
 ## Managed folders
