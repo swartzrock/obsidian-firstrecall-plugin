@@ -73,7 +73,7 @@ export function exportFilePath(
 	basename: string,
 	format: "markdown" | "anki"
 ): string {
-	const ext = format === "markdown" ? "md" : "txt";
+	const ext = format === "markdown" ? "md" : "tsv";
 	const tag = format === "markdown"
 		? "recall-questions-and-key-terms"
 		: "recall-questions-and-key-terms.anki";
