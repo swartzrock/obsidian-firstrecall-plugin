@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "cuecraft",
+      "name": "firstrecall",
       "dependencies": {
         "@anthropic-ai/sdk": "^0.104.1",
         "@swartzrock/byok-runtime": "3.0.0",

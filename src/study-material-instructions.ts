@@ -1,5 +1,5 @@
 import { DEFAULT_NOTE_BRIEF_INSTRUCTIONS } from "./note-brief-instructions";
-import type { CueCraftNoteBriefInput } from "./cue-provider";
+import type { FirstRecallNoteBriefInput } from "./cue-provider";
 
 export const NOTE_TITLE_PLACEHOLDER = "{{note_title}}";
 export const FULL_NOTE_SOURCE_PLACEHOLDER = "{{full_note_source}}";
@@ -52,7 +52,7 @@ export const NOTE_BRIEF_PROMPT =
 	`Card titles must name specific note content; never use or begin with the category labels ` +
 	`"Core idea", "Review first", or "Self-test". Make the "sayItBack" title the recall question itself.`;
 
-function formatNoteBriefSectionSource(input: CueCraftNoteBriefInput): string {
+function formatNoteBriefSectionSource(input: FirstRecallNoteBriefInput): string {
 	return input.sections
 		.map((section, index) => {
 			const terms = section.keywords.length
@@ -83,8 +83,8 @@ function composeNoteBriefPrompt(source: {
 	);
 }
 
-/** Build the exact CueCraft-owned initial Note Brief prompt. */
-export function buildNoteBriefPrompt(input: CueCraftNoteBriefInput): string {
+/** Build the exact FirstRecall-owned initial Note Brief prompt. */
+export function buildNoteBriefPrompt(input: FirstRecallNoteBriefInput): string {
 	return composeNoteBriefPrompt({
 		noteTitle: input.noteTitle || "(untitled)",
 		fullText: input.fullText,

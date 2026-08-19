@@ -9,7 +9,7 @@ import {
 } from "../src/byok-provider-metadata";
 import { BYOK_PROVIDER_ICONS } from "../src/provider-icons";
 
-describe("CueCraft BYOK provider metadata", () => {
+describe("FirstRecall BYOK provider metadata", () => {
 	it("covers every provider supported by the runtime", () => {
 		expect(byokProviderDefinitions().map((definition) => definition.id)).toEqual(
 			BYOK_PROVIDER_IDS

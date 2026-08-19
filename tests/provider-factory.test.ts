@@ -3,17 +3,17 @@ import type {
 	ByokProviderId,
 	ByokProviderStoredSettings,
 } from "@swartzrock/byok-runtime";
-import { DEFAULT_SETTINGS, type CueCraftSettings } from "../src/settings";
+import { DEFAULT_SETTINGS, type FirstRecallSettings } from "../src/settings";
 import {
-	makeCueCraftByokProvider,
-	cueCraftProviderConfigFromSettings,
-	type CueCraftTransport,
-} from "../src/byok-cuecraft-adapter";
+	makeFirstRecallByokProvider,
+	firstRecallProviderConfigFromSettings,
+	type FirstRecallTransport,
+} from "../src/byok-firstrecall-adapter";
 
 function settings(
 	provider: ByokProviderId = "ollama",
 	overrides: Partial<ByokProviderStoredSettings> = {}
-): CueCraftSettings {
+): FirstRecallSettings {
 	const current = structuredClone(DEFAULT_SETTINGS);
 	current.byok.selectedProvider = provider;
 	current.byok.providers[provider] = {
@@ -33,18 +33,18 @@ function settings(
 	return current;
 }
 
-const transport: CueCraftTransport = async () => new Response("{}");
+const transport: FirstRecallTransport = async () => new Response("{}");
 
-describe("makeCueCraftByokProvider", () => {
+describe("makeFirstRecallByokProvider", () => {
 	it("requires the user to select a provider", () => {
 		expect(() =>
-			cueCraftProviderConfigFromSettings(structuredClone(DEFAULT_SETTINGS))
+			firstRecallProviderConfigFromSettings(structuredClone(DEFAULT_SETTINGS))
 		).toThrow("Choose an AI provider in Settings.");
 	});
 
-	it("maps CueCraft settings into BYOK provider config", () => {
+	it("maps FirstRecall settings into BYOK provider config", () => {
 		expect(
-			cueCraftProviderConfigFromSettings(
+			firstRecallProviderConfigFromSettings(
 				settings("openrouter", {
 					credential: "sk-or-test",
 					model: "anthropic/claude-sonnet-4",
@@ -56,7 +56,7 @@ describe("makeCueCraftByokProvider", () => {
 			model: "anthropic/claude-sonnet-4",
 		});
 		expect(
-			cueCraftProviderConfigFromSettings(
+			firstRecallProviderConfigFromSettings(
 				settings("codex-cli", {
 					credential: "codex",
 					model: "",
@@ -68,7 +68,7 @@ describe("makeCueCraftByokProvider", () => {
 			model: "",
 		});
 		expect(
-			cueCraftProviderConfigFromSettings(
+			firstRecallProviderConfigFromSettings(
 				settings("lm-studio", {
 					credential: "http://localhost:1234/v1",
 					model: "qwen3-4b",
@@ -94,12 +94,12 @@ describe("makeCueCraftByokProvider", () => {
 			? {}
 			: { credential: "test-key", model: "test-model" };
 		expect(
-			makeCueCraftByokProvider(settings(provider, stored), { transport }).id
+			makeFirstRecallByokProvider(settings(provider, stored), { transport }).id
 		).toBe(expectedId);
 	});
 
 	it("creates the Codex CLI provider without a sequential concurrency cap", () => {
-		const provider = makeCueCraftByokProvider(
+		const provider = makeFirstRecallByokProvider(
 			settings("codex-cli", { credential: "codex" }),
 			{ transport }
 		);
@@ -112,7 +112,7 @@ describe("makeCueCraftByokProvider", () => {
 	});
 
 	it("creates the Claude CLI provider without a sequential concurrency cap", () => {
-		const provider = makeCueCraftByokProvider(
+		const provider = makeFirstRecallByokProvider(
 			settings("claude-cli", { credential: "claude" }),
 			{ transport }
 		);

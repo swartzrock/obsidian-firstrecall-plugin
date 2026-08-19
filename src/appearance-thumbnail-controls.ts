@@ -38,7 +38,7 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 	const doc = config.parentEl.ownerDocument;
 	const root = doc.createElement("div");
 	root.className = [
-		"cuecraft-thumbnail-group",
+		"firstrecall-thumbnail-group",
 		config.className ?? "",
 	]
 		.filter(Boolean)
@@ -53,25 +53,25 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 	for (const option of config.options) {
 		const button = doc.createElement("button");
 		button.type = "button";
-		button.className = "cuecraft-thumbnail-button";
+		button.className = "firstrecall-thumbnail-button";
 		button.dataset.optionId = option.id;
 		button.disabled = Boolean(option.disabled);
 		button.setAttribute("aria-label", option.label);
 
 		const preview = doc.createElement("div");
-		preview.className = "cuecraft-thumbnail-preview";
+		preview.className = "firstrecall-thumbnail-preview";
 		preview.setAttribute("aria-hidden", "true");
 		option.renderPreview?.(preview, option);
 		button.appendChild(preview);
 
 		const label = doc.createElement("span");
-		label.className = "cuecraft-thumbnail-label";
+		label.className = "firstrecall-thumbnail-label";
 		label.textContent = option.label;
 		button.appendChild(label);
 
 		if (option.description) {
 			const description = doc.createElement("span");
-			description.className = "cuecraft-thumbnail-description";
+			description.className = "firstrecall-thumbnail-description";
 			description.textContent = option.description;
 			button.appendChild(description);
 		}
@@ -116,9 +116,9 @@ export function cueFontSizeThumbnailOptions(): AppearanceThumbnailOption<
 		description: option.description,
 		renderPreview: (previewEl) => {
 			renderCuePreview(previewEl, [
-				"cuecraft-preview-font",
-				`cuecraft-preview-font-${option.id}`,
-				"cuecraft-preview-cue-only",
+				"firstrecall-preview-font",
+				`firstrecall-preview-font-${option.id}`,
+				"firstrecall-preview-cue-only",
 			]);
 		},
 	}));
@@ -143,21 +143,21 @@ function renderCuePreview(
 ): void {
 	const doc = previewEl.ownerDocument;
 	const surface = doc.createElement("div");
-	surface.className = ["cuecraft-preview-surface", ...classes].join(" ");
+	surface.className = ["firstrecall-preview-surface", ...classes].join(" ");
 	const card = doc.createElement("div");
-	card.className = "cuecraft-preview-card";
+	card.className = "firstrecall-preview-card";
 	surface.appendChild(card);
 
 	const rail = doc.createElement("div");
-	rail.className = "cuecraft-preview-rail";
+	rail.className = "firstrecall-preview-rail";
 	card.appendChild(rail);
 
 	const content = doc.createElement("div");
-	content.className = "cuecraft-preview-content";
+	content.className = "firstrecall-preview-content";
 	card.appendChild(content);
 
 	const question = doc.createElement("div");
-	question.className = "cuecraft-preview-question";
+	question.className = "firstrecall-preview-question";
 	question.textContent = SAMPLE_QUESTION;
 	content.appendChild(question);
 
@@ -170,8 +170,8 @@ function renderEditorCueDisplayPreview(
 ): void {
 	const doc = previewEl.ownerDocument;
 	const surface = editorPreviewSurface(doc, [
-		"cuecraft-preview-editor-display",
-		`cuecraft-preview-editor-display-${display}`,
+		"firstrecall-preview-editor-display",
+		`firstrecall-preview-editor-display-${display}`,
 	]);
 	surface.appendChild(editorCueCardScene(doc, display));
 	previewEl.appendChild(surface);
@@ -182,7 +182,7 @@ function editorCueCardScene(
 	display: "cornell" | "inline-cues"
 ): HTMLElement {
 	const scene = editorScene(doc);
-	scene.classList.add(`cuecraft-preview-editor-scene-${display}`);
+	scene.classList.add(`firstrecall-preview-editor-scene-${display}`);
 	scene.appendChild(editorCueCard(doc, display));
 	return scene;
 }
@@ -193,13 +193,13 @@ function editorCueCard(
 ): HTMLElement {
 	const card = doc.createElement("div");
 	card.className = [
-		"cuecraft-preview-editor-cue-card",
-		`cuecraft-preview-editor-cue-card-${display}`,
+		"firstrecall-preview-editor-cue-card",
+		`firstrecall-preview-editor-cue-card-${display}`,
 	].join(" ");
 
 	if (display === "cornell") {
 		const grip = doc.createElement("span");
-		grip.className = "cuecraft-preview-editor-cue-grip";
+		grip.className = "firstrecall-preview-editor-cue-grip";
 		card.appendChild(grip);
 	}
 
@@ -223,26 +223,26 @@ function editorCueSection(
 	bodyText: string | null
 ): HTMLElement {
 	const section = doc.createElement("div");
-	section.className = "cuecraft-preview-editor-cue-section";
+	section.className = "firstrecall-preview-editor-cue-section";
 
 	const label = doc.createElement("span");
-	label.className = "cuecraft-preview-editor-cue-section-label";
+	label.className = "firstrecall-preview-editor-cue-section-label";
 	const icon = doc.createElement("span");
-	icon.className = "cuecraft-preview-editor-cue-icon";
+	icon.className = "firstrecall-preview-editor-cue-icon";
 	icon.dataset.section = kind;
 	const text = doc.createElement("span");
 	text.textContent = labelText;
 	const chevron = doc.createElement("span");
-	chevron.className = "cuecraft-preview-editor-cue-chevron";
+	chevron.className = "firstrecall-preview-editor-cue-chevron";
 	label.append(icon, text, chevron);
 	section.appendChild(label);
 
 	if (kind === "terms") {
 		const terms = doc.createElement("span");
-		terms.className = "cuecraft-preview-editor-cue-terms";
+		terms.className = "firstrecall-preview-editor-cue-terms";
 		for (const termText of ["frontier AI", "data"]) {
 			const term = doc.createElement("span");
-			term.className = "cuecraft-preview-editor-cue-term";
+			term.className = "firstrecall-preview-editor-cue-term";
 			term.textContent = termText;
 			terms.appendChild(term);
 		}
@@ -250,8 +250,8 @@ function editorCueSection(
 	} else if (bodyText) {
 		const body = doc.createElement("span");
 		body.className = [
-			"cuecraft-preview-editor-cue-body",
-			kind === "question" ? "cuecraft-preview-editor-cue-question" : "",
+			"firstrecall-preview-editor-cue-body",
+			kind === "question" ? "firstrecall-preview-editor-cue-question" : "",
 		]
 			.filter(Boolean)
 			.join(" ");
@@ -264,16 +264,16 @@ function editorCueSection(
 
 function editorPreviewSurface(doc: Document, classes: string[]): HTMLElement {
 	const surface = doc.createElement("div");
-	surface.className = ["cuecraft-preview-editor-surface", ...classes].join(" ");
+	surface.className = ["firstrecall-preview-editor-surface", ...classes].join(" ");
 	return surface;
 }
 
 function editorScene(doc: Document): HTMLElement {
 	const scene = doc.createElement("div");
-	scene.className = "cuecraft-preview-editor-scene";
+	scene.className = "firstrecall-preview-editor-scene";
 	for (const variant of ["short", "long", "medium"] as const) {
 		const line = doc.createElement("span");
-		line.className = `cuecraft-preview-editor-line cuecraft-preview-editor-line-${variant}`;
+		line.className = `firstrecall-preview-editor-line firstrecall-preview-editor-line-${variant}`;
 		scene.appendChild(line);
 	}
 	return scene;

@@ -7,7 +7,7 @@ import {
 	TFolder,
 	setIcon,
 } from "obsidian";
-import type CueCraftPlugin from "./main";
+import type FirstRecallPlugin from "./main";
 import {
 	CUE_FONT_SIZES,
 	DEFAULT_CUE_FONT_SIZE,
@@ -40,7 +40,7 @@ import {
 import {
 	byokProviderDefinition,
 	byokProviderDefinitions,
-	type CueCraftProviderDefinition,
+	type FirstRecallProviderDefinition,
 } from "./byok-provider-metadata";
 import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
@@ -57,27 +57,27 @@ import {
 } from "./byok-model-options";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
 import {
-	applyCueCraftListedModels,
-	applyCueCraftModelRefreshFailure,
-	cueCraftFetchedModelCount,
-	cueCraftModelRefreshMessage,
-	cueCraftProviderCredential,
-	cueCraftProviderCredentialLength,
-	cueCraftProviderLabel,
-	cueCraftProviderModel,
-	cueCraftProviderSettings,
-	cueCraftSelectedProvider,
-	type CueCraftByokRuntime,
-	deriveCueCraftProviderSetupStatus,
-	isCueCraftLocalCliProvider,
-	recordCueCraftProviderConnectionSuccess,
-	resetCueCraftFetchedModels,
-	setCueCraftProviderCredential,
-	setCueCraftProviderModel,
-	setCueCraftSelectedProvider,
-	type CueCraftFetchedModelProvider,
-} from "./byok-cuecraft-adapter";
-import { isCueCraftCloudCredentialProvider } from "./secure-credential-store";
+	applyFirstRecallListedModels,
+	applyFirstRecallModelRefreshFailure,
+	firstRecallFetchedModelCount,
+	firstRecallModelRefreshMessage,
+	firstRecallProviderCredential,
+	firstRecallProviderCredentialLength,
+	firstRecallProviderLabel,
+	firstRecallProviderModel,
+	firstRecallProviderSettings,
+	firstRecallSelectedProvider,
+	type FirstRecallByokRuntime,
+	deriveFirstRecallProviderSetupStatus,
+	isFirstRecallLocalCliProvider,
+	recordFirstRecallProviderConnectionSuccess,
+	resetFirstRecallFetchedModels,
+	setFirstRecallProviderCredential,
+	setFirstRecallProviderModel,
+	setFirstRecallSelectedProvider,
+	type FirstRecallFetchedModelProvider,
+} from "./byok-firstrecall-adapter";
+import { isFirstRecallCloudCredentialProvider } from "./secure-credential-store";
 import { resolveModelRefreshDescription } from "./model-refresh";
 import {
 	renderModelCombobox,
@@ -97,7 +97,7 @@ import {
 	type StudyAreaGenerationPlan,
 	type StudyAreaRunSummary,
 } from "./study-area";
-import { formatCueCraftNotice } from "./notice";
+import { formatFirstRecallNotice } from "./notice";
 import {
 	SAVED_CLOUD_CREDENTIAL_MASK,
 	cloudCredentialMask,
@@ -117,7 +117,7 @@ import {
 import { buildNoteBriefInstructionsTemplate } from "./study-material-instructions";
 
 /**
- * CueCraft supports a local provider (Ollama), local CLI providers, and several
+ * FirstRecall supports a local provider (Ollama), local CLI providers, and several
  * cloud providers via the Vercel AI SDK (Anthropic, OpenAI, Google, xAI). Each
  * cloud provider keeps its own API key + model id; only the selected provider's
  * fields are surfaced.
@@ -127,7 +127,7 @@ type SettingsSubpage =
 	| "home"
 	| "ai-model"
 	| "cue-generation";
-type CueCraftSettingsSubpage =
+type FirstRecallSettingsSubpage =
 	| SettingsSubpage
 	| "study-areas";
 const CLI_DEFAULT_MODEL_OPTION: ModelOption = {
@@ -162,7 +162,7 @@ interface StudyAreaUiState {
 	message: string | null;
 }
 
-export interface CueCraftSettings {
+export interface FirstRecallSettings {
 	byok: Omit<ByokStoredSettings, "selectedProvider"> & {
 		selectedProvider: ByokProviderId | null;
 	};
@@ -181,7 +181,7 @@ export interface CueCraftSettings {
 	showTerms: boolean;
 }
 
-export const DEFAULT_SETTINGS: CueCraftSettings = {
+export const DEFAULT_SETTINGS: FirstRecallSettings = {
 	byok: {
 		selectedProvider: null,
 		providers: {
@@ -240,12 +240,12 @@ export const DEFAULT_SETTINGS: CueCraftSettings = {
 	showTerms: true,
 };
 
-export class CueCraftSettingTab extends PluginSettingTab {
-	private plugin: CueCraftPlugin;
-	private currentSubpage: CueCraftSettingsSubpage = "home";
+export class FirstRecallSettingTab extends PluginSettingTab {
+	private plugin: FirstRecallPlugin;
+	private currentSubpage: FirstRecallSettingsSubpage = "home";
 	private readonly studyAreaUi = new Map<string, StudyAreaUiState>();
 
-	constructor(app: App, plugin: CueCraftPlugin) {
+	constructor(app: App, plugin: FirstRecallPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
@@ -259,7 +259,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderSubpageHeader(
 					containerEl,
 					"AI model",
-					cueCraftSelectedProvider(this.plugin.settings)
+					firstRecallSelectedProvider(this.plugin.settings)
 						? "Provider setup, connection checks, model selection, and speed tuning."
 						: "Select an AI provider to generate study material"
 				);
@@ -277,14 +277,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.renderSubpageHeader(
 					containerEl,
 					"Managed folders",
-					"Add a folder—or your entire vault—to generate and refresh study material in bulk. Turn on automatic updates when you want CueCraft to keep future changes current."
+					"Add a folder—or your entire vault—to generate and refresh study material in bulk. Turn on automatic updates when you want FirstRecall to keep future changes current."
 				);
 				this.renderStudyAreasSection(containerEl, false);
 				break;
 			default:
 				containerEl.createEl("p", {
-					text: "CueCraft turns your notes into active-recall study material: a Note Brief for the whole note and a study card for each section. Choose an AI provider and model to get started. Your Markdown files are never modified.",
-					cls: "cuecraft-settings-intro",
+					text: "FirstRecall turns your notes into active-recall study material: a Note Brief for the whole note and a study card for each section. Choose an AI provider and model to get started. Your Markdown files are never modified.",
+					cls: "firstrecall-settings-intro",
 				});
 				this.renderSettingsHome(containerEl);
 				break;
@@ -301,7 +301,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private renderSettingsHome(containerEl: HTMLElement): void {
 		new Setting(containerEl).setName("Settings").setHeading();
 
-		const navEl = containerEl.createDiv({ cls: "cuecraft-settings-nav" });
+		const navEl = containerEl.createDiv({ cls: "firstrecall-settings-nav" });
 		this.renderSettingsNavCard(navEl, {
 			title: "AI model",
 			description: "Choose a provider and model, check the connection, and tune request speed.",
@@ -332,11 +332,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		description: string
 	): void {
 		const titleSetting = new Setting(containerEl).setName(title).setHeading();
-		titleSetting.settingEl.addClass("cuecraft-settings-subpage-header");
+		titleSetting.settingEl.addClass("firstrecall-settings-subpage-header");
 		titleSetting.nameEl.empty();
 
 		const backBtn = titleSetting.nameEl.createEl("button", {
-			cls: "clickable-icon cuecraft-settings-back",
+			cls: "clickable-icon firstrecall-settings-back",
 			attr: { type: "button", "aria-label": "Back to settings" },
 		});
 		setIcon(backBtn, "chevron-left");
@@ -344,13 +344,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			this.openSubpage("home")
 		);
 		titleSetting.nameEl.createSpan({
-			cls: "cuecraft-settings-subpage-title",
+			cls: "firstrecall-settings-subpage-title",
 			text: title,
 		});
 		titleSetting.descEl.empty();
 		if (description) {
 			titleSetting.descEl.createDiv({
-				cls: "cuecraft-settings-subpage-desc",
+				cls: "firstrecall-settings-subpage-desc",
 				text: description,
 			});
 		}
@@ -368,13 +368,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const setting = new Setting(containerEl)
 			.setName(opts.title)
 			.setDesc(opts.description);
-		setting.settingEl.addClass("cuecraft-settings-nav-card");
+		setting.settingEl.addClass("firstrecall-settings-nav-card");
 		setting.descEl.createDiv({
-			cls: "cuecraft-settings-nav-summary",
+			cls: "firstrecall-settings-nav-summary",
 			text: opts.summary,
 		});
 		const chevronEl = setting.controlEl.createSpan({
-			cls: "cuecraft-settings-nav-chevron",
+			cls: "firstrecall-settings-nav-chevron",
 		});
 		setIcon(chevronEl, "chevron-right");
 		chevronEl.setAttr("aria-hidden", "true");
@@ -405,15 +405,15 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		this.openSubpage("study-areas");
 	}
 
-	private openSubpage(subpage: CueCraftSettingsSubpage): void {
+	private openSubpage(subpage: FirstRecallSettingsSubpage): void {
 		this.currentSubpage = subpage;
 		this.display();
 	}
 
 	private aiModelSummary(): string {
-		const provider = cueCraftSelectedProvider(this.plugin.settings);
+		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return "Select an AI provider to generate study material";
-		const setup = deriveCueCraftProviderSetupStatus(this.plugin.settings);
+		const setup = deriveFirstRecallProviderSetupStatus(this.plugin.settings);
 		const providerLabel = this.providerDisplayName(provider);
 		const modelLabel = this.selectedModelLabel() || "No model selected";
 		const connectionLabel =
@@ -453,12 +453,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private selectedModelLabel(): string {
 		const settings = this.plugin.settings;
-		const provider = cueCraftSelectedProvider(settings);
+		const provider = firstRecallSelectedProvider(settings);
 		if (!provider) return "";
-		const modelId = cueCraftProviderModel(settings, provider).trim();
+		const modelId = firstRecallProviderModel(settings, provider).trim();
 		if (provider === "anthropic") {
 			if (!modelId) return "";
-			const stored = cueCraftProviderSettings(settings, "anthropic");
+			const stored = firstRecallProviderSettings(settings, "anthropic");
 			const described = describeAnthropicModel(
 				modelId,
 				stored.modelOptions
@@ -482,17 +482,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 
 		const providerFlowEl = containerEl.createDiv({
-			cls: "cuecraft-settings-flow",
+			cls: "firstrecall-settings-flow",
 		});
 		this.renderSettingsFlowHeading(
 			providerFlowEl,
 			"Provider",
-			"Pick where CueCraft should generate section study cards and Note Briefs."
+			"Pick where FirstRecall should generate section study cards and Note Briefs."
 		);
 
 		this.renderProviderPicker(providerFlowEl);
 
-		if (!cueCraftSelectedProvider(this.plugin.settings)) return;
+		if (!firstRecallSelectedProvider(this.plugin.settings)) return;
 
 		this.renderProviderSetupPanel(providerFlowEl);
 		this.renderAiModelPerformanceSection(containerEl);
@@ -500,12 +500,12 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private renderAiModelPerformanceSection(containerEl: HTMLElement): void {
 		const performanceFlowEl = containerEl.createDiv({
-			cls: "cuecraft-settings-flow",
+			cls: "firstrecall-settings-flow",
 		});
 		this.renderSettingsFlowHeading(
 			performanceFlowEl,
 			"Performance",
-			"Tune how quickly CueCraft generates section cards."
+			"Tune how quickly FirstRecall generates section cards."
 		);
 		this.renderParallelRequestsSetting(performanceFlowEl);
 	}
@@ -530,22 +530,22 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private renderProviderSetupPanel(containerEl: HTMLElement): void {
-		const provider = cueCraftSelectedProvider(this.plugin.settings);
+		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return;
 		const definition = byokProviderDefinition(provider);
 		const panelEl = containerEl.createDiv({
-			cls: "cuecraft-active-provider-panel",
+			cls: "firstrecall-active-provider-panel",
 		});
 		const headerEl = panelEl.createDiv({
-			cls: "cuecraft-active-provider-header",
+			cls: "firstrecall-active-provider-header",
 		});
 		this.renderProviderIcon(headerEl, definition);
 		headerEl.createDiv({
-			cls: "cuecraft-active-provider-title",
+			cls: "firstrecall-active-provider-title",
 			text: definition.label,
 		});
 		const fieldsEl = panelEl.createDiv({
-			cls: "cuecraft-active-provider-fields",
+			cls: "firstrecall-active-provider-fields",
 		});
 		this.renderProviderCredentialSettings(fieldsEl);
 		this.renderProviderModelSettings(fieldsEl);
@@ -554,17 +554,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private renderProviderPicker(containerEl: HTMLElement): void {
 		const pickerEl = containerEl.createDiv({
-			cls: "cuecraft-provider-picker",
+			cls: "firstrecall-provider-picker",
 			attr: {
 				role: "radiogroup",
 				"aria-label": "AI provider",
 			},
 		});
-		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
 		for (const definition of byokProviderDefinitions()) {
 			const isSelected = definition.id === selectedProvider;
 			const buttonEl = pickerEl.createEl("button", {
-				cls: `cuecraft-provider-button${isSelected ? " is-selected" : ""}`,
+				cls: `firstrecall-provider-button${isSelected ? " is-selected" : ""}`,
 				attr: {
 					type: "button",
 					role: "radio",
@@ -574,10 +574,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			});
 			this.renderProviderIcon(buttonEl, definition);
 			buttonEl.createSpan({
-				cls: "cuecraft-provider-button-label",
+				cls: "firstrecall-provider-button-label",
 				text: definition.shortLabel,
 			});
-			buttonEl.createSpan({ cls: "cuecraft-provider-radio" });
+			buttonEl.createSpan({ cls: "firstrecall-provider-radio" });
 			this.plugin.registerDomEvent(buttonEl, "click", () => {
 				void this.selectProvider(definition.id);
 			});
@@ -586,10 +586,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private renderProviderIcon(
 		containerEl: HTMLElement,
-		definition: CueCraftProviderDefinition
+		definition: FirstRecallProviderDefinition
 	): void {
 		const iconEl = containerEl.createSpan({
-			cls: "cuecraft-provider-icon",
+			cls: "firstrecall-provider-icon",
 			attr: { "aria-hidden": "true" },
 		});
 		if (typeof definition.icon === "string") {
@@ -615,17 +615,17 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private async selectProvider(provider: string): Promise<void> {
 		if (!isByokProviderId(provider)) return;
-		if (provider === cueCraftSelectedProvider(this.plugin.settings)) return;
-		setCueCraftSelectedProvider(this.plugin.settings, provider);
+		if (provider === firstRecallSelectedProvider(this.plugin.settings)) return;
+		setFirstRecallSelectedProvider(this.plugin.settings, provider);
 		await this.plugin.saveSettings();
 		this.display();
 	}
 
 	private renderProviderSetupStatus(containerEl: HTMLElement): void {
-		const provider = cueCraftSelectedProvider(this.plugin.settings);
+		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return;
-		const status = deriveCueCraftProviderSetupStatus(this.plugin.settings);
-		const isCli = isCueCraftLocalCliProvider(provider);
+		const status = deriveFirstRecallProviderSetupStatus(this.plugin.settings);
+		const isCli = isFirstRecallLocalCliProvider(provider);
 		const cliModelLabel = this.selectedModelLabel() === "CLI default"
 			? "CLI default"
 			: "Model override";
@@ -638,9 +638,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const statusSetting = new Setting(containerEl)
 			.setName("Connection")
 			.setDesc(description);
-		statusSetting.settingEl.addClass("cuecraft-provider-connection-setting");
+		statusSetting.settingEl.addClass("firstrecall-provider-connection-setting");
 		const chipsEl = statusSetting.controlEl.createDiv({
-			cls: "cuecraft-status-chips",
+			cls: "firstrecall-status-chips",
 		});
 		this.renderStatusChip(
 			chipsEl,
@@ -688,11 +688,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		stateClass: string
 	): void {
 		const chipEl = containerEl.createEl("span", {
-			cls: `cuecraft-status-chip ${stateClass}`,
+			cls: `firstrecall-status-chip ${stateClass}`,
 		});
-		chipEl.createEl("span", { cls: "cuecraft-status-chip-dot" });
+		chipEl.createEl("span", { cls: "firstrecall-status-chip-dot" });
 		chipEl.createEl("span", {
-			cls: "cuecraft-status-chip-label",
+			cls: "firstrecall-status-chip-label",
 			text: label,
 		});
 	}
@@ -703,14 +703,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		description: string
 	): void {
 		const headingEl = containerEl.createDiv({
-			cls: "cuecraft-settings-flow-heading",
+			cls: "firstrecall-settings-flow-heading",
 		});
 		headingEl.createEl("div", {
-			cls: "cuecraft-settings-flow-title",
+			cls: "firstrecall-settings-flow-title",
 			text: title,
 		});
 		headingEl.createEl("div", {
-			cls: "cuecraft-settings-flow-desc",
+			cls: "firstrecall-settings-flow-desc",
 			text: description,
 		});
 	}
@@ -750,14 +750,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 
 		const advanced = containerEl.createEl("details", {
-			cls: "cuecraft-generation-advanced",
+			cls: "firstrecall-generation-advanced",
 		});
 		const summary = advanced.createEl("summary", { text: "Advanced" });
-		summary.setAttr("aria-controls", "cuecraft-generation-instructions");
+		summary.setAttr("aria-controls", "firstrecall-generation-instructions");
 		summary.setAttr("aria-expanded", "false");
 		const content = advanced.createDiv({
-			cls: "cuecraft-generation-instructions",
-			attr: { id: "cuecraft-generation-instructions" },
+			cls: "firstrecall-generation-instructions",
+			attr: { id: "firstrecall-generation-instructions" },
 		});
 		this.plugin.registerDomEvent(advanced, "toggle", () => {
 			summary.setAttr("aria-expanded", String(advanced.open));
@@ -776,10 +776,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private sectionCueInstructionsTemplate(): string {
-		const provider = cueCraftSelectedProvider(this.plugin.settings);
+		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		return buildSectionCueInstructionsTemplate(
 			this.plugin.settings.questionType,
-			provider && isCueCraftLocalCliProvider(provider) ? "batch" : "single"
+			provider && isFirstRecallLocalCliProvider(provider) ? "batch" : "single"
 		);
 	}
 
@@ -789,14 +789,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		value: string
 	): HTMLTextAreaElement {
 		const setting = new Setting(containerEl).setName(title);
-		setting.settingEl.addClass("cuecraft-instructions-setting");
+		setting.settingEl.addClass("firstrecall-instructions-setting");
 		let input!: HTMLTextAreaElement;
 		setting.addTextArea((textArea) => {
 			textArea.setValue(value);
 			input = textArea.inputEl;
 			input.readOnly = true;
 			input.rows = 12;
-			input.addClass("cuecraft-instructions-input");
+			input.addClass("firstrecall-instructions-input");
 			input.setAttr("aria-label", title);
 		});
 		return input;
@@ -876,7 +876,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			canChooseEntireVault || availableFolderPaths.length > 0;
 
 		const parentFolderSetting = new Setting(containerEl);
-		parentFolderSetting.settingEl.addClass("cuecraft-study-area-create-row");
+		parentFolderSetting.settingEl.addClass("firstrecall-study-area-create-row");
 		parentFolderSetting
 			.setName(
 				hasEntireVaultArea
@@ -915,18 +915,18 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					if (!normalized && !isEntireVaultSelection) return;
 					if (isEntireVaultSelection && hasStudyAreas) {
 						new Notice(
-							`CueCraft: remove folder coverage before using ${vaultScopeLabel}.`
+							`FirstRecall: remove folder coverage before using ${vaultScopeLabel}.`
 						);
 						this.display();
 						return;
 					}
 					if (assignedFolderPaths.has(normalized)) {
-						new Notice("CueCraft: that managed folder already exists.");
+						new Notice("FirstRecall: that managed folder already exists.");
 						this.display();
 						return;
 					}
 					if (!isEntireVaultSelection && !folderPaths.includes(normalized)) {
-						new Notice(`CueCraft: "${normalized}" is not an existing folder.`);
+						new Notice(`FirstRecall: "${normalized}" is not an existing folder.`);
 						this.display();
 						return;
 					}
@@ -947,7 +947,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName("Automatic update delay")
 			.setDesc(
-				"After you stop typing in an automatically-updated note, CueCraft waits this long before updating its study material. Longer delays reduce repeated AI requests."
+				"After you stop typing in an automatically-updated note, FirstRecall waits this long before updating its study material. Longer delays reduce repeated AI requests."
 			)
 			.addDropdown((dropdown) => {
 				for (const seconds of AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS) {
@@ -967,7 +967,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 		if (hasStudyAreas) {
 			const manageEl = containerEl.createDiv({
-				cls: "cuecraft-settings-flow",
+				cls: "firstrecall-settings-flow",
 			});
 			for (const area of this.plugin.settings.studyAreas) {
 				this.renderStudyAreaRow(manageEl, area);
@@ -975,7 +975,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 		if (this.plugin.settings.disabledStudyAreas.length) {
 			new Setting(containerEl).setName("Folders needing attention").setHeading();
-			const recoveryEl = containerEl.createDiv({ cls: "cuecraft-settings-flow" });
+			const recoveryEl = containerEl.createDiv({ cls: "firstrecall-settings-flow" });
 			for (const area of this.plugin.settings.disabledStudyAreas) {
 				this.renderDisabledStudyAreaRow(recoveryEl, area);
 			}
@@ -991,37 +991,37 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const setting = new Setting(containerEl).setName(
 			entireVault ? ENTIRE_VAULT_STUDY_AREA_LABEL : area.name
 		);
-		setting.settingEl.addClass("cuecraft-study-area-row");
+		setting.settingEl.addClass("firstrecall-study-area-row");
 		setting.descEl.empty();
 		if (!entireVault && scopeLabel !== area.name) {
 			setting.descEl.createDiv({
-				cls: "cuecraft-study-area-path",
+				cls: "firstrecall-study-area-path",
 				text: scopeLabel,
 			});
 		}
 		setting.descEl.createDiv({
-			cls: "cuecraft-study-area-counts",
+			cls: "firstrecall-study-area-counts",
 			text: this.studyAreaCountsText(state),
 			attr: { role: "status", "aria-live": "polite" },
 		});
 		const statusText = state.message ?? this.studyAreaStatusText(state);
 		if (statusText) {
 			setting.descEl.createDiv({
-				cls: "cuecraft-study-area-status",
+				cls: "firstrecall-study-area-status",
 				text: statusText,
 				attr: { role: "status", "aria-live": "polite" },
 			});
 		}
 		if (area.maintenanceMode === "maintain-on-save") {
 			setting.descEl.createDiv({
-				cls: "cuecraft-study-area-help",
-				text: "CueCraft automatically updates new and changed study material after the selected delay.",
+				cls: "firstrecall-study-area-help",
+				text: "FirstRecall automatically updates new and changed study material after the selected delay.",
 			});
 		}
 
-		setting.controlEl.addClass("cuecraft-study-area-controls");
+		setting.controlEl.addClass("firstrecall-study-area-controls");
 		setting.controlEl.createSpan({
-			cls: "cuecraft-study-area-toggle-label",
+			cls: "firstrecall-study-area-toggle-label",
 			text: "Update automatically",
 		});
 		setting.addToggle((tg) => {
@@ -1053,11 +1053,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			text: "Retry update",
 			attr: { type: "button" },
 		});
-		retryBtn.addClass("cuecraft-study-area-retry");
+		retryBtn.addClass("firstrecall-study-area-retry");
 		const hasFailed = Boolean(state.plan?.counts.failed);
 		retryBtn.disabled = busy || !providerReady || !hasFailed;
 		retryBtn.hidden = !hasFailed;
-		retryBtn.classList.toggle("cuecraft-study-area-hidden", !hasFailed);
+		retryBtn.classList.toggle("firstrecall-study-area-hidden", !hasFailed);
 		const scanBtn = setting.controlEl.createEl("button", {
 			text: state.phase === "scanning" ? "Cancel scan" : "Scan again",
 			attr: {
@@ -1069,7 +1069,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		scanBtn.disabled = state.phase === "running";
 		const removeBtn = setting.controlEl.createEl("button", {
-			cls: "clickable-icon cuecraft-study-area-remove",
+			cls: "clickable-icon firstrecall-study-area-remove",
 			attr: { type: "button", "aria-label": `Remove ${area.name}` },
 		});
 		setIcon(removeBtn, "trash-2");
@@ -1215,7 +1215,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const setup = new Setting(containerEl)
 			.setName("AI model required")
 			.setDesc("Scanning is available now. Configure a provider and model before generating or automatically updating study material.");
-		setup.settingEl.addClass("cuecraft-study-area-provider-setup");
+		setup.settingEl.addClass("firstrecall-study-area-provider-setup");
 		setup.addButton((button) =>
 			button.setButtonText("Configure AI model").onClick(() => {
 				this.openSubpage("ai-model");
@@ -1228,19 +1228,19 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		area: StudyArea
 	): void {
 		const exclusions = containerEl.createDiv({
-			cls: "cuecraft-study-area-exclusions",
+			cls: "firstrecall-study-area-exclusions",
 			attr: { role: "group", "aria-label": `Exclusions for ${studyAreaScopeLabel(area.parentPath)}` },
 		});
 		exclusions.createDiv({
-			cls: "cuecraft-study-area-exclusions-title",
+			cls: "firstrecall-study-area-exclusions-title",
 			text: "Exclusions",
 		});
 		exclusions.createDiv({
-			cls: "cuecraft-study-area-help",
+			cls: "firstrecall-study-area-help",
 			text: "Notes inherit coverage from this managed folder. Excluding a note or nested folder is the only per-note opt-out.",
 		});
 		for (const path of area.excludedPaths) {
-			const row = exclusions.createDiv({ cls: "cuecraft-study-area-exclusion-row" });
+			const row = exclusions.createDiv({ cls: "firstrecall-study-area-exclusion-row" });
 			row.createSpan({ text: path });
 			const remove = row.createEl("button", {
 				cls: "clickable-icon",
@@ -1275,8 +1275,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					const reason = validation.valid ? "outside-scope" : validation.reason;
 					new Notice(
 						reason === "duplicate-path"
-							? "CueCraft: that path is already excluded."
-							: "CueCraft: choose an existing note or nested folder inside this managed folder."
+							? "FirstRecall: that path is already excluded."
+							: "FirstRecall: choose an existing note or nested folder inside this managed folder."
 					);
 					return;
 				}
@@ -1311,7 +1311,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					? `${scope} is disabled because it conflicts with ${conflictLabel}. It does not update notes.`
 					: `${scope} is disabled and does not update notes. Its previous conflict is gone.`
 			);
-		setting.settingEl.addClass("cuecraft-study-area-row", "is-disabled");
+		setting.settingEl.addClass("firstrecall-study-area-row", "is-disabled");
 		setting.settingEl.setAttr("aria-disabled", "true");
 		setting.addButton((button) =>
 			button
@@ -1324,11 +1324,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		);
 	}
 
-	// ── Content shown in notes ────────────────────────────────────────────
+	// ── Display ────────────────────────────────────────────
 	private renderArtifactVisibilitySection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Content shown in notes").setHeading();
+		new Setting(containerEl).setName("Display").setHeading();
 		containerEl.createEl("p", {
-			cls: "cuecraft-settings-visibility-note",
+			cls: "firstrecall-settings-visibility-note",
 			text: "These controls only change what appears in Editing and Reading. Hiding generated material never disables automatic maintenance.",
 		});
 		const noteBriefCard = this.createArtifactCard(
@@ -1401,11 +1401,11 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		description: string
 	): HTMLElement {
 		const card = containerEl.createDiv({
-			cls: "cuecraft-settings-artifact-card",
+			cls: "firstrecall-settings-artifact-card",
 			attr: { role: "group", "aria-label": title },
 		});
-		card.createDiv({ cls: "cuecraft-settings-artifact-title", text: title });
-		card.createDiv({ cls: "cuecraft-settings-artifact-preview", text: description });
+		card.createDiv({ cls: "firstrecall-settings-artifact-title", text: title });
+		card.createDiv({ cls: "firstrecall-settings-artifact-preview", text: description });
 		return card;
 	}
 
@@ -1429,7 +1429,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				this.plugin.settings.editorCueDisplay = value;
 			},
 			afterSave: () => this.display(),
-			className: "cuecraft-thumbnail-group-editor-display",
+			className: "firstrecall-thumbnail-group-editor-display",
 			refreshReading: false,
 		});
 
@@ -1444,7 +1444,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			setValue: (value) => {
 				this.plugin.settings.cueFontSize = value;
 			},
-			className: "cuecraft-thumbnail-group-cue-font",
+			className: "firstrecall-thumbnail-group-cue-font",
 			refreshReading: true,
 		});
 	}
@@ -1486,7 +1486,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const setting = new Setting(containerEl)
 			.setName(config.name)
 			.setDesc(config.description());
-		setting.settingEl.addClass("cuecraft-thumbnail-setting");
+		setting.settingEl.addClass("firstrecall-thumbnail-setting");
 		setting.then(() => {
 			let group: AppearanceThumbnailGroup<T>;
 			group = renderAppearanceThumbnailGroup({
@@ -1543,10 +1543,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			.addText((text) =>
 				text
 					.setPlaceholder(field.placeholder)
-					.setValue(cueCraftProviderCredential(s, provider))
+					.setValue(firstRecallProviderCredential(s, provider))
 					.onChange(async (value) => {
-						setCueCraftProviderCredential(s, provider, value.trim());
-						resetCueCraftFetchedModels(
+						setFirstRecallProviderCredential(s, provider, value.trim());
+						resetFirstRecallFetchedModels(
 							s,
 							provider,
 							field.resetModelsMessage ?? field.missingMessage
@@ -1562,13 +1562,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		provider: ByokProviderId
 	): void {
 		const s = this.plugin.settings;
-		const stored = cueCraftProviderSettings(s, provider);
+		const stored = firstRecallProviderSettings(s, provider);
 		const definition = byokProviderDefinition(provider);
 		this.renderCloudModelSettings(containerEl, {
 			provider,
 			definition,
-			getModel: () => cueCraftProviderModel(s, provider),
-			setModel: (value) => setCueCraftProviderModel(s, provider, value),
+			getModel: () => firstRecallProviderModel(s, provider),
+			setModel: (value) => setFirstRecallProviderModel(s, provider, value),
 			hasCredential: () => this.plugin.isProviderCredentialSaved(provider),
 			getAvailableModels: () => stored.availableModels,
 			getModelOptions: () => stored.modelOptions,
@@ -1595,7 +1595,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			.setName(opts.label)
 			.setDesc(opts.description)
 			.addText((text) => {
-				text.inputEl.addClass("cuecraft-cli-text-input");
+				text.inputEl.addClass("firstrecall-cli-text-input");
 				text
 					.setPlaceholder(opts.commandPlaceholder)
 					.setValue(opts.getCommand())
@@ -1604,7 +1604,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					});
 			});
-		setting.settingEl.addClass("cuecraft-cli-text-setting");
+		setting.settingEl.addClass("firstrecall-cli-text-setting");
 	}
 
 	private renderAnthropicCredentialSettings(containerEl: HTMLElement): void {
@@ -1618,10 +1618,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private renderAnthropicModelSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
-		const stored = cueCraftProviderSettings(s, ByokProvider.Anthropic);
+		const stored = firstRecallProviderSettings(s, ByokProvider.Anthropic);
 		const definition = byokProviderDefinition(ByokProvider.Anthropic);
 		const field = definition.modelField;
-		const model = cueCraftProviderModel(s, ByokProvider.Anthropic);
+		const model = firstRecallProviderModel(s, ByokProvider.Anthropic);
 		const storedModels =
 			stored.modelOptions.length > 0
 				? stored.modelOptions
@@ -1646,7 +1646,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					modelHint || field.description
 				)
 			);
-		modelSetting.settingEl.addClass("cuecraft-model-setting");
+		modelSetting.settingEl.addClass("firstrecall-model-setting");
 		modelSetting.addDropdown((dd) => {
 			dd.addOption(ANTHROPIC_CUSTOM_MODEL_ID, "Custom model ID...");
 			for (const model of modelOptions) {
@@ -1656,7 +1656,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				.setValue(
 					isCustomSelection
 						? ANTHROPIC_CUSTOM_MODEL_ID
-						: cueCraftProviderModel(s, ByokProvider.Anthropic)
+						: firstRecallProviderModel(s, ByokProvider.Anthropic)
 				)
 				.onChange(async (value) => {
 					if (value === ANTHROPIC_CUSTOM_MODEL_ID) {
@@ -1666,7 +1666,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 						return;
 					}
 					stored.modelSelection = value;
-					setCueCraftProviderModel(s, ByokProvider.Anthropic, value);
+					setFirstRecallProviderModel(s, ByokProvider.Anthropic, value);
 					await this.plugin.saveSettings();
 					this.display();
 				});
@@ -1681,13 +1681,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		if (isCustomSelection) {
 			new Setting(containerEl)
 				.setName("Custom model ID")
-				.setDesc("Enter the exact Anthropic model ID CueCraft should use.")
+				.setDesc("Enter the exact Anthropic model ID FirstRecall should use.")
 				.addText((text) =>
 					text
 						.setPlaceholder("claude-sonnet-4-6")
-						.setValue(cueCraftProviderModel(s, ByokProvider.Anthropic))
+						.setValue(firstRecallProviderModel(s, ByokProvider.Anthropic))
 						.onChange(async (value) => {
-							setCueCraftProviderModel(s, ByokProvider.Anthropic, value.trim());
+							setFirstRecallProviderModel(s, ByokProvider.Anthropic, value.trim());
 							stored.modelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
 							await this.plugin.saveSettings();
 						})
@@ -1698,13 +1698,13 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private syncAnthropicModelSelection(): void {
 		const s = this.plugin.settings;
-		const stored = cueCraftProviderSettings(s, ByokProvider.Anthropic);
+		const stored = firstRecallProviderSettings(s, ByokProvider.Anthropic);
 		const knownIds = new Set(
 			buildAnthropicModelOptions(stored.modelOptions).map(
 				(model) => model.id
 			)
 		);
-		const model = cueCraftProviderModel(s, ByokProvider.Anthropic);
+		const model = firstRecallProviderModel(s, ByokProvider.Anthropic);
 		stored.modelSelection = knownIds.has(model)
 			? model
 			: ANTHROPIC_CUSTOM_MODEL_ID;
@@ -1713,7 +1713,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private async refreshAnthropicModels(): Promise<void> {
 		const s = this.plugin.settings;
 		if (!this.plugin.isProviderCredentialSaved(ByokProvider.Anthropic)) {
-			new Notice("CueCraft: enter your Anthropic API key first.");
+			new Notice("FirstRecall: enter your Anthropic API key first.");
 			return;
 		}
 		let message: string;
@@ -1725,23 +1725,23 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				modelOptions.length > 0
 					? `Fetched ${modelOptions.length} Anthropic model${modelOptions.length === 1 ? "" : "s"} from your account.`
 					: "No Anthropic models were returned for this account. You can still enter a custom model ID.";
-			applyCueCraftListedModels(s, ByokProvider.Anthropic, modelOptions, message);
+			applyFirstRecallListedModels(s, ByokProvider.Anthropic, modelOptions, message);
 		} catch (error) {
 			const detail = error instanceof Error ? error.message : String(error);
 			message = detail
 				? `Could not fetch Anthropic models (${detail}). You can still enter a custom model ID.`
 				: "Could not fetch Anthropic models. You can still enter a custom model ID.";
-			applyCueCraftModelRefreshFailure(s, ByokProvider.Anthropic, message);
+			applyFirstRecallModelRefreshFailure(s, ByokProvider.Anthropic, message);
 		}
 		this.syncAnthropicModelSelection();
 		await this.plugin.saveSettings();
 		this.display();
-		new Notice(`CueCraft: ${message}`);
+		new Notice(`FirstRecall: ${message}`);
 	}
 
 	private renderProviderCredentialSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
-		const provider = cueCraftSelectedProvider(s);
+		const provider = firstRecallSelectedProvider(s);
 		if (!provider) return;
 		const definition = byokProviderDefinition(provider);
 		if (provider === "anthropic") {
@@ -1753,7 +1753,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				provider,
 				field: definition.credentialField,
 				onSaved: () => {
-					resetCueCraftFetchedModels(
+					resetFirstRecallFetchedModels(
 						s,
 						provider,
 						definition.credentialField.resetModelsMessage ??
@@ -1768,10 +1768,10 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				label: definition.credentialField.label,
 				description: definition.credentialField.description,
 				commandPlaceholder: definition.credentialField.placeholder,
-				getCommand: () => cueCraftProviderCredential(s, provider),
+				getCommand: () => firstRecallProviderCredential(s, provider),
 				setCommand: (value) => {
-					setCueCraftProviderCredential(s, provider, value);
-					resetCueCraftFetchedModels(
+					setFirstRecallProviderCredential(s, provider, value);
+					resetFirstRecallFetchedModels(
 						s,
 						provider,
 						definition.credentialField.resetModelsMessage ??
@@ -1786,7 +1786,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 
 	private renderProviderModelSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
-		const provider = cueCraftSelectedProvider(s);
+		const provider = firstRecallSelectedProvider(s);
 		if (!provider) return;
 		if (provider === "anthropic") {
 			this.renderAnthropicModelSettings(containerEl);
@@ -1799,7 +1799,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		containerEl: HTMLElement,
 		opts: {
 			provider: ByokProviderId;
-			field: CueCraftProviderDefinition["credentialField"];
+			field: FirstRecallProviderDefinition["credentialField"];
 			onSaved: () => void;
 		}
 	): void {
@@ -1809,7 +1809,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			fieldDescription: opts.field.description,
 			fieldPlaceholder: opts.field.placeholder,
 			saved,
-			credentialLength: cueCraftProviderCredentialLength(
+			credentialLength: firstRecallProviderCredentialLength(
 				this.plugin.settings,
 				opts.provider
 			),
@@ -1817,7 +1817,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		});
 		const savedMask = saved
 			? cloudCredentialMask(
-				cueCraftProviderCredentialLength(this.plugin.settings, opts.provider)
+				firstRecallProviderCredentialLength(this.plugin.settings, opts.provider)
 			)
 			: SAVED_CLOUD_CREDENTIAL_MASK;
 		let pendingKey = "";
@@ -1825,7 +1825,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			.setName(opts.field.label)
 			.setDesc(displayState.description)
 			.addText((text) => {
-				text.inputEl.addClass("cuecraft-api-key-input");
+				text.inputEl.addClass("firstrecall-api-key-input");
 				const updateEyeVisibility = (eye: HTMLButtonElement): void => {
 					const hasTypedReplacement =
 						text.inputEl.value.trim().length > 0 &&
@@ -1863,7 +1863,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				const eye = text.inputEl.insertAdjacentElement(
 					"afterend",
 					createEl("button", {
-						cls: "cuecraft-key-eye",
+						cls: "firstrecall-key-eye",
 						attr: { type: "button", "aria-label": "Show typed API key" },
 					})
 				) as HTMLButtonElement;
@@ -1885,9 +1885,9 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				.setButtonText(displayState.saveButtonLabel)
 				.setDisabled(!displayState.canEdit)
 				.onClick(async () => {
-					if (!isCueCraftCloudCredentialProvider(opts.provider)) return;
+					if (!isFirstRecallCloudCredentialProvider(opts.provider)) return;
 					if (!pendingKey) {
-						new Notice(`CueCraft: enter your ${opts.field.label} first.`);
+						new Notice(`FirstRecall: enter your ${opts.field.label} first.`);
 						return;
 					}
 					const result = await this.plugin.saveCloudProviderCredential(
@@ -1896,14 +1896,14 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					);
 					if (!result.ok) {
 						new Notice(
-							`CueCraft: could not save API key (${result.message ?? "secure storage unavailable"}).`
+							`FirstRecall: could not save API key (${result.message ?? "secure storage unavailable"}).`
 						);
 						return;
 					}
 					opts.onSaved();
 					await this.plugin.saveSettings();
 					this.display();
-					new Notice("CueCraft: API key saved securely.");
+					new Notice("FirstRecall: API key saved securely.");
 				})
 		);
 		if (saved) {
@@ -1912,24 +1912,24 @@ export class CueCraftSettingTab extends PluginSettingTab {
 					.setButtonText("Clear key")
 					.setDisabled(!displayState.canEdit)
 					.onClick(async () => {
-						if (!isCueCraftCloudCredentialProvider(opts.provider)) return;
+						if (!isFirstRecallCloudCredentialProvider(opts.provider)) return;
 						const result = await this.plugin.clearCloudProviderCredential(
 							opts.provider
 						);
 						if (!result.ok) {
 							new Notice(
-								`CueCraft: could not clear API key (${result.message ?? "secure storage unavailable"}).`
+								`FirstRecall: could not clear API key (${result.message ?? "secure storage unavailable"}).`
 							);
 							return;
 						}
 						opts.onSaved();
 						await this.plugin.saveSettings();
 						this.display();
-						new Notice("CueCraft: API key cleared.");
+						new Notice("FirstRecall: API key cleared.");
 					})
 			);
 		}
-		setting.settingEl.addClass("cuecraft-api-key-setting");
+		setting.settingEl.addClass("firstrecall-api-key-setting");
 	}
 
 	private renderFetchedModelSelector(
@@ -1953,7 +1953,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		const modelSetting = new Setting(containerEl)
 			.setName(opts.modelLabel)
 			.setDesc(opts.modelDesc);
-		modelSetting.settingEl.addClass("cuecraft-model-setting");
+		modelSetting.settingEl.addClass("firstrecall-model-setting");
 		renderModelCombobox({
 			containerEl: modelSetting.controlEl,
 			value: currentModel,
@@ -1975,8 +1975,8 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private renderCloudModelSettings(
 		containerEl: HTMLElement,
 		opts: {
-			provider: CueCraftFetchedModelProvider;
-			definition: CueCraftProviderDefinition;
+			provider: FirstRecallFetchedModelProvider;
+			definition: FirstRecallProviderDefinition;
 			getModel: () => string;
 			setModel: (v: string) => void;
 			hasCredential: () => boolean;
@@ -2020,7 +2020,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	private addModelRefreshButton(
 		setting: Setting,
 		opts: {
-			definition: CueCraftProviderDefinition;
+			definition: FirstRecallProviderDefinition;
 			hasFetchedModels: boolean;
 			disabled: boolean;
 			onClick: () => void;
@@ -2046,19 +2046,19 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private async refreshProviderModels(opts: {
-		provider: CueCraftFetchedModelProvider;
+		provider: FirstRecallFetchedModelProvider;
 		providerName: string;
 		emptyMessage: string;
 	}): Promise<void> {
 		if (!this.plugin.isProviderCredentialSaved(opts.provider)) {
 			const missingMessage =
 				byokProviderDefinition(opts.provider).credentialField.missingMessage;
-			new Notice(`CueCraft: ${missingMessage}`);
+			new Notice(`FirstRecall: ${missingMessage}`);
 			return;
 		}
 		try {
 			const raw = await this.plugin.listProviderModels(opts.provider);
-			applyCueCraftListedModels(
+			applyFirstRecallListedModels(
 				this.plugin.settings,
 				opts.provider,
 				raw,
@@ -2066,7 +2066,7 @@ export class CueCraftSettingTab extends PluginSettingTab {
 			);
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			applyCueCraftModelRefreshFailure(
+			applyFirstRecallModelRefreshFailure(
 				this.plugin.settings,
 				opts.provider,
 				message
@@ -2076,24 +2076,24 @@ export class CueCraftSettingTab extends PluginSettingTab {
 		}
 		await this.plugin.saveSettings();
 		this.display();
-		const successCount = cueCraftFetchedModelCount(
+		const successCount = firstRecallFetchedModelCount(
 			this.plugin.settings,
 			opts.provider
 		);
-		const refreshMessage = cueCraftModelRefreshMessage(
+		const refreshMessage = firstRecallModelRefreshMessage(
 			this.plugin.settings,
 			opts.provider
 		);
 		new Notice(
 			successCount > 0
-				? `CueCraft: Fetched ${successCount} ${opts.providerName} model${successCount === 1 ? "" : "s"}.`
-				: `CueCraft: ${refreshMessage}`
+				? `FirstRecall: Fetched ${successCount} ${opts.providerName} model${successCount === 1 ? "" : "s"}.`
+				: `FirstRecall: ${refreshMessage}`
 		);
 	}
 
 	/** Verify the selected provider is reachable and reports a readable result. */
 	private async testConnection(): Promise<void> {
-		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!selectedProvider) return;
 		const definition = byokProviderDefinition(selectedProvider);
 		if (definition.credentialKind === "command") {
@@ -2108,109 +2108,109 @@ export class CueCraftSettingTab extends PluginSettingTab {
 	}
 
 	private async testLocalCliProvider(): Promise<void> {
-		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!selectedProvider) return;
-		const command = cueCraftProviderCredential(
+		const command = firstRecallProviderCredential(
 			this.plugin.settings,
 			selectedProvider
 		);
 		if (!command.trim()) {
-			const providerName = cueCraftProviderLabel(selectedProvider);
-			new Notice(`CueCraft: enter your ${providerName} command first.`);
+			const providerName = firstRecallProviderLabel(selectedProvider);
+			new Notice(`FirstRecall: enter your ${providerName} command first.`);
 			return;
 		}
 		const provider = await this.plugin.makeProvider();
 		const status = await provider.testConnection();
 		if (status.ok) {
-			recordCueCraftProviderConnectionSuccess(this.plugin.settings);
+			recordFirstRecallProviderConnectionSuccess(this.plugin.settings);
 			await this.plugin.saveSettings();
 			this.display();
 		}
-		new Notice(formatCueCraftNotice(status.message));
+		new Notice(formatFirstRecallNotice(status.message));
 	}
 
 	private async testUrlProvider(): Promise<void> {
-		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!selectedProvider) return;
 		const definition = byokProviderDefinition(selectedProvider);
-		const url = cueCraftProviderCredential(this.plugin.settings, selectedProvider);
+		const url = firstRecallProviderCredential(this.plugin.settings, selectedProvider);
 		if (!url.trim()) {
-			new Notice(`CueCraft: ${definition.credentialField.missingMessage}`);
+			new Notice(`FirstRecall: ${definition.credentialField.missingMessage}`);
 			return;
 		}
-		let provider: CueCraftByokRuntime;
+		let provider: FirstRecallByokRuntime;
 		try {
 			provider = await this.plugin.makeProvider();
 		} catch (error) {
-			new Notice(formatCueCraftNotice(error instanceof Error ? error.message : String(error)));
+			new Notice(formatFirstRecallNotice(error instanceof Error ? error.message : String(error)));
 			return;
 		}
 		const status = await provider.testConnection();
 		if (status.ok) {
-			recordCueCraftProviderConnectionSuccess(this.plugin.settings);
+			recordFirstRecallProviderConnectionSuccess(this.plugin.settings);
 			await this.plugin.saveSettings();
 			this.display();
 		}
-		new Notice(formatCueCraftNotice(status.message));
+		new Notice(formatFirstRecallNotice(status.message));
 	}
 
 	private async testCloudProvider(): Promise<void> {
-		const selectedProvider = cueCraftSelectedProvider(this.plugin.settings);
+		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!selectedProvider) return;
 		if (!this.plugin.isProviderCredentialSaved(selectedProvider)) {
-			const providerName = cueCraftProviderLabel(selectedProvider);
-			new Notice(`CueCraft: enter your ${providerName} API key first.`);
+			const providerName = firstRecallProviderLabel(selectedProvider);
+			new Notice(`FirstRecall: enter your ${providerName} API key first.`);
 			return;
 		}
-		const selectedModel = cueCraftProviderModel(
+		const selectedModel = firstRecallProviderModel(
 			this.plugin.settings,
 			selectedProvider
 		).trim();
 		if (!selectedModel) {
 			try {
 				const models = await this.plugin.listProviderModels(
-					selectedProvider as CueCraftFetchedModelProvider
+					selectedProvider as FirstRecallFetchedModelProvider
 				);
-				recordCueCraftProviderConnectionSuccess(this.plugin.settings);
+				recordFirstRecallProviderConnectionSuccess(this.plugin.settings);
 				await this.plugin.saveSettings();
 				this.display();
 				const providerName = byokProviderDefinition(selectedProvider).shortLabel;
 				new Notice(
-					`CueCraft: Connected to ${providerName} (${models.length} model${models.length === 1 ? "" : "s"} available). Choose a model and test again to verify generation with that model.`
+					`FirstRecall: Connected to ${providerName} (${models.length} model${models.length === 1 ? "" : "s"} available). Choose a model and test again to verify generation with that model.`
 				);
 				return;
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
-				new Notice(formatCueCraftNotice(message));
+				new Notice(formatFirstRecallNotice(message));
 				return;
 			}
 		}
-		let provider: CueCraftByokRuntime;
+		let provider: FirstRecallByokRuntime;
 		try {
 			provider = await this.plugin.makeProvider();
 		} catch (error) {
-			new Notice(formatCueCraftNotice(error instanceof Error ? error.message : String(error)));
+			new Notice(formatFirstRecallNotice(error instanceof Error ? error.message : String(error)));
 			return;
 		}
 		const status = await provider.testConnection();
 		if (status.ok) {
-			recordCueCraftProviderConnectionSuccess(this.plugin.settings);
+			recordFirstRecallProviderConnectionSuccess(this.plugin.settings);
 			await this.plugin.saveSettings();
 			this.display();
 		}
 		if (status.ok && provider.id === "anthropic") {
-			const stored = cueCraftProviderSettings(this.plugin.settings, ByokProvider.Anthropic);
+			const stored = firstRecallProviderSettings(this.plugin.settings, ByokProvider.Anthropic);
 			const model = describeAnthropicModel(
-				cueCraftProviderModel(this.plugin.settings, ByokProvider.Anthropic),
+				firstRecallProviderModel(this.plugin.settings, ByokProvider.Anthropic),
 				stored.modelOptions
 			);
 			new Notice(
-				`CueCraft: Connected to Anthropic with ${model.label} (${model.rawId}).`
+				`FirstRecall: Connected to Anthropic with ${model.label} (${model.rawId}).`
 			);
 			return;
 		}
 		if (status.ok) {
-			new Notice(formatCueCraftNotice(status.message));
+			new Notice(formatFirstRecallNotice(status.message));
 			return;
 		}
 		if (
@@ -2219,18 +2219,18 @@ export class CueCraftSettingTab extends PluginSettingTab {
 				status.message
 			)
 		) {
-			const stored = cueCraftProviderSettings(this.plugin.settings, ByokProvider.Anthropic);
+			const stored = firstRecallProviderSettings(this.plugin.settings, ByokProvider.Anthropic);
 			new Notice(
-				formatCueCraftNotice(
+				formatFirstRecallNotice(
 					formatAnthropicUnavailableModelMessage(
-						cueCraftProviderModel(this.plugin.settings, ByokProvider.Anthropic),
+						firstRecallProviderModel(this.plugin.settings, ByokProvider.Anthropic),
 						stored.modelOptions
 					)
 				)
 			);
 			return;
 		}
-		new Notice(formatCueCraftNotice(status.message));
+		new Notice(formatFirstRecallNotice(status.message));
 	}
 }
 
@@ -2252,7 +2252,7 @@ class StudyAreaConfirmModal extends Modal {
 		contentEl.empty();
 		contentEl.createEl("h2", { text: this.opts.title });
 		contentEl.createEl("p", { text: this.opts.message });
-		const actionsEl = contentEl.createDiv({ cls: "cuecraft-modal-actions" });
+		const actionsEl = contentEl.createDiv({ cls: "firstrecall-modal-actions" });
 		const cancelBtn = actionsEl.createEl("button", {
 			text: "Cancel",
 			attr: { type: "button" },

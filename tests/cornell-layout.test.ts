@@ -31,12 +31,12 @@ describe("editor cue font size", () => {
 
 	it("maps each known size to its scoped CSS class", () => {
 		for (const f of CUE_FONT_SIZES) {
-			expect(cueFontSizeClass(f.id)).toBe(`cuecraft-cuefont-${f.id}`);
+			expect(cueFontSizeClass(f.id)).toBe(`firstrecall-cuefont-${f.id}`);
 		}
 	});
 
 	it("falls back to the default class for unknown/garbage values", () => {
-		const fallback = `cuecraft-cuefont-${DEFAULT_CUE_FONT_SIZE}`;
+		const fallback = `firstrecall-cuefont-${DEFAULT_CUE_FONT_SIZE}`;
 		for (const bad of ["nope", null, undefined, 42, {}]) {
 			expect(cueFontSizeClass(bad)).toBe(fallback);
 		}

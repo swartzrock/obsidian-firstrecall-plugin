@@ -115,7 +115,7 @@ describe("exportFilePath", () => {
 
 	it("returns the Anki export path", () => {
 		expect(exportFilePath("", "Note", "anki")).toBe(
-			"Note (recall-questions-and-key-terms.anki).txt"
+			"Note (recall-questions-and-key-terms.anki).tsv"
 		);
 	});
 });

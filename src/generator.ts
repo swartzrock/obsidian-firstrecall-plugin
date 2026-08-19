@@ -8,8 +8,8 @@ import {
 	type CueGenerationOptions,
 } from "./cue-generation";
 import type {
-	CueCraftCueBatchResult,
-	CueCraftCueProviderRuntime,
+	FirstRecallCueBatchResult,
+	FirstRecallCueProviderRuntime,
 } from "./cue-provider";
 import type { NoteBriefOutput, SectionSummary } from "./schemas";
 
@@ -43,7 +43,7 @@ export interface GenerateSectionParams {
 		content: string;
 		contentHash: string;
 	};
-	provider: CueCraftCueProviderRuntime;
+	provider: FirstRecallCueProviderRuntime;
 	options?: Partial<CueGenerationOptions>;
 	noteContext?: string;
 	maxContextChars?: number;
@@ -52,7 +52,7 @@ export interface GenerateSectionParams {
 
 export interface GenerateSectionBatchParams {
 	sections: GenerateSectionParams["section"][];
-	provider: CueCraftCueProviderRuntime;
+	provider: FirstRecallCueProviderRuntime;
 	options?: Partial<CueGenerationOptions>;
 	noteContext?: string;
 	maxContextChars?: number;
@@ -62,7 +62,7 @@ export interface GenerateSectionBatchParams {
 export interface GenerateNoteParams {
 	noteTitle: string;
 	markdown: string;
-	provider: CueCraftCueProviderRuntime;
+	provider: FirstRecallCueProviderRuntime;
 	options?: Partial<CueGenerationOptions>;
 	useWholeNoteContext?: boolean;
 	/** Cap (in chars) on note text injected into prompts; keeps requests within model context limits. */
@@ -83,7 +83,7 @@ export interface NoteBriefSectionSource {
 export interface GenerateNoteBriefParams {
 	noteTitle: string;
 	markdown: string;
-	provider: CueCraftCueProviderRuntime;
+	provider: FirstRecallCueProviderRuntime;
 	sections: readonly NoteBriefSectionSource[];
 	maxContextChars?: number;
 	signal?: AbortSignal;
@@ -121,7 +121,7 @@ export function resolveSectionConcurrency(value: unknown): number {
 
 export function resolveEffectiveSectionConcurrency(
 	value: unknown,
-	provider: CueCraftCueProviderRuntime
+	provider: FirstRecallCueProviderRuntime
 ): number {
 	const requested = resolveSectionConcurrency(value);
 	const limit = provider.sectionConcurrencyLimit;
@@ -149,7 +149,7 @@ function emptySectionResult(
 
 function applyCueResult(
 	result: SectionResult,
-	item: CueCraftCueBatchResult | undefined
+	item: FirstRecallCueBatchResult | undefined
 ): void {
 	if (!item) {
 		result.error = "Provider returned no section study card for this section.";

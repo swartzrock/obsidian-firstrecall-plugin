@@ -5,7 +5,7 @@ import {
 } from "@swartzrock/byok-runtime";
 import { byokProviderDefinition } from "./byok-provider-metadata";
 
-export type CueCraftCloudCredentialProvider = Extract<
+export type FirstRecallCloudCredentialProvider = Extract<
 	ByokProviderConfig,
 	{ apiKey: string }
 >["provider"];
@@ -53,17 +53,17 @@ export interface CredentialStoreWriteResult {
 export interface SecureCredentialStore {
 	availability(): CredentialStoreAvailability;
 	metadata(
-		provider: CueCraftCloudCredentialProvider
+		provider: FirstRecallCloudCredentialProvider
 	): Promise<CredentialStoreReadResult>;
 	read(
-		provider: CueCraftCloudCredentialProvider
+		provider: FirstRecallCloudCredentialProvider
 	): Promise<CredentialStoreReadResult>;
 	save(
-		provider: CueCraftCloudCredentialProvider,
+		provider: FirstRecallCloudCredentialProvider,
 		value: string
 	): Promise<CredentialStoreWriteResult>;
 	clear(
-		provider: CueCraftCloudCredentialProvider
+		provider: FirstRecallCloudCredentialProvider
 	): Promise<CredentialStoreWriteResult>;
 }
 
@@ -77,26 +77,26 @@ type StoredCredentialPayloadResult =
 	| { ok: true; payload: StoredCredentialPayload }
 	| CredentialStoreReadResult;
 
-export const CUECRAFT_SECRET_STORAGE_MIN_APP_VERSION = "1.11.4";
+export const FIRSTRECALL_SECRET_STORAGE_MIN_APP_VERSION = "1.11.4";
 
-export const CUECRAFT_CLOUD_CREDENTIAL_PROVIDERS: readonly CueCraftCloudCredentialProvider[] =
+export const FIRSTRECALL_CLOUD_CREDENTIAL_PROVIDERS: readonly FirstRecallCloudCredentialProvider[] =
 	(BYOK_PROVIDER_IDS as readonly ByokProviderId[]).filter(
-		(provider): provider is CueCraftCloudCredentialProvider =>
+		(provider): provider is FirstRecallCloudCredentialProvider =>
 			byokProviderDefinition(provider).credentialKind === "api-key"
 	);
 
-export function isCueCraftCloudCredentialProvider(
+export function isFirstRecallCloudCredentialProvider(
 	provider: ByokProviderId
-): provider is CueCraftCloudCredentialProvider {
-	return (CUECRAFT_CLOUD_CREDENTIAL_PROVIDERS as readonly string[]).includes(
+): provider is FirstRecallCloudCredentialProvider {
+	return (FIRSTRECALL_CLOUD_CREDENTIAL_PROVIDERS as readonly string[]).includes(
 		provider
 	);
 }
 
-export function cueCraftCredentialSecretId(
-	provider: CueCraftCloudCredentialProvider
+export function firstRecallCredentialSecretId(
+	provider: FirstRecallCloudCredentialProvider
 ): string {
-	return `cuecraft-${provider}-api-key`;
+	return `firstrecall-${provider}-api-key`;
 }
 
 export function createSecureCredentialStore(opts: {
@@ -112,7 +112,7 @@ export function createSecureCredentialStore(opts: {
 			return {
 				ok: false,
 				reason: "secret-storage-unavailable",
-				message: `Obsidian secret storage is unavailable. Update Obsidian to ${CUECRAFT_SECRET_STORAGE_MIN_APP_VERSION} or newer.`,
+				message: `Obsidian secret storage is unavailable. Update Obsidian to ${FIRSTRECALL_SECRET_STORAGE_MIN_APP_VERSION} or newer.`,
 			};
 		}
 		return { ok: true };
@@ -122,18 +122,18 @@ export function createSecureCredentialStore(opts: {
 		if (reportedUnavailable) return;
 		reportedUnavailable = true;
 		const secretStorage = opts.secretStorage;
-		console.warn("CueCraft secure storage unavailable.", {
+		console.warn("FirstRecall secure storage unavailable.", {
 			reason,
 			hasSecretStorage: Boolean(secretStorage),
 			hasGetSecret: typeof secretStorage?.getSecret === "function",
 			hasSetSecret: typeof secretStorage?.setSecret === "function",
 			hasListSecrets: typeof secretStorage?.listSecrets === "function",
-			minimumObsidianVersion: CUECRAFT_SECRET_STORAGE_MIN_APP_VERSION,
+			minimumObsidianVersion: FIRSTRECALL_SECRET_STORAGE_MIN_APP_VERSION,
 		});
 	}
 
 	function readPayload(
-		provider: CueCraftCloudCredentialProvider
+		provider: FirstRecallCloudCredentialProvider
 	): StoredCredentialPayloadResult {
 		const available = availability();
 		if (!available.ok) return available;
@@ -141,7 +141,7 @@ export function createSecureCredentialStore(opts: {
 		if (!isUsableSecretStorage(secretStorage)) return availability();
 		let raw: string | null;
 		try {
-			raw = secretStorage.getSecret(cueCraftCredentialSecretId(provider));
+			raw = secretStorage.getSecret(firstRecallCredentialSecretId(provider));
 		} catch (error) {
 			return failure("read-failed", error);
 		}
@@ -162,7 +162,7 @@ export function createSecureCredentialStore(opts: {
 				return {
 					ok: false,
 					reason: "invalid-secret",
-					message: "CueCraft credential has an unsupported format.",
+					message: "FirstRecall credential has an unsupported format.",
 				};
 			}
 			if (!parsed.value) {
@@ -186,7 +186,7 @@ export function createSecureCredentialStore(opts: {
 	}
 
 	async function metadata(
-		provider: CueCraftCloudCredentialProvider
+		provider: FirstRecallCloudCredentialProvider
 	): Promise<CredentialStoreReadResult> {
 		const result = readPayload(provider);
 		if (!("payload" in result)) return result;
@@ -201,7 +201,7 @@ export function createSecureCredentialStore(opts: {
 	}
 
 	async function read(
-		provider: CueCraftCloudCredentialProvider
+		provider: FirstRecallCloudCredentialProvider
 	): Promise<CredentialStoreReadResult> {
 		const result = readPayload(provider);
 		if (!("payload" in result)) return result;
@@ -217,7 +217,7 @@ export function createSecureCredentialStore(opts: {
 	}
 
 	async function save(
-		provider: CueCraftCloudCredentialProvider,
+		provider: FirstRecallCloudCredentialProvider,
 		value: string
 	): Promise<CredentialStoreWriteResult> {
 		const available = availability();
@@ -227,7 +227,7 @@ export function createSecureCredentialStore(opts: {
 		const token = now().toISOString();
 		try {
 			secretStorage.setSecret(
-				cueCraftCredentialSecretId(provider),
+				firstRecallCredentialSecretId(provider),
 				JSON.stringify({
 					version: 1,
 					value,
@@ -244,7 +244,7 @@ export function createSecureCredentialStore(opts: {
 	}
 
 	async function clear(
-		provider: CueCraftCloudCredentialProvider
+		provider: FirstRecallCloudCredentialProvider
 	): Promise<CredentialStoreWriteResult> {
 		const available = availability();
 		if (!available.ok) return available;
@@ -252,7 +252,7 @@ export function createSecureCredentialStore(opts: {
 		if (!isUsableSecretStorage(secretStorage)) return availability();
 		try {
 			secretStorage.setSecret(
-				cueCraftCredentialSecretId(provider),
+				firstRecallCredentialSecretId(provider),
 				JSON.stringify({
 					version: 1,
 					value: "",

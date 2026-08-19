@@ -55,16 +55,16 @@ describe("renderAppearanceThumbnailGroup", () => {
 		});
 
 		const buttons = root.querySelectorAll<HTMLButtonElement>(
-			".cuecraft-thumbnail-button"
+			".firstrecall-thumbnail-button"
 		);
 		expect(buttons).toHaveLength(3);
 		expect(buttons[0].classList.contains("is-selected")).toBe(true);
 		expect(buttons[0].getAttribute("aria-pressed")).toBe("true");
 		expect(buttons[1].classList.contains("is-selected")).toBe(false);
 		expect(buttons[1].getAttribute("aria-pressed")).toBe("false");
-		expect(root.querySelector(".cuecraft-thumbnail-selected")).toBeNull();
+		expect(root.querySelector(".firstrecall-thumbnail-selected")).toBeNull();
 		expect(
-			root.querySelector(".cuecraft-thumbnail-group")?.getAttribute("aria-label")
+			root.querySelector(".firstrecall-thumbnail-group")?.getAttribute("aria-label")
 		).toBe("Editor cue style");
 	});
 
@@ -180,10 +180,10 @@ describe("Editing View thumbnail option recipes", () => {
 
 		for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
 			expect(
-				root.querySelector(`.cuecraft-preview-editor-display-${option.id}`)
+				root.querySelector(`.firstrecall-preview-editor-display-${option.id}`)
 			).not.toBeNull();
 		}
-		expect(root.querySelectorAll(".cuecraft-preview-editor-scene")).toHaveLength(
+		expect(root.querySelectorAll(".firstrecall-preview-editor-scene")).toHaveLength(
 			EDITOR_CUE_DISPLAY_OPTIONS.length
 		);
 		const cornell = root.querySelector<HTMLElement>(
@@ -193,22 +193,22 @@ describe("Editing View thumbnail option recipes", () => {
 			"[data-option-id='inline-cues']"
 		);
 		expect(
-			cornell?.querySelector(".cuecraft-preview-editor-cue-card-cornell")
+			cornell?.querySelector(".firstrecall-preview-editor-cue-card-cornell")
 		).not.toBeNull();
 		expect(
-			inline?.querySelector(".cuecraft-preview-editor-cue-card-inline-cues")
+			inline?.querySelector(".firstrecall-preview-editor-cue-card-inline-cues")
 		).not.toBeNull();
 		expect(
-			cornell?.querySelector(".cuecraft-preview-editor-cue-grip")
+			cornell?.querySelector(".firstrecall-preview-editor-cue-grip")
 		).not.toBeNull();
 		expect(
-			inline?.querySelector(".cuecraft-preview-editor-cue-grip")
+			inline?.querySelector(".firstrecall-preview-editor-cue-grip")
 		).toBeNull();
 		expect(
-			cornell?.querySelectorAll(".cuecraft-preview-editor-cue-section")
+			cornell?.querySelectorAll(".firstrecall-preview-editor-cue-section")
 		).toHaveLength(3);
 		expect(
-			inline?.querySelectorAll(".cuecraft-preview-editor-cue-section")
+			inline?.querySelectorAll(".firstrecall-preview-editor-cue-section")
 		).toHaveLength(3);
 		expect(cornell?.textContent).toContain("SUMMARY");
 		expect(cornell?.textContent).toContain("RECALL QUESTION");
@@ -237,7 +237,7 @@ describe("Editing View thumbnail option recipes", () => {
 			"[data-option-id='inline-cues']"
 		);
 		expect(
-			button?.querySelector(".cuecraft-preview-editor-cue-question")
+			button?.querySelector(".firstrecall-preview-editor-cue-question")
 				?.textContent
 		).toBe(
 			"How does org-trained AI help upskill employees and improve agent reusability?"

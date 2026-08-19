@@ -1,5 +1,5 @@
 ---
-title: CueCraft Release Vocabulary Baseline - Plan
+title: FirstRecall Release Vocabulary Baseline - Plan
 type: implementation
 date: 2026-08-17
 artifact_contract: ce-unified-plan/v1
@@ -8,7 +8,7 @@ product_contract_source: user-direction
 execution: code
 ---
 
-# CueCraft Release Vocabulary Baseline - Plan
+# FirstRecall Release Vocabulary Baseline - Plan
 
 ## Goal Capsule
 

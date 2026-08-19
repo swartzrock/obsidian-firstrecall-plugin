@@ -1,6 +1,6 @@
 import { composeSectionCueBatchPrompt } from "./cue-instructions";
 import { DEFAULT_QUESTION_TYPE } from "./cue-generation";
-import type { CueCraftCueBatchResult, CueCraftCueInput } from "./cue-provider";
+import type { FirstRecallCueBatchResult, FirstRecallCueInput } from "./cue-provider";
 import { validateCueBatch } from "./schemas";
 import { SUMMARY_JSON_SCHEMA } from "./study-material-instructions";
 
@@ -48,7 +48,7 @@ export function cueBatchJsonSchema(count: number): string {
 }
 
 export function buildCueBatchPrompt(
-	inputs: CueCraftCueInput[]
+	inputs: FirstRecallCueInput[]
 ): string {
 	const first = inputs[0];
 	const sections = inputs
@@ -69,13 +69,13 @@ export function buildCueBatchPrompt(
 }
 
 export interface ParsedCueBatch {
-	results: CueCraftCueBatchResult[];
+	results: FirstRecallCueBatchResult[];
 }
 
 export function parseCueBatch(raw: string, expectedCount: number): ParsedCueBatch | string {
 	const result = validateCueBatch(raw, expectedCount);
 	if (!result.ok) return result.error;
-	const results = result.value.map<CueCraftCueBatchResult>((item) =>
+	const results = result.value.map<FirstRecallCueBatchResult>((item) =>
 		item.value ? { cue: item.value } : { error: item.error ?? "Invalid section study card." }
 	);
 	return {

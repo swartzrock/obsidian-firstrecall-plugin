@@ -33,9 +33,9 @@ import {
 	parseCueBatch,
 } from "./local-cli-cue-batch";
 import type {
-	CueCraftCueInput,
-	CueCraftNoteBriefInput,
-	CueCraftCueProviderRuntime,
+	FirstRecallCueInput,
+	FirstRecallNoteBriefInput,
+	FirstRecallCueProviderRuntime,
 } from "./cue-provider";
 import {
 	buildNoteBriefPrompt,
@@ -56,43 +56,43 @@ import {
 	type CueOutput,
 	type NoteBriefOutput,
 } from "./schemas";
-import type { CueCraftSettings } from "./settings";
+import type { FirstRecallSettings } from "./settings";
 import {
-	isCueCraftCloudCredentialProvider,
-	type CueCraftCloudCredentialProvider,
+	isFirstRecallCloudCredentialProvider,
+	type FirstRecallCloudCredentialProvider,
 	type SecureCredentialStore,
 } from "./secure-credential-store";
 
-export type CueCraftByokRuntime = CueCraftCueProviderRuntime;
-export type CueCraftTransport = ByokTransport;
-export type CueCraftProviderFactoryDeps = ByokProviderDeps;
-export type CueCraftProviderConnectionStatusMap = ByokVerificationSnapshotMap;
+export type FirstRecallByokRuntime = FirstRecallCueProviderRuntime;
+export type FirstRecallTransport = ByokTransport;
+export type FirstRecallProviderFactoryDeps = ByokProviderDeps;
+export type FirstRecallProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type { ByokProviderConfig, ByokProviderDeps } from "@swartzrock/byok-runtime";
 
-type CueCraftApiKeyProvider = Extract<
+type FirstRecallApiKeyProvider = Extract<
 	ByokProviderConfig,
 	{ apiKey: string }
 >["provider"];
-type CueCraftUrlProvider = Extract<
+type FirstRecallUrlProvider = Extract<
 	ByokProviderConfig,
 	{ url?: string }
 >["provider"];
-type CueCraftCommandProvider = Extract<
+type FirstRecallCommandProvider = Extract<
 	ByokProviderConfig,
 	{ command: string }
 >["provider"];
 export type {
-	CueCraftCueBatchResult,
-	CueCraftCueInput,
-	CueCraftCueOutput,
-	CueCraftNoteBriefInput,
-	CueCraftNoteBriefOutput,
+	FirstRecallCueBatchResult,
+	FirstRecallCueInput,
+	FirstRecallCueOutput,
+	FirstRecallNoteBriefInput,
+	FirstRecallNoteBriefOutput,
 } from "./cue-provider";
 
-export type CueCraftFetchedModelProvider =
+export type FirstRecallFetchedModelProvider =
 	ByokProviderId;
 
-export interface CueCraftAppliedModelRefresh {
+export interface FirstRecallAppliedModelRefresh {
 	models: string[];
 	options: ByokModelOption[];
 	message: string;
@@ -129,12 +129,12 @@ const CUE_JSON_SCHEMA = JSON.stringify({
 
 const NOTE_BRIEF_SCHEMA = JSON.stringify(NOTE_BRIEF_JSON_SCHEMA);
 
-function cueCraftProviderError(message: string): ByokProviderError {
+function firstRecallProviderError(message: string): ByokProviderError {
 	return new ByokProviderError(message);
 }
 
 function debugModelTextFailure(kind: string, stage: "initial" | "repair", text: string, error: string): void {
-	console.warn("[CueCraft BYOK] Model output validation failed", {
+	console.warn("[FirstRecall BYOK] Model output validation failed", {
 		kind,
 		stage,
 		error,
@@ -185,7 +185,7 @@ async function normalizeOllamaJsonResponse(response: Response): Promise<Response
 		});
 	}
 	if (typeof generatedText === "string" && generatedText.trim() === "") {
-		console.warn("[CueCraft BYOK] Ollama returned an empty JSON response", {
+		console.warn("[FirstRecall BYOK] Ollama returned an empty JSON response", {
 			status: response.status,
 			responseKeys: Object.keys(record),
 			responseLength: generatedText.length,
@@ -197,10 +197,10 @@ async function normalizeOllamaJsonResponse(response: Response): Promise<Response
 	return response;
 }
 
-function cueCraftProviderDeps(
+function firstRecallProviderDeps(
 	config: ByokProviderConfig,
-	deps: CueCraftProviderFactoryDeps
-): CueCraftProviderFactoryDeps {
+	deps: FirstRecallProviderFactoryDeps
+): FirstRecallProviderFactoryDeps {
 	if (config.provider !== "ollama") return deps;
 	return {
 		...deps,
@@ -222,11 +222,11 @@ function cueCraftProviderDeps(
 
 async function generateCueFromObjectProvider(
 	runtime: ByokProviderRuntime,
-	input: CueCraftCueInput,
+	input: FirstRecallCueInput,
 	signal?: AbortSignal
 ): Promise<CueOutput> {
 	if (!runtime.generateObject) {
-		throw cueCraftProviderError("Provider does not support structured output.");
+		throw firstRecallProviderError("Provider does not support structured output.");
 	}
 	const raw = await runtime.generateObject({
 		schema: cueGenerationResponseSchema,
@@ -234,16 +234,16 @@ async function generateCueFromObjectProvider(
 	}, signal);
 	const response = cueGenerationResponseSchema.safeParse(raw);
 	if (!response.success) {
-		throw cueCraftProviderError(
+		throw firstRecallProviderError(
 			`Model output could not be validated: ${formatZodError(response.error)}`
 		);
 	}
 	if (isInsufficientSource(response.data)) {
-		throw cueCraftProviderError(INSUFFICIENT_SOURCE_ERROR);
+		throw firstRecallProviderError(INSUFFICIENT_SOURCE_ERROR);
 	}
 	const parsed = cueOutputSchema.safeParse(raw);
 	if (!parsed.success) {
-		throw cueCraftProviderError(
+		throw firstRecallProviderError(
 			`Model output could not be validated: ${formatZodError(parsed.error)}`
 		);
 	}
@@ -252,7 +252,7 @@ async function generateCueFromObjectProvider(
 
 async function generateCueFromTextProvider(
 	runtime: ByokProviderRuntime,
-	input: CueCraftCueInput,
+	input: FirstRecallCueInput,
 	signal?: AbortSignal
 ): Promise<CueOutput> {
 	const basePrompt = buildSectionCuePrompt(input);
@@ -286,21 +286,21 @@ async function generateCueFromTextProvider(
 		}
 	}
 	if (!result.ok) {
-		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
+		throw firstRecallProviderError(`Model output could not be validated: ${result.error}`);
 	}
 	if (isInsufficientSource(result.value)) {
-		throw cueCraftProviderError(INSUFFICIENT_SOURCE_ERROR);
+		throw firstRecallProviderError(INSUFFICIENT_SOURCE_ERROR);
 	}
 	return result.value;
 }
 
 async function generateNoteBriefFromObjectProvider(
 	runtime: ByokProviderRuntime,
-	input: CueCraftNoteBriefInput,
+	input: FirstRecallNoteBriefInput,
 	signal?: AbortSignal
 ): Promise<NoteBriefOutput> {
 	if (!runtime.generateObject) {
-		throw cueCraftProviderError("Provider does not support structured output.");
+		throw firstRecallProviderError("Provider does not support structured output.");
 	}
 	const raw = await runtime.generateObject({
 		schema: noteBriefGenerationSchema,
@@ -308,7 +308,7 @@ async function generateNoteBriefFromObjectProvider(
 	}, signal);
 	const parsed = noteBriefOutputSchema.safeParse(raw);
 	if (!parsed.success) {
-		throw cueCraftProviderError(
+		throw firstRecallProviderError(
 			`Model output could not be validated: ${formatZodError(parsed.error)}`
 		);
 	}
@@ -317,7 +317,7 @@ async function generateNoteBriefFromObjectProvider(
 
 async function generateNoteBriefFromTextProvider(
 	runtime: ByokProviderRuntime,
-	input: CueCraftNoteBriefInput,
+	input: FirstRecallNoteBriefInput,
 	signal?: AbortSignal
 ): Promise<NoteBriefOutput> {
 	const basePrompt = buildNoteBriefPrompt(input);
@@ -350,14 +350,14 @@ async function generateNoteBriefFromTextProvider(
 		}
 	}
 	if (!result.ok) {
-		throw cueCraftProviderError(`Model output could not be validated: ${result.error}`);
+		throw firstRecallProviderError(`Model output could not be validated: ${result.error}`);
 	}
 	return result.value;
 }
 
 async function generateCueBatchFromTextProvider(
 	runtime: ByokProviderRuntime,
-	inputs: CueCraftCueInput[],
+	inputs: FirstRecallCueInput[],
 	signal?: AbortSignal
 ) {
 	if (inputs.length === 0) return [];
@@ -403,16 +403,16 @@ async function generateCueBatchFromTextProvider(
 		}
 	}
 	if (typeof result === "string") {
-		throw cueCraftProviderError(`Model output could not be validated: ${result}`);
+		throw firstRecallProviderError(`Model output could not be validated: ${result}`);
 	}
 	return result.results;
 }
 
-export function wrapCueCraftByokRuntime(
+export function wrapFirstRecallByokRuntime(
 	runtime: ByokProviderRuntime
-): CueCraftByokRuntime {
+): FirstRecallByokRuntime {
 	const generateFromObject = Boolean(runtime.generateObject);
-	const cueRuntime: CueCraftByokRuntime = {
+	const cueRuntime: FirstRecallByokRuntime = {
 		id: runtime.id,
 		label: runtime.label,
 		requiresNetwork: runtime.requiresNetwork,
@@ -439,34 +439,34 @@ export function wrapCueCraftByokRuntime(
 	return cueRuntime;
 }
 
-export class CueCraftCredentialUnavailableError extends Error {
+export class FirstRecallCredentialUnavailableError extends Error {
 	constructor(
-		readonly provider: CueCraftCloudCredentialProvider,
+		readonly provider: FirstRecallCloudCredentialProvider,
 		readonly reason: string,
 		message: string
 	) {
 		super(message);
-		this.name = "CueCraftCredentialUnavailableError";
+		this.name = "FirstRecallCredentialUnavailableError";
 	}
 }
 
-export interface CueCraftCredentialStorageResult {
+export interface FirstRecallCredentialStorageResult {
 	settingsChanged: boolean;
 	warnings: string[];
-	securedProviders: CueCraftCloudCredentialProvider[];
+	securedProviders: FirstRecallCloudCredentialProvider[];
 }
 
 type ProviderSettingsDefaults = Pick<
-	CueCraftSettings,
+	FirstRecallSettings,
 	"byok"
 >;
 
-export function normalizeCueCraftProviderSettings(
-	settings: CueCraftSettings,
+export function normalizeFirstRecallProviderSettings(
+	settings: FirstRecallSettings,
 	defaults: ProviderSettingsDefaults,
 	rawSettings: unknown = settings
 ): void {
-	settings.byok = normalizeCueCraftByokSettings(defaults.byok, rawSettings);
+	settings.byok = normalizeFirstRecallByokSettings(defaults.byok, rawSettings);
 }
 
 function emptyStoredProviderSettings(): ByokProviderStoredSettings {
@@ -484,10 +484,10 @@ function emptyStoredProviderSettings(): ByokProviderStoredSettings {
 	};
 }
 
-function normalizeCueCraftByokSettings(
-	defaults: CueCraftSettings["byok"],
+function normalizeFirstRecallByokSettings(
+	defaults: FirstRecallSettings["byok"],
 	rawSettings: unknown
-): CueCraftSettings["byok"] {
+): FirstRecallSettings["byok"] {
 	const rawByok = (rawSettings as { byok?: unknown } | null | undefined)?.byok;
 	const hasRawByok = Boolean(
 		rawByok &&
@@ -495,7 +495,7 @@ function normalizeCueCraftByokSettings(
 			"providers" in rawByok
 	);
 	const existing = hasRawByok
-		? (rawByok as Partial<CueCraftSettings["byok"]>)
+		? (rawByok as Partial<FirstRecallSettings["byok"]>)
 		: {};
 	const parsed = parseByokStoredSettings(hasRawByok ? rawByok : defaults);
 	const providers: ByokStoredSettings["providers"] = {};
@@ -506,7 +506,7 @@ function normalizeCueCraftByokSettings(
 		};
 	}
 	return {
-		selectedProvider: normalizeCueCraftSelectedProvider(
+		selectedProvider: normalizeFirstRecallSelectedProvider(
 			existing.selectedProvider ?? defaults.selectedProvider
 		),
 		providers,
@@ -514,41 +514,41 @@ function normalizeCueCraftByokSettings(
 	};
 }
 
-function normalizeCueCraftSelectedProvider(value: unknown): ByokProviderId | null {
+function normalizeFirstRecallSelectedProvider(value: unknown): ByokProviderId | null {
 	if (isByokProviderId(value)) return value;
 	if (value === "codex" || value === "claude") return normalizeProviderId(value);
 	return null;
 }
 
-export function cueCraftSelectedProvider(
-	settings: CueCraftSettings
+export function firstRecallSelectedProvider(
+	settings: FirstRecallSettings
 ): ByokProviderId | null {
-	return normalizeCueCraftSelectedProvider(
+	return normalizeFirstRecallSelectedProvider(
 		(settings.byok as { selectedProvider?: unknown } | undefined)
 			?.selectedProvider
 	);
 }
 
-function requireCueCraftSelectedProvider(
-	settings: CueCraftSettings
+function requireFirstRecallSelectedProvider(
+	settings: FirstRecallSettings
 ): ByokProviderId {
-	const provider = cueCraftSelectedProvider(settings);
-	if (!provider) throw cueCraftProviderError("Choose an AI provider in Settings.");
+	const provider = firstRecallSelectedProvider(settings);
+	if (!provider) throw firstRecallProviderError("Choose an AI provider in Settings.");
 	return provider;
 }
 
-export function setCueCraftSelectedProvider(
-	settings: CueCraftSettings,
+export function setFirstRecallSelectedProvider(
+	settings: FirstRecallSettings,
 	provider: ByokProviderId
 ): void {
-	ensureCueCraftByokSettings(settings).selectedProvider = provider;
+	ensureFirstRecallByokSettings(settings).selectedProvider = provider;
 }
 
-function ensureCueCraftByokSettings(
-	settings: CueCraftSettings
-): CueCraftSettings["byok"] {
-	const maybeSettings = settings as CueCraftSettings & {
-		byok?: CueCraftSettings["byok"];
+function ensureFirstRecallByokSettings(
+	settings: FirstRecallSettings
+): FirstRecallSettings["byok"] {
+	const maybeSettings = settings as FirstRecallSettings & {
+		byok?: FirstRecallSettings["byok"];
 	};
 	if (!maybeSettings.byok?.providers) {
 		maybeSettings.byok = {
@@ -564,12 +564,12 @@ function ensureCueCraftByokSettings(
 	return maybeSettings.byok;
 }
 
-export function cueCraftProviderSettings(
-	settings: CueCraftSettings,
+export function firstRecallProviderSettings(
+	settings: FirstRecallSettings,
 	provider?: ByokProviderId
 ): ByokProviderStoredSettings {
-	provider ??= requireCueCraftSelectedProvider(settings);
-	const providers = ensureCueCraftByokSettings(settings).providers;
+	provider ??= requireFirstRecallSelectedProvider(settings);
+	const providers = ensureFirstRecallByokSettings(settings).providers;
 	const stored = {
 		...emptyStoredProviderSettings(),
 		...(providers[provider] ?? {}),
@@ -603,77 +603,77 @@ export function cueCraftProviderSettings(
 	return stored;
 }
 
-export function setCueCraftProviderCredential(
-	settings: CueCraftSettings,
+export function setFirstRecallProviderCredential(
+	settings: FirstRecallSettings,
 	provider: ByokProviderId,
 	value: string
 ): void {
-	cueCraftProviderSettings(settings, provider).credential = value;
+	firstRecallProviderSettings(settings, provider).credential = value;
 }
 
-export function setCueCraftProviderCredentialMetadata(
-	settings: CueCraftSettings,
+export function setFirstRecallProviderCredentialMetadata(
+	settings: FirstRecallSettings,
 	provider: ByokProviderId,
 	metadata: { saved: boolean; token: string; length: number }
 ): void {
-	const stored = cueCraftProviderSettings(settings, provider);
+	const stored = firstRecallProviderSettings(settings, provider);
 	stored.credentialSaved = metadata.saved;
 	stored.credentialUpdatedAt = metadata.token;
 	stored.credentialLength = metadata.length;
 }
 
-export function clearCueCraftProviderCredentialMetadata(
-	settings: CueCraftSettings,
+export function clearFirstRecallProviderCredentialMetadata(
+	settings: FirstRecallSettings,
 	provider: ByokProviderId
 ): void {
-	setCueCraftProviderCredentialMetadata(settings, provider, {
+	setFirstRecallProviderCredentialMetadata(settings, provider, {
 		saved: false,
 		token: "",
 		length: 0,
 	});
 }
 
-export function clearCueCraftStoredCloudCredential(
-	settings: CueCraftSettings,
-	provider: CueCraftCloudCredentialProvider
+export function clearFirstRecallStoredCloudCredential(
+	settings: FirstRecallSettings,
+	provider: FirstRecallCloudCredentialProvider
 ): void {
-	cueCraftProviderSettings(settings, provider).credential = "";
-	clearCueCraftProviderCredentialMetadata(settings, provider);
+	firstRecallProviderSettings(settings, provider).credential = "";
+	clearFirstRecallProviderCredentialMetadata(settings, provider);
 }
 
-export function markCueCraftCloudCredentialSaved(
-	settings: CueCraftSettings,
-	provider: CueCraftCloudCredentialProvider,
+export function markFirstRecallCloudCredentialSaved(
+	settings: FirstRecallSettings,
+	provider: FirstRecallCloudCredentialProvider,
 	token: string,
 	length: number
 ): void {
-	cueCraftProviderSettings(settings, provider).credential = "";
-	setCueCraftProviderCredentialMetadata(settings, provider, {
+	firstRecallProviderSettings(settings, provider).credential = "";
+	setFirstRecallProviderCredentialMetadata(settings, provider, {
 		saved: true,
 		token,
 		length,
 	});
 }
 
-export function setCueCraftProviderModel(
-	settings: CueCraftSettings,
+export function setFirstRecallProviderModel(
+	settings: FirstRecallSettings,
 	provider: ByokProviderId,
 	value: string
 ): void {
-	cueCraftProviderSettings(settings, provider).model = value;
+	firstRecallProviderSettings(settings, provider).model = value;
 }
 
-export function cueCraftProviderConfigFromSettings(
-	settings: CueCraftSettings,
+export function firstRecallProviderConfigFromSettings(
+	settings: FirstRecallSettings,
 	opts: {
-		cloudCredentials?: Partial<Record<CueCraftCloudCredentialProvider, string>>;
+		cloudCredentials?: Partial<Record<FirstRecallCloudCredentialProvider, string>>;
 	} = {}
 ): ByokProviderConfig {
-	const provider = requireCueCraftSelectedProvider(settings);
-	const stored = cueCraftProviderSettings(settings, provider);
+	const provider = requireFirstRecallSelectedProvider(settings);
+	const stored = firstRecallProviderSettings(settings, provider);
 	const credentialKind = byokProviderDefinition(provider).credentialKind;
 	if (credentialKind === "api-key") {
-		const cloudProvider = provider as CueCraftApiKeyProvider;
+		const cloudProvider = provider as FirstRecallApiKeyProvider;
 		return {
 			provider: cloudProvider,
 			apiKey: opts.cloudCredentials?.[cloudProvider] ?? stored.credential,
@@ -682,85 +682,85 @@ export function cueCraftProviderConfigFromSettings(
 	}
 	if (credentialKind === "command") {
 		return {
-			provider: provider as CueCraftCommandProvider,
+			provider: provider as FirstRecallCommandProvider,
 			command: stored.credential,
 			model: stored.model,
 		};
 	}
 	return {
-		provider: provider as CueCraftUrlProvider,
+		provider: provider as FirstRecallUrlProvider,
 		url: stored.credential,
 		model: stored.model,
 	};
 }
 
-export function makeCueCraftByokProvider(
-	settings: CueCraftSettings,
-	deps: CueCraftProviderFactoryDeps
-): CueCraftByokRuntime {
-	const config = cueCraftProviderConfigFromSettings(settings);
-	return wrapCueCraftByokRuntime(
-		createByokNodeProvider(config, cueCraftProviderDeps(config, deps))
+export function makeFirstRecallByokProvider(
+	settings: FirstRecallSettings,
+	deps: FirstRecallProviderFactoryDeps
+): FirstRecallByokRuntime {
+	const config = firstRecallProviderConfigFromSettings(settings);
+	return wrapFirstRecallByokRuntime(
+		createByokNodeProvider(config, firstRecallProviderDeps(config, deps))
 	);
 }
 
-export async function resolveCueCraftProviderConfigFromStore(
-	settings: CueCraftSettings,
+export async function resolveFirstRecallProviderConfigFromStore(
+	settings: FirstRecallSettings,
 	credentialStore: SecureCredentialStore
 ): Promise<ByokProviderConfig> {
-	const provider = requireCueCraftSelectedProvider(settings);
-	if (!isCueCraftCloudCredentialProvider(provider)) {
-		return cueCraftProviderConfigFromSettings(settings);
+	const provider = requireFirstRecallSelectedProvider(settings);
+	if (!isFirstRecallCloudCredentialProvider(provider)) {
+		return firstRecallProviderConfigFromSettings(settings);
 	}
-	const apiKey = await readCueCraftCloudCredential(provider, credentialStore);
-	return cueCraftProviderConfigFromSettings(settings, {
+	const apiKey = await readFirstRecallCloudCredential(provider, credentialStore);
+	return firstRecallProviderConfigFromSettings(settings, {
 		cloudCredentials: { [provider]: apiKey },
 	});
 }
 
-async function readCueCraftCloudCredential(
-	provider: CueCraftCloudCredentialProvider,
+async function readFirstRecallCloudCredential(
+	provider: FirstRecallCloudCredentialProvider,
 	credentialStore: SecureCredentialStore
 ): Promise<string> {
 	const result = await credentialStore.read(provider);
 	if (!result.ok || !result.value) {
-		const providerName = cueCraftProviderLabel(provider);
-		throw new CueCraftCredentialUnavailableError(
+		const providerName = firstRecallProviderLabel(provider);
+		throw new FirstRecallCredentialUnavailableError(
 			provider,
 			result.reason ?? "missing-credential",
 			result.message ??
-				`CueCraft: ${providerName} API key is not available from secure storage.`
+				`FirstRecall: ${providerName} API key is not available from secure storage.`
 		);
 	}
 	return result.value;
 }
 
-export async function listCueCraftProviderModelsFromStore(
-	settings: CueCraftSettings,
-	provider: CueCraftFetchedModelProvider,
-	deps: CueCraftProviderFactoryDeps,
+export async function listFirstRecallProviderModelsFromStore(
+	settings: FirstRecallSettings,
+	provider: FirstRecallFetchedModelProvider,
+	deps: FirstRecallProviderFactoryDeps,
 	credentialStore: SecureCredentialStore
 ): Promise<ByokModelOption[]> {
-	const stored = cueCraftProviderSettings(settings, provider);
+	const stored = firstRecallProviderSettings(settings, provider);
 	const definition = byokProviderDefinition(provider);
 	if (!definition.supportsModelListing) {
-		throw cueCraftProviderError("Provider does not support model discovery.");
+		throw firstRecallProviderError("Provider does not support model discovery.");
 	}
 	if (definition.credentialKind === "api-key") {
-		const cloudProvider = provider as CueCraftCloudCredentialProvider;
-		const apiKey = await readCueCraftCloudCredential(cloudProvider, credentialStore);
+		const cloudProvider = provider as FirstRecallCloudCredentialProvider;
+		const apiKey = await readFirstRecallCloudCredential(cloudProvider, credentialStore);
 		return listModels({ provider: cloudProvider, apiKey, deps });
 	}
 	if (definition.credentialKind === "url") {
 		return listModels({
-			provider: provider as CueCraftUrlProvider,
+			provider: provider as FirstRecallUrlProvider,
 			url: stored.credential,
 			deps,
 		});
 	}
 	const runtime = createByokNodeProvider(
 		{
-			provider: provider as CueCraftCommandProvider,
+			provider: provider as FirstRecallCommandProvider,
 			command: stored.credential,
 			model: stored.model,
 		},
@@ -769,54 +769,54 @@ export async function listCueCraftProviderModelsFromStore(
 	return runtime.listModels();
 }
 
-export async function makeCueCraftByokProviderFromStore(
-	settings: CueCraftSettings,
-	deps: CueCraftProviderFactoryDeps,
+export async function makeFirstRecallByokProviderFromStore(
+	settings: FirstRecallSettings,
+	deps: FirstRecallProviderFactoryDeps,
 	credentialStore: SecureCredentialStore
-): Promise<CueCraftByokRuntime> {
-	const config = await resolveCueCraftProviderConfigFromStore(settings, credentialStore);
-	return wrapCueCraftByokRuntime(
+): Promise<FirstRecallByokRuntime> {
+	const config = await resolveFirstRecallProviderConfigFromStore(settings, credentialStore);
+	return wrapFirstRecallByokRuntime(
 		createByokNodeProvider(
 			config,
-			cueCraftProviderDeps(config, deps)
+			firstRecallProviderDeps(config, deps)
 		)
 	);
 }
 
-export function isCueCraftLocalCliProvider(provider: ByokProviderId): boolean {
+export function isFirstRecallLocalCliProvider(provider: ByokProviderId): boolean {
 	return byokProviderDefinition(provider).credentialKind === "command";
 }
 
-export function cueCraftProviderLabel(provider: ByokProviderId): string {
+export function firstRecallProviderLabel(provider: ByokProviderId): string {
 	return byokProviderDefinition(provider).label;
 }
 
-export function cueCraftProviderCredential(
-	settings: CueCraftSettings,
+export function firstRecallProviderCredential(
+	settings: FirstRecallSettings,
 	provider?: ByokProviderId
 ): string {
-	provider ??= requireCueCraftSelectedProvider(settings);
-	return cueCraftProviderSettings(settings, provider).credential;
+	provider ??= requireFirstRecallSelectedProvider(settings);
+	return firstRecallProviderSettings(settings, provider).credential;
 }
 
-export function cueCraftProviderCredentialSaved(
-	settings: CueCraftSettings,
+export function firstRecallProviderCredentialSaved(
+	settings: FirstRecallSettings,
 	provider?: ByokProviderId
 ): boolean {
-	provider ??= requireCueCraftSelectedProvider(settings);
-	const stored = cueCraftProviderSettings(settings, provider);
-	return isCueCraftCloudCredentialProvider(provider)
+	provider ??= requireFirstRecallSelectedProvider(settings);
+	const stored = firstRecallProviderSettings(settings, provider);
+	return isFirstRecallCloudCredentialProvider(provider)
 		? Boolean(stored.credentialSaved) || stored.credential.trim().length > 0
 		: stored.credential.trim().length > 0;
 }
 
-export function cueCraftProviderCredentialLength(
-	settings: CueCraftSettings,
+export function firstRecallProviderCredentialLength(
+	settings: FirstRecallSettings,
 	provider?: ByokProviderId
 ): number {
-	provider ??= requireCueCraftSelectedProvider(settings);
-	const stored = cueCraftProviderSettings(settings, provider);
-	if (isCueCraftCloudCredentialProvider(provider)) {
+	provider ??= requireFirstRecallSelectedProvider(settings);
+	const stored = firstRecallProviderSettings(settings, provider);
+	if (isFirstRecallCloudCredentialProvider(provider)) {
 		return stored.credentialSaved
 			? stored.credentialLength ?? 0
 			: stored.credential.trim().length;
@@ -824,28 +824,28 @@ export function cueCraftProviderCredentialLength(
 	return stored.credential.trim().length;
 }
 
-export async function secureCueCraftCloudCredentials(
-	settings: CueCraftSettings,
+export async function secureFirstRecallCloudCredentials(
+	settings: FirstRecallSettings,
 	credentialStore: SecureCredentialStore
-): Promise<CueCraftCredentialStorageResult> {
-	const result: CueCraftCredentialStorageResult = {
+): Promise<FirstRecallCredentialStorageResult> {
+	const result: FirstRecallCredentialStorageResult = {
 		settingsChanged: false,
 		warnings: [],
 		securedProviders: [],
 	};
 	for (const provider of BYOK_PROVIDER_IDS) {
-		if (!isCueCraftCloudCredentialProvider(provider)) continue;
-		const stored = cueCraftProviderSettings(settings, provider);
+		if (!isFirstRecallCloudCredentialProvider(provider)) continue;
+		const stored = firstRecallProviderSettings(settings, provider);
 		const plaintext = stored.credential.trim();
 		if (plaintext) {
 			const saved = await credentialStore.save(provider, plaintext);
 			if (!saved.ok || !saved.metadata) {
 				result.warnings.push(
-					`${cueCraftProviderLabel(provider)} API key could not be moved to secure storage: ${saved.message ?? saved.reason ?? "unknown error"}`
+					`${firstRecallProviderLabel(provider)} API key could not be moved to secure storage: ${saved.message ?? saved.reason ?? "unknown error"}`
 				);
 				continue;
 			}
-			markCueCraftCloudCredentialSaved(
+			markFirstRecallCloudCredentialSaved(
 				settings,
 				provider,
 				saved.metadata.token,
@@ -860,7 +860,7 @@ export async function secureCueCraftCloudCredentials(
 				? null
 				: await credentialStore.metadata(provider);
 			if (metadata?.ok && metadata.metadata) {
-				setCueCraftProviderCredentialMetadata(settings, provider, {
+				setFirstRecallProviderCredentialMetadata(settings, provider, {
 					saved: true,
 					token: metadata.metadata.token,
 					length: metadata.metadata.length,
@@ -871,7 +871,7 @@ export async function secureCueCraftCloudCredentials(
 		}
 		const metadata = await credentialStore.metadata(provider);
 		if (metadata.ok && metadata.metadata) {
-			markCueCraftCloudCredentialSaved(
+			markFirstRecallCloudCredentialSaved(
 				settings,
 				provider,
 				metadata.metadata.token,
@@ -883,25 +883,25 @@ export async function secureCueCraftCloudCredentials(
 	return result;
 }
 
-export function cueCraftProviderModel(
-	settings: CueCraftSettings,
+export function firstRecallProviderModel(
+	settings: FirstRecallSettings,
 	provider?: ByokProviderId
 ): string {
-	provider ??= requireCueCraftSelectedProvider(settings);
-	return cueCraftProviderSettings(settings, provider).model;
+	provider ??= requireFirstRecallSelectedProvider(settings);
+	return firstRecallProviderSettings(settings, provider).model;
 }
 
-export function deriveCueCraftProviderSetupStatus(
-	settings: CueCraftSettings
+export function deriveFirstRecallProviderSetupStatus(
+	settings: FirstRecallSettings
 ): ByokSetupStatus {
-	return deriveProviderSetupStatus({ byok: ensureCueCraftByokSettings(settings) });
+	return deriveProviderSetupStatus({ byok: ensureFirstRecallByokSettings(settings) });
 }
 
-export function recordCueCraftProviderConnectionSuccess(
-	settings: CueCraftSettings,
+export function recordFirstRecallProviderConnectionSuccess(
+	settings: FirstRecallSettings,
 	testedAt?: string
-): CueCraftProviderConnectionStatusMap {
-	const byok = ensureCueCraftByokSettings(settings);
+): FirstRecallProviderConnectionStatusMap {
+	const byok = ensureFirstRecallByokSettings(settings);
 	const verification = recordProviderConnectionSuccess(
 		{ byok },
 		testedAt
@@ -910,28 +910,28 @@ export function recordCueCraftProviderConnectionSuccess(
 	return verification;
 }
 
-export function resetCueCraftFetchedModels(
-	settings: CueCraftSettings,
-	provider: CueCraftFetchedModelProvider,
+export function resetFirstRecallFetchedModels(
+	settings: FirstRecallSettings,
+	provider: FirstRecallFetchedModelProvider,
 	message: string
 ): void {
-	const stored = cueCraftProviderSettings(settings, provider);
+	const stored = firstRecallProviderSettings(settings, provider);
 	stored.availableModels = [];
 	stored.modelOptions = [];
 	stored.hasFetchedModels = false;
 	stored.modelRefreshMessage = message;
 }
 
-export function applyCueCraftListedModels(
-	settings: CueCraftSettings,
-	provider: CueCraftFetchedModelProvider,
+export function applyFirstRecallListedModels(
+	settings: FirstRecallSettings,
+	provider: FirstRecallFetchedModelProvider,
 	options: ByokModelOption[],
 	emptyMessage: string
-): CueCraftAppliedModelRefresh {
+): FirstRecallAppliedModelRefresh {
 	const ids = options.map((option) => option.id);
 	const models = sortFetchedModelIds(ids);
 	const message = models.length > 0 ? "" : emptyMessage;
-	const stored = cueCraftProviderSettings(settings, provider);
+	const stored = firstRecallProviderSettings(settings, provider);
 	stored.availableModels = models;
 	stored.modelOptions = options;
 	stored.hasFetchedModels = true;
@@ -940,28 +940,28 @@ export function applyCueCraftListedModels(
 	return { models, options, message };
 }
 
-export function applyCueCraftModelRefreshFailure(
-	settings: CueCraftSettings,
-	provider: CueCraftFetchedModelProvider,
+export function applyFirstRecallModelRefreshFailure(
+	settings: FirstRecallSettings,
+	provider: FirstRecallFetchedModelProvider,
 	message: string
 ): void {
-	const stored = cueCraftProviderSettings(settings, provider);
+	const stored = firstRecallProviderSettings(settings, provider);
 	stored.availableModels = [];
 	stored.modelOptions = [];
 	stored.hasFetchedModels = true;
 	stored.modelRefreshMessage = message;
 }
 
-export function cueCraftFetchedModelCount(
-	settings: CueCraftSettings,
-	provider: CueCraftFetchedModelProvider
+export function firstRecallFetchedModelCount(
+	settings: FirstRecallSettings,
+	provider: FirstRecallFetchedModelProvider
 ): number {
-	return cueCraftProviderSettings(settings, provider).availableModels.length;
+	return firstRecallProviderSettings(settings, provider).availableModels.length;
 }
 
-export function cueCraftModelRefreshMessage(
-	settings: CueCraftSettings,
-	provider: CueCraftFetchedModelProvider
+export function firstRecallModelRefreshMessage(
+	settings: FirstRecallSettings,
+	provider: FirstRecallFetchedModelProvider
 ): string {
-	return cueCraftProviderSettings(settings, provider).modelRefreshMessage;
+	return firstRecallProviderSettings(settings, provider).modelRefreshMessage;
 }

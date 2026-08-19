@@ -1,7 +1,7 @@
 import { z } from "zod/v3";
 
 /**
- * Validation for CueCraft provider output. The app accepts a little model
+ * Validation for FirstRecall provider output. The app accepts a little model
  * variation at the boundary, then normalizes to the section-card and Note Brief contracts.
  */
 export const sectionSummarySchema = z.object({

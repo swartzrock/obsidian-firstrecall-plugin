@@ -1,13 +1,13 @@
 /*
- * CueCraft — Obsidian Native style (v1.0).
+ * FirstRecall — Obsidian Native style (v1.0).
  * Theme-aware: relies on Obsidian CSS variables, no hard-coded colors.
  */
 
-.cuecraft-status {
+.firstrecall-status {
 	cursor: default;
 }
 
-.cuecraft-study-material-banner {
+.firstrecall-study-material-banner {
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
@@ -20,29 +20,29 @@
 	font-size: var(--font-ui-small);
 }
 
-.cuecraft-study-material-banner.is-failed {
+.firstrecall-study-material-banner.is-failed {
 	border-color: var(--background-modifier-error);
 	background: var(--background-modifier-error-hover);
 }
 
-.cuecraft-study-material-banner-message {
+.firstrecall-study-material-banner-message {
 	flex: 1 1 auto;
 }
 
-.cuecraft-study-material-banner-actions {
+.firstrecall-study-material-banner-actions {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.4rem;
 	flex: 0 0 auto;
 }
 
-.cuecraft-study-material-banner-dismiss {
+.firstrecall-study-material-banner-dismiss {
 	background: transparent;
 	box-shadow: none;
 	color: var(--text-muted);
 }
 
-.cuecraft-freshness-badge {
+.firstrecall-freshness-badge {
 	display: inline-flex;
 	align-items: center;
 	width: fit-content;
@@ -57,18 +57,18 @@
 }
 
 @media (max-width: 520px) {
-	.cuecraft-study-material-banner {
+	.firstrecall-study-material-banner {
 		align-items: flex-start;
 		flex-direction: column;
 	}
 }
 
-.cuecraft-settings-intro {
+.firstrecall-settings-intro {
 	color: var(--text-muted);
 	margin-top: 0;
 }
 
-.cuecraft-settings-nav {
+.firstrecall-settings-nav {
 	background: var(--background-secondary);
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-l);
@@ -76,79 +76,79 @@
 	margin-bottom: 22px;
 }
 
-.cuecraft-settings-nav-card {
+.firstrecall-settings-nav-card {
 	cursor: pointer;
 	transition:
 		background-color 120ms ease,
 		border-color 120ms ease;
 }
 
-.cuecraft-settings-nav>.setting-item {
+.firstrecall-settings-nav>.setting-item {
 	margin: 0;
 	padding: 16px;
 	border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.cuecraft-settings-nav>.setting-item:first-child {
+.firstrecall-settings-nav>.setting-item:first-child {
 	padding-top: 14px;
 }
 
-.cuecraft-settings-nav>.setting-item:last-child {
+.firstrecall-settings-nav>.setting-item:last-child {
 	padding-bottom: 14px;
 	border-bottom: none;
 }
 
-.cuecraft-settings-nav-card:hover,
-.cuecraft-settings-nav-card:focus-visible {
+.firstrecall-settings-nav-card:hover,
+.firstrecall-settings-nav-card:focus-visible {
 	background: var(--background-modifier-hover);
 }
 
-.cuecraft-settings-nav-summary {
+.firstrecall-settings-nav-summary {
 	margin-top: 6px;
 	font-size: var(--font-ui-smaller);
 	color: var(--text-muted);
 	line-height: 1.4;
 }
 
-.cuecraft-settings-nav-chevron {
+.firstrecall-settings-nav-chevron {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	color: var(--text-muted);
 }
 
-.cuecraft-settings-subpage-header {
+.firstrecall-settings-subpage-header {
 	margin-bottom: 12px;
 }
 
-.cuecraft-settings-subpage-header .setting-item-name {
+.firstrecall-settings-subpage-header .setting-item-name {
 	display: flex;
 	align-items: center;
 	gap: 6px;
 }
 
-.cuecraft-settings-subpage-header .setting-item-heading {
+.firstrecall-settings-subpage-header .setting-item-heading {
 	margin-bottom: 0;
 }
 
-.cuecraft-settings-subpage-title {
+.firstrecall-settings-subpage-title {
 	margin-left: 0;
 }
 
-.cuecraft-settings-subpage-desc {
+.firstrecall-settings-subpage-desc {
 	margin-top: 4px;
 	color: var(--text-muted);
 	line-height: 1.4;
 }
 
-.cuecraft-settings-back {
+.firstrecall-settings-back {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	padding: 0;
 }
 
-.cuecraft-settings-flow {
+.firstrecall-settings-flow {
 	padding: 10px 14px 14px;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: var(--radius-m);
@@ -156,7 +156,7 @@
 	margin-bottom: 18px;
 }
 
-.cuecraft-settings-flow>.setting-item {
+.firstrecall-settings-flow>.setting-item {
 	padding-left: 0;
 	padding-right: 0;
 	background: transparent;
@@ -164,21 +164,21 @@
 	box-shadow: none;
 }
 
-.cuecraft-settings-flow .cuecraft-cli-text-setting .setting-item-info {
+.firstrecall-settings-flow .firstrecall-cli-text-setting .setting-item-info {
 	flex: 1 1 320px;
 }
 
-.cuecraft-settings-flow .cuecraft-cli-text-setting .setting-item-control {
+.firstrecall-settings-flow .firstrecall-cli-text-setting .setting-item-control {
 	flex: 1 1 520px;
 }
 
-.cuecraft-settings-flow .cuecraft-cli-text-input {
+.firstrecall-settings-flow .firstrecall-cli-text-input {
 	width: 520px;
 	max-width: 100%;
 }
 
 
-.cuecraft-settings-artifact-card {
+.firstrecall-settings-artifact-card {
 	margin: 10px 0 14px;
 	padding: 14px 16px 4px;
 	min-width: 0;
@@ -187,49 +187,49 @@
 	background: var(--background-primary);
 }
 
-.cuecraft-settings-artifact-title {
+.firstrecall-settings-artifact-title {
 	font-size: var(--font-ui-medium);
 	font-weight: var(--font-semibold);
 	color: var(--text-normal);
 }
 
-.cuecraft-settings-artifact-preview {
+.firstrecall-settings-artifact-preview {
 	margin-top: 4px;
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	line-height: 1.4;
 }
 
-.cuecraft-generation-advanced {
+.firstrecall-generation-advanced {
 	margin-top: 18px;
 	min-width: 0;
 	border-top: 1px solid var(--background-modifier-border);
 	padding-top: 12px;
 }
 
-.cuecraft-generation-advanced>summary {
+.firstrecall-generation-advanced>summary {
 	cursor: pointer;
 	font-weight: var(--font-semibold);
 }
 
-.cuecraft-generation-instructions {
+.firstrecall-generation-instructions {
 	min-width: 0;
 	padding-top: 8px;
 }
 
-.cuecraft-instructions-setting {
+.firstrecall-instructions-setting {
 	flex-direction: column;
 	align-items: stretch;
 }
 
-.cuecraft-instructions-setting .setting-item-control {
+.firstrecall-instructions-setting .setting-item-control {
 	width: 100%;
 	flex-direction: column;
 	align-items: stretch;
 	gap: 8px;
 }
 
-.cuecraft-instructions-input {
+.firstrecall-instructions-input {
 	width: 100%;
 	max-width: 100%;
 	min-height: 10rem;
@@ -238,36 +238,36 @@
 	font-family: var(--font-monospace);
 }
 
-.cuecraft-settings-flow-heading {
+.firstrecall-settings-flow-heading {
 	margin: 12px 0 6px;
 }
 
-.cuecraft-settings-flow-heading:first-child {
+.firstrecall-settings-flow-heading:first-child {
 	margin-top: 0;
 }
 
-.cuecraft-settings-flow-title {
+.firstrecall-settings-flow-title {
 	font-size: var(--font-ui-small);
 	font-weight: var(--font-semibold);
 	color: var(--text-normal);
 	margin-bottom: 2px;
 }
 
-.cuecraft-settings-flow-desc {
+.firstrecall-settings-flow-desc {
 	font-size: var(--font-ui-smaller);
 	color: var(--text-muted);
 	line-height: 1.35;
 	margin-bottom: 2px;
 }
 
-.cuecraft-provider-picker {
+.firstrecall-provider-picker {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 8px;
 	margin: 8px 0 12px;
 }
 
-.cuecraft-provider-button {
+.firstrecall-provider-button {
 	position: relative;
 	display: flex;
 	align-items: center;
@@ -284,18 +284,18 @@
 	text-align: left;
 }
 
-.cuecraft-provider-button:hover,
-.cuecraft-provider-button:focus-visible {
+.firstrecall-provider-button:hover,
+.firstrecall-provider-button:focus-visible {
 	border-color: var(--interactive-accent);
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 18%, transparent);
 }
 
-.cuecraft-provider-button.is-selected {
+.firstrecall-provider-button.is-selected {
 	border-color: var(--interactive-accent);
 	box-shadow: 0 0 0 2px var(--interactive-accent);
 }
 
-.cuecraft-provider-icon {
+.firstrecall-provider-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -305,14 +305,14 @@
 	color: var(--text-normal);
 }
 
-.cuecraft-provider-icon svg {
+.firstrecall-provider-icon svg {
 	display: block;
 	width: 100%;
 	height: 100%;
 	overflow: visible;
 }
 
-.cuecraft-provider-button-label {
+.firstrecall-provider-button-label {
 	overflow: hidden;
 	color: var(--text-normal);
 	font-size: var(--font-ui-small);
@@ -322,7 +322,7 @@
 	white-space: nowrap;
 }
 
-.cuecraft-provider-radio {
+.firstrecall-provider-radio {
 	position: absolute;
 	top: 50%;
 	right: 12px;
@@ -334,12 +334,12 @@
 	transform: translateY(-50%);
 }
 
-.cuecraft-provider-button.is-selected .cuecraft-provider-radio {
+.firstrecall-provider-button.is-selected .firstrecall-provider-radio {
 	border: 4px solid var(--interactive-accent);
 	background: var(--background-primary);
 }
 
-.cuecraft-active-provider-panel {
+.firstrecall-active-provider-panel {
 	margin: 12px 0;
 	padding: 10px 12px 4px;
 	border: 1px solid var(--background-modifier-border);
@@ -347,7 +347,7 @@
 	background: var(--background-primary);
 }
 
-.cuecraft-active-provider-header {
+.firstrecall-active-provider-header {
 	display: flex;
 	align-items: center;
 	gap: 10px;
@@ -355,7 +355,7 @@
 	margin: 1em 0 1em 0.5em;
 }
 
-.cuecraft-active-provider-title {
+.firstrecall-active-provider-title {
 	overflow: hidden;
 	color: var(--text-normal);
 	font-size: var(--font-ui-medium);
@@ -365,123 +365,123 @@
 	white-space: nowrap;
 }
 
-.cuecraft-active-provider-fields>.setting-item {
+.firstrecall-active-provider-fields>.setting-item {
 	padding-left: 0;
 	padding-right: 0;
 }
 
-.cuecraft-active-provider-fields {
+.firstrecall-active-provider-fields {
 	margin-top: 14px;
 }
 
-.cuecraft-active-provider-fields .cuecraft-api-key-setting .setting-item-control {
+.firstrecall-active-provider-fields .firstrecall-api-key-setting .setting-item-control {
 	flex: 1 1 520px;
 }
 
-.cuecraft-active-provider-fields .cuecraft-api-key-setting {
+.firstrecall-active-provider-fields .firstrecall-api-key-setting {
 	align-items: stretch;
 	flex-direction: column;
 	gap: 8px;
 	justify-content: flex-start;
 }
 
-.cuecraft-active-provider-fields .cuecraft-api-key-setting .setting-item-info,
-.cuecraft-active-provider-fields .cuecraft-api-key-setting .setting-item-control {
+.firstrecall-active-provider-fields .firstrecall-api-key-setting .setting-item-info,
+.firstrecall-active-provider-fields .firstrecall-api-key-setting .setting-item-control {
 	width: 100%;
 }
 
-.cuecraft-active-provider-fields .cuecraft-api-key-setting .setting-item-control {
+.firstrecall-active-provider-fields .firstrecall-api-key-setting .setting-item-control {
 	flex: 0 1 auto;
 	justify-content: flex-start;
 }
 
-.cuecraft-active-provider-fields .cuecraft-api-key-input {
+.firstrecall-active-provider-fields .firstrecall-api-key-input {
 	flex: 1 1 360px;
 	width: 360px;
 	max-width: 100%;
 }
 
-.cuecraft-active-provider-fields .cuecraft-cli-text-setting {
+.firstrecall-active-provider-fields .firstrecall-cli-text-setting {
 	align-items: stretch;
 	flex-direction: column;
 	gap: 8px;
 	justify-content: flex-start;
 }
 
-.cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-info,
-.cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-control {
+.firstrecall-active-provider-fields .firstrecall-cli-text-setting .setting-item-info,
+.firstrecall-active-provider-fields .firstrecall-cli-text-setting .setting-item-control {
 	width: 100%;
 }
 
-.cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-info {
+.firstrecall-active-provider-fields .firstrecall-cli-text-setting .setting-item-info {
 	flex: 0 1 auto;
 }
 
-.cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-control {
+.firstrecall-active-provider-fields .firstrecall-cli-text-setting .setting-item-control {
 	flex: 0 1 auto;
 	justify-content: flex-start;
 }
 
-.cuecraft-active-provider-fields .cuecraft-cli-text-input {
+.firstrecall-active-provider-fields .firstrecall-cli-text-input {
 	flex: 1 1 auto;
 	width: 100%;
 	min-width: 0;
 	max-width: 100%;
 }
 
-.cuecraft-active-provider-fields .cuecraft-model-setting .setting-item-control {
+.firstrecall-active-provider-fields .firstrecall-model-setting .setting-item-control {
 	flex-wrap: nowrap;
 	gap: 8px;
 }
 
-.cuecraft-active-provider-fields .cuecraft-model-setting button {
+.firstrecall-active-provider-fields .firstrecall-model-setting button {
 	white-space: nowrap;
 }
 
-.cuecraft-active-provider-fields>.cuecraft-provider-connection-setting {
+.firstrecall-active-provider-fields>.firstrecall-provider-connection-setting {
 	margin-top: 4px;
 	border-top: 1px solid var(--background-modifier-border);
 }
 
-.cuecraft-provider-connection-setting .setting-item-control {
+.firstrecall-provider-connection-setting .setting-item-control {
 	flex-wrap: wrap;
 	gap: 8px;
 }
 
-.cuecraft-provider-connection-setting .cuecraft-status-chips {
+.firstrecall-provider-connection-setting .firstrecall-status-chips {
 	justify-content: flex-start;
 }
 
-.cuecraft-thumbnail-group {
+.firstrecall-thumbnail-group {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(138px, 100%), 1fr));
 	gap: 10px;
 	width: 100%;
 }
 
-.cuecraft-thumbnail-group-editor-display {
+.firstrecall-thumbnail-group-editor-display {
 	grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
 }
 
-.cuecraft-thumbnail-group-cue-font {
+.firstrecall-thumbnail-group-cue-font {
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.cuecraft-thumbnail-setting {
+.firstrecall-thumbnail-setting {
 	align-items: flex-start;
 }
 
-.cuecraft-thumbnail-setting .setting-item-info {
+.firstrecall-thumbnail-setting .setting-item-info {
 	flex: 1 1 220px;
 }
 
-.cuecraft-thumbnail-setting .setting-item-control {
+.firstrecall-thumbnail-setting .setting-item-control {
 	flex: 2 1 520px;
 	justify-content: stretch;
 	width: min(100%, 720px);
 }
 
-.cuecraft-thumbnail-button {
+.firstrecall-thumbnail-button {
 	position: relative;
 	display: flex;
 	flex-direction: column;
@@ -503,27 +503,27 @@
 	overflow: hidden;
 }
 
-.cuecraft-thumbnail-button:hover,
-.cuecraft-thumbnail-button:focus-visible {
+.firstrecall-thumbnail-button:hover,
+.firstrecall-thumbnail-button:focus-visible {
 	border-color: var(--interactive-accent);
 }
 
-.cuecraft-thumbnail-button:focus-visible {
+.firstrecall-thumbnail-button:focus-visible {
 	outline: 2px solid var(--interactive-accent);
 	outline-offset: 2px;
 }
 
-.cuecraft-thumbnail-button.is-selected {
+.firstrecall-thumbnail-button.is-selected {
 	border-width: 3px;
 	border-color: var(--interactive-accent);
 }
 
-.cuecraft-thumbnail-button:disabled {
+.firstrecall-thumbnail-button:disabled {
 	opacity: 0.55;
 	cursor: not-allowed;
 }
 
-.cuecraft-thumbnail-preview {
+.firstrecall-thumbnail-preview {
 	display: block;
 	width: 100%;
 	aspect-ratio: 16 / 9;
@@ -535,7 +535,7 @@
 	box-sizing: border-box;
 }
 
-.cuecraft-thumbnail-label {
+.firstrecall-thumbnail-label {
 	display: block;
 	max-width: 100%;
 	font-size: var(--font-ui-small);
@@ -545,7 +545,7 @@
 	white-space: normal;
 }
 
-.cuecraft-thumbnail-description {
+.firstrecall-thumbnail-description {
 	display: -webkit-box;
 	max-width: 100%;
 	overflow: hidden;
@@ -558,8 +558,8 @@
 	-webkit-line-clamp: 2;
 }
 
-.cuecraft-preview-surface {
-	--cuecraft-preview-accent: #9b72ff;
+.firstrecall-preview-surface {
+	--firstrecall-preview-accent: #9b72ff;
 	position: relative;
 	display: flex;
 	align-items: center;
@@ -574,7 +574,7 @@
 	box-sizing: border-box;
 }
 
-.cuecraft-preview-card {
+.firstrecall-preview-card {
 	position: relative;
 	display: flex;
 	gap: 5px;
@@ -589,13 +589,13 @@
 	box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
 }
 
-.cuecraft-preview-rail {
+.firstrecall-preview-rail {
 	flex: 0 0 2px;
 	border-radius: 999px;
-	background: var(--cuecraft-preview-accent);
+	background: var(--firstrecall-preview-accent);
 }
 
-.cuecraft-preview-content {
+.firstrecall-preview-content {
 	display: flex;
 	min-width: 0;
 	flex: 1;
@@ -605,7 +605,7 @@
 	text-align: left;
 }
 
-.cuecraft-preview-question {
+.firstrecall-preview-question {
 	display: -webkit-box;
 	overflow: hidden;
 	color: var(--text-normal);
@@ -616,25 +616,25 @@
 	-webkit-line-clamp: 4;
 }
 
-.cuecraft-preview-cue-only .cuecraft-preview-question {
+.firstrecall-preview-cue-only .firstrecall-preview-question {
 	-webkit-line-clamp: 5;
 }
 
-.cuecraft-preview-font-small .cuecraft-preview-question {
+.firstrecall-preview-font-small .firstrecall-preview-question {
 	font-size: 7px;
 }
 
-.cuecraft-preview-font-medium .cuecraft-preview-question {
+.firstrecall-preview-font-medium .firstrecall-preview-question {
 	font-size: 8px;
 }
 
-.cuecraft-preview-font-large .cuecraft-preview-question {
+.firstrecall-preview-font-large .firstrecall-preview-question {
 	font-size: 9.5px;
 	line-height: 1.12;
 	-webkit-line-clamp: 5;
 }
 
-.cuecraft-preview-editor-surface {
+.firstrecall-preview-editor-surface {
 	position: relative;
 	display: flex;
 	align-items: center;
@@ -649,7 +649,7 @@
 	box-sizing: border-box;
 }
 
-.cuecraft-preview-editor-scene {
+.firstrecall-preview-editor-scene {
 	position: relative;
 	width: 88%;
 	height: 74%;
@@ -664,14 +664,14 @@
 	box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
 }
 
-.cuecraft-preview-editor-scene-cornell,
-.cuecraft-preview-editor-scene-inline-cues {
+.firstrecall-preview-editor-scene-cornell,
+.firstrecall-preview-editor-scene-inline-cues {
 	width: 86%;
 	height: 80%;
 	background: var(--background-primary);
 }
 
-.cuecraft-preview-editor-scene::before {
+.firstrecall-preview-editor-scene::before {
 	position: absolute;
 	inset-block: 16%;
 	inset-inline-start: 9%;
@@ -680,12 +680,12 @@
 	content: "";
 }
 
-.cuecraft-preview-editor-scene-cornell::before,
-.cuecraft-preview-editor-scene-inline-cues::before {
+.firstrecall-preview-editor-scene-cornell::before,
+.firstrecall-preview-editor-scene-inline-cues::before {
 	display: none;
 }
 
-.cuecraft-preview-editor-line {
+.firstrecall-preview-editor-line {
 	position: absolute;
 	inset-inline-start: 27%;
 	height: 3px;
@@ -693,66 +693,66 @@
 	background: color-mix(in srgb, var(--text-muted) 32%, transparent);
 }
 
-.cuecraft-preview-editor-scene-cornell .cuecraft-preview-editor-line,
-.cuecraft-preview-editor-scene-inline-cues .cuecraft-preview-editor-line {
+.firstrecall-preview-editor-scene-cornell .firstrecall-preview-editor-line,
+.firstrecall-preview-editor-scene-inline-cues .firstrecall-preview-editor-line {
 	height: 2px;
 	background: color-mix(in srgb, var(--text-muted) 38%, transparent);
 }
 
-.cuecraft-preview-editor-line-short {
+.firstrecall-preview-editor-line-short {
 	inset-block-start: 18%;
 	width: 42%;
 }
 
-.cuecraft-preview-editor-line-long {
+.firstrecall-preview-editor-line-long {
 	inset-block-start: 38%;
 	width: 56%;
 }
 
-.cuecraft-preview-editor-line-medium {
+.firstrecall-preview-editor-line-medium {
 	inset-block-start: 58%;
 	width: 46%;
 }
 
-.cuecraft-preview-editor-scene-cornell .cuecraft-preview-editor-line {
+.firstrecall-preview-editor-scene-cornell .firstrecall-preview-editor-line {
 	inset-inline-start: 58%;
 }
 
-.cuecraft-preview-editor-scene-cornell .cuecraft-preview-editor-line-short {
+.firstrecall-preview-editor-scene-cornell .firstrecall-preview-editor-line-short {
 	inset-block-start: 25%;
 	width: 25%;
 }
 
-.cuecraft-preview-editor-scene-cornell .cuecraft-preview-editor-line-long {
+.firstrecall-preview-editor-scene-cornell .firstrecall-preview-editor-line-long {
 	inset-block-start: 39%;
 	width: 32%;
 }
 
-.cuecraft-preview-editor-scene-cornell .cuecraft-preview-editor-line-medium {
+.firstrecall-preview-editor-scene-cornell .firstrecall-preview-editor-line-medium {
 	inset-block-start: 53%;
 	width: 28%;
 }
 
-.cuecraft-preview-editor-scene-inline-cues .cuecraft-preview-editor-line {
+.firstrecall-preview-editor-scene-inline-cues .firstrecall-preview-editor-line {
 	inset-inline-start: 12%;
 }
 
-.cuecraft-preview-editor-scene-inline-cues .cuecraft-preview-editor-line-short {
+.firstrecall-preview-editor-scene-inline-cues .firstrecall-preview-editor-line-short {
 	inset-block-start: 10%;
 	width: 35%;
 }
 
-.cuecraft-preview-editor-scene-inline-cues .cuecraft-preview-editor-line-long {
+.firstrecall-preview-editor-scene-inline-cues .firstrecall-preview-editor-line-long {
 	inset-block-start: 19%;
 	width: 63%;
 }
 
-.cuecraft-preview-editor-scene-inline-cues .cuecraft-preview-editor-line-medium {
+.firstrecall-preview-editor-scene-inline-cues .firstrecall-preview-editor-line-medium {
 	inset-block-start: 28%;
 	width: 51%;
 }
 
-.cuecraft-preview-editor-cue-card {
+.firstrecall-preview-editor-cue-card {
 	position: absolute;
 	display: flex;
 	flex-direction: column;
@@ -766,18 +766,18 @@
 	text-align: left;
 }
 
-.cuecraft-preview-editor-cue-card-cornell {
+.firstrecall-preview-editor-cue-card-cornell {
 	inset-block: 6%;
 	inset-inline-start: 8%;
 	width: 43%;
 }
 
-.cuecraft-preview-editor-cue-card-inline-cues {
+.firstrecall-preview-editor-cue-card-inline-cues {
 	inset-block: 35% 6%;
 	inset-inline: 7%;
 }
 
-.cuecraft-preview-editor-cue-section {
+.firstrecall-preview-editor-cue-section {
 	display: flex;
 	min-height: 0;
 	flex: 1 1 0;
@@ -787,11 +787,11 @@
 	overflow: hidden;
 }
 
-.cuecraft-preview-editor-cue-section+.cuecraft-preview-editor-cue-section {
+.firstrecall-preview-editor-cue-section+.firstrecall-preview-editor-cue-section {
 	border-top: 1px solid color-mix(in srgb, var(--background-modifier-border) 72%, transparent);
 }
 
-.cuecraft-preview-editor-cue-section-label {
+.firstrecall-preview-editor-cue-section-label {
 	display: flex;
 	align-items: center;
 	gap: 2px;
@@ -803,7 +803,7 @@
 	line-height: 1;
 }
 
-.cuecraft-preview-editor-cue-icon {
+.firstrecall-preview-editor-cue-icon {
 	position: relative;
 	box-sizing: border-box;
 	width: 6px;
@@ -813,18 +813,18 @@
 	flex: 0 0 auto;
 }
 
-.cuecraft-preview-editor-cue-icon[data-section="question"] {
+.firstrecall-preview-editor-cue-icon[data-section="question"] {
 	border-radius: 50%;
 }
 
-.cuecraft-preview-editor-cue-icon[data-section="terms"] {
+.firstrecall-preview-editor-cue-icon[data-section="terms"] {
 	width: 7px;
 	height: 5px;
 	border-radius: 1px 3px 3px 1px;
 	transform: rotate(45deg) scale(0.8);
 }
 
-.cuecraft-preview-editor-cue-chevron {
+.firstrecall-preview-editor-cue-chevron {
 	width: 3px;
 	height: 3px;
 	margin-inline-start: auto;
@@ -833,7 +833,7 @@
 	transform: rotate(45deg) translateY(-1px);
 }
 
-.cuecraft-preview-editor-cue-body {
+.firstrecall-preview-editor-cue-body {
 	display: -webkit-box;
 	overflow: hidden;
 	font-size: 5.5px;
@@ -843,18 +843,18 @@
 	-webkit-line-clamp: 2;
 }
 
-.cuecraft-preview-editor-cue-question {
+.firstrecall-preview-editor-cue-question {
 	font-size: 5.75px;
 }
 
-.cuecraft-preview-editor-cue-terms {
+.firstrecall-preview-editor-cue-terms {
 	display: flex;
 	min-width: 0;
 	gap: 2px;
 	overflow: hidden;
 }
 
-.cuecraft-preview-editor-cue-term {
+.firstrecall-preview-editor-cue-term {
 	padding: 0 2px;
 	border: 1px solid color-mix(in srgb, var(--background-modifier-border) 72%, transparent);
 	border-radius: 2px;
@@ -865,7 +865,7 @@
 	white-space: nowrap;
 }
 
-.cuecraft-preview-editor-cue-grip {
+.firstrecall-preview-editor-cue-grip {
 	position: absolute;
 	top: 50%;
 	left: -6px;
@@ -878,32 +878,32 @@
 	transform: translateY(-50%);
 }
 
-.cuecraft-preview-editor-cue-grip::after {
+.firstrecall-preview-editor-cue-grip::after {
 	position: absolute;
 	inset: 7px 1px;
 	background: radial-gradient(circle, var(--text-muted) 0.7px, transparent 0.9px) center top / 2px 4px repeat-y;
 	content: "";
 }
 
-.cuecraft-model-combobox {
+.firstrecall-model-combobox {
 	position: relative;
 	width: min(340px, 100%);
 	box-sizing: border-box;
-	--cuecraft-combobox-border: color-mix(in srgb,
+	--firstrecall-combobox-border: color-mix(in srgb,
 			var(--background-modifier-border) 64%,
 			var(--background-primary));
-	--cuecraft-combobox-border-focus: color-mix(in srgb,
+	--firstrecall-combobox-border-focus: color-mix(in srgb,
 			var(--text-muted) 34%,
 			var(--background-primary));
 }
 
-.cuecraft-model-combobox-input {
+.firstrecall-model-combobox-input {
 	width: 100%;
 	min-width: 220px;
 	height: 34px;
 	box-sizing: border-box;
 	padding-inline-end: 34px;
-	border: 1px solid var(--cuecraft-combobox-border);
+	border: 1px solid var(--firstrecall-combobox-border);
 	border-radius: var(--radius-m);
 	background: var(--background-primary);
 	box-shadow: var(--input-shadow, none);
@@ -914,18 +914,18 @@
 		background-color 120ms ease;
 }
 
-.cuecraft-model-combobox-input:hover {
-	border-color: var(--cuecraft-combobox-border-focus);
+.firstrecall-model-combobox-input:hover {
+	border-color: var(--firstrecall-combobox-border-focus);
 }
 
-.cuecraft-model-combobox-input:focus,
-.cuecraft-model-combobox-input:focus-visible {
-	border-color: var(--cuecraft-combobox-border-focus);
+.firstrecall-model-combobox-input:focus,
+.firstrecall-model-combobox-input:focus-visible {
+	border-color: var(--firstrecall-combobox-border-focus);
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--text-muted) 16%, transparent);
 	outline: none;
 }
 
-.cuecraft-model-combobox-toggle {
+.firstrecall-model-combobox-toggle {
 	position: absolute;
 	z-index: 1;
 	inset-block-start: 50%;
@@ -944,19 +944,19 @@
 	transform: translateY(-50%);
 }
 
-.cuecraft-model-combobox-toggle:hover,
-.cuecraft-model-combobox-open .cuecraft-model-combobox-toggle {
+.firstrecall-model-combobox-toggle:hover,
+.firstrecall-model-combobox-open .firstrecall-model-combobox-toggle {
 	color: var(--text-normal);
 	background: transparent;
 	box-shadow: none;
 }
 
-.cuecraft-model-combobox-toggle svg {
+.firstrecall-model-combobox-toggle svg {
 	width: 16px;
 	height: 16px;
 }
 
-.cuecraft-model-combobox-list {
+.firstrecall-model-combobox-list {
 	position: absolute;
 	z-index: var(--layer-popover);
 	inset-inline-start: 0;
@@ -965,18 +965,18 @@
 	box-sizing: border-box;
 	max-height: min(240px, calc(100vh - 220px));
 	overflow: auto;
-	border: 1px solid var(--cuecraft-combobox-border);
+	border: 1px solid var(--firstrecall-combobox-border);
 	border-radius: var(--radius-m);
 	background: var(--background-primary);
 	box-shadow: var(--shadow-s), 0 8px 24px rgba(0, 0, 0, 0.1);
 	padding: 4px;
 }
 
-.cuecraft-model-combobox-list-hidden {
+.firstrecall-model-combobox-list-hidden {
 	display: none;
 }
 
-.cuecraft-model-combobox-list button.cuecraft-model-combobox-option {
+.firstrecall-model-combobox-list button.firstrecall-model-combobox-option {
 	appearance: none;
 	display: flex;
 	flex-direction: column;
@@ -998,21 +998,21 @@
 	cursor: pointer;
 }
 
-.cuecraft-model-combobox-list button.cuecraft-model-combobox-option:hover,
-.cuecraft-model-combobox-list button.cuecraft-model-combobox-option[aria-selected="true"] {
+.firstrecall-model-combobox-list button.firstrecall-model-combobox-option:hover,
+.firstrecall-model-combobox-list button.firstrecall-model-combobox-option[aria-selected="true"] {
 	background: var(--background-modifier-hover);
 	border: 0;
 	box-shadow: none;
 	color: var(--text-normal);
 }
 
-.cuecraft-model-combobox-divider {
+.firstrecall-model-combobox-divider {
 	height: 1px;
 	margin: 4px 0;
 	background: var(--background-modifier-border);
 }
 
-.cuecraft-model-combobox-option-label {
+.firstrecall-model-combobox-option-label {
 	width: 100%;
 	overflow: hidden;
 	font-size: var(--font-ui-small);
@@ -1022,8 +1022,8 @@
 	white-space: nowrap;
 }
 
-.cuecraft-model-combobox-option-detail,
-.cuecraft-model-combobox-empty {
+.firstrecall-model-combobox-option-detail,
+.firstrecall-model-combobox-empty {
 	width: 100%;
 	overflow: hidden;
 	color: var(--text-muted);
@@ -1033,94 +1033,94 @@
 	white-space: nowrap;
 }
 
-.cuecraft-model-combobox-empty {
+.firstrecall-model-combobox-empty {
 	padding: 8px;
 }
 
 @media (max-width: 700px) {
-	.cuecraft-settings-artifact-card {
+	.firstrecall-settings-artifact-card {
 		padding-inline: 12px;
 	}
 
-	.cuecraft-settings-artifact-card .setting-item,
-	.cuecraft-generation-instructions .setting-item {
+	.firstrecall-settings-artifact-card .setting-item,
+	.firstrecall-generation-instructions .setting-item {
 		align-items: stretch;
 		flex-direction: column;
 	}
 
-	.cuecraft-settings-artifact-card .setting-item-control,
-	.cuecraft-generation-instructions .setting-item-control {
+	.firstrecall-settings-artifact-card .setting-item-control,
+	.firstrecall-generation-instructions .setting-item-control {
 		width: 100%;
 		min-width: 0;
 		justify-content: flex-start;
 	}
 
-	.cuecraft-settings-nav>.setting-item {
+	.firstrecall-settings-nav>.setting-item {
 		padding-inline: 12px;
 	}
 
-	.cuecraft-settings-flow {
+	.firstrecall-settings-flow {
 		padding-inline: 12px;
 	}
 
-	.cuecraft-provider-picker {
+	.firstrecall-provider-picker {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
 
-	.cuecraft-settings-flow .setting-item-control {
+	.firstrecall-settings-flow .setting-item-control {
 		flex-wrap: wrap;
 		justify-content: flex-start;
 		gap: 8px;
 	}
 
-	.cuecraft-active-provider-fields .cuecraft-model-setting .setting-item-control {
+	.firstrecall-active-provider-fields .firstrecall-model-setting .setting-item-control {
 		flex-wrap: wrap;
 	}
 
-	.cuecraft-settings-flow .setting-item-control input,
-	.cuecraft-settings-flow .setting-item-control select {
+	.firstrecall-settings-flow .setting-item-control input,
+	.firstrecall-settings-flow .setting-item-control select {
 		max-width: 100%;
 	}
 
-	.cuecraft-model-combobox,
-	.cuecraft-model-combobox-input {
+	.firstrecall-model-combobox,
+	.firstrecall-model-combobox-input {
 		width: 100%;
 		min-width: 0;
 	}
 
-	.cuecraft-settings-flow .setting-item-info,
-	.cuecraft-settings-flow .setting-item-control {
+	.firstrecall-settings-flow .setting-item-info,
+	.firstrecall-settings-flow .setting-item-control {
 		width: 100%;
 	}
 
-	.cuecraft-thumbnail-setting {
+	.firstrecall-thumbnail-setting {
 		align-items: stretch;
 	}
 
-	.cuecraft-thumbnail-setting .setting-item-control {
+	.firstrecall-thumbnail-setting .setting-item-control {
 		width: 100%;
 		flex-basis: auto;
 	}
 
-	.cuecraft-thumbnail-group {
+	.firstrecall-thumbnail-group {
 		grid-template-columns: repeat(auto-fit, minmax(min(138px, 100%), 1fr));
 	}
 
-	.cuecraft-thumbnail-group-editor-display {
+	.firstrecall-thumbnail-group-editor-display {
 		grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr));
 	}
 }
 
 @media (max-width: 420px) {
-	.cuecraft-provider-picker {
+	.firstrecall-provider-picker {
 		grid-template-columns: 1fr;
 	}
 }
 
-.cuecraft-cue,
-.cuecraft-note-brief,
-.cuecraft-editor-hook,
-.cuecraft-cornell-cue {
+.firstrecall-cue,
+.firstrecall-note-brief,
+.firstrecall-editor-hook,
+.firstrecall-cornell-cue {
 	--cc-card: var(--background-primary);
 	--cc-border: var(--background-modifier-border);
 	--cc-text: var(--text-normal);
@@ -1132,7 +1132,7 @@
 }
 
 /* Cue block widget rendered beside a section heading in the editor. */
-.cuecraft-cue {
+.firstrecall-cue {
 	box-sizing: border-box;
 	color: var(--cc-text);
 	font-size: var(--font-ui-small);
@@ -1145,15 +1145,15 @@
 	margin: 0.3em 0 1em;
 }
 
-.cuecraft-inline-cue-widget {
+.firstrecall-inline-cue-widget {
 	padding-bottom: 1em;
 }
 
-.cuecraft-inline-cue-widget>.cuecraft-cue {
+.firstrecall-inline-cue-widget>.firstrecall-cue {
 	margin-bottom: 0;
 }
 
-.cuecraft-label-icon {
+.firstrecall-label-icon {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -1163,18 +1163,18 @@
 	flex: 0 0 auto;
 }
 
-.cuecraft-label-icon svg {
+.firstrecall-label-icon svg {
 	width: 1.25em;
 	height: 1.25em;
 	stroke-width: 2;
 }
 
-.cuecraft-cue-question {
+.firstrecall-cue-question {
 	font-weight: var(--font-semibold);
 	line-height: 1.3;
 }
 
-.cuecraft-cue-keywords {
+.firstrecall-cue-keywords {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.35em;
@@ -1183,8 +1183,8 @@
 	font-size: var(--font-smallest);
 }
 
-.cuecraft-cue-term,
-.cuecraft-cornell-term {
+.firstrecall-cue-term,
+.firstrecall-cornell-term {
 	display: inline-flex;
 	align-items: center;
 	max-width: 100%;
@@ -1198,7 +1198,7 @@
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-summary {
+.firstrecall-summary {
 	margin-top: 0.4em;
 	padding-top: 0.35em;
 	border-top: 1px solid var(--cc-border);
@@ -1208,17 +1208,17 @@
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-summary-phrase {
+.firstrecall-summary-phrase {
 	color: var(--text-normal);
 	font-weight: var(--font-semibold);
 }
 
-.cuecraft-summary-explanation {
+.firstrecall-summary-explanation {
 	margin-top: 0.2em;
 	color: var(--cc-muted);
 }
 
-.cuecraft-note-brief {
+.firstrecall-note-brief {
 	box-sizing: border-box;
 	max-width: min(48rem, 100%);
 	margin: 0.65em 0 1em;
@@ -1233,7 +1233,7 @@
 	user-select: text;
 }
 
-.cuecraft-note-brief-label {
+.firstrecall-note-brief-label {
 	display: inline-flex;
 	align-items: center;
 	gap: 0.48em;
@@ -1246,7 +1246,7 @@
 	text-transform: uppercase;
 }
 
-.cuecraft-note-brief-overview {
+.firstrecall-note-brief-overview {
 	margin: 0;
 	color: var(--cc-text);
 	font-size: var(--font-ui-medium);
@@ -1254,7 +1254,7 @@
 	text-wrap: pretty;
 }
 
-.cuecraft-note-brief-insights {
+.firstrecall-note-brief-insights {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
 	gap: 0.75em;
@@ -1263,40 +1263,40 @@
 	border-top: 1px solid var(--cc-border);
 }
 
-.cuecraft-note-brief-insight {
+.firstrecall-note-brief-insight {
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
 	padding-inline-start: 0.7em;
 }
 
-.cuecraft-note-brief-insight:first-child {
+.firstrecall-note-brief-insight:first-child {
 	padding-inline-start: 0;
 }
 
-.cuecraft-note-brief-insight:not(:first-child) {
+.firstrecall-note-brief-insight:not(:first-child) {
 	border-inline-start: 1px solid var(--cc-border);
 }
 
-.cuecraft-note-brief-insight-badge {
+.firstrecall-note-brief-insight-badge {
 	align-self: flex-start;
 	margin-top: auto;
 }
 
-.cuecraft-note-brief-insight-title {
+.firstrecall-note-brief-insight-title {
 	font-weight: var(--font-semibold);
 	line-height: 1.25;
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-note-brief-insight-detail {
+.firstrecall-note-brief-insight-detail {
 	margin: 0.25em 0 0.65em;
 	color: var(--cc-muted);
 	font-size: var(--font-smallest);
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-editor-hook {
+.firstrecall-editor-hook {
 	box-sizing: border-box;
 	color: var(--cc-text);
 	font-size: var(--font-ui-small);
@@ -1304,49 +1304,49 @@
 	user-select: text;
 }
 
-.cuecraft-cue.cuecraft-cuewidth-medium {
+.firstrecall-cue.firstrecall-cuewidth-medium {
 	max-width: min(36rem, 100%);
 }
 
-.cuecraft-cue.cuecraft-cuefont-small {
+.firstrecall-cue.firstrecall-cuefont-small {
 	font-size: var(--font-smallest);
 }
 
-.cuecraft-cue.cuecraft-cuefont-medium {
+.firstrecall-cue.firstrecall-cuefont-medium {
 	font-size: var(--font-ui-small);
 }
 
-.cuecraft-cue.cuecraft-cuefont-large {
+.firstrecall-cue.firstrecall-cuefont-large {
 	font-size: var(--font-ui-medium);
 }
 
-.cuecraft-editor-hook.cuecraft-cuefont-small {
+.firstrecall-editor-hook.firstrecall-cuefont-small {
 	font-size: var(--font-smallest);
 }
 
-.cuecraft-editor-hook.cuecraft-cuefont-medium {
+.firstrecall-editor-hook.firstrecall-cuefont-medium {
 	font-size: var(--font-ui-small);
 }
 
-.cuecraft-editor-hook.cuecraft-cuefont-large {
+.firstrecall-editor-hook.firstrecall-cuefont-large {
 	font-size: var(--font-ui-medium);
 }
 
-.cuecraft-editor-cornell-card.cuecraft-cornell {
+.firstrecall-editor-cornell-card.firstrecall-cornell {
 	padding: 0;
 	overflow: visible;
 }
 
-.cuecraft-editor-cornell-card .cuecraft-cornell-cue {
+.firstrecall-editor-cornell-card .firstrecall-cornell-cue {
 	box-sizing: border-box;
 	width: 100%;
 }
 
-.cuecraft-editor-cornell-card[data-question-visible="false"] .cuecraft-cornell-cue::before {
+.firstrecall-editor-cornell-card[data-question-visible="false"] .firstrecall-cornell-cue::before {
 	content: none;
 }
 
-.cuecraft-editor-rail-spacer {
+.firstrecall-editor-rail-spacer {
 	display: block;
 	width: 1px;
 	opacity: 0;
@@ -1354,17 +1354,17 @@
 	user-select: none;
 }
 
-.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
+.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter {
 	background: transparent;
 	border-inline-end: 0;
 }
 
-.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cm-gutterElement {
+.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .cm-gutterElement {
 	padding: 0;
 	overflow: visible;
 }
 
-.cuecraft-editor-hook-title {
+.firstrecall-editor-hook-title {
 	position: relative;
 	z-index: 1;
 	font-weight: var(--font-semibold);
@@ -1372,14 +1372,14 @@
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-title {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-title {
 	color: var(--text-normal);
 	font-size: inherit;
 	font-weight: var(--font-normal, 400);
 	line-height: 1.45;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-toggle {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-toggle {
 	display: block;
 	box-sizing: border-box;
 	width: 100%;
@@ -1394,18 +1394,18 @@
 	text-align: start;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-toggle:focus-visible {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-toggle:focus-visible {
 	outline: 2px solid var(--interactive-accent);
 	outline-offset: 3px;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-body+.cuecraft-editor-hook-section-toggle {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-body+.firstrecall-editor-hook-section-toggle {
 	margin-top: 0.95em;
 	padding-top: 0.85em;
 	border-top: 1px solid var(--cc-border);
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-label {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-label {
 	display: flex;
 	align-items: center;
 	gap: 0.48em;
@@ -1420,7 +1420,7 @@
 	text-transform: uppercase;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-chevron {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-chevron {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -1433,16 +1433,16 @@
 	transition: transform 200ms ease;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-chevron svg {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-chevron svg {
 	width: 1.25em;
 	height: 1.25em;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-toggle[aria-expanded="false"] .cuecraft-editor-hook-section-chevron {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-toggle[aria-expanded="false"] .firstrecall-editor-hook-section-chevron {
 	transform: rotate(-90deg);
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-preview {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-preview {
 	display: block;
 	width: 100%;
 	overflow: hidden;
@@ -1455,16 +1455,16 @@
 	white-space: nowrap;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-preview[hidden] {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-preview[hidden] {
 	display: none;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-toggle[data-section="terms"][aria-expanded="false"] {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-toggle[data-section="terms"][aria-expanded="false"] {
 	height: auto;
 	padding-bottom: 0.65em;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-body {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-body {
 	display: grid;
 	grid-template-rows: 1fr;
 	opacity: 1;
@@ -1473,24 +1473,24 @@
 		opacity 200ms ease;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-body[data-collapsed="true"] {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-body[data-collapsed="true"] {
 	grid-template-rows: 0fr;
 	opacity: 0;
 	pointer-events: none;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-content {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-content {
 	min-height: 0;
 	overflow: hidden;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-content>.cuecraft-summary {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-content>.firstrecall-summary {
 	margin-top: 0;
 	padding-top: 0;
 	border-top: 0;
 }
 
-.cuecraft-editor-hook-keywords {
+.firstrecall-editor-hook-keywords {
 	position: relative;
 	z-index: 1;
 	margin-top: 0.55em;
@@ -1500,21 +1500,21 @@
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-editor-hook-keywords {
+.firstrecall-editor-hook-keywords {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 0.35em;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-keywords,
-.cuecraft-editor-hook-sectioned .cuecraft-cornell-kw {
+.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-keywords,
+.firstrecall-editor-hook-sectioned .firstrecall-cornell-kw {
 	gap: 0.32em;
 	margin-top: 0.42em;
 	font-size: inherit;
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-cue-term,
-.cuecraft-editor-hook-sectioned .cuecraft-cornell-term {
+.firstrecall-editor-hook-sectioned .firstrecall-cue-term,
+.firstrecall-editor-hook-sectioned .firstrecall-cornell-term {
 	min-height: 1.65em;
 	padding: 0 0.42rem;
 	color: color-mix(in srgb, var(--cc-muted) 82%, transparent);
@@ -1522,28 +1522,28 @@
 	line-height: 1.65;
 }
 
-.cuecraft-editor-hook .cuecraft-summary {
+.firstrecall-editor-hook .firstrecall-summary {
 	position: relative;
 	z-index: 1;
 	color: var(--cc-muted);
 	font-weight: var(--font-medium);
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-summary {
+.firstrecall-editor-hook-sectioned .firstrecall-summary {
 	color: var(--text-normal);
 	font-size: inherit;
 	font-weight: var(--font-normal, 400);
 	line-height: 1.45;
 }
 
-.cuecraft-editor-hook[data-question-visible="false"] .cuecraft-summary {
+.firstrecall-editor-hook[data-question-visible="false"] .firstrecall-summary {
 	margin-top: 0;
 	padding-top: 0;
 	border-top: 0;
 }
 
 @media (min-width: 980px) {
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter {
 		flex: 0 0 0;
 		width: 0;
 		min-width: 0;
@@ -1551,13 +1551,13 @@
 		overflow: visible;
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cm-gutterElement {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .cm-gutterElement {
 		width: 0;
 		min-width: 0;
 		overflow: visible;
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook {
 		margin: 0.35em 0 0.75em;
 		max-width: none;
 		transform: translateX(calc(-100% - 1.5rem));
@@ -1566,37 +1566,37 @@
 }
 
 @media (min-width: 980px) and (max-width: 1320px) {
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook {
 		font-size: var(--font-smallest);
 		line-height: 1.16;
 		transform: translateX(calc(-100% - 0.5rem));
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-medium {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook.firstrecall-cuefont-medium {
 		font-size: var(--font-ui-small);
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-large {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook.firstrecall-cuefont-large {
 		font-size: var(--font-ui-medium);
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-title {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook-title {
 		font-size: var(--font-smallest);
 		line-height: 1.12;
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-sectioned .cuecraft-editor-hook-title {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook-sectioned .firstrecall-editor-hook-title {
 		font-size: inherit;
 		line-height: 1.45;
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-keywords {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook-keywords {
 		font-size: var(--font-smallest);
 	}
 }
 
 @media (max-width: 979.98px) {
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter {
 		flex: 0 0 0;
 		width: 0;
 		min-width: 0;
@@ -1604,13 +1604,13 @@
 		overflow: visible;
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cm-gutterElement {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .cm-gutterElement {
 		width: 0;
 		min-width: 0;
 		overflow: visible;
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook {
 		margin: 0.3em 0 0.65em;
 		max-width: none;
 		font-size: var(--font-smallest);
@@ -1618,83 +1618,83 @@
 		transform: translateX(calc(-100% - 0.375rem));
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-medium {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook.firstrecall-cuefont-medium {
 		font-size: var(--font-ui-small);
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-large {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook.firstrecall-cuefont-large {
 		font-size: var(--font-ui-medium);
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-title {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook-title {
 		font-size: var(--font-smallest);
 		line-height: 1.1;
 	}
 
-	.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook-sectioned .cuecraft-editor-hook-title {
+	.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook-sectioned .firstrecall-editor-hook-title {
 		font-size: inherit;
 		line-height: 1.45;
 	}
 }
 
 @media (min-width: 980px) {
-	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cuecraft-editor-hook-gutter .cuecraft-editor-hook {
+	.markdown-source-view.mod-cm6 .cm-editor.firstrecall-editor-hook-page-shift .firstrecall-editor-hook-gutter .firstrecall-editor-hook {
 		transform: translateX(calc(-100% + 1rem));
 	}
 }
 
 @media (min-width: 1180px) {
-	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift {
-		--cuecraft-editor-page-shift: clamp(6.5rem, 11vw, 11rem);
+	.markdown-source-view.mod-cm6 .cm-editor.firstrecall-editor-hook-page-shift {
+		--firstrecall-editor-page-shift: clamp(6.5rem, 11vw, 11rem);
 	}
 
-	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cm-contentContainer {
-		transform: translateX(var(--cuecraft-editor-page-shift));
+	.markdown-source-view.mod-cm6 .cm-editor.firstrecall-editor-hook-page-shift .cm-contentContainer {
+		transform: translateX(var(--firstrecall-editor-page-shift));
 		transition: transform 140ms ease;
 	}
 
 }
 
 @media (min-width: 980px) and (max-width: 1179.98px) {
-	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift {
-		--cuecraft-editor-page-shift: clamp(4rem, 8vw, 6rem);
+	.markdown-source-view.mod-cm6 .cm-editor.firstrecall-editor-hook-page-shift {
+		--firstrecall-editor-page-shift: clamp(4rem, 8vw, 6rem);
 	}
 
-	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cm-contentContainer {
-		transform: translateX(var(--cuecraft-editor-page-shift));
+	.markdown-source-view.mod-cm6 .cm-editor.firstrecall-editor-hook-page-shift .cm-contentContainer {
+		transform: translateX(var(--firstrecall-editor-page-shift));
 		transition: transform 140ms ease;
 	}
 
 }
 
-.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuewidth-medium {
+.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook.firstrecall-cuewidth-medium {
 	width: clamp(8.5rem, 16vw, 13rem);
 }
 
-.markdown-source-view.mod-cm6 .cuecraft-editor-cue-width-custom {
-	--cuecraft-editor-cue-width-resolved: clamp(6rem, var(--cuecraft-editor-cue-width, 13rem), 32rem);
+.markdown-source-view.mod-cm6 .firstrecall-editor-cue-width-custom {
+	--firstrecall-editor-cue-width-resolved: clamp(6rem, var(--firstrecall-editor-cue-width, 13rem), 32rem);
 }
 
-.markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-rail-card.cuecraft-editor-cue-width-custom {
+.markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-rail-card.firstrecall-editor-cue-width-custom {
 	box-sizing: border-box;
-	width: var(--cuecraft-editor-cue-width-resolved);
+	width: var(--firstrecall-editor-cue-width-resolved);
 	max-width: none;
 }
 
-.cuecraft-editor-rail-card {
+.firstrecall-editor-rail-card {
 	position: relative;
 	box-sizing: border-box;
 }
 
-.cuecraft-editor-cornell-card.cuecraft-editor-rail-card {
+.firstrecall-editor-cornell-card.firstrecall-editor-rail-card {
 	padding-left: 0;
 }
 
-.cuecraft-editor-cornell-card.cuecraft-editor-rail-card .cuecraft-cornell-cue {
+.firstrecall-editor-cornell-card.firstrecall-editor-rail-card .firstrecall-cornell-cue {
 	padding-left: 28px;
 }
 
-.cuecraft-editor-cue-width-grip {
+.firstrecall-editor-cue-width-grip {
 	position: absolute;
 	z-index: 5;
 	inset-block: 0;
@@ -1708,7 +1708,7 @@
 	touch-action: none;
 }
 
-.cuecraft-editor-cue-width-grip-label {
+.firstrecall-editor-cue-width-grip-label {
 	position: absolute;
 	width: 1px;
 	height: 1px;
@@ -1720,10 +1720,10 @@
 	border: 0;
 }
 
-.cuecraft-editor-cue-width-grip::before {
+.firstrecall-editor-cue-width-grip::before {
 	content: "";
 	position: absolute;
-	top: var(--cuecraft-editor-cue-width-grip-top, 50%);
+	top: var(--firstrecall-editor-cue-width-grip-top, 50%);
 	left: 50%;
 	width: 9px;
 	height: 52px;
@@ -1735,10 +1735,10 @@
 	transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
 }
 
-.cuecraft-editor-cue-width-grip::after {
+.firstrecall-editor-cue-width-grip::after {
 	content: "";
 	position: absolute;
-	top: var(--cuecraft-editor-cue-width-grip-top, 50%);
+	top: var(--firstrecall-editor-cue-width-grip-top, 50%);
 	left: 50%;
 	width: 2px;
 	height: 17px;
@@ -1746,59 +1746,59 @@
 	transform: translate(-50%, -50%);
 }
 
-.cuecraft-editor-cue-width-grip:hover::before,
-.cuecraft-editor-cue-width-grip:focus-visible::before,
-.cuecraft-editor-cue-width-grip.cuecraft-editor-cue-width-resizing::before {
+.firstrecall-editor-cue-width-grip:hover::before,
+.firstrecall-editor-cue-width-grip:focus-visible::before,
+.firstrecall-editor-cue-width-grip.firstrecall-editor-cue-width-resizing::before {
 	border-color: var(--interactive-accent);
 	background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary));
 	box-shadow: 0 0 0 3px color-mix(in srgb, var(--interactive-accent) 16%, transparent), var(--shadow-s);
 }
 
-.cuecraft-editor-cue-width-grip:hover::after,
-.cuecraft-editor-cue-width-grip:focus-visible::after,
-.cuecraft-editor-cue-width-grip.cuecraft-editor-cue-width-resizing::after {
+.firstrecall-editor-cue-width-grip:hover::after,
+.firstrecall-editor-cue-width-grip:focus-visible::after,
+.firstrecall-editor-cue-width-grip.firstrecall-editor-cue-width-resizing::after {
 	background: radial-gradient(circle, var(--interactive-accent) 1px, transparent 1.2px) center top / 2px 5px repeat-y;
 }
 
-.cuecraft-editor-cue-width-grip:focus-visible {
+.firstrecall-editor-cue-width-grip:focus-visible {
 	outline: none;
 }
 
-html.cuecraft-editor-cue-width-resizing,
-html.cuecraft-editor-cue-width-resizing * {
+html.firstrecall-editor-cue-width-resizing,
+html.firstrecall-editor-cue-width-resizing * {
 	cursor: ew-resize !important;
 	user-select: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.cuecraft-editor-hook {
+	.firstrecall-editor-hook {
 		transition: none;
 	}
 
-	.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-body,
-	.cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-chevron {
+	.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-body,
+	.firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-chevron {
 		transition: none;
 	}
 
-	.markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cm-contentContainer {
+	.markdown-source-view.mod-cm6 .cm-editor.firstrecall-editor-hook-page-shift .cm-contentContainer {
 		transition: none;
 	}
 }
 
 /* Failed-cue state in Reading and Editing views. */
-.cuecraft-cue-error,
-.cuecraft-cornell-cue-error {
+.firstrecall-cue-error,
+.firstrecall-cornell-cue-error {
 	border-left-color: var(--text-error);
 	opacity: 0.85;
 }
 
-.cuecraft-cue-error .cuecraft-cue-question,
-.cuecraft-cornell-cue-error .cuecraft-cornell-q {
+.firstrecall-cue-error .firstrecall-cue-question,
+.firstrecall-cornell-cue-error .firstrecall-cornell-q {
 	color: var(--text-error);
 	font-style: italic;
 }
 
-.cuecraft-cornell-cue {
+.firstrecall-cornell-cue {
 	position: relative;
 	border: 1px solid var(--cc-border);
 	border-inline-start: 3px solid var(--cc-border);
@@ -1808,49 +1808,49 @@ html.cuecraft-editor-cue-width-resizing * {
 	box-shadow: var(--cc-shadow);
 }
 
-.cuecraft-cornell-q {
+.firstrecall-cornell-q {
 	font-weight: var(--font-semibold);
 	font-size: var(--font-ui-small);
 	line-height: 1.4;
 }
 
 /* ---- Typography / layout controls (cue font size) ---- */
-.cuecraft-cuefont-small .cuecraft-cornell-q {
+.firstrecall-cuefont-small .firstrecall-cornell-q {
 	font-size: var(--font-smallest);
 }
 
-.cuecraft-cuefont-medium .cuecraft-cornell-q {
+.firstrecall-cuefont-medium .firstrecall-cornell-q {
 	font-size: var(--font-ui-small);
 }
 
-.cuecraft-cuefont-large .cuecraft-cornell-q {
+.firstrecall-cuefont-large .firstrecall-cornell-q {
 	font-size: var(--font-ui-medium);
 }
 
-.cuecraft-editor-hook-sectioned .cuecraft-cornell-q {
+.firstrecall-editor-hook-sectioned .firstrecall-cornell-q {
 	font-size: inherit;
 	font-weight: var(--font-normal, 400);
 	line-height: 1.45;
 }
 
 /* Reading-mode (preview) cues, inserted beneath their headings. */
-.cuecraft-cue-reading {
+.firstrecall-cue-reading {
 	margin: 0.4em 0 1em;
 }
 
-.cuecraft-reading-study-answer.is-hidden {
+.firstrecall-reading-study-answer.is-hidden {
 	visibility: hidden;
 }
 
-.cuecraft-reading-study-cue {
+.firstrecall-reading-study-cue {
 	position: relative;
 }
 
-.cuecraft-reading-study-cue[data-study-state="revealed"] {
+.firstrecall-reading-study-cue[data-study-state="revealed"] {
 	border-color: var(--interactive-accent);
 }
 
-.cuecraft-reading-study-controls {
+.firstrecall-reading-study-controls {
 	position: sticky;
 	top: 0;
 	z-index: 10;
@@ -1871,20 +1871,20 @@ html.cuecraft-editor-cue-width-resizing * {
 	border-radius: 0;
 }
 
-.cuecraft-reading-study-progress {
+.firstrecall-reading-study-progress {
 	white-space: nowrap;
 	color: var(--text-normal);
 	font-variant-numeric: tabular-nums;
 	font-weight: var(--font-medium);
 }
 
-.cuecraft-reading-study-controls button {
+.firstrecall-reading-study-controls button {
 	min-height: 26px;
 	padding: 2px 8px;
 	font-size: var(--font-ui-smaller);
 }
 
-.cuecraft-cornell-kw {
+.firstrecall-cornell-kw {
 	margin-top: 8px;
 	display: flex;
 	flex-wrap: wrap;
@@ -1896,7 +1896,7 @@ html.cuecraft-editor-cue-width-resizing * {
 }
 
 /* Editing Study keeps source geometry intact so concealed text remains editable. */
-.cuecraft-study-header-action {
+.firstrecall-study-header-action {
 	display: inline-flex;
 	align-items: center;
 	gap: 5px;
@@ -1904,26 +1904,29 @@ html.cuecraft-editor-cue-width-resizing * {
 	padding-inline: 7px;
 }
 
-.cuecraft-study-header-label {
+.firstrecall-study-header-menu-action {
+	font-weight: var(--font-semibold);
+}
+
+.firstrecall-study-header-action.firstrecall-has-no-material {
+	color: #aa5555;
+	background-color: #fff6f6;
+}
+
+.firstrecall-study-header-label {
 	display: inline;
 	font-size: var(--font-ui-smaller);
 }
 
-.cuecraft-study-header-action[aria-disabled="true"],
-.cuecraft-study-ribbon[aria-disabled="true"] {
+.firstrecall-study-header-action[aria-disabled="true"] {
 	opacity: 0.55;
 }
 
-.cuecraft-study-header-action.is-active,
-.cuecraft-study-ribbon.is-active {
+.firstrecall-study-header-action.is-active {
 	color: var(--interactive-accent);
 }
 
-.cuecraft-study-ribbon:not([aria-disabled="true"]) {
-	box-shadow: inset 2px 0 0 var(--interactive-accent);
-}
-
-.markdown-source-view.mod-cm6 .cuecraft-editor-study-answer.is-hidden {
+.markdown-source-view.mod-cm6 .firstrecall-editor-study-answer.is-hidden {
 	filter: blur(4px);
 	opacity: 0.58;
 	cursor: text;
@@ -1933,15 +1936,15 @@ html.cuecraft-editor-cue-width-resizing * {
 		opacity 120ms ease;
 }
 
-.cuecraft-editor-study-cue {
+.firstrecall-editor-study-cue {
 	position: relative;
 }
 
-.cuecraft-editor-study-cue[data-study-state="revealed"] {
+.firstrecall-editor-study-cue[data-study-state="revealed"] {
 	border-color: var(--interactive-accent);
 }
 
-button.cuecraft-study-section-toggle {
+button.firstrecall-study-section-toggle {
 	position: absolute;
 	top: 50%;
 	inset-inline-end: -14px;
@@ -1963,24 +1966,24 @@ button.cuecraft-study-section-toggle {
 	transform: translateY(-50%);
 }
 
-button.cuecraft-study-section-toggle:hover,
-button.cuecraft-study-section-toggle:focus-visible,
-button.cuecraft-study-section-toggle[data-revealed="true"] {
+button.firstrecall-study-section-toggle:hover,
+button.firstrecall-study-section-toggle:focus-visible,
+button.firstrecall-study-section-toggle[data-revealed="true"] {
 	color: var(--interactive-accent);
 	border-color: var(--interactive-accent);
 }
 
-button.cuecraft-study-section-toggle:focus-visible {
+button.firstrecall-study-section-toggle:focus-visible {
 	outline: 2px solid var(--interactive-accent);
 	outline-offset: 2px;
 }
 
-button.cuecraft-study-section-toggle svg {
+button.firstrecall-study-section-toggle svg {
 	width: 15px;
 	height: 15px;
 }
 
-.cuecraft-editor-study-controls {
+.firstrecall-editor-study-controls {
 	position: sticky;
 	top: 0;
 	z-index: 10;
@@ -2001,20 +2004,20 @@ button.cuecraft-study-section-toggle svg {
 	border-radius: 0;
 }
 
-.cuecraft-editor-study-progress {
+.firstrecall-editor-study-progress {
 	white-space: nowrap;
 	color: var(--text-normal);
 	font-variant-numeric: tabular-nums;
 	font-weight: var(--font-medium);
 }
 
-.cuecraft-editor-study-controls button {
+.firstrecall-editor-study-controls button {
 	min-height: 26px;
 	padding: 2px 8px;
 	font-size: var(--font-ui-smaller);
 }
 
-.cuecraft-study-help {
+.firstrecall-study-help {
 	display: inline-flex;
 	flex: 0 1 auto;
 	align-items: center;
@@ -2029,13 +2032,13 @@ button.cuecraft-study-section-toggle svg {
 	border-radius: var(--radius-s);
 }
 
-.cuecraft-study-help svg {
+.firstrecall-study-help svg {
 	flex: 0 0 auto;
 	width: 16px;
 	height: 16px;
 }
 
-.cuecraft-study-help-copy {
+.firstrecall-study-help-copy {
 	display: flex;
 	min-width: 0;
 	flex-direction: column;
@@ -2044,28 +2047,28 @@ button.cuecraft-study-section-toggle svg {
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-study-help-title {
+.firstrecall-study-help-title {
 	font-weight: var(--font-medium);
 }
 
-.cuecraft-study-help-detail {
+.firstrecall-study-help-detail {
 	color: var(--text-muted);
 	font-size: var(--font-smallest);
 }
 
-.cuecraft-study-action {
+.firstrecall-study-action {
 	display: inline-flex;
 	align-items: center;
 	gap: 5px;
 	white-space: nowrap;
 }
 
-.cuecraft-study-action svg {
+.firstrecall-study-action svg {
 	width: 14px;
 	height: 14px;
 }
 
-.cuecraft-study-actions {
+.firstrecall-study-actions {
 	display: flex;
 	flex: 0 0 auto;
 	align-items: center;
@@ -2073,7 +2076,7 @@ button.cuecraft-study-section-toggle svg {
 	margin-inline-start: auto;
 }
 
-.cuecraft-study-progress-track {
+.firstrecall-study-progress-track {
 	flex: 1 1 120px;
 	min-width: 80px;
 	height: 3px;
@@ -2082,7 +2085,7 @@ button.cuecraft-study-section-toggle svg {
 	border-radius: var(--radius-s);
 }
 
-.cuecraft-study-progress-fill {
+.firstrecall-study-progress-fill {
 	height: 100%;
 	background: var(--interactive-accent);
 	border-radius: inherit;
@@ -2090,7 +2093,7 @@ button.cuecraft-study-section-toggle svg {
 }
 
 @media (prefers-reduced-motion: reduce) {
-	.cuecraft-study-progress-fill {
+	.firstrecall-study-progress-fill {
 		transition: none;
 	}
 }
@@ -2100,7 +2103,7 @@ button.cuecraft-study-section-toggle svg {
  * ==========================================================================*/
 
 /* API key field: inline show/hide eye. */
-.cuecraft-key-eye {
+.firstrecall-key-eye {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -2113,18 +2116,18 @@ button.cuecraft-study-section-toggle svg {
 	cursor: pointer;
 }
 
-.cuecraft-key-eye:hover {
+.firstrecall-key-eye:hover {
 	color: var(--text-normal);
 }
 
-.cuecraft-status-chips {
+.firstrecall-status-chips {
 	display: flex;
 	flex-wrap: wrap;
 	justify-content: flex-end;
 	gap: 8px;
 }
 
-.cuecraft-status-chip {
+.firstrecall-status-chip {
 	display: inline-flex;
 	align-items: center;
 	gap: 6px;
@@ -2138,7 +2141,7 @@ button.cuecraft-study-section-toggle svg {
 	box-shadow: none;
 }
 
-.cuecraft-status-chip-dot {
+.firstrecall-status-chip-dot {
 	width: 8px;
 	height: 8px;
 	border-radius: 999px;
@@ -2146,85 +2149,85 @@ button.cuecraft-study-section-toggle svg {
 	flex: 0 0 auto;
 }
 
-.cuecraft-status-chip-label {
+.firstrecall-status-chip-label {
 	color: inherit;
 }
 
-.cuecraft-status-chip.is-positive {
+.firstrecall-status-chip.is-positive {
 	border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
 }
 
-.cuecraft-status-chip.is-positive .cuecraft-status-chip-dot {
+.firstrecall-status-chip.is-positive .firstrecall-status-chip-dot {
 	background: var(--color-green, var(--interactive-accent));
 }
 
-.cuecraft-status-chip.is-warning {
+.firstrecall-status-chip.is-warning {
 	border-color: var(--background-modifier-border-hover, var(--background-modifier-border));
 }
 
-.cuecraft-status-chip.is-warning .cuecraft-status-chip-dot {
+.firstrecall-status-chip.is-warning .firstrecall-status-chip-dot {
 	background: var(--color-orange, var(--color-yellow));
 }
 
-.cuecraft-status-chip.is-muted {
+.firstrecall-status-chip.is-muted {
 	color: var(--text-muted);
 }
 
-.cuecraft-status-chip.is-muted .cuecraft-status-chip-dot {
+.firstrecall-status-chip.is-muted .firstrecall-status-chip-dot {
 	background: var(--text-faint, var(--text-muted));
 }
 
-.cuecraft-modal-actions {
+.firstrecall-modal-actions {
 	display: flex;
 	justify-content: flex-end;
 	gap: 8px;
 	margin-top: 16px;
 }
 
-.cuecraft-study-area-path,
-.cuecraft-study-area-counts,
-.cuecraft-study-area-status,
-.cuecraft-study-area-help,
-.cuecraft-study-area-intro,
-.cuecraft-settings-visibility-note {
+.firstrecall-study-area-path,
+.firstrecall-study-area-counts,
+.firstrecall-study-area-status,
+.firstrecall-study-area-help,
+.firstrecall-study-area-intro,
+.firstrecall-settings-visibility-note {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	line-height: 1.4;
 }
 
-.cuecraft-study-area-counts {
+.firstrecall-study-area-counts {
 	margin-top: 3px;
 }
 
-.cuecraft-study-area-status {
+.firstrecall-study-area-status {
 	margin-top: 3px;
 }
 
-.cuecraft-study-area-help {
+.firstrecall-study-area-help {
 	margin-top: 8px;
 	max-width: 520px;
 }
 
-.cuecraft-study-area-create-row .cuecraft-model-combobox-input {
+.firstrecall-study-area-create-row .firstrecall-model-combobox-input {
 	border-color: color-mix(in srgb,
 			var(--text-muted) 24%,
 			var(--background-primary));
 	box-shadow: none;
 }
 
-.cuecraft-study-area-row {
+.firstrecall-study-area-row {
 	align-items: flex-start;
 }
 
-.cuecraft-study-area-row.is-disabled {
+.firstrecall-study-area-row.is-disabled {
 	opacity: var(--opacity-disabled, 0.65);
 }
 
-.cuecraft-study-area-row .setting-item-info {
+.firstrecall-study-area-row .setting-item-info {
 	min-width: 0;
 }
 
-.cuecraft-study-area-controls {
+.firstrecall-study-area-controls {
 	display: flex;
 	align-items: center;
 	justify-content: flex-end;
@@ -2232,22 +2235,22 @@ button.cuecraft-study-section-toggle svg {
 	gap: 8px;
 }
 
-.cuecraft-study-area-toggle-label {
+.firstrecall-study-area-toggle-label {
 	color: var(--text-muted);
 	font-size: var(--font-ui-smaller);
 	white-space: nowrap;
 }
 
-.cuecraft-study-area-controls button.cuecraft-study-area-retry.cuecraft-study-area-hidden {
+.firstrecall-study-area-controls button.firstrecall-study-area-retry.firstrecall-study-area-hidden {
 	display: none;
 }
 
-.cuecraft-study-area-controls button.mod-cta:disabled {
+.firstrecall-study-area-controls button.mod-cta:disabled {
 	cursor: default;
 	opacity: var(--opacity-disabled, 0.45);
 }
 
-.cuecraft-study-area-exclusions {
+.firstrecall-study-area-exclusions {
 	margin: -4px 0 16px;
 	padding: 12px;
 	border: 1px solid var(--background-modifier-border);
@@ -2255,11 +2258,11 @@ button.cuecraft-study-section-toggle svg {
 	background: var(--background-secondary);
 }
 
-.cuecraft-study-area-exclusions-title {
+.firstrecall-study-area-exclusions-title {
 	font-weight: var(--font-semibold);
 }
 
-.cuecraft-study-area-exclusion-row {
+.firstrecall-study-area-exclusion-row {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -2269,15 +2272,15 @@ button.cuecraft-study-section-toggle svg {
 	border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.cuecraft-study-area-exclusion-row>span {
+.firstrecall-study-area-exclusion-row>span {
 	overflow-wrap: anywhere;
 }
 
-.cuecraft-study-area-provider-setup {
+.firstrecall-study-area-provider-setup {
 	margin-block: 4px 12px;
 }
 
-button.cuecraft-study-area-remove {
+button.firstrecall-study-area-remove {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -2286,7 +2289,7 @@ button.cuecraft-study-area-remove {
 	padding: 0;
 }
 
-.cuecraft-study-area-remove svg {
+.firstrecall-study-area-remove svg {
 	width: 16px;
 	height: 16px;
 }

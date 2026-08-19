@@ -3,7 +3,7 @@ import type {
 	ByokProviderRuntime,
 	ByokTextGenerationInput,
 } from "@swartzrock/byok-runtime";
-import { wrapCueCraftByokRuntime } from "../src/byok-cuecraft-adapter";
+import { wrapFirstRecallByokRuntime } from "../src/byok-firstrecall-adapter";
 import {
 	buildSectionCueInstructionsTemplate,
 	SECTION_COUNT_PLACEHOLDER,
@@ -85,7 +85,7 @@ describe("local CLI cue batch prompt", () => {
 				};
 			},
 		};
-		const provider = wrapCueCraftByokRuntime(runtime);
+		const provider = wrapFirstRecallByokRuntime(runtime);
 		const inputs = [
 			{
 				heading: "Stacks",
@@ -151,7 +151,7 @@ describe("local CLI cue batch prompt", () => {
 				return { text: "still not json" };
 			},
 		};
-		const provider = wrapCueCraftByokRuntime(runtime);
+		const provider = wrapFirstRecallByokRuntime(runtime);
 
 		await expect(
 			provider.generateCues?.([
@@ -195,7 +195,7 @@ describe("local CLI cue batch prompt", () => {
 				};
 			},
 		};
-		const provider = wrapCueCraftByokRuntime(runtime);
+		const provider = wrapFirstRecallByokRuntime(runtime);
 
 		await expect(
 			provider.generateCues?.([
@@ -227,7 +227,7 @@ describe("local CLI cue batch prompt", () => {
 				return { text: JSON.stringify({ cues: [{ insufficientSource: true }] }) };
 			},
 		};
-		const provider = wrapCueCraftByokRuntime(runtime);
+		const provider = wrapFirstRecallByokRuntime(runtime);
 
 		await expect(
 			provider.generateCues?.([

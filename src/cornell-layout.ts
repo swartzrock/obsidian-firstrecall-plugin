@@ -35,5 +35,5 @@ export function isCueFontSize(value: unknown): value is CueFontSize {
 /** The CSS class an editor cue uses for the configured font size. */
 export function cueFontSizeClass(value: unknown): string {
 	const id = isCueFontSize(value) ? value : DEFAULT_CUE_FONT_SIZE;
-	return `cuecraft-cuefont-${id}`;
+	return `firstrecall-cuefont-${id}`;
 }

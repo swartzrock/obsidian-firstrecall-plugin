@@ -1,23 +1,23 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-	applyCueCraftListedModels,
-	applyCueCraftModelRefreshFailure,
-	cueCraftFetchedModelCount,
-	cueCraftModelRefreshMessage,
-	cueCraftProviderConfigFromSettings,
-	cueCraftProviderSettings,
-	clearCueCraftProviderCredentialMetadata,
-	deriveCueCraftProviderSetupStatus,
-	makeCueCraftByokProvider,
-	makeCueCraftByokProviderFromStore,
-	secureCueCraftCloudCredentials,
-	normalizeCueCraftProviderSettings,
-	recordCueCraftProviderConnectionSuccess,
-	resetCueCraftFetchedModels,
-	resolveCueCraftProviderConfigFromStore,
-	setCueCraftProviderCredentialMetadata,
-	setCueCraftProviderModel,
-} from "../src/byok-cuecraft-adapter";
+	applyFirstRecallListedModels,
+	applyFirstRecallModelRefreshFailure,
+	firstRecallFetchedModelCount,
+	firstRecallModelRefreshMessage,
+	firstRecallProviderConfigFromSettings,
+	firstRecallProviderSettings,
+	clearFirstRecallProviderCredentialMetadata,
+	deriveFirstRecallProviderSetupStatus,
+	makeFirstRecallByokProvider,
+	makeFirstRecallByokProviderFromStore,
+	secureFirstRecallCloudCredentials,
+	normalizeFirstRecallProviderSettings,
+	recordFirstRecallProviderConnectionSuccess,
+	resetFirstRecallFetchedModels,
+	resolveFirstRecallProviderConfigFromStore,
+	setFirstRecallProviderCredentialMetadata,
+	setFirstRecallProviderModel,
+} from "../src/byok-firstrecall-adapter";
 import type {
 	ByokModelOption,
 	ByokProviderId,
@@ -26,21 +26,21 @@ import type {
 } from "@swartzrock/byok-runtime";
 import {
 	DEFAULT_SETTINGS,
-	type CueCraftSettings,
+	type FirstRecallSettings,
 } from "../src/settings";
 import type {
-	CueCraftCloudCredentialProvider,
+	FirstRecallCloudCredentialProvider,
 	SecureCredentialStore,
 } from "../src/secure-credential-store";
 import { buildSectionCuePrompt } from "../src/cue-instructions";
 import { buildNoteBriefPrompt } from "../src/study-material-instructions";
 
 function settings(
-	overrides: Partial<CueCraftSettings> & {
+	overrides: Partial<FirstRecallSettings> & {
 		selectedProvider?: ByokProviderId;
 		selectedProviderSettings?: Partial<ByokProviderStoredSettings>;
 	} = {}
-): CueCraftSettings {
+): FirstRecallSettings {
 	const {
 		selectedProvider = "ollama",
 		selectedProviderSettings = {},
@@ -89,11 +89,11 @@ const openrouterOption: ByokModelOption = {
 
 function fakeCredentialStore(opts: {
 	save?: (
-		provider: CueCraftCloudCredentialProvider,
+		provider: FirstRecallCloudCredentialProvider,
 		value: string
 	) => Promise<{ ok: boolean; token?: string; length?: number; message?: string }>;
 	metadata?: (
-		provider: CueCraftCloudCredentialProvider
+		provider: FirstRecallCloudCredentialProvider
 	) => Promise<{ ok: boolean; token?: string; length?: number }>;
 } = {}): SecureCredentialStore {
 	return {
@@ -136,10 +136,10 @@ function fakeCredentialStore(opts: {
 	};
 }
 
-describe("cueCraftProviderConfigFromSettings", () => {
-	it("maps every CueCraft provider setting shape into BYOK provider config", () => {
+describe("firstRecallProviderConfigFromSettings", () => {
+	it("maps every FirstRecall provider setting shape into BYOK provider config", () => {
 		expect(
-			cueCraftProviderConfigFromSettings(
+			firstRecallProviderConfigFromSettings(
 				settings({
 					selectedProvider: "openrouter",
 					selectedProviderSettings: {
@@ -154,7 +154,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			model: "anthropic/claude-sonnet-4",
 		});
 		expect(
-			cueCraftProviderConfigFromSettings(
+			firstRecallProviderConfigFromSettings(
 				settings({
 					selectedProvider: "codex-cli",
 					selectedProviderSettings: { credential: "codex", model: "" },
@@ -166,7 +166,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			model: "",
 		});
 		expect(
-			cueCraftProviderConfigFromSettings(
+			firstRecallProviderConfigFromSettings(
 				settings({
 					selectedProvider: "ollama",
 					selectedProviderSettings: {
@@ -181,7 +181,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 			model: "llama3.1:8b",
 		});
 		expect(
-			cueCraftProviderConfigFromSettings(
+			firstRecallProviderConfigFromSettings(
 				settings({
 					selectedProvider: "lm-studio",
 					selectedProviderSettings: {
@@ -209,7 +209,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		});
 
 		await expect(
-			resolveCueCraftProviderConfigFromStore(
+			resolveFirstRecallProviderConfigFromStore(
 				s,
 				{
 					...fakeCredentialStore(),
@@ -238,7 +238,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		let readCount = 0;
 
 		await expect(
-			resolveCueCraftProviderConfigFromStore(
+			resolveFirstRecallProviderConfigFromStore(
 				s,
 				{
 					...fakeCredentialStore(),
@@ -275,16 +275,16 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		if (
 			!["ollama", "lm-studio", "codex-cli", "claude-cli"].includes(provider)
 		) {
-			const stored = cueCraftProviderSettings(providerSettings, provider);
+			const stored = firstRecallProviderSettings(providerSettings, provider);
 			stored.credential = "test-key";
 			stored.model = "test-model";
 		}
 		expect(
-			makeCueCraftByokProvider(providerSettings, { transport }).id
+			makeFirstRecallByokProvider(providerSettings, { transport }).id
 		).toBe(provider);
 	});
 
-	it("wraps generic text providers with CueCraft cue generation", async () => {
+	it("wraps generic text providers with FirstRecall cue generation", async () => {
 		const calls: Array<{ url: string; body?: string }> = [];
 		const transport: ByokTransport = async (request) => {
 			calls.push({ url: request.url, body: await request.clone().text() });
@@ -298,7 +298,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 				{ status: 200, headers: { "content-type": "application/json" } }
 			);
 		};
-		const provider = makeCueCraftByokProvider(settings({ selectedProvider: "ollama" }), {
+		const provider = makeFirstRecallByokProvider(settings({ selectedProvider: "ollama" }), {
 			transport,
 		});
 
@@ -325,7 +325,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("accepts a text provider abstention without asking it to fabricate a repair", async () => {
 		const calls: Array<{ body?: string }> = [];
-		const provider = makeCueCraftByokProvider(
+		const provider = makeFirstRecallByokProvider(
 			settings({ selectedProvider: "ollama" }),
 			{
 				transport: async (request) => {
@@ -352,7 +352,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("uses the current structured-object cue fields", async () => {
 		const calls: Array<{ body?: string }> = [];
-		const provider = makeCueCraftByokProvider(
+		const provider = makeFirstRecallByokProvider(
 			settings({
 				selectedProvider: "openai",
 				selectedProviderSettings: {
@@ -433,7 +433,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 	});
 
 	it("accepts a structured-object provider abstention", async () => {
-		const provider = makeCueCraftByokProvider(
+		const provider = makeFirstRecallByokProvider(
 			settings({
 				selectedProvider: "openai",
 				selectedProviderSettings: {
@@ -471,7 +471,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("uses the shared Note Brief template for structured requests", async () => {
 		const calls: Array<{ body?: string }> = [];
-		const provider = makeCueCraftByokProvider(
+		const provider = makeFirstRecallByokProvider(
 			settings({
 				selectedProvider: "openai",
 				selectedProviderSettings: {
@@ -546,10 +546,10 @@ describe("cueCraftProviderConfigFromSettings", () => {
 	it("disables Ollama thinking mode and recovers Qwen JSON from thinking output", async () => {
 		const calls: Array<{ url: string; body?: string }> = [];
 		const cue = {
-			question: "What does CueCraft turn notes into?",
+			question: "What does FirstRecall turn notes into?",
 			keywords: ["notes", "Section cues"],
 			summary: {
-				takeaway: "CueCraft turns notes into Section cues.",
+				takeaway: "FirstRecall turns notes into Section cues.",
 				keyPhrase: "Section cues",
 				explanation: "The phrase names the product's review output.",
 			},
@@ -564,14 +564,14 @@ describe("cueCraftProviderConfigFromSettings", () => {
 				{ status: 200, headers: { "content-type": "application/json" } }
 			);
 		};
-		const provider = makeCueCraftByokProvider(settings({ selectedProvider: "ollama" }), {
+		const provider = makeFirstRecallByokProvider(settings({ selectedProvider: "ollama" }), {
 			transport,
 		});
 
 		await expect(
 			provider.generateCue({
 				heading: "Product Promise",
-				content: "CueCraft turns notes into Section cues.",
+				content: "FirstRecall turns notes into Section cues.",
 				options: { questionType: "conceptual" },
 			})
 		).resolves.toMatchObject({
@@ -586,10 +586,10 @@ describe("cueCraftProviderConfigFromSettings", () => {
 
 	it("recovers Ollama thinking output when the adapter only receives response text", async () => {
 		const cue = {
-			question: "What does CueCraft turn notes into?",
+			question: "What does FirstRecall turn notes into?",
 			keywords: ["notes", "Section cues"],
 			summary: {
-				takeaway: "CueCraft turns notes into Section cues.",
+				takeaway: "FirstRecall turns notes into Section cues.",
 				keyPhrase: "Section cues",
 				explanation: "The phrase names the product's review output.",
 			},
@@ -599,14 +599,14 @@ describe("cueCraftProviderConfigFromSettings", () => {
 				response: "",
 				thinking: JSON.stringify(cue),
 			}), { status: 200, headers: { "content-type": "application/json" } });
-		const provider = makeCueCraftByokProvider(settings({ selectedProvider: "ollama" }), {
+		const provider = makeFirstRecallByokProvider(settings({ selectedProvider: "ollama" }), {
 			transport,
 		});
 
 		await expect(
 			provider.generateCue({
 				heading: "Product Promise",
-				content: "CueCraft turns notes into Section cues.",
+				content: "FirstRecall turns notes into Section cues.",
 				options: { questionType: "conceptual" },
 			})
 		).resolves.toMatchObject({
@@ -618,10 +618,10 @@ describe("cueCraftProviderConfigFromSettings", () => {
 	it("applies Ollama JSON normalization when creating a provider from secure storage", async () => {
 		const calls: Array<{ url: string; body?: string }> = [];
 		const cue = {
-			question: "What does CueCraft turn notes into?",
+			question: "What does FirstRecall turn notes into?",
 			keywords: ["notes", "Section cues"],
 			summary: {
-				takeaway: "CueCraft turns notes into Section cues.",
+				takeaway: "FirstRecall turns notes into Section cues.",
 				keyPhrase: "Section cues",
 				explanation: "The phrase names the product's review output.",
 			},
@@ -633,7 +633,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 					thinking: JSON.stringify(cue),
 				}), { status: 200, headers: { "content-type": "application/json" } });
 		};
-		const provider = await makeCueCraftByokProviderFromStore(
+		const provider = await makeFirstRecallByokProviderFromStore(
 			settings({ selectedProvider: "ollama" }),
 			{ transport },
 			fakeCredentialStore()
@@ -642,7 +642,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 		await expect(
 			provider.generateCue({
 				heading: "Product Promise",
-				content: "CueCraft turns notes into Section cues.",
+				content: "FirstRecall turns notes into Section cues.",
 				options: { questionType: "conceptual" },
 			})
 		).resolves.toMatchObject({
@@ -656,7 +656,7 @@ describe("cueCraftProviderConfigFromSettings", () => {
 	});
 });
 
-describe("CueCraft provider settings normalization", () => {
+describe("FirstRecall provider settings normalization", () => {
 	it.each([
 		["codex", "codex-cli"],
 		["claude", "claude-cli"],
@@ -665,7 +665,7 @@ describe("CueCraft provider settings normalization", () => {
 		(raw.byok as { selectedProvider: unknown }).selectedProvider = legacy;
 		const normalized = structuredClone(DEFAULT_SETTINGS);
 
-		normalizeCueCraftProviderSettings(normalized, DEFAULT_SETTINGS, raw);
+		normalizeFirstRecallProviderSettings(normalized, DEFAULT_SETTINGS, raw);
 
 		expect(normalized.byok.selectedProvider).toBe(expected);
 	});
@@ -681,12 +681,12 @@ describe("CueCraft provider settings normalization", () => {
 			},
 		});
 
-		normalizeCueCraftProviderSettings(s, settings(), s);
+		normalizeFirstRecallProviderSettings(s, settings(), s);
 
 		expect(s.byok.selectedProvider).toBe("claude-cli");
-		expect(cueCraftProviderSettings(s, "codex-cli").credential).toBe("codex");
-		expect(cueCraftProviderSettings(s, "claude-cli").model).toBe("");
-		expect(cueCraftProviderSettings(s, "claude-cli").availableModels).toEqual([
+		expect(firstRecallProviderSettings(s, "codex-cli").credential).toBe("codex");
+		expect(firstRecallProviderSettings(s, "claude-cli").model).toBe("");
+		expect(firstRecallProviderSettings(s, "claude-cli").availableModels).toEqual([
 			"sonnet",
 		]);
 	});
@@ -721,9 +721,9 @@ describe("CueCraft provider settings normalization", () => {
 			testedAt: "2026-08-17T12:00:00.000Z",
 		};
 
-		normalizeCueCraftProviderSettings(s, settings(), raw);
+		normalizeFirstRecallProviderSettings(s, settings(), raw);
 
-		expect(cueCraftProviderSettings(s, "openai")).toEqual({
+		expect(firstRecallProviderSettings(s, "openai")).toEqual({
 			credential: "",
 			credentialSaved: false,
 			credentialUpdatedAt: "",
@@ -757,27 +757,27 @@ describe("CueCraft provider settings normalization", () => {
 			},
 		});
 
-		normalizeCueCraftProviderSettings(s, settings(), s);
-		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+		normalizeFirstRecallProviderSettings(s, settings(), s);
+		expect(firstRecallProviderSettings(s, "openai")).toMatchObject({
 			credential: "",
 			credentialSaved: true,
 			credentialUpdatedAt: "token-1",
 			credentialLength: 14,
 		});
 
-		setCueCraftProviderCredentialMetadata(s, "openai", {
+		setFirstRecallProviderCredentialMetadata(s, "openai", {
 			saved: true,
 			token: "token-2",
 			length: 28,
 		});
-		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+		expect(firstRecallProviderSettings(s, "openai")).toMatchObject({
 			credentialSaved: true,
 			credentialUpdatedAt: "token-2",
 			credentialLength: 28,
 		});
 
-		clearCueCraftProviderCredentialMetadata(s, "openai");
-		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+		clearFirstRecallProviderCredentialMetadata(s, "openai");
+		expect(firstRecallProviderSettings(s, "openai")).toMatchObject({
 			credentialSaved: false,
 			credentialUpdatedAt: "",
 			credentialLength: 0,
@@ -785,7 +785,7 @@ describe("CueCraft provider settings normalization", () => {
 	});
 });
 
-describe("CueCraft fetched model adapters", () => {
+describe("FirstRecall fetched model adapters", () => {
 	it("resets provider-specific fetched model state when credentials change", () => {
 		const s = settings({
 			selectedProvider: "openrouter",
@@ -796,9 +796,9 @@ describe("CueCraft fetched model adapters", () => {
 			},
 		});
 
-		resetCueCraftFetchedModels(s, "openrouter", "Enter an OpenRouter key.");
+		resetFirstRecallFetchedModels(s, "openrouter", "Enter an OpenRouter key.");
 
-		const stored = cueCraftProviderSettings(s, "openrouter");
+		const stored = firstRecallProviderSettings(s, "openrouter");
 		expect(stored.availableModels).toEqual([]);
 		expect(stored.modelOptions).toEqual([]);
 		expect(stored.hasFetchedModels).toBe(false);
@@ -810,48 +810,48 @@ describe("CueCraft fetched model adapters", () => {
 		const openAiOption = { id: "gpt-4o-mini", label: "gpt-4o-mini" };
 
 		expect(
-			applyCueCraftListedModels(s, "openai", [openAiOption], "No models.")
+			applyFirstRecallListedModels(s, "openai", [openAiOption], "No models.")
 		).toEqual({
 			models: ["gpt-4o-mini"],
 			options: [openAiOption],
 			message: "",
 		});
-		expect(cueCraftProviderSettings(s, "openai").availableModels).toEqual([
+		expect(firstRecallProviderSettings(s, "openai").availableModels).toEqual([
 			"gpt-4o-mini",
 		]);
-		expect(cueCraftProviderSettings(s, "openai").modelOptions).toEqual([
+		expect(firstRecallProviderSettings(s, "openai").modelOptions).toEqual([
 			openAiOption,
 		]);
-		expect(cueCraftProviderSettings(s, "openai").hasFetchedModels).toBe(true);
+		expect(firstRecallProviderSettings(s, "openai").hasFetchedModels).toBe(true);
 
 		expect(
-			applyCueCraftListedModels(s, "openrouter", [openrouterOption], "No models.")
+			applyFirstRecallListedModels(s, "openrouter", [openrouterOption], "No models.")
 		).toEqual({
 			models: ["anthropic/claude-sonnet-4"],
 			options: [openrouterOption],
 			message: "",
 		});
-		expect(cueCraftProviderSettings(s, "openrouter").availableModels).toEqual([
+		expect(firstRecallProviderSettings(s, "openrouter").availableModels).toEqual([
 			"anthropic/claude-sonnet-4",
 		]);
-		expect(cueCraftProviderSettings(s, "openrouter").modelOptions).toEqual([
+		expect(firstRecallProviderSettings(s, "openrouter").modelOptions).toEqual([
 			openrouterOption,
 		]);
-		expect(cueCraftFetchedModelCount(s, "openrouter")).toBe(1);
-		expect(cueCraftModelRefreshMessage(s, "openrouter")).toBe("");
+		expect(firstRecallFetchedModelCount(s, "openrouter")).toBe(1);
+		expect(firstRecallModelRefreshMessage(s, "openrouter")).toBe("");
 
 		const codexOption = { id: "gpt-5.5", label: "gpt-5.5" };
 		expect(
-			applyCueCraftListedModels(s, "codex-cli", [codexOption], "No models.")
+			applyFirstRecallListedModels(s, "codex-cli", [codexOption], "No models.")
 		).toEqual({
 			models: ["gpt-5.5"],
 			options: [codexOption],
 			message: "",
 		});
-		expect(cueCraftProviderSettings(s, "codex-cli").availableModels).toEqual([
+		expect(firstRecallProviderSettings(s, "codex-cli").availableModels).toEqual([
 			"gpt-5.5",
 		]);
-		expect(cueCraftProviderSettings(s, "codex-cli").modelOptions).toEqual([
+		expect(firstRecallProviderSettings(s, "codex-cli").modelOptions).toEqual([
 			codexOption,
 		]);
 
@@ -860,16 +860,16 @@ describe("CueCraft fetched model adapters", () => {
 			label: "claude-sonnet-4",
 		};
 		expect(
-			applyCueCraftListedModels(s, "claude-cli", [claudeOption], "No models.")
+			applyFirstRecallListedModels(s, "claude-cli", [claudeOption], "No models.")
 		).toEqual({
 			models: ["claude-sonnet-4"],
 			options: [claudeOption],
 			message: "",
 		});
-		expect(cueCraftProviderSettings(s, "claude-cli").availableModels).toEqual([
+		expect(firstRecallProviderSettings(s, "claude-cli").availableModels).toEqual([
 			"claude-sonnet-4",
 		]);
-		expect(cueCraftProviderSettings(s, "claude-cli").modelOptions).toEqual([
+		expect(firstRecallProviderSettings(s, "claude-cli").modelOptions).toEqual([
 			claudeOption,
 		]);
 	});
@@ -883,13 +883,13 @@ describe("CueCraft fetched model adapters", () => {
 			},
 		});
 
-		applyCueCraftModelRefreshFailure(
+		applyFirstRecallModelRefreshFailure(
 			s,
 			"ollama",
 			"Could not fetch Ollama models."
 		);
 
-		const stored = cueCraftProviderSettings(s, "ollama");
+		const stored = firstRecallProviderSettings(s, "ollama");
 		expect(stored.availableModels).toEqual([]);
 		expect(stored.hasFetchedModels).toBe(true);
 		expect(stored.modelRefreshMessage).toBe(
@@ -898,7 +898,7 @@ describe("CueCraft fetched model adapters", () => {
 	});
 });
 
-describe("CueCraft provider connection adapters", () => {
+describe("FirstRecall provider connection adapters", () => {
 	it("records and derives setup status through BYOK snapshots", () => {
 		const s = settings({
 			selectedProvider: "openai",
@@ -908,26 +908,26 @@ describe("CueCraft provider connection adapters", () => {
 			},
 		});
 
-		recordCueCraftProviderConnectionSuccess(
+		recordFirstRecallProviderConnectionSuccess(
 			s,
 			"2026-06-27T00:00:00.000Z"
 		);
 
-		expect(deriveCueCraftProviderSetupStatus(s)).toEqual({
+		expect(deriveFirstRecallProviderSetupStatus(s)).toEqual({
 			keySaved: true,
 			modelSelected: true,
 			connection: "verified",
 			testedAt: "2026-06-27T00:00:00.000Z",
 		});
 
-		setCueCraftProviderModel(s, "openai", "gpt-4o");
-		expect(deriveCueCraftProviderSetupStatus(s).connection).toBe("stale");
+		setFirstRecallProviderModel(s, "openai", "gpt-4o");
+		expect(deriveFirstRecallProviderSetupStatus(s).connection).toBe("stale");
 	});
 });
 
-describe("CueCraft secure credential storage", () => {
+describe("FirstRecall secure credential storage", () => {
 	it("moves plaintext cloud credentials into secure storage metadata", async () => {
-		const saved: Array<[CueCraftCloudCredentialProvider, string]> = [];
+		const saved: Array<[FirstRecallCloudCredentialProvider, string]> = [];
 		const s = settings({
 			selectedProvider: "openai",
 			selectedProviderSettings: {
@@ -935,9 +935,9 @@ describe("CueCraft secure credential storage", () => {
 				model: "gpt-4o-mini",
 			},
 		});
-		normalizeCueCraftProviderSettings(s, settings(), s);
+		normalizeFirstRecallProviderSettings(s, settings(), s);
 
-		const result = await secureCueCraftCloudCredentials(
+		const result = await secureFirstRecallCloudCredentials(
 			s,
 			fakeCredentialStore({
 				save: async (provider, value) => {
@@ -953,7 +953,7 @@ describe("CueCraft secure credential storage", () => {
 			warnings: [],
 		});
 		expect(saved).toContainEqual(["openai", "sk-openai-test"]);
-		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+		expect(firstRecallProviderSettings(s, "openai")).toMatchObject({
 			credential: "",
 			credentialSaved: true,
 			credentialUpdatedAt: "openai-token",
@@ -968,9 +968,9 @@ describe("CueCraft secure credential storage", () => {
 			selectedProvider: "openai",
 			selectedProviderSettings: { credential: "sk-openai-test" },
 		});
-		normalizeCueCraftProviderSettings(s, settings(), s);
+		normalizeFirstRecallProviderSettings(s, settings(), s);
 
-		const result = await secureCueCraftCloudCredentials(
+		const result = await secureFirstRecallCloudCredentials(
 			s,
 			fakeCredentialStore({
 				save: async (provider) =>
@@ -982,7 +982,7 @@ describe("CueCraft secure credential storage", () => {
 
 		expect(result.settingsChanged).toBe(false);
 		expect(result.warnings.join("\n")).toContain("disk full");
-		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+		expect(firstRecallProviderSettings(s, "openai")).toMatchObject({
 			credential: "sk-openai-test",
 			credentialSaved: false,
 			credentialUpdatedAt: "",
@@ -995,9 +995,9 @@ describe("CueCraft secure credential storage", () => {
 			selectedProvider: "openai",
 			selectedProviderSettings: { credential: "" },
 		});
-		normalizeCueCraftProviderSettings(s, settings(), s);
+		normalizeFirstRecallProviderSettings(s, settings(), s);
 
-		const result = await secureCueCraftCloudCredentials(
+		const result = await secureFirstRecallCloudCredentials(
 			s,
 			fakeCredentialStore({
 				metadata: async (provider) =>
@@ -1008,7 +1008,7 @@ describe("CueCraft secure credential storage", () => {
 		);
 
 		expect(result.settingsChanged).toBe(true);
-		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+		expect(firstRecallProviderSettings(s, "openai")).toMatchObject({
 			credential: "",
 			credentialSaved: true,
 			credentialUpdatedAt: "openai-token",
@@ -1036,9 +1036,9 @@ describe("CueCraft secure credential storage", () => {
 				verification: {},
 			},
 		});
-		normalizeCueCraftProviderSettings(s, settings(), s);
+		normalizeFirstRecallProviderSettings(s, settings(), s);
 
-		const result = await secureCueCraftCloudCredentials(
+		const result = await secureFirstRecallCloudCredentials(
 			s,
 			fakeCredentialStore({
 				metadata: async (provider) =>
@@ -1049,7 +1049,7 @@ describe("CueCraft secure credential storage", () => {
 		);
 
 		expect(result.settingsChanged).toBe(true);
-		expect(cueCraftProviderSettings(s, "openai")).toMatchObject({
+		expect(firstRecallProviderSettings(s, "openai")).toMatchObject({
 			credentialSaved: true,
 			credentialUpdatedAt: "openai-token",
 			credentialLength: 42,
