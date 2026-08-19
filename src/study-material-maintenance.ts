@@ -4,7 +4,7 @@ import {
 	type NoteCache,
 } from "./cache";
 import type { CueGenerationOptions } from "./cue-generation";
-import type { CueCraftCueProviderRuntime } from "./cue-provider";
+import type { FirstRecallCueProviderRuntime } from "./cue-provider";
 import {
 	generateNoteBriefForSections,
 	generateSectionCueBatch,
@@ -89,7 +89,7 @@ export interface StudyMaterialMaintenanceDependencies {
 	): Promise<void>;
 	renamePath?(from: string, to: string): Promise<void>;
 	deletePath?(path: string): Promise<void>;
-	makeProvider(automatic: boolean): Promise<CueCraftCueProviderRuntime | null>;
+	makeProvider(automatic: boolean): Promise<FirstRecallCueProviderRuntime | null>;
 	providerMetadata(): MaintenanceProviderMetadata;
 	generationOptions(): Partial<CueGenerationOptions>;
 	sectionConcurrency(): number;
@@ -596,7 +596,7 @@ export class StudyMaterialMaintenance {
 			};
 		}
 
-		let provider: CueCraftCueProviderRuntime | null;
+		let provider: FirstRecallCueProviderRuntime | null;
 		try {
 			provider = await this.deps.makeProvider(request.kind === "automatic");
 		} catch (error) {

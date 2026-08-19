@@ -1,4 +1,4 @@
-export const EDITOR_HOOK_PAGE_SHIFT_CLASS = "cuecraft-editor-hook-page-shift";
+export const EDITOR_HOOK_PAGE_SHIFT_CLASS = "firstrecall-editor-hook-page-shift";
 
 export interface LeftDockState {
 	collapsed: boolean;

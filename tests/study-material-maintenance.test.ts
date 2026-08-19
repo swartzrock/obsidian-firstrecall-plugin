@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildNoteCache, type NoteCache } from "../src/cache";
 import type {
-	CueCraftCueInput,
-	CueCraftCueOutput,
-	CueCraftCueProviderRuntime,
-	CueCraftNoteBriefInput,
+	FirstRecallCueInput,
+	FirstRecallCueOutput,
+	FirstRecallCueProviderRuntime,
+	FirstRecallNoteBriefInput,
 } from "../src/cue-provider";
 import { parseSections } from "../src/parser";
 import {
@@ -66,8 +66,8 @@ function createHarness(initial: Record<string, string> = { "notes/note.md": ORIG
 	const states: MaintenanceStateMap = {};
 	const automaticPaths = new Set<string>();
 	const hidden = new Set<string>();
-	const cueInputs: CueCraftCueInput[] = [];
-	const noteBriefInputs: CueCraftNoteBriefInput[] = [];
+	const cueInputs: FirstRecallCueInput[] = [];
+	const noteBriefInputs: FirstRecallNoteBriefInput[] = [];
 	let activeProviders = 0;
 	let maxActiveProviders = 0;
 	let gate: ReturnType<typeof deferred<void>> | null = null;
@@ -75,7 +75,7 @@ function createHarness(initial: Record<string, string> = { "notes/note.md": ORIG
 	let failBrief = false;
 	let supportsBrief = true;
 	let commitGate: ReturnType<typeof deferred<void>> | null = null;
-	const provider: CueCraftCueProviderRuntime = {
+	const provider: FirstRecallCueProviderRuntime = {
 		id: "test",
 		label: "Test",
 		requiresNetwork: false,
@@ -86,7 +86,7 @@ function createHarness(initial: Record<string, string> = { "notes/note.md": ORIG
 		async listModels() {
 			return [];
 		},
-		async generateCue(input: CueCraftCueInput): Promise<CueCraftCueOutput> {
+		async generateCue(input: FirstRecallCueInput): Promise<FirstRecallCueOutput> {
 			cueInputs.push(input);
 			if (failHeading === input.heading) throw new Error(`failed ${input.heading}`);
 			if (gate) await gate.promise;
@@ -96,7 +96,7 @@ function createHarness(initial: Record<string, string> = { "notes/note.md": ORIG
 				summary: null,
 			};
 		},
-		async generateNoteBrief(input: CueCraftNoteBriefInput) {
+		async generateNoteBrief(input: FirstRecallNoteBriefInput) {
 			noteBriefInputs.push(input);
 			if (failBrief) throw new Error("brief failed");
 			return { ...BRIEF, overview: `Brief:${input.fullText.length}` };

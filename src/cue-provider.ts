@@ -6,34 +6,34 @@ import type {
 import type { CueGenerationOptions } from "./cue-generation";
 import type { CueOutput, NoteBriefOutput } from "./schemas";
 
-export type CueCraftCueOutput = CueOutput;
-export type CueCraftNoteBriefOutput = NoteBriefOutput;
+export type FirstRecallCueOutput = CueOutput;
+export type FirstRecallNoteBriefOutput = NoteBriefOutput;
 
-export interface CueCraftCueInput {
+export interface FirstRecallCueInput {
 	heading: string;
 	content: string;
 	noteContext?: string;
 	options: CueGenerationOptions;
 }
 
-export interface CueCraftCueBatchResult {
+export interface FirstRecallCueBatchResult {
 	cue?: CueOutput;
 	error?: string;
 }
 
-export interface CueCraftNoteBriefSectionInput {
+export interface FirstRecallNoteBriefSectionInput {
 	heading: string;
 	question: string;
 	keywords: string[];
 }
 
-export interface CueCraftNoteBriefInput {
+export interface FirstRecallNoteBriefInput {
 	noteTitle: string;
 	fullText: string;
-	sections: CueCraftNoteBriefSectionInput[];
+	sections: FirstRecallNoteBriefSectionInput[];
 }
 
-export interface CueCraftCueProviderRuntime {
+export interface FirstRecallCueProviderRuntime {
 	id: ByokProviderId;
 	label: string;
 	requiresNetwork: boolean;
@@ -42,15 +42,15 @@ export interface CueCraftCueProviderRuntime {
 	testConnection(): Promise<ByokProviderStatus>;
 	listModels(): Promise<ByokModelOption[]>;
 	generateCue(
-		input: CueCraftCueInput,
+		input: FirstRecallCueInput,
 		signal?: AbortSignal
 	): Promise<CueOutput>;
 	generateCues?(
-		inputs: CueCraftCueInput[],
+		inputs: FirstRecallCueInput[],
 		signal?: AbortSignal
-	): Promise<CueCraftCueBatchResult[]>;
+	): Promise<FirstRecallCueBatchResult[]>;
 	generateNoteBrief?(
-		input: CueCraftNoteBriefInput,
+		input: FirstRecallNoteBriefInput,
 		signal?: AbortSignal
 	): Promise<NoteBriefOutput>;
 }

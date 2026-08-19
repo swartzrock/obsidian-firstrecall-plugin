@@ -125,10 +125,10 @@ interface CueStudySectionRenderState {
 
 const RAIL_CARD_SECTION_GAP = 12;
 const RAIL_CARD_SPACER_TOLERANCE = 1;
-export const RAIL_CARD_LAYOUT_EVENT = "cuecraft-rail-card-layout";
-const EDITOR_CUE_WIDTH_PROPERTY = "--cuecraft-editor-cue-width";
-const EDITOR_CUE_WIDTH_CUSTOM_CLASS = "cuecraft-editor-cue-width-custom";
-const EDITOR_CUE_WIDTH_RESIZING_CLASS = "cuecraft-editor-cue-width-resizing";
+export const RAIL_CARD_LAYOUT_EVENT = "firstrecall-rail-card-layout";
+const EDITOR_CUE_WIDTH_PROPERTY = "--firstrecall-editor-cue-width";
+const EDITOR_CUE_WIDTH_CUSTOM_CLASS = "firstrecall-editor-cue-width-custom";
+const EDITOR_CUE_WIDTH_RESIZING_CLASS = "firstrecall-editor-cue-width-resizing";
 const editorCueWidthInteractionCleanup = new WeakMap<HTMLElement, () => void>();
 const editorStudyCueInteractionCleanup = new WeakMap<HTMLElement, () => void>();
 const editorCueWidthLayoutFrames = new WeakMap<
@@ -228,7 +228,7 @@ class CueWidget extends WidgetType {
 			: this.options;
 		const element = renderCueElement(this.cue, "inline-cues", options);
 		const wrapper = element.ownerDocument.createElement("div");
-		wrapper.className = "cuecraft-inline-cue-widget";
+		wrapper.className = "firstrecall-inline-cue-widget";
 		wrapper.appendChild(element);
 		return wrapper;
 	}
@@ -239,7 +239,7 @@ class CueWidget extends WidgetType {
 			| null;
 		return Boolean(
 			this.options.study ||
-			target?.closest?.(".cuecraft-editor-hook-section-toggle")
+			target?.closest?.(".firstrecall-editor-hook-section-toggle")
 		);
 	}
 
@@ -277,7 +277,7 @@ class RailSpacerWidget extends WidgetType {
 
 	toDOM(): HTMLElement {
 		const element = cueDocument().createElement("div");
-		element.className = "cuecraft-editor-rail-spacer";
+		element.className = "firstrecall-editor-rail-spacer";
 		element.setAttribute("aria-hidden", "true");
 		element.style.height = `${this.height}px`;
 		return element;
@@ -365,7 +365,7 @@ export function appendFreshnessBadge(
 		return;
 	}
 	const badge = parent.ownerDocument.createElement("span");
-	badge.className = "cuecraft-freshness-badge";
+	badge.className = "firstrecall-freshness-badge";
 	badge.textContent = "Outdated";
 	parent.prepend(badge);
 }
@@ -375,13 +375,13 @@ function applyEditorStudyCueInteraction(
 	study: CueStudySectionRenderState | undefined
 ): void {
 	if (!study) return;
-	element.classList.add("cuecraft-editor-study-cue");
+	element.classList.add("firstrecall-editor-study-cue");
 	element.dataset.studySectionId = study.sectionId;
 	element.dataset.studyState = study.revealed ? "revealed" : "hidden";
 
 	const toggle = element.ownerDocument.createElement("button");
 	toggle.type = "button";
-	toggle.className = "cuecraft-study-section-toggle";
+	toggle.className = "firstrecall-study-section-toggle";
 	toggle.dataset.revealed = String(study.revealed);
 	const label = study.revealed ? "Hide answer" : "Show answer";
 	toggle.setAttribute("aria-label", label);
@@ -405,11 +405,11 @@ function applyEditorStudyCueInteraction(
 function cleanupEditorStudyCueInteractions(dom: Node): void {
 	if (dom.nodeType !== dom.ELEMENT_NODE) return;
 	const element = dom as HTMLElement;
-	if (element.classList.contains("cuecraft-editor-study-cue")) {
+	if (element.classList.contains("firstrecall-editor-study-cue")) {
 		editorStudyCueInteractionCleanup.get(element)?.();
 	}
 	for (const cue of element.querySelectorAll<HTMLElement>(
-		".cuecraft-editor-study-cue"
+		".firstrecall-editor-study-cue"
 	)) {
 		editorStudyCueInteractionCleanup.get(cue)?.();
 	}
@@ -422,9 +422,9 @@ function renderCornellCueElement(
 	const doc = cueDocument();
 	const root = doc.createElement("div");
 	root.className = [
-		"cuecraft-editor-hook",
-		"cuecraft-editor-cornell-card",
-		"cuecraft-cornell",
+		"firstrecall-editor-hook",
+		"firstrecall-editor-cornell-card",
+		"firstrecall-cornell",
 	].join(" ");
 	root.tabIndex = 0;
 	root.setAttribute("role", "note");
@@ -440,25 +440,25 @@ function renderCornellCueElement(
 	applyCueLayoutClasses(root, options);
 
 	const card = doc.createElement("div");
-	card.className = "cuecraft-cornell-cue";
+	card.className = "firstrecall-cornell-cue";
 	root.appendChild(card);
 
 	if (cue.error) {
-		card.classList.add("cuecraft-cornell-cue-error");
+		card.classList.add("firstrecall-cornell-cue-error");
 		card.title = cue.error;
 		const q = doc.createElement("div");
-		q.className = "cuecraft-cornell-q";
+		q.className = "firstrecall-cornell-q";
 		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
 		card.appendChild(q);
 		return finalizeRailCard(root, options);
 	}
 
-	root.classList.add("cuecraft-editor-hook-sectioned");
+	root.classList.add("firstrecall-editor-hook-sectioned");
 	if (showSummary && cue.summary) {
 		const summary = doc.createElement("div");
-		summary.className = "cuecraft-summary";
+		summary.className = "firstrecall-summary";
 		const takeaway = doc.createElement("span");
-		takeaway.className = "cuecraft-summary-takeaway";
+		takeaway.className = "firstrecall-summary-takeaway";
 		takeaway.textContent = cue.summary.takeaway;
 		summary.appendChild(takeaway);
 		appendEditorHookDisclosure(
@@ -471,7 +471,7 @@ function renderCornellCueElement(
 	}
 	if (showQuestion) {
 		const q = doc.createElement("div");
-		q.className = "cuecraft-cornell-q";
+		q.className = "firstrecall-cornell-q";
 		q.textContent = cue.question;
 		appendEditorHookDisclosure(
 			card,
@@ -484,8 +484,8 @@ function renderCornellCueElement(
 
 	if (showTerms && termValues.length) {
 		const kw = doc.createElement("div");
-		kw.className = "cuecraft-cornell-kw";
-		appendCueTerms(kw, termValues, "cuecraft-cornell-term");
+		kw.className = "firstrecall-cornell-kw";
+		appendCueTerms(kw, termValues, "firstrecall-cornell-term");
 		appendEditorHookDisclosure(
 			card,
 			"terms",
@@ -503,7 +503,7 @@ function renderInlineCueElement(
 	options: CueRenderOptions = {}
 ): HTMLElement {
 	const root = cueDocument().createElement("div");
-	root.className = "cuecraft-cue cuecraft-editor-hook-sectioned";
+	root.className = "firstrecall-cue firstrecall-editor-hook-sectioned";
 	root.setAttribute("role", "note");
 	const showSummary = options.showSummary ?? true;
 	const showTerms = options.showTerms ?? true;
@@ -514,10 +514,10 @@ function renderInlineCueElement(
 	applyCueLayoutClasses(root, options);
 
 	if (cue.error) {
-		root.classList.add("cuecraft-cue-error");
+		root.classList.add("firstrecall-cue-error");
 		root.title = cue.error;
 		const q = cueDocument().createElement("div");
-		q.className = "cuecraft-cue-question";
+		q.className = "firstrecall-cue-question";
 		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
 		root.appendChild(q);
 		return root;
@@ -525,9 +525,9 @@ function renderInlineCueElement(
 
 	if (showSummary && cue.summary) {
 		const summary = cueDocument().createElement("div");
-		summary.className = "cuecraft-summary";
+		summary.className = "firstrecall-summary";
 		const takeaway = cueDocument().createElement("span");
-		takeaway.className = "cuecraft-summary-takeaway";
+		takeaway.className = "firstrecall-summary-takeaway";
 		takeaway.textContent = cue.summary.takeaway;
 		summary.appendChild(takeaway);
 		appendEditorHookDisclosure(
@@ -540,7 +540,7 @@ function renderInlineCueElement(
 	}
 	if (showQuestion) {
 		const q = cueDocument().createElement("div");
-		q.className = "cuecraft-cue-question cuecraft-editor-hook-title";
+		q.className = "firstrecall-cue-question firstrecall-editor-hook-title";
 		q.textContent = cue.question;
 		appendEditorHookDisclosure(
 			root,
@@ -553,7 +553,7 @@ function renderInlineCueElement(
 
 	if (showTerms && cue.keywords.length) {
 		const kw = cueDocument().createElement("div");
-		kw.className = "cuecraft-cue-keywords cuecraft-editor-hook-keywords";
+		kw.className = "firstrecall-cue-keywords firstrecall-editor-hook-keywords";
 		appendCueTerms(kw, cue.keywords);
 		appendEditorHookDisclosure(
 			root,
@@ -571,7 +571,7 @@ function appendLabelIcon(
 	icon: string | readonly string[]
 ): void {
 	const iconEl = parent.ownerDocument.createElement("span");
-	iconEl.className = "cuecraft-label-icon";
+	iconEl.className = "firstrecall-label-icon";
 	iconEl.setAttribute("aria-hidden", "true");
 	const icons: readonly string[] = typeof icon === "string" ? [icon] : icon;
 	for (const candidate of icons) {
@@ -584,7 +584,7 @@ function appendLabelIcon(
 
 function appendLabelText(parent: HTMLElement, label: string): void {
 	const labelText = parent.ownerDocument.createElement("span");
-	labelText.className = "cuecraft-label-text";
+	labelText.className = "firstrecall-label-text";
 	labelText.textContent = label;
 	parent.appendChild(labelText);
 }
@@ -592,7 +592,7 @@ function appendLabelText(parent: HTMLElement, label: string): void {
 function appendCueTerms(
 	parent: HTMLElement,
 	terms: readonly string[],
-	chipClass = "cuecraft-cue-term"
+	chipClass = "firstrecall-cue-term"
 ): void {
 	for (const term of terms) {
 		const chip = parent.ownerDocument.createElement("span");
@@ -627,21 +627,21 @@ function finalizeRailCard(
 	root: HTMLElement,
 	options: CueRenderOptions
 ): HTMLElement {
-	root.classList.add("cuecraft-editor-rail-card");
+	root.classList.add("firstrecall-editor-rail-card");
 	const controller = options.editorCueWidthController;
 	if (!controller) return root;
 	if (!root.id) {
 		nextEditorCueRailCardId += 1;
-		root.id = `cuecraft-editor-rail-card-${nextEditorCueRailCardId}`;
+		root.id = `firstrecall-editor-rail-card-${nextEditorCueRailCardId}`;
 	}
 	const grip = root.ownerDocument.createElement("div");
-	grip.className = "cuecraft-editor-cue-width-grip";
+	grip.className = "firstrecall-editor-cue-width-grip";
 	grip.tabIndex = 0;
 	grip.setAttribute("role", "separator");
 	grip.setAttribute("aria-orientation", "vertical");
 	const gripLabel = root.ownerDocument.createElement("span");
 	gripLabel.id = `${root.id}-width-grip-label`;
-	gripLabel.className = "cuecraft-editor-cue-width-grip-label";
+	gripLabel.className = "firstrecall-editor-cue-width-grip-label";
 	gripLabel.textContent = "Cornell section card rail width";
 	grip.appendChild(gripLabel);
 	grip.setAttribute("aria-labelledby", gripLabel.id);
@@ -653,7 +653,7 @@ function finalizeRailCard(
 	);
 	grip.setAttribute("aria-controls", root.id);
 	const gripHost = root.querySelector<HTMLElement>(
-		":scope > .cuecraft-cornell-cue"
+		":scope > .firstrecall-cornell-cue"
 	);
 	(gripHost ?? root).prepend(grip);
 	applyEditorCueWidthPreview(
@@ -694,9 +694,9 @@ function applyEditorCueWidthToScope(
 	}
 	const layoutTargets = new Set<HTMLElement>();
 	for (const grip of root.querySelectorAll<HTMLElement>(
-		".cuecraft-editor-cue-width-grip"
+		".firstrecall-editor-cue-width-grip"
 	)) {
-		const card = grip.closest<HTMLElement>(".cuecraft-editor-rail-card");
+		const card = grip.closest<HTMLElement>(".firstrecall-editor-rail-card");
 		if (card && applyEditorCueWidthToElement(card, normalizedWidth)) {
 			layoutTargets.add(
 				card.closest<HTMLElement>(".cm-editor") ?? card
@@ -721,9 +721,9 @@ function effectiveEditorCueWidthPx(
 		EDITOR_CUE_WIDTH_MAX_PX
 	);
 	const rootElement = root as HTMLElement;
-	const card = rootElement.matches?.(".cuecraft-editor-rail-card")
+	const card = rootElement.matches?.(".firstrecall-editor-rail-card")
 		? rootElement
-		: root.querySelector<HTMLElement>(".cuecraft-editor-rail-card");
+		: root.querySelector<HTMLElement>(".firstrecall-editor-rail-card");
 	if (!card?.isConnected) return absoluteWidth;
 	const boundary = editorCueWorkspaceBoundary(card);
 	if (!boundary) return absoluteWidth;
@@ -823,14 +823,14 @@ function installEditorCueWidthInteraction(
 	let destroyed = false;
 
 	const unlockGripTop = (): void => {
-		grip.style.removeProperty("--cuecraft-editor-cue-width-grip-top");
+		grip.style.removeProperty("--firstrecall-editor-cue-width-grip-top");
 	};
 	const lockGripTop = (): void => {
 		const gripHost = grip.parentElement ?? card;
 		const hostHeight = gripHost.getBoundingClientRect().height;
 		if (Number.isFinite(hostHeight) && hostHeight > 0) {
 			grip.style.setProperty(
-				"--cuecraft-editor-cue-width-grip-top",
+				"--firstrecall-editor-cue-width-grip-top",
 				`${hostHeight / 2}px`
 			);
 		}
@@ -1039,11 +1039,11 @@ function dispatchRailCardLayoutEvent(card: HTMLElement): void {
 function railCardsIn(root: ParentNode): HTMLElement[] {
 	const rootElement = root as Element;
 	return [
-		...(rootElement.matches?.(".cuecraft-editor-rail-card")
+		...(rootElement.matches?.(".firstrecall-editor-rail-card")
 			? [rootElement as HTMLElement]
 			: []),
 		...Array.from(
-			root.querySelectorAll<HTMLElement>(".cuecraft-editor-rail-card")
+			root.querySelectorAll<HTMLElement>(".firstrecall-editor-rail-card")
 		),
 	];
 }
@@ -1122,11 +1122,11 @@ function appendEditorHookDisclosure(
 	const doc = parent.ownerDocument;
 	const button = doc.createElement("button");
 	button.type = "button";
-	button.className = "cuecraft-editor-hook-section-toggle";
+	button.className = "firstrecall-editor-hook-section-toggle";
 	button.dataset.section = kind;
 
 	const sectionLabel = doc.createElement("span");
-	sectionLabel.className = "cuecraft-editor-hook-section-label";
+	sectionLabel.className = "firstrecall-editor-hook-section-label";
 	sectionLabel.dataset.section = kind;
 	appendLabelIcon(sectionLabel, CUE_SECTION_ICON_CANDIDATES[kind]);
 	appendLabelText(
@@ -1139,23 +1139,23 @@ function appendEditorHookDisclosure(
 	);
 
 	const chevron = doc.createElement("span");
-	chevron.className = "cuecraft-editor-hook-section-chevron";
+	chevron.className = "firstrecall-editor-hook-section-chevron";
 	chevron.setAttribute("aria-hidden", "true");
 	setIcon(chevron, "chevron-down");
 	sectionLabel.appendChild(chevron);
 	button.appendChild(sectionLabel);
 
 	const preview = doc.createElement("span");
-	preview.className = "cuecraft-editor-hook-section-preview";
+	preview.className = "firstrecall-editor-hook-section-preview";
 	preview.textContent = previewText;
 	button.appendChild(preview);
 
 	const body = doc.createElement("div");
-	body.className = "cuecraft-editor-hook-section-body";
+	body.className = "firstrecall-editor-hook-section-body";
 	body.dataset.section = kind;
 	body.id = editorHookSectionBodyId();
 	const bodyContent = doc.createElement("div");
-	bodyContent.className = "cuecraft-editor-hook-section-content";
+	bodyContent.className = "firstrecall-editor-hook-section-content";
 	bodyContent.appendChild(content);
 	body.appendChild(bodyContent);
 	button.setAttribute("aria-controls", body.id);
@@ -1194,7 +1194,7 @@ function appendEditorHookDisclosure(
 				)
 				.catch((error: unknown) => {
 					console.error(
-						"CueCraft section card collapse persistence failed",
+						"FirstRecall section card collapse persistence failed",
 						error
 					);
 				});
@@ -1209,7 +1209,7 @@ function appendEditorHookDisclosure(
 
 function editorHookSectionBodyId(): string {
 	nextEditorHookSectionBodyId += 1;
-	return `cuecraft-editor-hook-section-body-${nextEditorHookSectionBodyId}`;
+	return `firstrecall-editor-hook-section-body-${nextEditorHookSectionBodyId}`;
 }
 
 const noteBriefCardOrder = [
@@ -1242,45 +1242,45 @@ export function renderNoteBriefElement(
 ): HTMLElement {
 	const doc = cueDocument();
 	const root = doc.createElement("section");
-	root.className = `cuecraft-note-brief cuecraft-note-brief-${variant}`;
+	root.className = `firstrecall-note-brief firstrecall-note-brief-${variant}`;
 	root.setAttribute("role", "note");
 
 	const label = doc.createElement("div");
-	label.className = "cuecraft-note-brief-label";
+	label.className = "firstrecall-note-brief-label";
 	appendLabelIcon(label, "sparkles");
 	appendLabelText(label, "Note Brief");
 	appendFreshnessBadge(label, freshness);
 	root.appendChild(label);
 
 	const overview = doc.createElement("p");
-	overview.className = "cuecraft-note-brief-overview";
+	overview.className = "firstrecall-note-brief-overview";
 	overview.textContent = noteBrief.overview;
 	root.appendChild(overview);
 
 	const cards = doc.createElement("div");
-	cards.className = "cuecraft-note-brief-insights";
+	cards.className = "firstrecall-note-brief-insights";
 	for (const key of noteBriefCardOrder) {
 		const card = noteBrief[key];
 		const cardEl = doc.createElement("div");
-		cardEl.className = "cuecraft-note-brief-insight";
+		cardEl.className = "firstrecall-note-brief-insight";
 		cardEl.dataset.card = key;
 
 		const insightLabel = noteBriefInsightLabels[key];
 		const displayTitle = noteBriefTitleWithoutRepeatedLabel(card.title, insightLabel);
 		if (displayTitle) {
 			const title = doc.createElement("div");
-			title.className = "cuecraft-note-brief-insight-title";
+			title.className = "firstrecall-note-brief-insight-title";
 			title.textContent = displayTitle;
 			cardEl.appendChild(title);
 		}
 
 		const detail = doc.createElement("div");
-		detail.className = "cuecraft-note-brief-insight-detail";
+		detail.className = "firstrecall-note-brief-insight-detail";
 		detail.textContent = card.detail;
 		cardEl.appendChild(detail);
 
 		const badge = doc.createElement("span");
-		badge.className = "cuecraft-note-brief-insight-badge cuecraft-cue-term";
+		badge.className = "firstrecall-note-brief-insight-badge firstrecall-cue-term";
 		badge.textContent = insightLabel;
 		cardEl.appendChild(badge);
 
@@ -1297,22 +1297,22 @@ export function appendSummary(
 	if (!summary) return;
 	const doc = parent.ownerDocument;
 	const root = doc.createElement("div");
-	root.className = "cuecraft-summary";
+	root.className = "firstrecall-summary";
 
 	const phrase = doc.createElement("span");
-	phrase.className = "cuecraft-summary-phrase";
+	phrase.className = "firstrecall-summary-phrase";
 	phrase.textContent = summary.keyPhrase;
 	root.appendChild(phrase);
 
 	root.appendChild(doc.createTextNode(" - "));
 
 	const takeaway = doc.createElement("span");
-	takeaway.className = "cuecraft-summary-takeaway";
+	takeaway.className = "firstrecall-summary-takeaway";
 	takeaway.textContent = summary.takeaway;
 	root.appendChild(takeaway);
 
 	const explanation = doc.createElement("div");
-	explanation.className = "cuecraft-summary-explanation";
+	explanation.className = "firstrecall-summary-explanation";
 	explanation.textContent = summary.explanation;
 	root.appendChild(explanation);
 
@@ -1373,7 +1373,7 @@ export function buildEditorStudyAnswerDecorations(
 		if (from < 0 || to <= from || to > state.doc.length) continue;
 		ranges.push(
 			Decoration.mark({
-				class: "cuecraft-editor-study-answer is-hidden",
+				class: "firstrecall-editor-study-answer is-hidden",
 				attributes: {
 					"aria-hidden": "true",
 					"data-study-section-id": section.sectionId,
@@ -1588,7 +1588,7 @@ function applyCueLayoutClasses(
 	element: HTMLElement,
 	options: CueRenderOptions
 ): void {
-	element.classList.add("cuecraft-cuewidth-medium");
+	element.classList.add("firstrecall-cuewidth-medium");
 	element.classList.add(cueFontSizeClass(options.cueFontSize));
 }
 
@@ -1835,7 +1835,7 @@ export const cueGutterField = StateField.define<CueGutterState>({
 });
 
 const cueGutter = gutter({
-	class: "cuecraft-editor-hook-gutter",
+	class: "firstrecall-editor-hook-gutter",
 	markers: (view) => view.state.field(cueGutterField).markers,
 });
 
@@ -1949,36 +1949,36 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			const projection = this.view.state.field(cueStudyField).projection;
 			const snapshot = projection?.snapshot;
 			const active = Boolean(projection && snapshot?.active);
-			this.view.dom.classList.toggle("cuecraft-editor-study-active", active);
+			this.view.dom.classList.toggle("firstrecall-editor-study-active", active);
 			if (!projection || !snapshot?.active) return;
 
 			const doc = this.view.dom.ownerDocument;
 			const host = doc.createElement("div");
-			host.className = "cuecraft-editor-study-controls";
+			host.className = "firstrecall-editor-study-controls";
 			host.setAttribute("role", "region");
 			host.setAttribute("aria-label", "Study controls");
 
 			const help = doc.createElement("span");
-			help.className = "cuecraft-study-help";
+			help.className = "firstrecall-study-help";
 			setIcon(help, "eye");
 			const helpCopy = doc.createElement("span");
-			helpCopy.className = "cuecraft-study-help-copy";
+			helpCopy.className = "firstrecall-study-help-copy";
 			const helpTitle = doc.createElement("span");
-			helpTitle.className = "cuecraft-study-help-title";
+			helpTitle.className = "firstrecall-study-help-title";
 			helpTitle.textContent = "Show or hide answers";
 			const helpDetail = doc.createElement("span");
-			helpDetail.className = "cuecraft-study-help-detail";
+			helpDetail.className = "firstrecall-study-help-detail";
 			helpDetail.textContent = "Click the eye icon on any section card.";
 			helpCopy.append(helpTitle, helpDetail);
 			help.append(helpCopy);
 
 			const progress = doc.createElement("span");
-			progress.className = "cuecraft-editor-study-progress";
+			progress.className = "firstrecall-editor-study-progress";
 			progress.setAttribute("aria-live", "polite");
 			progress.textContent = `${snapshot.revealedCount} / ${snapshot.total} answers revealed`;
 
 			const progressTrack = doc.createElement("div");
-			progressTrack.className = "cuecraft-study-progress-track";
+			progressTrack.className = "firstrecall-study-progress-track";
 			progressTrack.setAttribute("role", "progressbar");
 			progressTrack.setAttribute("aria-valuemin", "0");
 			progressTrack.setAttribute("aria-valuemax", String(snapshot.total));
@@ -1988,7 +1988,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			);
 			progressTrack.setAttribute("aria-label", "Answers revealed");
 			const progressFill = doc.createElement("div");
-			progressFill.className = "cuecraft-study-progress-fill";
+			progressFill.className = "firstrecall-study-progress-fill";
 			progressFill.style.width = `${
 				snapshot.total > 0
 					? (snapshot.revealedCount / snapshot.total) * 100
@@ -1999,7 +1999,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			const showAll = doc.createElement("button");
 			showAll.type = "button";
 			showAll.className =
-				"cuecraft-study-action cuecraft-editor-study-show-all";
+				"firstrecall-study-action firstrecall-editor-study-show-all";
 			setIcon(showAll, "eye");
 			showAll.append("Show All Answers");
 			showAll.disabled = snapshot.revealedCount === snapshot.total;
@@ -2007,14 +2007,14 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			const hideAll = doc.createElement("button");
 			hideAll.type = "button";
 			hideAll.className =
-				"cuecraft-study-action cuecraft-editor-study-hide-all";
+				"firstrecall-study-action firstrecall-editor-study-hide-all";
 			setIcon(hideAll, "eye-off");
 			hideAll.append("Hide All Answers");
 			hideAll.disabled = snapshot.revealedCount === 0;
 
 			const exit = doc.createElement("button");
 			exit.type = "button";
-			exit.className = "cuecraft-study-action cuecraft-editor-study-exit";
+			exit.className = "firstrecall-study-action firstrecall-editor-study-exit";
 			setIcon(exit, "log-out");
 			exit.append("Exit Study Mode");
 
@@ -2025,7 +2025,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			hideAll.addEventListener("click", onHideAll);
 			exit.addEventListener("click", onExit);
 			const actions = doc.createElement("div");
-			actions.className = "cuecraft-study-actions";
+			actions.className = "firstrecall-study-actions";
 			actions.append(showAll, hideAll, exit);
 			host.append(help, progress, progressTrack, actions);
 			(projection.controlsContainer ?? this.view.scrollDOM).prepend(host);
@@ -2047,7 +2047,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 		destroy(): void {
 			this.destroyed = true;
 			this.removeControls();
-			this.view.dom.classList.remove("cuecraft-editor-study-active");
+			this.view.dom.classList.remove("firstrecall-editor-study-active");
 		}
 	}
 );
@@ -2069,7 +2069,7 @@ export function railLayoutUpdateNeedsMeasure(update: ViewUpdate): boolean {
 	);
 }
 
-/** Editor extension that renders CueCraft cues. Register via registerEditorExtension. */
+/** Editor extension that renders FirstRecall cues. Register via registerEditorExtension. */
 export const cueEditorExtension = [
 	cueField,
 	cueStudyField,

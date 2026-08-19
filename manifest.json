@@ -1,6 +1,6 @@
 {
-	"id": "cuecraft",
-	"name": "CueCraft",
+	"id": "firstrecall",
+	"name": "FirstRecall",
 	"version": "0.1.0",
 	"minAppVersion": "1.11.4",
 	"description": "Create active-recall Note Briefs and section study cards in Obsidian without modifying source Markdown.",

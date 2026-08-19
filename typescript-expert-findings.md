@@ -11,11 +11,11 @@
      better fix is a narrower dependency contract in byok-runtime.
 
   2. High — Persisted settings become trusted application types before validation.
-     src/main.ts:341 asserts loadData() as Partial<PluginData>, then src/main.ts:344 merges arbitrary values into CueCraftSettings. Several fields
+     src/main.ts:341 asserts loadData() as Partial<PluginData>, then src/main.ts:344 merges arbitrary values into FirstRecallSettings. Several fields
      are normalized, but fields such as studyHideMode, cueFontSize, autoGenerateOnSave, and sectionConcurrency remain vulnerable to malformed or
      obsolete persisted values.
 
-     Nested BYOK normalization has the same issue: src/byok-cuecraft-adapter.ts:750 verifies that model collections are arrays, but not that their
+     Nested BYOK normalization has the same issue: src/byok-firstrecall-adapter.ts:750 verifies that model collections are arrays, but not that their
      elements are valid strings or {id, label} objects.
 
      Add one schema/parser for the complete persisted-data boundary, preserving legacy fields only as unknown migration input.
@@ -35,11 +35,11 @@
      Replace these with discriminated unions such as { ok: true; metadata: ... } | { ok: false; reason: ... }.
 
   5. Medium — Provider metadata does not encode the relationship between provider ID and credential kind.
-     CueCraftProviderDefinition.id accepts every provider regardless of credentialKind in src/byok-provider-metadata.ts:19. This forces repeated
-     assertions while constructing provider configurations in src/byok-cuecraft-adapter.ts:962.
+     FirstRecallProviderDefinition.id accepts every provider regardless of credentialKind in src/byok-provider-metadata.ts:19. This forces repeated
+     assertions while constructing provider configurations in src/byok-firstrecall-adapter.ts:962.
 
      Model definitions as a discriminated union where API-key, URL, and command definitions each accept only their corresponding provider IDs. Use
-     satisfies Record<ByokProviderId, CueCraftProviderDefinition> and exhaustive switches. A strict lint probe already found six non-exhaustive
+     satisfies Record<ByokProviderId, FirstRecallProviderDefinition> and exhaustive switches. A strict lint probe already found six non-exhaustive
      switches, including missing handling for newer provider IDs.
 
   6. Low — Strengthen compiler and lint guardrails incrementally.

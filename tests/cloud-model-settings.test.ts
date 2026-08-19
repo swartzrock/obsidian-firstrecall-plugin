@@ -35,13 +35,13 @@ describe("resolveModelRefreshDescription", () => {
 		).toBe("No OpenRouter models were returned for this account.");
 	});
 
-	it("surfaces a 'CueCraft:' prefixed message over the default", () => {
+	it("surfaces a 'FirstRecall:' prefixed message over the default", () => {
 		expect(
 			resolveModelRefreshDescription(
-				"CueCraft: OpenRouter model fetch is unavailable.",
+				"FirstRecall: OpenRouter model fetch is unavailable.",
 				"Fetch models."
 			)
-		).toBe("CueCraft: OpenRouter model fetch is unavailable.");
+		).toBe("FirstRecall: OpenRouter model fetch is unavailable.");
 	});
 
 	it("ignores an unrecognized success message and returns the default", () => {

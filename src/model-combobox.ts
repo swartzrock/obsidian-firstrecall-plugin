@@ -68,7 +68,7 @@ export function renderModelCombobox(opts: {
 	suggestionsLabel?: string;
 	leadingOption?: ModelOption;
 }): void {
-	const comboboxId = `cuecraft-model-combobox-${++nextComboboxId}`;
+	const comboboxId = `firstrecall-model-combobox-${++nextComboboxId}`;
 	const listboxId = `${comboboxId}-list`;
 	let isOpen = false;
 	let activeIndex = -1;
@@ -81,10 +81,10 @@ export function renderModelCombobox(opts: {
 	);
 
 	const rootEl = opts.containerEl.createDiv({
-		cls: "cuecraft-model-combobox",
+		cls: "firstrecall-model-combobox",
 	});
 	const inputEl = rootEl.createEl("input", {
-		cls: "cuecraft-model-combobox-input",
+		cls: "firstrecall-model-combobox-input",
 		attr: {
 			id: comboboxId,
 			type: "text",
@@ -98,7 +98,7 @@ export function renderModelCombobox(opts: {
 	inputEl.value = opts.value;
 
 	const toggleEl = rootEl.createEl("button", {
-		cls: "cuecraft-model-combobox-toggle",
+		cls: "firstrecall-model-combobox-toggle",
 		attr: {
 			type: "button",
 			"aria-label": `Show ${suggestionsLabel}`,
@@ -108,7 +108,7 @@ export function renderModelCombobox(opts: {
 	opts.renderToggleIcon?.(toggleEl);
 
 	const listEl = rootEl.createDiv({
-		cls: "cuecraft-model-combobox-list cuecraft-model-combobox-list-hidden",
+		cls: "firstrecall-model-combobox-list firstrecall-model-combobox-list-hidden",
 		attr: { id: listboxId, role: "listbox" },
 	});
 
@@ -142,8 +142,8 @@ export function renderModelCombobox(opts: {
 		inputEl.setAttr("aria-expanded", "false");
 		inputEl.removeAttribute("aria-activedescendant");
 		toggleEl.setAttr("aria-label", `Show ${suggestionsLabel}`);
-		rootEl.removeClass("cuecraft-model-combobox-open");
-		listEl.addClass("cuecraft-model-combobox-list-hidden");
+		rootEl.removeClass("firstrecall-model-combobox-open");
+		listEl.addClass("firstrecall-model-combobox-list-hidden");
 	};
 
 	const commitValue = (value: string) => {
@@ -170,13 +170,13 @@ export function renderModelCombobox(opts: {
 			return;
 		}
 		const visibleOptions = matches();
-		rootEl.addClass("cuecraft-model-combobox-open");
-		listEl.removeClass("cuecraft-model-combobox-list-hidden");
+		rootEl.addClass("firstrecall-model-combobox-open");
+		listEl.removeClass("firstrecall-model-combobox-list-hidden");
 		inputEl.setAttr("aria-expanded", "true");
 		toggleEl.setAttr("aria-label", `Hide ${suggestionsLabel}`);
 		if (visibleOptions.length === 0) {
 			listEl.createDiv({
-				cls: "cuecraft-model-combobox-empty",
+				cls: "firstrecall-model-combobox-empty",
 				text: opts.emptyMessage,
 			});
 			inputEl.removeAttribute("aria-activedescendant");
@@ -192,7 +192,7 @@ export function renderModelCombobox(opts: {
 		for (const [index, option] of visibleOptions.entries()) {
 			const optionId = `${comboboxId}-option-${index}`;
 			const optionEl = listEl.createEl("button", {
-				cls: "cuecraft-model-combobox-option",
+				cls: "firstrecall-model-combobox-option",
 				attr: {
 					id: optionId,
 					type: "button",
@@ -204,14 +204,14 @@ export function renderModelCombobox(opts: {
 				inputEl.setAttr("aria-activedescendant", optionId);
 			}
 			optionEl.createDiv({
-				cls: "cuecraft-model-combobox-option-label",
+				cls: "firstrecall-model-combobox-option-label",
 				text: option.label || option.id,
 			});
 			const detailText =
 				option.label && option.label !== option.id ? option.id : "";
 			if (detailText) {
 				optionEl.createDiv({
-					cls: "cuecraft-model-combobox-option-detail",
+					cls: "firstrecall-model-combobox-option-detail",
 					text: detailText,
 				});
 			}
@@ -226,7 +226,7 @@ export function renderModelCombobox(opts: {
 				visibleOptions.length > 1
 			) {
 				listEl.createDiv({
-					cls: "cuecraft-model-combobox-divider",
+					cls: "firstrecall-model-combobox-divider",
 					attr: { role: "separator" },
 				});
 			}

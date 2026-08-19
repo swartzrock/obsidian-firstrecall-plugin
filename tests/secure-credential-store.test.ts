@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
 	createSecureCredentialStore,
-	cueCraftCredentialSecretId,
+	firstRecallCredentialSecretId,
 	type SecretStorageAdapter,
 } from "../src/secure-credential-store";
 
@@ -47,7 +47,7 @@ describe("createSecureCredentialStore", () => {
 		});
 
 		expect(Object.keys(secretStorage.secrets)).toEqual([
-			"cuecraft-openai-api-key",
+			"firstrecall-openai-api-key",
 		]);
 		await expect(store.read("openai")).resolves.toMatchObject({
 			ok: true,
@@ -93,7 +93,7 @@ describe("createSecureCredentialStore", () => {
 			reason: "secret-storage-unavailable",
 		});
 		expect(warn).toHaveBeenCalledWith(
-			"CueCraft secure storage unavailable.",
+			"FirstRecall secure storage unavailable.",
 			expect.objectContaining({
 				reason: "secret-storage-unavailable",
 				hasSecretStorage: false,
@@ -107,7 +107,7 @@ describe("createSecureCredentialStore", () => {
 	it("fails closed for corrupt secret values", async () => {
 		const store = createSecureCredentialStore({
 			secretStorage: memorySecretStorage({
-				[cueCraftCredentialSecretId("openai")]: "{ nope",
+				[firstRecallCredentialSecretId("openai")]: "{ nope",
 			}),
 		});
 
@@ -121,14 +121,14 @@ describe("createSecureCredentialStore", () => {
 		const secretStorage = memorySecretStorage();
 		const store = createSecureCredentialStore({ secretStorage });
 		await store.save("openai", "old-key");
-		const before = secretStorage.secrets[cueCraftCredentialSecretId("openai")];
+		const before = secretStorage.secrets[firstRecallCredentialSecretId("openai")];
 		secretStorage.failSet = new Error("secret service unavailable");
 
 		await expect(store.save("openai", "new-key")).resolves.toMatchObject({
 			ok: false,
 			reason: "write-failed",
 		});
-		expect(secretStorage.secrets[cueCraftCredentialSecretId("openai")]).toBe(
+		expect(secretStorage.secrets[firstRecallCredentialSecretId("openai")]).toBe(
 			before
 		);
 	});

@@ -1,5 +1,5 @@
 ---
-title: CueCraft Vocabulary and Automatic Maintenance - Plan
+title: FirstRecall Vocabulary and Automatic Maintenance - Plan
 type: feat
 date: 2026-08-17
 topic: vocabulary-and-automation
@@ -9,12 +9,12 @@ product_contract_source: ce-brainstorm
 execution: code
 ---
 
-# CueCraft Vocabulary and Automatic Maintenance - Plan
+# FirstRecall Vocabulary and Automatic Maintenance - Plan
 
 ## Goal Capsule
 
-- **Objective:** Ship one release in which CueCraft uses plain study vocabulary and one understandable system for keeping selected study material current.
-- **Authority:** R1-R25 govern automation and override conflicting automation concepts in `docs/ideation/2026-08-17-cuecraft-vocabulary-review.html`; R26 binds that slideshow as the authority for user-facing vocabulary and Settings structure.
+- **Objective:** Ship one release in which FirstRecall uses plain study vocabulary and one understandable system for keeping selected study material current.
+- **Authority:** R1-R25 govern automation and override conflicting automation concepts in `docs/ideation/2026-08-17-firstrecall-vocabulary-review.html`; R26 binds that slideshow as the authority for user-facing vocabulary and Settings structure.
 - **Execution profile:** Deep, cross-cutting implementation across persisted state, scheduling, generation, Editing and Reading surfaces, Settings, commands, exports, documentation, and release metadata.
 - **Stop conditions:** Stop if implementation would modify source Markdown, enable automatic provider work without explicit scope consent, invoke provider work without an enabled scope or an explicit catch-up, update, Retry, or command action, weaken an R1-R25 qualifier, or require a new product decision not represented below.
 - **Tail ownership:** The release includes code, tests, user documentation, metadata, and production-build verification as one coherent vocabulary and behavior change.
@@ -26,7 +26,7 @@ execution: code
 ### Summary
 
 Implement the automatic-maintenance Product Contract and the approved vocabulary system as one release.
-CueCraft will use one scope model, one freshness model, and one user-facing language from setup through study.
+FirstRecall will use one scope model, one freshness model, and one user-facing language from setup through study.
 
 ### Problem Frame
 
@@ -125,36 +125,36 @@ flowchart TB
 
 **Vocabulary and information architecture**
 
-- R26. The release adopts the vocabulary and Settings model in `docs/ideation/2026-08-17-cuecraft-vocabulary-review.html` across user-facing Settings, commands, notices, exports, visible instruction text, accessibility labels, README, manifest, package metadata, and glossary; automation behavior in that slideshow defers to R1-R25.
+- R26. The release adopts the vocabulary and Settings model in `docs/ideation/2026-08-17-firstrecall-vocabulary-review.html` across user-facing Settings, commands, notices, exports, visible instruction text, accessibility labels, README, manifest, package metadata, and glossary; automation behavior in that slideshow defers to R1-R25.
 
 ### Key Flows
 
 - F1. Add and catch up a scope
   - **Trigger:** A user adds a folder or Entire vault under **Managed folders**.
-  - **Steps:** CueCraft scans without provider calls, reports the work by freshness state, and waits for the user to choose **Bring study material up to date**.
+  - **Steps:** FirstRecall scans without provider calls, reports the work by freshness state, and waits for the user to choose **Bring study material up to date**.
   - **Outcome:** Catch-up establishes current study material while ongoing maintenance remains off.
   - **Covers:** R2-R7.
 
 - F2. Maintain an enabled note
   - **Trigger:** Source content changes in a note covered by an enabled entry.
-  - **Steps:** CueCraft waits for the editing delay, updates only affected section cards, reconciles deleted or reordered sections, and refreshes the Note Brief.
+  - **Steps:** FirstRecall waits for the editing delay, updates only affected section cards, reconciles deleted or reordered sections, and refreshes the Note Brief.
   - **Outcome:** The note returns to current without replacing unchanged cards.
   - **Covers:** R8-R14.
 
 - F3. Assist a manual update
   - **Trigger:** Generated study material becomes outdated while maintenance is inactive for the note.
-  - **Steps:** CueCraft marks affected material, shows the view-wide banner, and lets the user update or dismiss the banner for the current revision.
+  - **Steps:** FirstRecall marks affected material, shows the view-wide banner, and lets the user update or dismiss the banner for the current revision.
   - **Outcome:** The stale state remains legible without invoking the provider automatically.
   - **Covers:** R15-R22.
 
 - F4. Recover from an automatic failure
   - **Trigger:** Provider work fails during automatic maintenance.
-  - **Steps:** CueCraft retains the previous material, marks the affected content outdated, and offers **Retry update**.
+  - **Steps:** FirstRecall retains the previous material, marks the affected content outdated, and offers **Retry update**.
   - **Outcome:** The user keeps usable context and a durable recovery path.
   - **Covers:** R16-R18, R23-R24.
 
 - F5. Move through one vocabulary system
-  - **Trigger:** A learner configures CueCraft, generates material, studies a note, invokes a command, or reads documentation.
+  - **Trigger:** A learner configures FirstRecall, generates material, studies a note, invokes a command, or reads documentation.
   - **Steps:** Each surface uses Note Brief, section study card, Summary, Recall question, Key terms, Generation, Managed folders, and Content shown in notes according to the vocabulary authority.
   - **Outcome:** The learner can understand the product without translating obsolete interface nouns.
   - **Covers:** R26.
@@ -165,37 +165,37 @@ flowchart TB
   - **Covers R5-R7.**
   - **Given:** A folder contains notes with missing and outdated study material.
   - **When:** The user adds the folder.
-  - **Then:** CueCraft reports the counts without invoking a provider, and **Update automatically** remains off.
+  - **Then:** FirstRecall reports the counts without invoking a provider, and **Update automatically** remains off.
 
 - AE2. Running explicit catch-up
   - **Covers R5-R6.**
   - **Given:** A selected folder contains missing Note Briefs, missing section cards, and outdated cards.
   - **When:** The user chooses **Bring study material up to date**.
-  - **Then:** CueCraft generates missing material and refreshes outdated material across the folder.
+  - **Then:** FirstRecall generates missing material and refreshes outdated material across the folder.
 
 - AE3. Adding a section under automatic maintenance
   - **Covers R8, R10, R14.**
   - **Given:** A current note belongs to an enabled folder.
   - **When:** The user adds a headed section and editing pauses.
-  - **Then:** CueCraft generates the new section card, refreshes the Note Brief, and preserves every unchanged card.
+  - **Then:** FirstRecall generates the new section card, refreshes the Note Brief, and preserves every unchanged card.
 
 - AE4. Editing one existing section
   - **Covers R8, R11, R14.**
   - **Given:** A current note has several section cards.
   - **When:** The user changes one section and editing pauses.
-  - **Then:** CueCraft refreshes that card and the Note Brief without regenerating the other cards.
+  - **Then:** FirstRecall refreshes that card and the Note Brief without regenerating the other cards.
 
 - AE5. Deleting or reordering sections
   - **Covers R12-R14.**
   - **Given:** A current note has cards for all eligible sections.
   - **When:** The user deletes one section or changes section order.
-  - **Then:** CueCraft reconciles the cards and refreshes the Note Brief without changing unaffected card content.
+  - **Then:** FirstRecall reconciles the cards and refreshes the Note Brief without changing unaffected card content.
 
 - AE6. Editing while maintenance is inactive
   - **Covers R4, R15-R20.**
   - **Given:** A note has generated material and is outside enabled scope, excluded, or covered by a paused entry.
   - **When:** Its source changes.
-  - **Then:** CueCraft invokes no provider, shows the view-wide banner, and marks the affected card and Note Brief outdated.
+  - **Then:** FirstRecall invokes no provider, shows the view-wide banner, and marks the affected card and Note Brief outdated.
 
 - AE7. Dismissing an outdated banner
   - **Covers R19.**
@@ -207,13 +207,13 @@ flowchart TB
   - **Covers R21-R22.**
   - **Given:** A note belongs to an enabled scope.
   - **When:** The user hides its generated material or disables Recall question visibility.
-  - **Then:** CueCraft continues maintaining the hidden generated material unless the note is explicitly excluded.
+  - **Then:** FirstRecall continues maintaining the hidden generated material unless the note is explicitly excluded.
 
 - AE9. Selecting Entire vault
   - **Covers R2-R4, R22.**
   - **Given:** No folder entries exist.
   - **When:** An existing Entire vault scope already excludes Templates.
-  - **Then:** CueCraft can maintain eligible notes outside Templates, and Settings prevents adding a separate folder entry.
+  - **Then:** FirstRecall can maintain eligible notes outside Templates, and Settings prevents adding a separate folder entry.
 
 - AE10. Recovering from failure
   - **Covers R16-R18, R23-R24.**
@@ -224,7 +224,7 @@ flowchart TB
 - AE11. Encountering the same concepts across surfaces
   - **Covers F5 / R26.**
   - **Given:** A learner moves between Settings, note content, commands, exports, and documentation.
-  - **When:** CueCraft names generated material or its controls.
+  - **When:** FirstRecall names generated material or its controls.
   - **Then:** The learner sees the approved vocabulary and no current user-facing surface teaches the superseded terms.
 
 ### Success Criteria
@@ -238,7 +238,7 @@ flowchart TB
 
 ### Scope Boundaries
 
-- CueCraft remains the plugin name for this release.
+- FirstRecall remains the plugin name for this release.
 - R1-R25 supersede the slideshow's earlier “Notes already generated” automation option; that option is not implemented.
 - Internal identifiers, persisted keys, CSS classes, schema keys, and filenames may retain `cue`, `question`, `keywords`, or `studyArea` when users do not encounter them and changing them adds no behavioral value.
 - Historical ideation and planning artifacts remain historical records and are not terminology-swept.
@@ -247,7 +247,7 @@ flowchart TB
 
 #### Deferred to Follow-Up Work
 
-- A documented agent, MCP, or integration API for scope management, freshness queries, update, or retry is deferred until CueCraft has an integration surface.
+- A documented agent, MCP, or integration API for scope management, freshness queries, update, or retry is deferred until FirstRecall has an integration surface.
 - Renaming internal domain types may follow later if current terminology causes implementation defects; it is not required for this release.
 
 ### Dependencies and Assumptions
@@ -260,7 +260,7 @@ flowchart TB
 
 ### Sources and Research
 
-- `docs/ideation/2026-08-17-cuecraft-vocabulary-review.html` — approved vocabulary, Settings information architecture, introduction, glossary model, and coordinated-surface requirement.
+- `docs/ideation/2026-08-17-firstrecall-vocabulary-review.html` — approved vocabulary, Settings information architecture, introduction, glossary model, and coordinated-surface requirement.
 - `docs/plans/2026-08-17-1317-docs-prune-glossary-terms-plan.md` — first-release baseline for current persisted data and vocabulary.
 - `src/main.ts` — current duplicate scheduling paths, provider orchestration, generation lifecycle, persistence, commands, status, and view refreshes.
 - `src/study-area.ts` — current folder scope, exclusions, readiness planning, pause state, and Entire vault behavior.
@@ -427,7 +427,7 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
   3. Preserve valid configured scopes, default newly created scopes to paused, and move ambiguous stored combinations into disabled recovery records outside active coverage resolution.
   4. Remove hidden state from scope matching and readiness classification while retaining explicit exclusions as the only nested opt-out.
 - **Execution note:** Start with characterization coverage for current scope loading and matching, then change the schema and eligibility rules.
-- **Patterns to follow:** `normalizeVaultPath`, `isDescendantPath`, `isExcludedPath`, `loadStudyAreas`, and allowlist-based parsing in `parsePersistedCueCraftSettings`.
+- **Patterns to follow:** `normalizeVaultPath`, `isDescendantPath`, `isExcludedPath`, `loadStudyAreas`, and allowlist-based parsing in `parsePersistedFirstRecallSettings`.
 - **Test scenarios:**
   1. Covers AE1. Adding a folder with mixed readiness performs no provider work and creates the entry with automatic updates off.
   2. Covers AE9. Entire vault prevents folder additions, and folder entries prevent Entire vault.
@@ -504,7 +504,7 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 
 ### U4. Rebuild Settings around generation, scope, and visibility
 
-- **Goal:** Make the main Settings page describe what CueCraft creates, which notes stay current, and which generated content appears.
+- **Goal:** Make the main Settings page describe what FirstRecall creates, which notes stay current, and which generated content appears.
 - **Requirements:** R1-R8, R21-R22, R26; F1, F5; AE1-AE2, AE8-AE9, AE11; KTD1-KTD3, KTD6, KTD9.
 - **Dependencies:** U1, U3.
 - **Files:** `src/settings.ts`, `src/main.ts`, `styles.css`, `tests/settings.test.ts`, `tests/settings-css.test.ts`, `tests/study-area.test.ts`.
@@ -589,13 +589,13 @@ The vocabulary pass follows the behavior-bearing surfaces so final text describe
 - **Goal:** Make onboarding, product metadata, glossary, and release checks describe the same behavior and vocabulary as the shipped plugin.
 - **Requirements:** R25-R26; F5; AE11; KTD9.
 - **Dependencies:** U6.
-- **Files:** `README.md`, `manifest.json`, `package.json`, `docs/CueCraft-Glossary.md`.
+- **Files:** `README.md`, `manifest.json`, `package.json`, `docs/FirstRecall-Glossary.md`.
 - **Approach:**
   1. Rewrite the README and metadata descriptions around active-recall study material, Note Briefs, section study cards, and source-Markdown safety.
   2. Replace the glossary's exception-heavy vocabulary specification with the approved Note → Note Brief + Section study cards model and a compact definition of automatic updates.
   3. Document automatic/manual coverage, visibility independence, outdated state, Retry behavior, and provider-call consent at user-relevant depth without advertising the deferred Exclusions editor.
   4. Keep historical ideation and plan documents unchanged and distinguish intentional internal terminology from current user-facing copy during the final audit.
-- **Patterns to follow:** Current README command/verification section, manifest description conventions, and the Mermaid concept map in `docs/CueCraft-Glossary.md`.
+- **Patterns to follow:** Current README command/verification section, manifest description conventions, and the Mermaid concept map in `docs/FirstRecall-Glossary.md`.
 - **Test scenarios:** Test expectation: none — this unit changes documentation and metadata; terminology, JSON validation, production build, and manual rendered-document review provide the evidence.
 - **Verification:** README, manifest, package metadata, glossary, and the built plugin all present one current vocabulary and repeat the source-safety promise accurately.
 

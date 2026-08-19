@@ -13,8 +13,8 @@ import {
 } from "obsidian";
 import type { EditorView } from "@codemirror/view";
 import {
-	CueCraftSettings,
-	CueCraftSettingTab,
+	FirstRecallSettings,
+	FirstRecallSettingTab,
 	DEFAULT_SETTINGS,
 } from "./settings";
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
@@ -26,21 +26,21 @@ import {
 } from "@swartzrock/byok-runtime";
 import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
-	cueCraftProviderCredential,
-	cueCraftProviderCredentialSaved,
-	cueCraftProviderModel,
-	cueCraftSelectedProvider,
-	clearCueCraftStoredCloudCredential,
-	markCueCraftCloudCredentialSaved,
-	secureCueCraftCloudCredentials,
-	listCueCraftProviderModelsFromStore,
-	makeCueCraftByokProviderFromStore,
-	type CueCraftByokRuntime,
-	type CueCraftFetchedModelProvider,
-} from "./byok-cuecraft-adapter";
+	firstRecallProviderCredential,
+	firstRecallProviderCredentialSaved,
+	firstRecallProviderModel,
+	firstRecallSelectedProvider,
+	clearFirstRecallStoredCloudCredential,
+	markFirstRecallCloudCredentialSaved,
+	secureFirstRecallCloudCredentials,
+	listFirstRecallProviderModelsFromStore,
+	makeFirstRecallByokProviderFromStore,
+	type FirstRecallByokRuntime,
+	type FirstRecallFetchedModelProvider,
+} from "./byok-firstrecall-adapter";
 import {
 	createSecureCredentialStore,
-	type CueCraftCloudCredentialProvider,
+	type FirstRecallCloudCredentialProvider,
 	type SecureCredentialStore,
 } from "./secure-credential-store";
 import { parseSections, type Section } from "./parser";
@@ -121,8 +121,8 @@ import {
 	removeStudyMaterialBanner,
 	syncStudyMaterialBanner,
 } from "./study-material-banner";
-import { formatCueCraftNotice } from "./notice";
-import { parsePersistedCueCraftSettings } from "./persisted-settings";
+import { formatFirstRecallNotice } from "./notice";
+import { parsePersistedFirstRecallSettings } from "./persisted-settings";
 import {
 	EditorHookLayoutController,
 	leftDockIsOpen,
@@ -143,7 +143,7 @@ import {
 } from "./study-area";
 
 interface PluginData {
-	settings: CueCraftSettings;
+	settings: FirstRecallSettings;
 	caches: Record<string, NoteCache>;
 	maintenanceStates: MaintenanceStateMap;
 	hidden: Record<string, true>;
@@ -184,13 +184,13 @@ async function withAbortSignal<T>(
 
 const RIBBON_ICON = "graduation-cap";
 const STUDY_RIBBON_ICON = "book-open-check";
-const STUDY_READY_LABEL = "CueCraft: Study this note";
-const STUDY_ACTIVE_LABEL = "CueCraft: Exit Study";
-const STUDY_GENERATE_FIRST = "CueCraft: generate study material for this note first.";
+const STUDY_READY_LABEL = "FirstRecall: Study this note";
+const STUDY_ACTIVE_LABEL = "FirstRecall: Exit Study";
+const STUDY_GENERATE_FIRST = "FirstRecall: generate study material for this note first.";
 type StudyProjectionMode = "source" | "preview";
 
-export default class CueCraftPlugin extends Plugin {
-	override settings: CueCraftSettings = DEFAULT_SETTINGS;
+export default class FirstRecallPlugin extends Plugin {
+	override settings: FirstRecallSettings = DEFAULT_SETTINGS;
 
 	private statusBarEl: HTMLElement | null = null;
 	private ribbonEl: HTMLElement | null = null;
@@ -222,7 +222,7 @@ export default class CueCraftPlugin extends Plugin {
 	};
 	private retainedCaches: Record<string, unknown> = {};
 	private pluginDataWrite: Promise<void> = Promise.resolve();
-	private settingTab!: CueCraftSettingTab;
+	private settingTab!: FirstRecallSettingTab;
 	private cacheStore!: StudyMaterialStore;
 	private visibility!: VisibilityStore;
 	private cueSectionCollapse!: CueSectionCollapseStore;
@@ -284,7 +284,7 @@ export default class CueCraftPlugin extends Plugin {
 			deletePath: (path) => this.cacheStore.delete(path),
 			makeProvider: (automatic) => this.makeProviderForRun({ automatic }),
 			providerMetadata: () => ({
-				provider: cueCraftSelectedProvider(this.settings) ?? "",
+				provider: firstRecallSelectedProvider(this.settings) ?? "",
 				model: this.selectedModelName(),
 				preset: this.settings.questionType,
 				generationMode: "whole-note-context",
@@ -309,14 +309,14 @@ export default class CueCraftPlugin extends Plugin {
 			}
 		);
 
-		this.settingTab = new CueCraftSettingTab(this.app, this);
+		this.settingTab = new FirstRecallSettingTab(this.app, this);
 		this.addSettingTab(this.settingTab);
 
 		this.statusBarEl = this.addStatusBarItem();
-		this.statusBarEl.addClass("cuecraft-status");
+		this.statusBarEl.addClass("firstrecall-status");
 		this.statusBarEl.addEventListener("click", () => this.onPillClick());
 
-		this.ribbonEl = this.addRibbonIcon(RIBBON_ICON, "CueCraft", () =>
+		this.ribbonEl = this.addRibbonIcon(RIBBON_ICON, "FirstRecall", () =>
 			this.onRibbonClick()
 		);
 		this.studyRibbonEl = this.addRibbonIcon(
@@ -324,7 +324,7 @@ export default class CueCraftPlugin extends Plugin {
 			STUDY_READY_LABEL,
 			() => this.toggleStudyForActiveView()
 		);
-		this.studyRibbonEl.classList.add("cuecraft-study-ribbon");
+		this.studyRibbonEl.classList.add("firstrecall-study-ribbon");
 		this.updateRibbonLabel();
 		this.registerCommands();
 		this.registerEditorExtension(cueEditorExtension);
@@ -426,9 +426,9 @@ export default class CueCraftPlugin extends Plugin {
 		const loaded: unknown = await this.loadData();
 		const loadedRecord = isRecord(loaded) ? loaded : {};
 		const rawSettings = loadedRecord.settings;
-		const parsedSettings = parsePersistedCueCraftSettings(rawSettings);
+		const parsedSettings = parsePersistedFirstRecallSettings(rawSettings);
 		const settings = parsedSettings.settings;
-		const credentialStorage = await secureCueCraftCloudCredentials(
+		const credentialStorage = await secureFirstRecallCloudCredentials(
 			settings,
 			this.credentialStore
 		);
@@ -491,8 +491,8 @@ export default class CueCraftPlugin extends Plugin {
 	/** Keep the ribbon tooltip describing what a click will do. */
 	private updateRibbonLabel(): void {
 		const generateLabel = this.isConfigured()
-			? "CueCraft: Generate study material for this note"
-			: "CueCraft: Set up \u2014 open settings";
+			? "FirstRecall: Generate study material for this note"
+			: "FirstRecall: Set up \u2014 open settings";
 		this.ribbonEl?.setAttribute("aria-label", generateLabel);
 		this.refreshStudyEntryStates();
 	}
@@ -630,7 +630,7 @@ export default class CueCraftPlugin extends Plugin {
 						),
 					})
 				: [];
-		cm.dom.dataset.cuecraftEditorDisplay = this.settings.editorCueDisplay;
+		cm.dom.dataset.firstrecallEditorDisplay = this.settings.editorCueDisplay;
 		applyEditorCueWidthPreview(
 			cm.dom,
 			railLayoutAppliesToDisplay(this.settings.editorCueDisplay)
@@ -786,7 +786,7 @@ export default class CueCraftPlugin extends Plugin {
 		projection: StudyMaterialStatusProjection
 	): Promise<void> {
 		if (!this.isConfigured()) {
-			new Notice("CueCraft: set up your AI provider in Settings first.");
+			new Notice("FirstRecall: set up your AI provider in Settings first.");
 			this.openSettings();
 			return;
 		}
@@ -902,9 +902,9 @@ export default class CueCraftPlugin extends Plugin {
 		const action = view.addAction(STUDY_RIBBON_ICON, STUDY_READY_LABEL, () =>
 			this.toggleStudyForView(view)
 		);
-		action.classList.add("cuecraft-study-header-action");
+		action.classList.add("firstrecall-study-header-action");
 		const label = action.ownerDocument.createElement("span");
-		label.className = "cuecraft-study-header-label";
+		label.className = "firstrecall-study-header-label";
 		label.textContent = "Study";
 		action.appendChild(label);
 		action.tabIndex = 0;
@@ -974,7 +974,7 @@ export default class CueCraftPlugin extends Plugin {
 	private toggleStudyForActiveView(): void {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view) {
-			new Notice("CueCraft: open a Markdown note to study.");
+			new Notice("FirstRecall: open a Markdown note to study.");
 			return;
 		}
 		this.toggleStudyForView(view);
@@ -986,7 +986,7 @@ export default class CueCraftPlugin extends Plugin {
 		}
 		const file = view.file;
 		if (!file) {
-			new Notice("CueCraft: open a Markdown note to study.");
+			new Notice("FirstRecall: open a Markdown note to study.");
 			return;
 		}
 		const descriptors = this.strictStudySections(view);
@@ -1034,7 +1034,7 @@ export default class CueCraftPlugin extends Plugin {
 			if (!(view instanceof MarkdownView)) return;
 			const cm = (view.editor as unknown as { cm?: EditorView }).cm;
 			if (!cm || seen.has(cm.dom)) return;
-			const display = cm.dom.dataset.cuecraftEditorDisplay;
+			const display = cm.dom.dataset.firstrecallEditorDisplay;
 			if (!isEditorCueDisplay(display)) return;
 			seen.add(cm.dom);
 			applyEditorCueWidthPreview(
@@ -1088,7 +1088,7 @@ export default class CueCraftPlugin extends Plugin {
 		return leftDockIsOpen(this.app.workspace.leftSplit);
 	}
 
-	/** Rerender CueCraft's CodeMirror cue surface in every open Markdown editor. */
+	/** Rerender FirstRecall's CodeMirror cue surface in every open Markdown editor. */
 	refreshEditorCues(forceLayout = false): void {
 		const seen = new Set<EditorView>();
 		this.app.workspace.iterateAllLeaves((leaf) => {
@@ -1124,17 +1124,17 @@ export default class CueCraftPlugin extends Plugin {
 
 	/** True once the selected provider has its required fields set. */
 	private isConfigured(): boolean {
-		const provider = cueCraftSelectedProvider(this.settings);
+		const provider = firstRecallSelectedProvider(this.settings);
 		if (!provider) return false;
 		const definition = byokProviderDefinition(provider);
 		const hasCredential =
 			definition.credentialKind === "api-key"
 				? this.credentialStore.availability().ok &&
-					cueCraftProviderCredentialSaved(this.settings)
-				: cueCraftProviderCredential(this.settings).trim().length > 0;
+					firstRecallProviderCredentialSaved(this.settings)
+				: firstRecallProviderCredential(this.settings).trim().length > 0;
 		const hasModel =
 			definition.modelBehavior === "optional" ||
-			cueCraftProviderModel(this.settings).trim().length > 0;
+			firstRecallProviderModel(this.settings).trim().length > 0;
 		return hasCredential && hasModel;
 	}
 
@@ -1152,20 +1152,20 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	isProviderCredentialSaved(provider?: ByokProviderId): boolean {
-		provider ??= cueCraftSelectedProvider(this.settings) ?? undefined;
+		provider ??= firstRecallSelectedProvider(this.settings) ?? undefined;
 		if (!provider) return false;
-		return cueCraftProviderCredentialSaved(this.settings, provider);
+		return firstRecallProviderCredentialSaved(this.settings, provider);
 	}
 
 	async saveCloudProviderCredential(
-		provider: CueCraftCloudCredentialProvider,
+		provider: FirstRecallCloudCredentialProvider,
 		value: string
 	): Promise<{ ok: boolean; message?: string }> {
 		const result = await this.credentialStore.save(provider, value);
 		if (!result.ok || !result.metadata) {
 			return { ok: false, message: result.message ?? result.reason };
 		}
-		markCueCraftCloudCredentialSaved(
+		markFirstRecallCloudCredentialSaved(
 			this.settings,
 			provider,
 			result.metadata.token,
@@ -1175,13 +1175,13 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	async clearCloudProviderCredential(
-		provider: CueCraftCloudCredentialProvider
+		provider: FirstRecallCloudCredentialProvider
 	): Promise<{ ok: boolean; message?: string }> {
 		const result = await this.credentialStore.clear(provider);
 		if (!result.ok) {
 			return { ok: false, message: result.message ?? result.reason };
 		}
-		clearCueCraftStoredCloudCredential(this.settings, provider);
+		clearFirstRecallStoredCloudCredential(this.settings, provider);
 		return { ok: true };
 	}
 
@@ -1194,8 +1194,8 @@ export default class CueCraftPlugin extends Plugin {
 			progress?.unit ? ` ${progress.unit}${progress.total === 1 ? "" : "s"}` : "";
 		const label =
 			status === "generating" && progress
-				? `CueCraft: generating ${progress.done}/${progress.total}${unit}`
-				: `CueCraft: ${statusLabel(status)}`;
+				? `FirstRecall: generating ${progress.done}/${progress.total}${unit}`
+				: `FirstRecall: ${statusLabel(status)}`;
 		this.statusBarEl.setText(label);
 		this.statusBarEl.dataset.status = status;
 		delete this.statusBarEl.dataset.coverage;
@@ -1212,7 +1212,7 @@ export default class CueCraftPlugin extends Plugin {
 	): void {
 		if (!this.statusBarEl) return;
 		const setup = projection.providerSetupRequired ? " · AI setup needed" : "";
-		this.statusBarEl.setText(`CueCraft: ${projection.statusLabel}${setup}`);
+		this.statusBarEl.setText(`FirstRecall: ${projection.statusLabel}${setup}`);
 		this.statusBarEl.dataset.status = projection.freshness ?? "manual";
 		this.statusBarEl.dataset.coverage = projection.coverage;
 		this.statusBarEl.dataset.freshness = projection.freshness ?? "none";
@@ -1227,7 +1227,7 @@ export default class CueCraftPlugin extends Plugin {
 			: "default";
 	}
 
-	/** Open Settings on the CueCraft tab. */
+	/** Open Settings on the FirstRecall tab. */
 	private openSettings(subpage?: "study-areas"): void {
 		if (subpage === "study-areas") {
 			this.settingTab.openStudyAreas();
@@ -1240,7 +1240,7 @@ export default class CueCraftPlugin extends Plugin {
 
 	private onRibbonClick(): void {
 		if (!this.isConfigured()) {
-			new Notice("CueCraft: choose your AI provider in Settings to get started.");
+			new Notice("FirstRecall: choose your AI provider in Settings to get started.");
 			this.openSettings();
 			return;
 		}
@@ -1279,7 +1279,7 @@ export default class CueCraftPlugin extends Plugin {
 		if (this.hasUsableCueCache(file.path)) {
 			menu.addItem((item) =>
 				item
-					.setTitle("CueCraft: Start Study Mode for this note")
+					.setTitle("FirstRecall: Start Study Mode for this note")
 					.setIcon(STUDY_RIBBON_ICON)
 					.onClick(() => void this.reviewThisNote(file))
 			);
@@ -1361,13 +1361,13 @@ export default class CueCraftPlugin extends Plugin {
 	private async exportCues(format: "markdown" | "anki"): Promise<void> {
 		const file = this.app.workspace.getActiveFile();
 		if (!file) {
-			new Notice("CueCraft: open a note to export its recall questions and key terms.");
+			new Notice("FirstRecall: open a note to export its recall questions and key terms.");
 			return;
 		}
 		const cache = this.cacheStore.get(file.path);
 		const questions = cache ? selectExportableQuestions(cache) : [];
 		if (questions.length === 0) {
-			new Notice("CueCraft: no usable recall questions and key terms to export \u2014 generate first.");
+			new Notice("FirstRecall: no usable recall questions and key terms to export \u2014 generate first.");
 			return;
 		}
 		const dir =
@@ -1392,7 +1392,7 @@ export default class CueCraftPlugin extends Plugin {
 		const questionCount = `${questions.length} recall ${
 			questions.length === 1 ? "question" : "questions"
 		}`;
-		new Notice(`CueCraft: exported ${questionCount} and key terms to ${outPath}`);
+		new Notice(`FirstRecall: exported ${questionCount} and key terms to ${outPath}`);
 		if (format === "markdown") {
 			await this.app.workspace.getLeaf(true).openFile(out);
 		}
@@ -1402,7 +1402,7 @@ export default class CueCraftPlugin extends Plugin {
 	private async reviewThisNote(target?: TFile): Promise<void> {
 		const file = target ?? this.app.workspace.getActiveFile();
 		if (!file) {
-			new Notice("CueCraft: open a note to review.");
+			new Notice("FirstRecall: open a note to review.");
 			return;
 		}
 		let view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -1414,7 +1414,7 @@ export default class CueCraftPlugin extends Plugin {
 			view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		}
 		if (!view || view.file?.path !== file.path) {
-			new Notice("CueCraft: open the note in Markdown view to study.");
+			new Notice("FirstRecall: open the note in Markdown view to study.");
 			return;
 		}
 		const descriptors = this.strictStudySections(view);
@@ -1519,12 +1519,12 @@ export default class CueCraftPlugin extends Plugin {
 			isHidden,
 		});
 		if (!displayState.showInlineCues) {
-			for (const cue of el.querySelectorAll(".cuecraft-cue-reading")) {
+			for (const cue of el.querySelectorAll(".firstrecall-cue-reading")) {
 				cue.remove();
 			}
 		}
 		if (!noteBriefState.showNoteBrief) {
-			for (const noteBrief of el.querySelectorAll(".cuecraft-note-brief")) {
+			for (const noteBrief of el.querySelectorAll(".firstrecall-note-brief")) {
 				noteBrief.remove();
 			}
 		}
@@ -1581,12 +1581,12 @@ export default class CueCraftPlugin extends Plugin {
 			const cue = map.get(info.lineStart + 1);
 			const next = heading.nextElementSibling;
 			if (!cue) {
-				if (next?.hasClass("cuecraft-cue-reading")) next.remove();
+				if (next?.hasClass("firstrecall-cue-reading")) next.remove();
 				continue;
 			}
 			if (
-				next?.hasClass("cuecraft-cue-reading") &&
-				(next as HTMLElement).dataset.cuecraftSectionId === cue.sectionId
+				next?.hasClass("firstrecall-cue-reading") &&
+				(next as HTMLElement).dataset.firstrecallSectionId === cue.sectionId
 			) {
 				next.replaceWith(this.buildReadingCueEl(cue, cueVisibility));
 				continue;
@@ -1701,13 +1701,13 @@ export default class CueCraftPlugin extends Plugin {
 		if (firstCueLine !== info.lineStart + 1) return false;
 		const rendered = renderNoteBriefElement(cache.noteBrief, "reading", freshness);
 		const previous = heading.previousElementSibling;
-		if (previous && previous.hasClass("cuecraft-note-brief")) {
+		if (previous && previous.hasClass("firstrecall-note-brief")) {
 			previous.replaceWith(rendered);
 			return true;
 		}
 		const parent = heading.parentElement;
 		const existing = parent?.querySelector<HTMLElement>(
-			":scope > .cuecraft-note-brief"
+			":scope > .firstrecall-note-brief"
 		);
 		if (existing) {
 			existing.replaceWith(rendered);
@@ -1722,27 +1722,27 @@ export default class CueCraftPlugin extends Plugin {
 		cue: CueLineData,
 		visibility: ReadingCueVisibility
 	): HTMLElement {
-		const root = createDiv({ cls: "cuecraft-cue cuecraft-cue-reading" });
+		const root = createDiv({ cls: "firstrecall-cue firstrecall-cue-reading" });
 		root.addClass(cueFontSizeClass(this.settings.cueFontSize));
-		root.dataset.cuecraftSectionId = cue.sectionId;
+		root.dataset.firstrecallSectionId = cue.sectionId;
 		root.setAttr("role", "note");
 		appendFreshnessBadge(root, cue.freshness);
 		if (cue.error) {
-			root.addClass("cuecraft-cue-error");
+			root.addClass("firstrecall-cue-error");
 			root.setAttr("title", cue.error);
 			root.createDiv({
-				cls: "cuecraft-cue-question",
+				cls: "firstrecall-cue-question",
 				text: "\u26a0 Generation failed \u2014 regenerate",
 			});
 			return root;
 		}
 		appendSummary(root, cue.summary);
 		if (visibility.showQuestion) {
-			root.createDiv({ cls: "cuecraft-cue-question", text: cue.question });
+			root.createDiv({ cls: "firstrecall-cue-question", text: cue.question });
 		}
 		if (cue.keywords.length) {
 			root.createDiv({
-				cls: "cuecraft-cue-keywords",
+				cls: "firstrecall-cue-keywords",
 				text: cue.keywords.join(" \u00b7 "),
 			});
 		}
@@ -1754,7 +1754,7 @@ export default class CueCraftPlugin extends Plugin {
 		this.cueSettingsChanged = true;
 	}
 
-	/** Ask whether to regenerate after the user leaves CueCraft settings. */
+	/** Ask whether to regenerate after the user leaves FirstRecall settings. */
 	promptForCueSettingsRegeneration(): void {
 		if (!this.cueSettingsChanged) return;
 		this.cueSettingsChanged = false;
@@ -1805,30 +1805,30 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
-	async makeProvider(): Promise<CueCraftByokRuntime> {
-		return makeCueCraftByokProviderFromStore(this.settings, {
+	async makeProvider(): Promise<FirstRecallByokRuntime> {
+		return makeFirstRecallByokProviderFromStore(this.settings, {
 			transport: this.makeTransport(),
 		}, this.credentialStore);
 	}
 
 	async listProviderModels(
-		provider: CueCraftFetchedModelProvider
+		provider: FirstRecallFetchedModelProvider
 	) {
-		return listCueCraftProviderModelsFromStore(this.settings, provider, {
+		return listFirstRecallProviderModelsFromStore(this.settings, provider, {
 			transport: this.makeTransport(),
 		}, this.credentialStore);
 	}
 
 	private async makeProviderForRun(
 		opts: { automatic?: boolean } = {}
-	): Promise<CueCraftByokRuntime | null> {
+	): Promise<FirstRecallByokRuntime | null> {
 		try {
 			return await this.makeProvider();
 		} catch (error) {
-			console.error("CueCraft provider setup failed", error);
+			console.error("FirstRecall provider setup failed", error);
 			if (!opts.automatic) {
 				new Notice(
-					formatCueCraftNotice(
+					formatFirstRecallNotice(
 						error instanceof Error ? error.message : String(error)
 					)
 				);
@@ -1844,9 +1844,9 @@ export default class CueCraftPlugin extends Plugin {
 	}
 
 	private selectedModelName(): string {
-		const provider = cueCraftSelectedProvider(this.settings);
+		const provider = firstRecallSelectedProvider(this.settings);
 		if (!provider) return "";
-		const model = cueCraftProviderModel(this.settings, provider).trim();
+		const model = firstRecallProviderModel(this.settings, provider).trim();
 		return byokProviderDefinition(provider).modelBehavior === "optional"
 			? model || "CLI default"
 			: model;
@@ -1874,22 +1874,22 @@ export default class CueCraftPlugin extends Plugin {
 	private pickAndRegenerateSection(): void {
 		const file = this.app.workspace.getActiveFile();
 		if (!file) {
-			new Notice("CueCraft: open a note first.");
+			new Notice("FirstRecall: open a note first.");
 			return;
 		}
 		if (!this.isConfigured()) {
-			new Notice("CueCraft: set up your AI provider in Settings first.");
+			new Notice("FirstRecall: set up your AI provider in Settings first.");
 			return;
 		}
 		if (!this.cacheStore.has(file.path)) {
-			new Notice("CueCraft: generate study material for this note first.");
+			new Notice("FirstRecall: generate study material for this note first.");
 			return;
 		}
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view) return;
 		const sections = parseSections(view.editor.getValue()).filter((s) => s.heading);
 		if (!sections.length) {
-			new Notice("CueCraft: no headed sections found.");
+			new Notice("FirstRecall: no headed sections found.");
 			return;
 		}
 		new SectionSuggestModal(this.app, sections, this.cacheStore.get(file.path), (s) => {
@@ -1903,19 +1903,19 @@ export default class CueCraftPlugin extends Plugin {
 	 */
 	async regenerateSection(file: TFile, sectionId: string): Promise<void> {
 		if (!this.isConfigured()) {
-			new Notice("CueCraft: set up your AI provider in Settings first.");
+			new Notice("FirstRecall: set up your AI provider in Settings first.");
 			return;
 		}
 		const cache = this.cacheStore.get(file.path);
 		if (!cache) {
-			new Notice("CueCraft: no cache for this note \u2014 run Generate first.");
+			new Notice("FirstRecall: no cache for this note \u2014 run Generate first.");
 			return;
 		}
 		const section = parseSections(await this.app.vault.cachedRead(file)).find(
 			(s) => s.id === sectionId
 		);
 		if (!section) {
-			new Notice("CueCraft: section no longer exists in the note.");
+			new Notice("FirstRecall: section no longer exists in the note.");
 			return;
 		}
 
@@ -1926,9 +1926,9 @@ export default class CueCraftPlugin extends Plugin {
 			sectionIds: [sectionId],
 		});
 		if (outcome.status === "failed") {
-			new Notice(`CueCraft: regeneration failed \u2014 ${outcome.errors.join("; ")}`);
+			new Notice(`FirstRecall: regeneration failed \u2014 ${outcome.errors.join("; ")}`);
 		} else if (outcome.status === "completed") {
-			new Notice(`CueCraft: updated the section card for "${section.heading}".`);
+			new Notice(`FirstRecall: updated the section card for "${section.heading}".`);
 		}
 		await this.updateStatusForFile(this.app.workspace.getActiveFile());
 	}
@@ -1943,12 +1943,12 @@ export default class CueCraftPlugin extends Plugin {
 	): Promise<void> {
 		const file = target ?? this.app.workspace.getActiveFile();
 		if (!file) {
-			if (!opts.automatic) new Notice("CueCraft: open a note first.");
+			if (!opts.automatic) new Notice("FirstRecall: open a note first.");
 			return;
 		}
 		if (!this.isConfigured()) {
 			if (!opts.automatic) {
-				new Notice("CueCraft: set up your AI provider in Settings first.");
+				new Notice("FirstRecall: set up your AI provider in Settings first.");
 			}
 			return;
 		}
@@ -1963,11 +1963,11 @@ export default class CueCraftPlugin extends Plugin {
 
 	private noticeForMaintenanceOutcome(outcome: MaintenanceOutcome): void {
 		if (outcome.status === "failed") {
-			new Notice(`CueCraft: update failed \u2014 ${outcome.errors.join("; ")}`);
+			new Notice(`FirstRecall: update failed \u2014 ${outcome.errors.join("; ")}`);
 		} else if (outcome.status === "completed") {
-			new Notice("CueCraft: study material is up to date.");
+			new Notice("FirstRecall: study material is up to date.");
 		} else if (outcome.status === "skipped" && outcome.reason === "no-work") {
-			new Notice("CueCraft: study material is already up to date.");
+			new Notice("FirstRecall: study material is already up to date.");
 		}
 	}
 
@@ -1978,7 +1978,7 @@ export default class CueCraftPlugin extends Plugin {
 	private pickStudyAreaAndRun(mode: StudyAreaPlanMode): void {
 		const areas = this.settings.studyAreas;
 		if (!areas.length) {
-			new Notice("CueCraft: add a folder or Entire vault in Settings first.");
+			new Notice("FirstRecall: add a folder or Entire vault in Settings first.");
 			this.openSettings();
 			return;
 		}
@@ -2047,12 +2047,12 @@ export default class CueCraftPlugin extends Plugin {
 		reason: ReturnType<typeof validateStudyAreaScope>["reason"]
 	): string {
 		if (reason === "duplicate-path") {
-			return "CueCraft: that managed folder coverage already exists.";
+			return "FirstRecall: that managed folder coverage already exists.";
 		}
 		if (reason === "entire-vault-conflict") {
-			return "CueCraft: remove the conflicting Entire vault or folder coverage first.";
+			return "FirstRecall: remove the conflicting Entire vault or folder coverage first.";
 		}
-		return "CueCraft: parent and descendant managed folders cannot overlap.";
+		return "FirstRecall: parent and descendant managed folders cannot overlap.";
 	}
 
 	async removeStudyArea(areaId: string): Promise<void> {
@@ -2111,13 +2111,13 @@ export default class CueCraftPlugin extends Plugin {
 	): Promise<StudyAreaRunSummary | null> {
 		if (!this.isConfigured()) {
 			if (!opts.automatic) {
-				new Notice("CueCraft: set up your AI provider in Settings first.");
+				new Notice("FirstRecall: set up your AI provider in Settings first.");
 			}
 			return null;
 		}
 		const area = this.findStudyArea(areaId);
 		if (!area) {
-			new Notice("CueCraft: that managed folder no longer exists.");
+			new Notice("FirstRecall: that managed folder no longer exists.");
 			return null;
 		}
 		const plan = await this.buildStudyAreaPlan(
@@ -2129,8 +2129,8 @@ export default class CueCraftPlugin extends Plugin {
 			if (!opts.automatic) {
 				new Notice(
 					mode === "retry-failed"
-						? "CueCraft: no failed updates to retry in this managed folder."
-						: "CueCraft: study material in this managed folder is already up to date."
+						? "FirstRecall: no failed updates to retry in this managed folder."
+						: "FirstRecall: study material in this managed folder is already up to date."
 				);
 			}
 			return summarizeStudyAreaRun(plan, {});
@@ -2231,11 +2231,11 @@ export default class CueCraftPlugin extends Plugin {
 		summary: StudyAreaRunSummary
 	): string {
 		if (summary.canceled) {
-			return `CueCraft: cancelled ${area.name} - kept ${summary.completed}, ${summary.remaining} remaining.`;
+			return `FirstRecall: cancelled ${area.name} - kept ${summary.completed}, ${summary.remaining} remaining.`;
 		}
 		const parts = [`${summary.completed} done`];
 		if (summary.failed) parts.push(`${summary.failed} failed`);
-		return `CueCraft: ${area.name} run complete - ${parts.join(", ")}.`;
+		return `FirstRecall: ${area.name} run complete - ${parts.join(", ")}.`;
 	}
 
 	private async generateCuesForFile(
@@ -2243,12 +2243,12 @@ export default class CueCraftPlugin extends Plugin {
 		opts: { automatic?: boolean } = {}
 	): Promise<void> {
 		if (!file) {
-			if (!opts.automatic) new Notice("CueCraft: open a note first.");
+			if (!opts.automatic) new Notice("FirstRecall: open a note first.");
 			return;
 		}
 		if (!this.isConfigured()) {
 			if (!opts.automatic) {
-				new Notice("CueCraft: set up your AI provider in Settings first.");
+				new Notice("FirstRecall: set up your AI provider in Settings first.");
 			}
 			return;
 		}
@@ -2264,16 +2264,16 @@ export default class CueCraftPlugin extends Plugin {
 	private async clearCues(): Promise<void> {
 		const file = this.app.workspace.getActiveFile();
 		if (!file) {
-			new Notice("CueCraft: open a note first.");
+			new Notice("FirstRecall: open a note first.");
 			return;
 		}
 		if (!this.cacheStore.has(file.path)) {
-			new Notice("CueCraft: no generated study material to clear for this note.");
+			new Notice("FirstRecall: no generated study material to clear for this note.");
 			return;
 		}
 		this.endStudyForPath(file.path);
 		await this.maintenance.delete(file.path);
-		new Notice("CueCraft: cleared generated study material for this note.");
+		new Notice("FirstRecall: cleared generated study material for this note.");
 		await this.updateStatusForFile(file);
 		this.renderCues(file);
 	}
@@ -2285,15 +2285,15 @@ export default class CueCraftPlugin extends Plugin {
 	private async setNoteVisibility(visible: boolean, target?: TFile): Promise<void> {
 		const file = target ?? this.app.workspace.getActiveFile();
 		if (!file) {
-			new Notice("CueCraft: open a note first.");
+			new Notice("FirstRecall: open a note first.");
 			return;
 		}
 		if (visible) {
 			await this.visibility.show(file.path);
-			new Notice("CueCraft: generated study material enabled for this note.");
+			new Notice("FirstRecall: generated study material enabled for this note.");
 		} else {
 			await this.visibility.hide(file.path);
-			new Notice("CueCraft: generated study material hidden for this note.");
+			new Notice("FirstRecall: generated study material hidden for this note.");
 		}
 		const active = this.app.workspace.getActiveFile();
 		await this.updateStatusForFile(active);
@@ -2319,10 +2319,10 @@ class RegenerateSettingsModal extends Modal {
 		contentEl.empty();
 		contentEl.createEl("h2", { text: "Regenerate section cards with new settings?" });
 		contentEl.createEl("p", {
-			text: `CueCraft settings that affect recall questions changed. Regenerate cached section cards for "${this.noteName}" now?`,
+			text: `FirstRecall settings that affect recall questions changed. Regenerate cached section cards for "${this.noteName}" now?`,
 		});
 		const actions = contentEl.createEl("div", {
-			cls: "cuecraft-modal-actions",
+			cls: "firstrecall-modal-actions",
 		});
 		const cancel = actions.createEl("button", { text: "Not now" });
 		cancel.addEventListener("click", () => this.close());

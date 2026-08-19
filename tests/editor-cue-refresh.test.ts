@@ -1,6 +1,6 @@
 import { JSDOM } from "jsdom";
 import { describe, expect, it, vi } from "vitest";
-import CueCraftPlugin from "../src/main";
+import FirstRecallPlugin from "../src/main";
 import { DEFAULT_SETTINGS } from "../src/settings";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
@@ -44,7 +44,7 @@ function studyCache() {
 
 describe("Editing View cue refresh", () => {
 	it("skips Markdown leaves whose editor is not initialized", () => {
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		const uninitializedView = {
 			getViewType: () => "markdown",
 			editor: undefined,
@@ -77,7 +77,7 @@ describe("Editing View cue refresh", () => {
 				getValue: () => "# Agents\nAgents use tools.",
 			},
 		};
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		plugin.settings = {
 			...structuredClone(DEFAULT_SETTINGS),
 			editorCueDisplay: "cornell",
@@ -104,7 +104,7 @@ describe("Editing View cue refresh", () => {
 			value: { display: string };
 		};
 		expect(effect.value.display).toBe("cornell");
-		expect(editorDom.dataset.cuecraftEditorDisplay).toBe("cornell");
+		expect(editorDom.dataset.firstrecallEditorDisplay).toBe("cornell");
 	});
 
 	it("projects outdated maintenance into the Editing banner and affected cards", () => {
@@ -129,7 +129,7 @@ describe("Editing View cue refresh", () => {
 				getValue: () => changed,
 			},
 		};
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		plugin.settings = {
 			...structuredClone(DEFAULT_SETTINGS),
 			studyAreas: [
@@ -170,13 +170,13 @@ describe("Editing View cue refresh", () => {
 		};
 		expect(payload.cues[0].freshness).toBe("outdated");
 		expect(
-			contentEl.querySelector(".cuecraft-study-material-banner")?.textContent
+			contentEl.querySelector(".firstrecall-study-material-banner")?.textContent
 		).toContain("out of date");
-		expect(contentEl.querySelectorAll(".cuecraft-study-material-banner")).toHaveLength(1);
+		expect(contentEl.querySelectorAll(".firstrecall-study-material-banner")).toHaveLength(1);
 
 		(markdownView as { file: typeof file | null }).file = null;
 		plugin.refreshEditorCues();
-		expect(contentEl.querySelector(".cuecraft-study-material-banner")).toBeNull();
+		expect(contentEl.querySelector(".firstrecall-study-material-banner")).toBeNull();
 	});
 
 	it("projects Study and hidden cues into only the active same-path editor", () => {
@@ -202,7 +202,7 @@ describe("Editing View cue refresh", () => {
 		const activeView = makeView("active", activeDispatch);
 		const inactiveView = makeView("inactive", inactiveDispatch);
 		const cache = studyCache();
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		plugin.settings = {
 			...structuredClone(DEFAULT_SETTINGS),
 			showSummary: false,
@@ -255,7 +255,7 @@ describe("Editing View cue refresh", () => {
 	});
 
 	it("rerenders every open Reading leaf and skips Editing leaves", () => {
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		const firstRerender = vi.fn();
 		const secondRerender = vi.fn();
 		const editingRerender = vi.fn();
@@ -298,7 +298,7 @@ describe("Editing View cue refresh", () => {
 	});
 
 	it("skips reported Markdown leaves without Markdown view methods", () => {
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			app: {
 				workspace: {
@@ -332,7 +332,7 @@ describe("study material banner", () => {
 			{ onUpdate: latestUpdate, onRetry, onDismiss }
 		);
 		expect(secondHost).toBe(firstHost);
-		expect(container.querySelectorAll(".cuecraft-study-material-banner")).toHaveLength(1);
+		expect(container.querySelectorAll(".firstrecall-study-material-banner")).toHaveLength(1);
 		const update = container.querySelector<HTMLButtonElement>(
 			"[data-banner-action='update']"
 		)!;
@@ -382,7 +382,7 @@ describe("study material banner", () => {
 		dismiss.click();
 		await vi.waitFor(() => expect(onDismiss).toHaveBeenCalledWith("revision-2"));
 
-		expect(container.querySelector(".cuecraft-study-material-banner")).toBeNull();
+		expect(container.querySelector(".firstrecall-study-material-banner")).toBeNull();
 		expect(document.activeElement).toBe(container);
 		removeStudyMaterialBanner(container);
 		expect(onDismiss).toHaveBeenCalledTimes(1);

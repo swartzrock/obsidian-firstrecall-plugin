@@ -246,7 +246,7 @@ describe("renderModelCombobox", () => {
 			"claude-opus-4-8",
 		]);
 		expect(
-			listChildren[1].classList.contains("cuecraft-model-combobox-divider")
+			listChildren[1].classList.contains("firstrecall-model-combobox-divider")
 		).toBe(true);
 		expect(listChildren[1].getAttribute("role")).toBe("separator");
 	});

@@ -12,7 +12,7 @@ function ruleFor(selector: string): string {
 
 describe("settings CSS", () => {
 	it("styles artifact-matched settings cards without fixed widths", () => {
-		const cardRule = ruleFor(".cuecraft-settings-artifact-card");
+		const cardRule = ruleFor(".firstrecall-settings-artifact-card");
 		expect(cardRule).toContain("min-width: 0");
 		expect(cardRule).toContain("border: 1px solid");
 		expect(cardRule).not.toMatch(/\n\twidth:/);
@@ -20,64 +20,64 @@ describe("settings CSS", () => {
 	});
 
 	it("uses shared read-only instruction-control hooks for both templates", () => {
-		const settingRule = ruleFor(".cuecraft-instructions-setting");
+		const settingRule = ruleFor(".firstrecall-instructions-setting");
 		expect(settingRule).toContain("flex-direction: column");
 		expect(settingRule).toContain("align-items: stretch");
 
 		const controlRule = ruleFor(
-			".cuecraft-instructions-setting .setting-item-control"
+			".firstrecall-instructions-setting .setting-item-control"
 		);
 		expect(controlRule).toContain("width: 100%");
 		expect(controlRule).toContain("flex-direction: column");
 
-		const inputRule = ruleFor(".cuecraft-instructions-input");
+		const inputRule = ruleFor(".firstrecall-instructions-input");
 		expect(inputRule).toContain("width: 100%");
 		expect(inputRule).toContain("max-width: 100%");
 		expect(inputRule).toContain("box-sizing: border-box");
 		expect(inputRule).toContain("min-height: 10rem");
 
-		expect(styles).toContain(".cuecraft-generation-advanced");
-		expect(styles).toContain(".cuecraft-generation-instructions");
+		expect(styles).toContain(".firstrecall-generation-advanced");
+		expect(styles).toContain(".firstrecall-generation-instructions");
 	});
 
 	it("keeps exclusions legible and recovery scopes visibly disabled", () => {
-		const exclusionsRule = ruleFor(".cuecraft-study-area-exclusions");
+		const exclusionsRule = ruleFor(".firstrecall-study-area-exclusions");
 		expect(exclusionsRule).toContain("border: 1px solid");
 		expect(exclusionsRule).toContain("background: var(--background-secondary)");
 
-		const exclusionRowRule = ruleFor(".cuecraft-study-area-exclusion-row");
+		const exclusionRowRule = ruleFor(".firstrecall-study-area-exclusion-row");
 		expect(exclusionRowRule).toContain("display: flex");
 		expect(exclusionRowRule).toContain("justify-content: space-between");
 
-		const disabledRule = ruleFor(".cuecraft-study-area-row.is-disabled");
+		const disabledRule = ruleFor(".firstrecall-study-area-row.is-disabled");
 		expect(disabledRule).toContain("opacity:");
 	});
 
 	it("stacks active CLI command labels above the command input", () => {
 		const settingRule = ruleFor(
-			".cuecraft-active-provider-fields .cuecraft-cli-text-setting"
+			".firstrecall-active-provider-fields .firstrecall-cli-text-setting"
 		);
 		expect(settingRule).toContain("flex-direction: column");
 		expect(settingRule).toContain("align-items: stretch");
 
 		const infoRule = ruleFor(
-			".cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-info"
+			".firstrecall-active-provider-fields .firstrecall-cli-text-setting .setting-item-info"
 		);
 		expect(infoRule).toContain("flex: 0 1 auto");
 
 		const controlRule = ruleFor(
-			".cuecraft-active-provider-fields .cuecraft-cli-text-setting .setting-item-control"
+			".firstrecall-active-provider-fields .firstrecall-cli-text-setting .setting-item-control"
 		);
 		expect(controlRule).toContain("width: 100%");
 
 		const inputRule = ruleFor(
-			".cuecraft-active-provider-fields .cuecraft-cli-text-input"
+			".firstrecall-active-provider-fields .firstrecall-cli-text-input"
 		);
 		expect(inputRule).toContain("width: 100%");
 		expect(inputRule).toContain("min-width: 0");
 	});
 
-	it("scopes shared CueCraft card tokens to review surfaces", () => {
+	it("scopes shared FirstRecall card tokens to review surfaces", () => {
 		expect(styles).toContain("--cc-card: var(--background-primary)");
 		expect(styles).toContain("--cc-border: var(--background-modifier-border)");
 		expect(styles).toContain("--cc-text: var(--text-normal)");
@@ -86,13 +86,13 @@ describe("settings CSS", () => {
 	});
 
 	it("uses neutral card surfaces for cues and Note Brief", () => {
-		const cueRule = ruleFor(".cuecraft-cue");
+		const cueRule = ruleFor(".firstrecall-cue");
 		expect(cueRule).toContain("background: var(--cc-card)");
 		expect(cueRule).toContain("border: 1px solid var(--cc-border)");
 		expect(cueRule).toContain("border-inline-start: 3px solid");
 		expect(cueRule).toContain("box-shadow: var(--cc-shadow)");
 
-		const briefRule = ruleFor(".cuecraft-note-brief");
+		const briefRule = ruleFor(".firstrecall-note-brief");
 		expect(briefRule).toContain("background: var(--cc-card)");
 		expect(briefRule).toContain("border: 1px solid var(--cc-border)");
 		expect(briefRule).toContain("box-shadow: var(--cc-shadow)");
@@ -100,22 +100,22 @@ describe("settings CSS", () => {
 	});
 
 	it("reserves measured space below Inline cue widgets", () => {
-		const wrapperRule = ruleFor(".cuecraft-inline-cue-widget");
+		const wrapperRule = ruleFor(".firstrecall-inline-cue-widget");
 		expect(wrapperRule).toContain("padding-bottom: 1em");
 
 		const cueRule = ruleFor(
-			".cuecraft-inline-cue-widget>.cuecraft-cue"
+			".firstrecall-inline-cue-widget>.firstrecall-cue"
 		);
 		expect(cueRule).toContain("margin-bottom: 0");
 	});
 
 	it("uses neutral cue tokens", () => {
-		const cueRule = ruleFor(".cuecraft-cue");
+		const cueRule = ruleFor(".firstrecall-cue");
 		expect(cueRule).toContain(
 			"border-inline-start: 3px solid var(--cc-border)"
 		);
 		const cornellRules =
-			styles.match(/\.cuecraft-cornell-cue\s*\{[^}]*\}/g) ?? [];
+			styles.match(/\.firstrecall-cornell-cue\s*\{[^}]*\}/g) ?? [];
 		expect(
 			cornellRules.some((rule) =>
 				rule.includes("border-inline-start: 3px solid var(--cc-border)")
@@ -126,22 +126,22 @@ describe("settings CSS", () => {
 		expect(styles).not.toContain("--cc-linkedlists");
 		expect(styles).not.toContain("--cc-stacks");
 		expect(styles).not.toContain("--cc-intervals");
-		expect(styles).not.toContain(".cuecraft-section-tag");
+		expect(styles).not.toContain(".firstrecall-section-tag");
 	});
 
 	it("preserves failed-cue error styling", () => {
 		const failedCueRule = ruleFor(
-			".cuecraft-cue-error,\n.cuecraft-cornell-cue-error"
+			".firstrecall-cue-error,\n.firstrecall-cornell-cue-error"
 		);
 		expect(failedCueRule).toContain("border-left-color: var(--text-error)");
 	});
 
 	it("keeps Note Brief insight columns flat", () => {
-		const insightGridRule = ruleFor(".cuecraft-note-brief-insights");
+		const insightGridRule = ruleFor(".firstrecall-note-brief-insights");
 		expect(insightGridRule).toContain("border-top: 1px solid var(--cc-border)");
 		expect(insightGridRule).toContain("padding-top: 1em");
 
-		const insightRule = ruleFor(".cuecraft-note-brief-insight");
+		const insightRule = ruleFor(".firstrecall-note-brief-insight");
 		expect(insightRule).toContain("display: flex");
 		expect(insightRule).toContain("flex-direction: column");
 		expect(insightRule).not.toContain("background:");
@@ -149,17 +149,17 @@ describe("settings CSS", () => {
 		expect(insightRule).not.toContain("border-inline-start:");
 
 		const dividerRule = ruleFor(
-			".cuecraft-note-brief-insight:not(:first-child)"
+			".firstrecall-note-brief-insight:not(:first-child)"
 		);
 		expect(dividerRule).toContain(
 			"border-inline-start: 1px solid var(--cc-border)"
 		);
 
-		const badgeRule = ruleFor(".cuecraft-note-brief-insight-badge");
+		const badgeRule = ruleFor(".firstrecall-note-brief-insight-badge");
 		expect(badgeRule).toContain("align-self: flex-start");
 		expect(badgeRule).toContain("margin-top: auto");
 
-		const briefLabelRule = ruleFor(".cuecraft-note-brief-label");
+		const briefLabelRule = ruleFor(".firstrecall-note-brief-label");
 		expect(briefLabelRule).toContain("font-size: 0.7em");
 		expect(briefLabelRule).toContain("font-weight: 800");
 		expect(briefLabelRule).toContain("letter-spacing: 0.08em");
@@ -167,7 +167,7 @@ describe("settings CSS", () => {
 	});
 
 	it("styles cue terms as quiet secondary chips", () => {
-		const termRule = ruleFor(".cuecraft-cue-term,\n.cuecraft-cornell-term");
+		const termRule = ruleFor(".firstrecall-cue-term,\n.firstrecall-cornell-term");
 		expect(termRule).toContain("padding: 0 0.5rem");
 		expect(termRule).toContain(
 			"border: 1px solid color-mix(in srgb, var(--cc-border) 70%, transparent)"
@@ -180,21 +180,21 @@ describe("settings CSS", () => {
 		expect(termRule).toContain("line-height: 20px");
 	});
 
-	it("keeps CueCraft label icons small and inline", () => {
+	it("keeps FirstRecall label icons small and inline", () => {
 		const editorLabelRule = ruleFor(
-			".cuecraft-editor-hook-sectioned .cuecraft-editor-hook-section-label"
+			".firstrecall-editor-hook-sectioned .firstrecall-editor-hook-section-label"
 		);
 		expect(editorLabelRule).toContain("display: flex");
 		expect(editorLabelRule).toContain("align-items: center");
 		expect(editorLabelRule).toContain("gap: 0.48em");
 
-		const iconRule = ruleFor(".cuecraft-label-icon");
+		const iconRule = ruleFor(".firstrecall-label-icon");
 		expect(iconRule).toContain("width: 1.25em");
 		expect(iconRule).toContain("height: 1.25em");
 		expect(iconRule).toContain("color: var(--cc-muted)");
 
 		const briefIconRule = ruleFor(
-			".cuecraft-note-brief-label .cuecraft-label-icon"
+			".firstrecall-note-brief-label .firstrecall-label-icon"
 		);
 		expect(briefIconRule).toBe("");
 	});
@@ -211,10 +211,10 @@ describe("settings CSS", () => {
 
 		for (const [size, expected] of cases) {
 			const inline = fontSizeFor(
-				`.cuecraft-cue.cuecraft-cuefont-${size}`
+				`.firstrecall-cue.firstrecall-cuefont-${size}`
 			);
 			const cornell = fontSizeFor(
-				`.cuecraft-editor-hook.cuecraft-cuefont-${size}`
+				`.firstrecall-editor-hook.firstrecall-cuefont-${size}`
 			);
 
 			expect(inline).toBe(expected);
@@ -225,26 +225,26 @@ describe("settings CSS", () => {
 
 	it("distinguishes Cornell rail and Inline cue thumbnails by geometry", () => {
 		const cornellCardRule = ruleFor(
-			".cuecraft-preview-editor-cue-card-cornell"
+			".firstrecall-preview-editor-cue-card-cornell"
 		);
 		expect(cornellCardRule).toContain("inset-inline-start: 8%");
 		expect(cornellCardRule).toContain("width: 43%");
 
 		const inlineCardRule = ruleFor(
-			".cuecraft-preview-editor-cue-card-inline-cues"
+			".firstrecall-preview-editor-cue-card-inline-cues"
 		);
 		expect(inlineCardRule).toContain("inset-block: 35% 6%");
 		expect(inlineCardRule).toContain("inset-inline: 7%");
 	});
 
 	it("keeps all cue font size options in one laptop-width row", () => {
-		const cueFontGroupRule = ruleFor(".cuecraft-thumbnail-group-cue-font");
+		const cueFontGroupRule = ruleFor(".firstrecall-thumbnail-group-cue-font");
 		expect(cueFontGroupRule).toContain(
 			"grid-template-columns: repeat(3, minmax(0, 1fr))"
 		);
 
 		const cueFontGroupIndex = styles.indexOf(
-			".cuecraft-thumbnail-group-cue-font"
+			".firstrecall-thumbnail-group-cue-font"
 		);
 		const narrowMediaIndex = styles.indexOf("@media (max-width: 700px)");
 		const narrowMediaEnd = styles.indexOf(
@@ -253,28 +253,28 @@ describe("settings CSS", () => {
 		);
 		const narrowStyles = styles.slice(narrowMediaIndex, narrowMediaEnd);
 		expect(narrowMediaIndex).toBeGreaterThan(cueFontGroupIndex);
-		expect(narrowStyles).toContain(".cuecraft-thumbnail-group {");
+		expect(narrowStyles).toContain(".firstrecall-thumbnail-group {");
 		expect(narrowStyles).toContain(
 			"grid-template-columns: repeat(auto-fit, minmax(min(138px, 100%), 1fr))"
 		);
 	});
 
 	it("animates accessible editor card section disclosures", () => {
-		const root = ".cuecraft-editor-hook-sectioned";
-		const toggleRule = ruleFor(`${root} .cuecraft-editor-hook-section-toggle`);
+		const root = ".firstrecall-editor-hook-sectioned";
+		const toggleRule = ruleFor(`${root} .firstrecall-editor-hook-section-toggle`);
 		expect(toggleRule).toContain("display: block");
 		expect(toggleRule).toContain("width: 100%");
 		expect(toggleRule).toContain("background: transparent");
 		expect(toggleRule).toContain("color: var(--text-normal)");
 
 		const dividerRule = ruleFor(
-			`${root} .cuecraft-editor-hook-section-body+.cuecraft-editor-hook-section-toggle`
+			`${root} .firstrecall-editor-hook-section-body+.firstrecall-editor-hook-section-toggle`
 		);
 		expect(dividerRule).toContain("border-top: 1px solid var(--cc-border)");
 		expect(dividerRule).toContain("margin-top: 0.95em");
 		expect(dividerRule).toContain("padding-top: 0.85em");
 
-		const bodyRule = ruleFor(`${root} .cuecraft-editor-hook-section-body`);
+		const bodyRule = ruleFor(`${root} .firstrecall-editor-hook-section-body`);
 		expect(bodyRule).toContain("display: grid");
 		expect(bodyRule).toContain("grid-template-rows: 1fr");
 		expect(bodyRule).toContain("opacity: 1");
@@ -282,25 +282,25 @@ describe("settings CSS", () => {
 		expect(bodyRule).toContain("opacity 200ms ease");
 
 		const collapsedBodyRule = ruleFor(
-			`${root} .cuecraft-editor-hook-section-body[data-collapsed="true"]`
+			`${root} .firstrecall-editor-hook-section-body[data-collapsed="true"]`
 		);
 		expect(collapsedBodyRule).toContain("grid-template-rows: 0fr");
 		expect(collapsedBodyRule).toContain("opacity: 0");
 
-		const contentRule = ruleFor(`${root} .cuecraft-editor-hook-section-content`);
+		const contentRule = ruleFor(`${root} .firstrecall-editor-hook-section-content`);
 		expect(contentRule).toContain("min-height: 0");
 		expect(contentRule).toContain("overflow: hidden");
 
 		const chevronRule = ruleFor(
-			`${root} .cuecraft-editor-hook-section-chevron`
+			`${root} .firstrecall-editor-hook-section-chevron`
 		);
 		expect(chevronRule).toContain("transition: transform 200ms ease");
 		const collapsedChevronRule = ruleFor(
-			`${root} .cuecraft-editor-hook-section-toggle[aria-expanded="false"] .cuecraft-editor-hook-section-chevron`
+			`${root} .firstrecall-editor-hook-section-toggle[aria-expanded="false"] .firstrecall-editor-hook-section-chevron`
 		);
 		expect(collapsedChevronRule).toContain("transform: rotate(-90deg)");
 
-		const previewRule = ruleFor(`${root} .cuecraft-editor-hook-section-preview`);
+		const previewRule = ruleFor(`${root} .firstrecall-editor-hook-section-preview`);
 		expect(previewRule).toContain("color: var(--cc-muted)");
 		expect(previewRule).toContain("font-size: 0.84em");
 		expect(previewRule).toContain("font-style: italic");
@@ -308,34 +308,34 @@ describe("settings CSS", () => {
 		expect(previewRule).toContain("overflow: hidden");
 		expect(previewRule).toContain("text-overflow: ellipsis");
 		const hiddenPreviewRule = ruleFor(
-			`${root} .cuecraft-editor-hook-section-preview[hidden]`
+			`${root} .firstrecall-editor-hook-section-preview[hidden]`
 		);
 		expect(hiddenPreviewRule).toContain("display: none");
 		const collapsedTermsRule = ruleFor(
-			`${root} .cuecraft-editor-hook-section-toggle[data-section="terms"][aria-expanded="false"]`
+			`${root} .firstrecall-editor-hook-section-toggle[data-section="terms"][aria-expanded="false"]`
 		);
 		expect(collapsedTermsRule).toContain("height: auto");
 		expect(collapsedTermsRule).toContain("padding-bottom: 0.65em");
 
 		const focusRule = ruleFor(
-			`${root} .cuecraft-editor-hook-section-toggle:focus-visible`
+			`${root} .firstrecall-editor-hook-section-toggle:focus-visible`
 		);
 		expect(focusRule).toContain("outline: 2px solid var(--interactive-accent)");
 		expect(focusRule).toContain("outline-offset: 3px");
 
 		expect(styles).toMatch(
-			/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.cuecraft-editor-hook-sectioned \.cuecraft-editor-hook-section-body,[\s\S]*?\.cuecraft-editor-hook-sectioned \.cuecraft-editor-hook-section-chevron\s*\{[^}]*transition: none/
+			/@media \(prefers-reduced-motion: reduce\) \{[\s\S]*?\.firstrecall-editor-hook-sectioned \.firstrecall-editor-hook-section-body,[\s\S]*?\.firstrecall-editor-hook-sectioned \.firstrecall-editor-hook-section-chevron\s*\{[^}]*transition: none/
 		);
 	});
 
 	it("keeps sectioned editor cues compact and quiet", () => {
-		expect(styles).not.toContain("cuecraft-editor-rail-card-toggle");
-		expect(styles).not.toContain("cuecraft-editor-rail-card-content");
+		expect(styles).not.toContain("firstrecall-editor-rail-card-toggle");
+		expect(styles).not.toContain("firstrecall-editor-rail-card-content");
 		expect(styles).not.toContain('data-overflowing="true"');
 		expect(styles).not.toContain('data-expanded="false"');
 
 		const titleRule = ruleFor(
-			".cuecraft-editor-hook-sectioned .cuecraft-editor-hook-title"
+			".firstrecall-editor-hook-sectioned .firstrecall-editor-hook-title"
 		);
 		expect(titleRule).toContain("color: var(--text-normal)");
 		expect(titleRule).toContain("font-size: inherit");
@@ -343,7 +343,7 @@ describe("settings CSS", () => {
 		expect(titleRule).toContain("line-height: 1.45");
 
 		const summaryRule = ruleFor(
-			".cuecraft-editor-hook-sectioned .cuecraft-summary"
+			".firstrecall-editor-hook-sectioned .firstrecall-summary"
 		);
 		expect(summaryRule).toContain("color: var(--text-normal)");
 		expect(summaryRule).toContain("font-size: inherit");
@@ -351,42 +351,42 @@ describe("settings CSS", () => {
 		expect(summaryRule).toContain("line-height: 1.45");
 
 		const termRule = ruleFor(
-			".cuecraft-editor-hook-sectioned .cuecraft-cue-term,\n.cuecraft-editor-hook-sectioned .cuecraft-cornell-term"
+			".firstrecall-editor-hook-sectioned .firstrecall-cue-term,\n.firstrecall-editor-hook-sectioned .firstrecall-cornell-term"
 		);
 		expect(termRule).toContain("font-size: 0.84em");
 		expect(termRule).toContain("line-height: 1.65");
 
 		const cornellQuestionRule = ruleFor(
-			".cuecraft-editor-hook-sectioned .cuecraft-cornell-q"
+			".firstrecall-editor-hook-sectioned .firstrecall-cornell-q"
 		);
 		expect(cornellQuestionRule).toContain("font-size: inherit");
 		expect(cornellQuestionRule).toContain(
 			"font-weight: var(--font-normal, 400)"
 		);
 		const responsiveMediumRule = ruleFor(
-			".markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-medium"
+			".markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook.firstrecall-cuefont-medium"
 		);
 		expect(responsiveMediumRule).toContain("font-size: var(--font-ui-small)");
 		const responsiveLargeRule = ruleFor(
-			".markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-hook.cuecraft-cuefont-large"
+			".markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-hook.firstrecall-cuefont-large"
 		);
 		expect(responsiveLargeRule).toContain("font-size: var(--font-ui-medium)");
 	});
 
 	it("styles the Editing View resize grip and scopes Custom width to rail cards", () => {
 		const customRule = ruleFor(
-			".markdown-source-view.mod-cm6 .cuecraft-editor-hook-gutter .cuecraft-editor-rail-card.cuecraft-editor-cue-width-custom"
+			".markdown-source-view.mod-cm6 .firstrecall-editor-hook-gutter .firstrecall-editor-rail-card.firstrecall-editor-cue-width-custom"
 		);
-		expect(customRule).toContain("width: var(--cuecraft-editor-cue-width-resolved)");
+		expect(customRule).toContain("width: var(--firstrecall-editor-cue-width-resolved)");
 		expect(customRule).toContain("max-width: none");
 		const resolvedWidthRule = ruleFor(
-			".markdown-source-view.mod-cm6 .cuecraft-editor-cue-width-custom"
+			".markdown-source-view.mod-cm6 .firstrecall-editor-cue-width-custom"
 		);
 		expect(resolvedWidthRule).toContain(
-			"--cuecraft-editor-cue-width-resolved: clamp(6rem, var(--cuecraft-editor-cue-width, 13rem), 32rem)"
+			"--firstrecall-editor-cue-width-resolved: clamp(6rem, var(--firstrecall-editor-cue-width, 13rem), 32rem)"
 		);
 
-		const gripRule = ruleFor(".cuecraft-editor-cue-width-grip");
+		const gripRule = ruleFor(".firstrecall-editor-cue-width-grip");
 		expect(gripRule).toContain("width: 24px");
 		expect(gripRule).toContain("min-width: 24px");
 		expect(gripRule).toContain("cursor: ew-resize");
@@ -396,19 +396,19 @@ describe("settings CSS", () => {
 		expect(gripRule).not.toContain("transition:");
 
 		const cornellRootRule = ruleFor(
-			".cuecraft-editor-cornell-card.cuecraft-editor-rail-card"
+			".firstrecall-editor-cornell-card.firstrecall-editor-rail-card"
 		);
 		expect(cornellRootRule).toContain("padding-left: 0");
 		const cornellContentRule = ruleFor(
-			".cuecraft-editor-cornell-card.cuecraft-editor-rail-card .cuecraft-cornell-cue"
+			".firstrecall-editor-cornell-card.firstrecall-editor-rail-card .firstrecall-cornell-cue"
 		);
 		expect(cornellContentRule).toContain("padding-left: 28px");
 
 		const compactGripRule = ruleFor(
-			".cuecraft-editor-cue-width-grip::before"
+			".firstrecall-editor-cue-width-grip::before"
 		);
 		expect(compactGripRule).toContain(
-			"top: var(--cuecraft-editor-cue-width-grip-top, 50%)"
+			"top: var(--firstrecall-editor-cue-width-grip-top, 50%)"
 		);
 		expect(compactGripRule).toContain("left: 50%");
 		expect(compactGripRule).toContain("width: 9px");
@@ -418,45 +418,45 @@ describe("settings CSS", () => {
 			"background: var(--background-primary)"
 		);
 		expect(compactGripRule).not.toContain("inset-block");
-		const gripDotsRule = ruleFor(".cuecraft-editor-cue-width-grip::after");
+		const gripDotsRule = ruleFor(".firstrecall-editor-cue-width-grip::after");
 		expect(gripDotsRule).toContain("radial-gradient");
 
 		const focusRule = ruleFor(
-			".cuecraft-editor-cue-width-grip:focus-visible"
+			".firstrecall-editor-cue-width-grip:focus-visible"
 		);
 		expect(focusRule).toContain("outline: none");
 		expect(styles).toContain(
-			".cuecraft-editor-cue-width-grip:hover::before"
+			".firstrecall-editor-cue-width-grip:hover::before"
 		);
 		expect(styles).toContain(
-			"html.cuecraft-editor-cue-width-resizing *"
+			"html.firstrecall-editor-cue-width-resizing *"
 		);
 		expect(styles).not.toMatch(
-			/\.cuecraft-cue[^\n{]*cuecraft-editor-cue-width-custom/
+			/\.firstrecall-cue[^\n{]*firstrecall-editor-cue-width-custom/
 		);
 	});
 
 	it("positions editor cues when the page is shifted", () => {
 		const railSelector =
-			".markdown-source-view.mod-cm6 .cm-editor.cuecraft-editor-hook-page-shift .cuecraft-editor-hook-gutter .cuecraft-editor-hook";
+			".markdown-source-view.mod-cm6 .cm-editor.firstrecall-editor-hook-page-shift .firstrecall-editor-hook-gutter .firstrecall-editor-hook";
 		expect(ruleFor(railSelector)).toContain(
 			"transform: translateX(calc(-100% + 1rem))"
 		);
 	});
 
 	it("styles non-collapsing Editing Study answers and sticky controls", () => {
-		expect(styles).not.toContain("body.cuecraft-study-active");
-		expect(ruleFor(".cuecraft-study-header-action")).toContain(
+		expect(styles).not.toContain("body.firstrecall-study-active");
+		expect(ruleFor(".firstrecall-study-header-action")).toContain(
 			"display: inline-flex"
 		);
-		expect(ruleFor(".cuecraft-study-header-label")).toContain("display: inline");
+		expect(ruleFor(".firstrecall-study-header-label")).toContain("display: inline");
 		expect(styles).toContain(
-			'.cuecraft-study-header-action[aria-disabled="true"]'
+			'.firstrecall-study-header-action[aria-disabled="true"]'
 		);
-		expect(styles).toContain(".cuecraft-study-ribbon.is-active");
+		expect(styles).toContain(".firstrecall-study-ribbon.is-active");
 
 		const answerRule = ruleFor(
-			".markdown-source-view.mod-cm6 .cuecraft-editor-study-answer.is-hidden"
+			".markdown-source-view.mod-cm6 .firstrecall-editor-study-answer.is-hidden"
 		);
 		expect(answerRule).toContain("filter: blur(4px)");
 		expect(answerRule).toContain("cursor: text");
@@ -464,7 +464,7 @@ describe("settings CSS", () => {
 		expect(answerRule).not.toContain("visibility: hidden");
 		expect(answerRule).not.toContain("max-height");
 
-		const controlsRule = ruleFor(".cuecraft-editor-study-controls");
+		const controlsRule = ruleFor(".firstrecall-editor-study-controls");
 		expect(controlsRule).toContain("position: sticky");
 		expect(controlsRule).toContain("top: 0");
 		expect(controlsRule).toContain("z-index: 10");
@@ -474,46 +474,46 @@ describe("settings CSS", () => {
 			"border: 1px solid var(--background-modifier-border)"
 		);
 
-		const cueRule = ruleFor(".cuecraft-editor-study-cue");
+		const cueRule = ruleFor(".firstrecall-editor-study-cue");
 		expect(cueRule).toContain("position: relative");
-		expect(ruleFor("button.cuecraft-study-section-toggle")).toContain(
+		expect(ruleFor("button.firstrecall-study-section-toggle")).toContain(
 			"border: 1px solid var(--background-modifier-border)"
 		);
-		expect(ruleFor("button.cuecraft-study-section-toggle")).toContain(
+		expect(ruleFor("button.firstrecall-study-section-toggle")).toContain(
 			"inset-inline-end: -14px"
 		);
 	});
 
 	it("styles inline-only Reading Study without the Cornell review launcher", () => {
 		const answerRule = ruleFor(
-			".cuecraft-reading-study-answer.is-hidden"
+			".firstrecall-reading-study-answer.is-hidden"
 		);
 		expect(answerRule).toContain("visibility: hidden");
 		expect(answerRule).not.toContain("display: none");
 
-		const controlsRule = ruleFor(".cuecraft-reading-study-controls");
+		const controlsRule = ruleFor(".firstrecall-reading-study-controls");
 		expect(controlsRule).toContain("position: sticky");
 		expect(controlsRule).toContain("top: 0");
 		expect(controlsRule).toContain("z-index: 10");
 		expect(controlsRule).toContain("width: 100%");
 		expect(controlsRule).toContain("background: var(--background-secondary)");
-		expect(styles).toContain(".cuecraft-study-progress-track");
-		expect(styles).toContain(".cuecraft-study-progress-fill");
-		expect(ruleFor(".cuecraft-study-help")).toContain(
+		expect(styles).toContain(".firstrecall-study-progress-track");
+		expect(styles).toContain(".firstrecall-study-progress-fill");
+		expect(ruleFor(".firstrecall-study-help")).toContain(
 			"background: var(--background-primary)"
 		);
-		expect(ruleFor(".cuecraft-study-help-copy")).toContain(
+		expect(ruleFor(".firstrecall-study-help-copy")).toContain(
 			"flex-direction: column"
 		);
-		expect(ruleFor(".cuecraft-study-progress-track")).toContain(
+		expect(ruleFor(".firstrecall-study-progress-track")).toContain(
 			"flex: 1 1 120px"
 		);
-		expect(ruleFor(".cuecraft-study-actions")).toContain(
+		expect(ruleFor(".firstrecall-study-actions")).toContain(
 			"margin-inline-start: auto"
 		);
 
-		const cueRule = ruleFor(".cuecraft-reading-study-cue");
+		const cueRule = ruleFor(".firstrecall-reading-study-cue");
 		expect(cueRule).toContain("position: relative");
-		expect(styles).not.toContain(".cuecraft-reading-review");
+		expect(styles).not.toContain(".firstrecall-reading-review");
 	});
 });

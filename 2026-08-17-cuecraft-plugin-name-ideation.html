@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ideation: A Better Name for CueCraft</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f0e8;
+      --paper: #fffdf8;
+      --ink: #20211d;
+      --muted: #676960;
+      --line: #d8d2c7;
+      --accent: #b8422e;
+      --accent-soft: #f8e4dc;
+      --sage: #dce8d8;
+      --sage-ink: #315238;
+      --shadow: 0 18px 45px rgba(49, 41, 31, .08);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.62;
+    }
+    main, footer { width: min(940px, calc(100% - 34px)); margin-inline: auto; }
+    header {
+      min-height: 62vh;
+      display: grid;
+      align-content: end;
+      padding: clamp(48px, 10vw, 110px) max(17px, calc((100vw - 940px) / 2)) 56px;
+      background:
+        radial-gradient(circle at 82% 18%, rgba(184, 66, 46, .14), transparent 26rem),
+        linear-gradient(135deg, #282921, #171813);
+      color: #fffdf8;
+    }
+    .eyebrow, dt, th, .rank, .chip {
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-weight: 760;
+      font-size: .72rem;
+    }
+    h1, h2, h3 { font-family: Georgia, "Times New Roman", serif; line-height: 1.06; letter-spacing: -.025em; }
+    h1 { max-width: 780px; margin: 14px 0 20px; font-size: clamp(3rem, 8.5vw, 6.7rem); font-weight: 500; }
+    h2 { margin: 0 0 22px; font-size: clamp(2rem, 5vw, 3.25rem); font-weight: 500; }
+    h3 { margin: 0; font-size: clamp(1.65rem, 4vw, 2.5rem); font-weight: 500; }
+    p { max-width: 74ch; }
+    a { color: var(--accent); text-underline-offset: 3px; }
+    header p { max-width: 62ch; color: #d9d8cf; font-size: 1.12rem; }
+    .metadata { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+    .chip { padding: 6px 10px; border: 1px solid rgba(255,255,255,.24); border-radius: 999px; color: #f4f0e8; }
+    section { padding-block: clamp(54px, 9vw, 92px); border-bottom: 1px solid var(--line); }
+    .lede { font-family: Georgia, "Times New Roman", serif; font-size: clamp(1.35rem, 3vw, 1.85rem); line-height: 1.42; }
+    .callout { margin-top: 30px; padding: 22px 24px; border-radius: 16px; background: var(--accent-soft); color: #5c2a20; }
+    .callout p { margin: 0; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 36px; }
+    .stat { padding: 20px; border-radius: 14px; background: var(--paper); box-shadow: var(--shadow); }
+    .stat strong { display: block; font-family: Georgia, serif; font-size: 2rem; line-height: 1; }
+    .stat span { color: var(--muted); font-size: .86rem; }
+    .axis-line { margin: 0; padding: 18px 22px; border-radius: 14px; background: var(--sage); color: var(--sage-ink); font-weight: 680; }
+    .jump-list { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; margin: 28px 0 40px; }
+    .jump-list a { display: block; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); color: var(--ink); text-decoration: none; font-weight: 680; }
+    article.idea { margin: 0 0 22px; padding: clamp(24px, 5vw, 42px); border-radius: 22px; background: var(--paper); box-shadow: var(--shadow); scroll-margin-top: 24px; }
+    .idea-top { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 20px; }
+    .rank { display: inline-block; margin-bottom: 8px; color: var(--accent); }
+    .verdict { flex: 0 0 auto; padding: 7px 11px; border-radius: 999px; background: var(--sage); color: var(--sage-ink); font-size: .78rem; font-weight: 760; }
+    dl { display: grid; grid-template-columns: 116px 1fr; gap: 12px 18px; margin: 26px 0 0; }
+    dt { color: var(--muted); }
+    dd { margin: 0; }
+    .best { background: #fff8f1; outline: 2px solid var(--accent); outline-offset: -2px; }
+    blockquote { margin: 24px 0 0; padding: 0 0 0 20px; border-left: 3px solid var(--accent); font-family: Georgia, serif; font-size: 1.2rem; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 15px; background: var(--paper); }
+    table { width: 100%; border-collapse: collapse; min-width: 680px; }
+    th, td { padding: 13px 16px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); background: rgba(0,0,0,.025); }
+    tr:last-child td { border-bottom: 0; }
+    footer { padding: 34px 0 54px; color: var(--muted); font-size: .82rem; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .92em; }
+    @media (max-width: 700px) {
+      .stats { grid-template-columns: 1fr; }
+      .jump-list { grid-template-columns: 1fr 1fr; }
+      .idea-top { display: block; }
+      .verdict { display: inline-block; margin-top: 12px; }
+      dl { grid-template-columns: 1fr; gap: 4px; }
+      dd { margin-bottom: 10px; }
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171814; --paper: #22231e; --ink: #f1eee6; --muted: #aaa99f;
+        --line: #3b3c35; --accent: #ee7c62; --accent-soft: #432a24;
+        --sage: #27382a; --sage-ink: #b8d4bc; --shadow: 0 18px 45px rgba(0,0,0,.18);
+      }
+      .callout { color: #f1c5ba; }
+      .best { background: #2c2420; }
+      th { background: rgba(255,255,255,.025); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="eyebrow">Plugin naming review</span>
+    <h1>What comes after CueCraft?</h1>
+    <p>Five names that lead with the learner’s experience—not an internal artifact, an AI provider, or the mechanics of generation.</p>
+    <div class="metadata" aria-label="Document metadata">
+      <span class="chip">Date · 2026-08-17</span>
+      <span class="chip">Topic · cuecraft-plugin-name</span>
+      <span class="chip">Focus · stronger naming shortlist</span>
+      <span class="chip">Mode · repo-grounded</span>
+    </div>
+  </header>
+
+  <main>
+    <section id="grounding-context">
+      <span class="eyebrow">Codebase Context</span>
+      <h2>Grounding Context</h2>
+      <p class="lede">This is not simply an AI flashcard generator. It turns existing Markdown notes into living, in-place recall practice: a whole-note brief plus heading-aware study material, while leaving the source untouched.</p>
+      <p>The current manifest promises “in-note active-recall sessions” and says Markdown is never modified. The README adds the essential interaction: learners reveal answers one section at a time in Editing or Reading view. That experience—not the internal term <em>cue</em>—is the durable product.</p>
+      <div class="stats" aria-label="Naming funnel">
+        <div class="stat"><strong>25</strong><span>serious candidates considered</span></div>
+        <div class="stat"><strong>20</strong><span>cut after clarity or collision checks</span></div>
+        <div class="stat"><strong>5</strong><span>directions worth discussion</span></div>
+      </div>
+      <div class="callout"><p><strong>Why retire CueCraft?</strong> Exact-name web collisions already include an <a href="https://cuecraft.app/">AI yoga product</a>, an <a href="https://www.cuecraft.io/en/launch">AI production cue manager</a>, and a <a href="https://www.cuecraftnursing.com/">nursing education platform</a>. The overlap is close enough to create search and category confusion. This is a naming scan, not trademark clearance.</p></div>
+    </section>
+
+    <section id="topic-axes">
+      <span class="eyebrow">Scope</span>
+      <h2>Topic Axes</h2>
+      <p class="axis-line">Decomposition skipped — atomic subject</p>
+    </section>
+
+    <section id="ranked-ideas">
+      <span class="eyebrow">Shortlist</span>
+      <h2>Ranked Ideas</h2>
+      <nav class="jump-list" aria-label="Ranked name links">
+        <a href="#idea-1">1 · First Recall</a>
+        <a href="#idea-2">2 · Second Brain</a>
+        <a href="#idea-3">3 · Note Reveal</a>
+        <a href="#idea-4">4 · Memory Map</a>
+        <a href="#idea-5">5 · Section Pulse</a>
+      </nav>
+
+      <article class="idea best" id="idea-1">
+        <div class="idea-top"><div><span class="rank">Idea 1 · Recommended</span><h3>First Recall</h3></div><span class="verdict">Confidence · 93%</span></div>
+        <p><strong>Description:</strong> Frames the workflow as active-recall first: retrieve from memory, then uncover the source context.</p>
+        <blockquote>First Recall — test memory, then open the note.</blockquote>
+        <dl>
+          <dt>Basis</dt><dd><strong>direct:</strong> The plugin’s core loop is hidden note content, learner response, then reveal. <strong>external:</strong> “First recall” communicates the retrieval-first learning order in plain language.</dd>
+          <dt>Rationale</dt><dd>It is distinctive enough for branding, directly tied to the user outcome, and still generic enough to support future extensions beyond section prompts.</dd>
+          <dt>Downsides</dt><dd>Any phrase with “Recall” risks competition in search; a formal name-search and package check is still required.</dd>
+          <dt>Complexity</dt><dd>Low</dd>
+        </dl>
+      </article>
+
+      <article class="idea" id="idea-2">
+        <div class="idea-top"><div><span class="rank">Idea 2</span><h3>Second Brain</h3></div><span class="verdict">Confidence · 82%</span></div>
+        <p><strong>Description:</strong> Leverages the familiar “second brain” metaphor while explicitly indicating this plugin is for retrieval practice.</p>
+        <blockquote>Second Brain — your note vault, now quiz-ready.</blockquote>
+        <dl>
+          <dt>Basis</dt><dd><strong>direct:</strong> It acts on note-backed knowledge, converting source material into retrieval tasks.</dd>
+          <dt>Rationale</dt><dd>Strong immediate meaning in personal knowledge workflows and easy to remember in commands.</dd>
+          <dt>Downsides</dt><dd>Widely used phrase in the knowledge management space; weaker direct association with the exact study behavior.</dd>
+          <dt>Complexity</dt><dd>Low</dd>
+        </dl>
+      </article>
+
+      <article class="idea" id="idea-3">
+        <div class="idea-top"><div><span class="rank">Idea 3</span><h3>Note Reveal</h3></div><span class="verdict">Confidence · 76%</span></div>
+        <p><strong>Description:</strong> Names the single interaction the learner sees in Study Mode: reveal your note after trying first.</p>
+        <blockquote>Note Reveal — pull the section, then open it.</blockquote>
+        <dl>
+          <dt>Basis</dt><dd><strong>direct:</strong> Each study cycle hides note sections and asks the learner to think before exposing them.</dd>
+          <dt>Rationale</dt><dd>Very clear, short, and low-friction to understand for first-time users.</dd>
+          <dt>Downsides</dt><dd>Less memorable than more branded alternatives and can read like a literal feature than a product name.</dd>
+          <dt>Complexity</dt><dd>Low</dd>
+        </dl>
+      </article>
+
+      <article class="idea" id="idea-4">
+        <div class="idea-top"><div><span class="rank">Idea 4</span><h3>Memory Map</h3></div><span class="verdict">Confidence · 73%</span></div>
+        <p><strong>Description:</strong> Highlights semantic structure: notes as connected memory locations, traversed by recall prompts.</p>
+        <blockquote>Memory Map — move through your knowledge by section.</blockquote>
+        <dl>
+          <dt>Basis</dt><dd><strong>external:</strong> Learners often retain material better when it is organized as a map of connected concepts.</dd>
+          <dt>Rationale</dt><dd>Signals structure-oriented study, especially useful as users scale to dozens of notes.</dd>
+          <dt>Downsides</dt><dd>May be interpreted as a broader graph tool and not clearly tied to reveal-style practice.</dd>
+          <dt>Complexity</dt><dd>Low</dd>
+        </dl>
+      </article>
+
+      <article class="idea" id="idea-5">
+        <div class="idea-top"><div><span class="rank">Idea 5</span><h3>Section Pulse</h3></div><span class="verdict">Confidence · 69%</span></div>
+        <p><strong>Description:</strong> Focuses on section-by-section retrieval rhythm for each note, matching the plugin’s current interaction shape.</p>
+        <blockquote>Section Pulse — active learning, chunk by chunk.</blockquote>
+        <dl>
+          <dt>Basis</dt><dd><strong>direct:</strong> The plugin already builds content and flow around section boundaries in Markdown.</dd>
+          <dt>Rationale</dt><dd>Fresh-sounding and descriptive, while preserving the “in note, in place” implementation style.</dd>
+          <dt>Downsides</dt><dd>Requires users to infer what the pulse means; not as instantly obvious as a plain verb phrase.</dd>
+          <dt>Complexity</dt><dd>Low</dd>
+        </dl>
+      </article>
+    </section>
+
+    <section id="rejection-summary">
+      <span class="eyebrow">What did not survive</span>
+      <h2>Rejection Summary</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Idea</th><th>Reason rejected</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>CueCraft</td><td>Internal jargon plus several active exact-name products in AI, education, and cue management.</td></tr>
+            <tr><td>2</td><td>Askback</td><td>Excellent concept, but a 2026 software/education trademark application and an active review product make it too risky.</td></tr>
+            <tr><td>3</td><td>Understudy</td><td>Active AI-agent and actor-rehearsal products; theatrical metaphor also hides the study method.</td></tr>
+            <tr><td>4</td><td>Rehearse</td><td>Accurate behavior, but active language- and speech-practice software already occupies the name.</td></tr>
+            <tr><td>5</td><td>Reprise</td><td>Elegant, but an active app and music/theater ambiguity weaken both ownership and clarity.</td></tr>
+            <tr><td>6</td><td>Readback</td><td>Suggests verification or oral repetition; active aviation training software uses the name.</td></tr>
+            <tr><td>7</td><td>PageBack</td><td>Active AI e-reader in the same learning territory; “page” also fits Markdown poorly.</td></tr>
+            <tr><td>8</td><td>StudyLayer</td><td>Active AI study-overlay product; technical and repetitive beside “Study Mode.”</td></tr>
+            <tr><td>9</td><td>Aftermark</td><td>Active automotive software and an opaque Markdown pun.</td></tr>
+            <tr><td>10</td><td>Closed Book</td><td>Clear recall metaphor, but falsely implies leaving or closing the in-note experience.</td></tr>
+            <tr><td>11</td><td>Answerback</td><td>Sounds combative or insolent rather than reflective.</td></tr>
+            <tr><td>12</td><td>Practice Layer</td><td>Useful product descriptor, not a memorable brand.</td></tr>
+            <tr><td>13</td><td>Retrace</td><td>Reads as debugging, navigation, or provenance before it reads as learning.</td></tr>
+            <tr><td>14</td><td>Counterread</td><td>Unfamiliar construction with an oppositional tone.</td></tr>
+            <tr><td>15</td><td>Knowback</td><td>Coined in a way that sounds synthetic and awkward in commands.</td></tr>
+            <tr><td>16</td><td>NoteTurn</td><td>Literal but mechanical; “note” compounds are crowded and the phrase lacks emotional meaning.</td></tr>
+            <tr><td>17</td><td>Recall Layer</td><td>“Recall” is saturated in Obsidian and the wider study-app market.</td></tr>
+            <tr><td>18</td><td>Card Forge</td><td>Reduces the product to cards and lands in the crowded AI-era forge/craft naming pattern.</td></tr>
+            <tr><td>19</td><td>Study Companion</td><td>Generic category language with little search ownership or distinctive promise.</td></tr>
+            <tr><td>20</td><td>EngramQuest</td><td>Already an Obsidian plugin; fantasy-gamification language misstates the product’s restrained character.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="composition-signal">Composed 2026-08-18T02:55Z by <code>ce-ideate</code> from the CueCraft repository, current vocabulary review, and a current web/Obsidian naming scan.</footer>
+</body>
+</html>

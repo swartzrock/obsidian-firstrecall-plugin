@@ -5,13 +5,13 @@ import {
 } from "@swartzrock/byok-runtime";
 import {
 	BYOK_PROVIDER_ICONS,
-	type CueCraftProviderIconDefinition,
+	type FirstRecallProviderIconDefinition,
 } from "./provider-icons";
 
-export type CueCraftCredentialKind = "api-key" | "url" | "command";
-export type CueCraftModelBehavior = "required" | "optional";
+export type FirstRecallCredentialKind = "api-key" | "url" | "command";
+export type FirstRecallModelBehavior = "required" | "optional";
 
-export interface CueCraftCredentialFieldDefinition {
+export interface FirstRecallCredentialFieldDefinition {
 	label: string;
 	placeholder: string;
 	description: string;
@@ -20,7 +20,7 @@ export interface CueCraftCredentialFieldDefinition {
 	resetModelsMessage?: string;
 }
 
-export interface CueCraftModelFieldDefinition {
+export interface FirstRecallModelFieldDefinition {
 	label: string;
 	placeholder: string;
 	description: string;
@@ -29,15 +29,15 @@ export interface CueCraftModelFieldDefinition {
 	emptyListMessage?: string;
 }
 
-export interface CueCraftProviderDefinition {
+export interface FirstRecallProviderDefinition {
 	id: ByokProviderId;
 	label: string;
 	shortLabel: string;
-	icon: CueCraftProviderIconDefinition | string;
-	credentialKind: CueCraftCredentialKind;
-	credentialField: CueCraftCredentialFieldDefinition;
-	modelBehavior: CueCraftModelBehavior;
-	modelField: CueCraftModelFieldDefinition;
+	icon: FirstRecallProviderIconDefinition | string;
+	credentialKind: FirstRecallCredentialKind;
+	credentialField: FirstRecallCredentialFieldDefinition;
+	modelBehavior: FirstRecallModelBehavior;
+	modelField: FirstRecallModelFieldDefinition;
 	supportsModelListing: boolean;
 }
 
@@ -48,7 +48,7 @@ interface CloudDefinitionOptions {
 	productLabel: string;
 	credentialLabel: string;
 	credentialPlaceholder: string;
-	icon: CueCraftProviderIconDefinition | string;
+	icon: FirstRecallProviderIconDefinition | string;
 	modelLabel?: string;
 	modelDescription?: string;
 }
@@ -59,16 +59,16 @@ const HOST_CREDENTIAL_DESCRIPTION =
 function providerIcon(
 	provider: ByokProviderId,
 	fallback: string
-): CueCraftProviderIconDefinition | string {
+): FirstRecallProviderIconDefinition | string {
 	const icons: Partial<
-		Record<ByokProviderId, CueCraftProviderIconDefinition>
+		Record<ByokProviderId, FirstRecallProviderIconDefinition>
 	> = BYOK_PROVIDER_ICONS;
 	return icons[provider] ?? fallback;
 }
 
 function cloudDefinition(
 	opts: CloudDefinitionOptions
-): CueCraftProviderDefinition {
+): FirstRecallProviderDefinition {
 	return {
 		id: opts.id,
 		label: opts.label,
@@ -100,7 +100,7 @@ function cloudDefinition(
 
 const PROVIDER_DEFINITIONS: Record<
 	ByokProviderId,
-	CueCraftProviderDefinition
+	FirstRecallProviderDefinition
 > = {
 	[ByokProvider.Anthropic]: cloudDefinition({
 		id: ByokProvider.Anthropic,
@@ -297,10 +297,10 @@ const PROVIDER_DEFINITIONS: Record<
 
 export function byokProviderDefinition(
 	provider: ByokProviderId
-): CueCraftProviderDefinition {
+): FirstRecallProviderDefinition {
 	return PROVIDER_DEFINITIONS[provider];
 }
 
-export function byokProviderDefinitions(): CueCraftProviderDefinition[] {
+export function byokProviderDefinitions(): FirstRecallProviderDefinition[] {
 	return BYOK_PROVIDER_IDS.map(byokProviderDefinition);
 }

@@ -27,7 +27,7 @@ export function cloudCredentialDisplayState(opts: {
 		description: canEdit
 			? opts.saved
 				? "Stored securely in Obsidian Secret Storage on this device. Enter a new key to replace it."
-				: "CueCraft stores this key in Obsidian Secret Storage on this device."
+				: "FirstRecall stores this key in Obsidian Secret Storage on this device."
 			: `${opts.fieldDescription} Obsidian Secret Storage unavailable: ${opts.storageStatus.message ?? opts.storageStatus.reason ?? "unknown error"}.`,
 		placeholder: opts.saved
 			? "Saved - enter a new key to replace it"

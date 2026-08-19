@@ -199,7 +199,7 @@ describe("Editing View Study projection", () => {
 			{
 				from: 8,
 				to: 12,
-				className: "cuecraft-editor-study-answer is-hidden",
+				className: "firstrecall-editor-study-answer is-hidden",
 				ariaHidden: "true",
 			},
 		]);
@@ -315,13 +315,13 @@ describe("Editing View Study projection", () => {
 			});
 
 			const studyCue = rendered[0].dom.querySelector<HTMLElement>(
-				".cuecraft-cue"
+				".firstrecall-cue"
 			)!;
 			expect(studyCue.getAttribute("role")).toBe("note");
 			expect(studyCue.hasAttribute("tabindex")).toBe(false);
 			expect(studyCue.dataset.studyState).toBe("hidden");
 			const toggle = studyCue.querySelector<HTMLButtonElement>(
-				".cuecraft-study-section-toggle"
+				".firstrecall-study-section-toggle"
 			)!;
 			expect(toggle.getAttribute("aria-label")).toBe("Show answer");
 			expect(toggle.getAttribute("aria-pressed")).toBe("false");
@@ -347,9 +347,9 @@ describe("Editing View Study projection", () => {
 			expect(toggleSection).toHaveBeenCalledWith("section-terms");
 
 			for (const item of rendered.slice(1)) {
-				const root = item.dom.querySelector<HTMLElement>(".cuecraft-cue")!;
+				const root = item.dom.querySelector<HTMLElement>(".firstrecall-cue")!;
 				expect(root.getAttribute("role")).toBe("note");
-				expect(root.querySelector(".cuecraft-study-section-toggle")).toBeNull();
+				expect(root.querySelector(".firstrecall-study-section-toggle")).toBeNull();
 				root.click();
 			}
 			expect(toggleSection).toHaveBeenCalledTimes(1);
@@ -370,7 +370,7 @@ describe("Editing View Study projection", () => {
 				}
 			);
 			const hideToggle = revealedCue.querySelector<HTMLButtonElement>(
-				".cuecraft-study-section-toggle"
+				".firstrecall-study-section-toggle"
 			)!;
 			expect(hideToggle.getAttribute("aria-label")).toBe("Hide answer");
 			expect(hideToggle.getAttribute("aria-pressed")).toBe("true");
@@ -454,39 +454,39 @@ describe("Editing View Study projection", () => {
 				});
 
 				expect(
-					controlsContainer.querySelectorAll(".cuecraft-editor-study-controls")
+					controlsContainer.querySelectorAll(".firstrecall-editor-study-controls")
 				).toHaveLength(1);
-				expect(parent.querySelector(".cuecraft-editor-study-controls")).toBeNull();
-				expect(view.dom.classList.contains("cuecraft-editor-study-active")).toBe(true);
+				expect(parent.querySelector(".firstrecall-editor-study-controls")).toBeNull();
+				expect(view.dom.classList.contains("firstrecall-editor-study-active")).toBe(true);
 				const controls = controlsContainer.querySelector<HTMLElement>(
-					".cuecraft-editor-study-controls"
+					".firstrecall-editor-study-controls"
 				)!;
 				expect(controls.textContent).toContain("0 / 1 answers revealed");
 				const help = controls.firstElementChild as HTMLElement;
-				expect(help.classList.contains("cuecraft-study-help")).toBe(true);
+				expect(help.classList.contains("firstrecall-study-help")).toBe(true);
 				expect(help.dataset.icon).toBe("eye");
 				expect(
-					help.querySelector(".cuecraft-study-help-title")?.textContent
+					help.querySelector(".firstrecall-study-help-title")?.textContent
 				).toBe("Show or hide answers");
 				expect(
-					help.querySelector(".cuecraft-study-help-detail")?.textContent
+					help.querySelector(".firstrecall-study-help-detail")?.textContent
 				).toBe("Click the eye icon on any section card.");
-				expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
+				expect(help.querySelectorAll(".firstrecall-study-help-copy > span")).toHaveLength(
 					2
 				);
 				const actions = controls.querySelector<HTMLElement>(
-					".cuecraft-study-actions"
+					".firstrecall-study-actions"
 				)!;
 				expect(actions.querySelectorAll("button")).toHaveLength(3);
 				const progressTrack = controls.querySelector<HTMLElement>(
-					".cuecraft-study-progress-track"
+					".firstrecall-study-progress-track"
 				)!;
 				expect(progressTrack.getAttribute("role")).toBe("progressbar");
 				expect(progressTrack.getAttribute("aria-valuenow")).toBe("0");
 				expect(progressTrack.getAttribute("aria-valuemax")).toBe("1");
 				expect(
 					progressTrack.querySelector<HTMLElement>(
-						".cuecraft-study-progress-fill"
+						".firstrecall-study-progress-fill"
 					)?.style.width
 				).toBe("0%");
 				const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
@@ -510,7 +510,7 @@ describe("Editing View Study projection", () => {
 				expect(exit).toHaveBeenCalledTimes(1);
 
 				const hidden = parent.querySelector<HTMLElement>(
-					".cuecraft-editor-study-answer.is-hidden"
+					".firstrecall-editor-study-answer.is-hidden"
 				)!;
 				hidden.dispatchEvent(
 					new document.defaultView!.MouseEvent("click", {
@@ -528,9 +528,9 @@ describe("Editing View Study projection", () => {
 						display: "inline-cues",
 					}),
 				});
-				expect(parent.querySelector(".cuecraft-editor-study-controls")).toBeNull();
-				expect(parent.querySelector(".cuecraft-editor-study-answer")).toBeNull();
-				expect(view.dom.classList.contains("cuecraft-editor-study-active")).toBe(false);
+				expect(parent.querySelector(".firstrecall-editor-study-controls")).toBeNull();
+				expect(parent.querySelector(".firstrecall-editor-study-answer")).toBeNull();
+				expect(view.dom.classList.contains("firstrecall-editor-study-active")).toBe(false);
 				buttons[0].click();
 				buttons[1].click();
 				buttons[2].click();
@@ -553,14 +553,14 @@ describe("Editing View Study projection", () => {
 					}),
 				});
 				destroyedControls = controlsContainer.querySelector<HTMLElement>(
-					".cuecraft-editor-study-controls"
+					".firstrecall-editor-study-controls"
 				);
 				destroyedButtons = destroyedControls?.querySelectorAll("button") ?? null;
 				destroyedEditor = view.dom;
 			}
 		);
 		expect(destroyedControls?.isConnected).toBe(false);
-		expect(destroyedEditor?.classList.contains("cuecraft-editor-study-active")).toBe(
+		expect(destroyedEditor?.classList.contains("firstrecall-editor-study-active")).toBe(
 			false
 		);
 		destroyedButtons?.[0]?.click();
@@ -599,7 +599,7 @@ function renderCornellMarker(
 function disclosureButtons(element: HTMLElement): HTMLButtonElement[] {
 	return Array.from(
 		element.querySelectorAll<HTMLButtonElement>(
-			".cuecraft-editor-hook-section-toggle"
+			".firstrecall-editor-hook-section-toggle"
 		)
 	);
 }
@@ -852,9 +852,9 @@ describe("renderCueElement", () => {
 				);
 
 				expect(
-					outdated.querySelector(".cuecraft-freshness-badge")?.textContent
+					outdated.querySelector(".firstrecall-freshness-badge")?.textContent
 				).toBe("Outdated");
-				expect(current.querySelector(".cuecraft-freshness-badge")).toBeNull();
+				expect(current.querySelector(".firstrecall-freshness-badge")).toBeNull();
 			}
 		});
 	});
@@ -905,7 +905,7 @@ describe("renderCueElement", () => {
 					editorCueWidthController: widthController,
 				});
 				const grip = card.querySelector<HTMLElement>(
-					".cuecraft-editor-cue-width-grip"
+					".firstrecall-editor-cue-width-grip"
 				);
 				expect(grip).not.toBeNull();
 				expect(grip?.tabIndex).toBe(0);
@@ -913,7 +913,7 @@ describe("renderCueElement", () => {
 				expect(grip?.getAttribute("aria-orientation")).toBe("vertical");
 				expect(grip?.hasAttribute("aria-label")).toBe(false);
 				const gripLabel = card.querySelector<HTMLElement>(
-					".cuecraft-editor-cue-width-grip-label"
+					".firstrecall-editor-cue-width-grip-label"
 				);
 				expect(gripLabel?.textContent).toContain("section card rail width");
 				expect(grip?.getAttribute("aria-labelledby")).toBe(gripLabel?.id);
@@ -922,7 +922,7 @@ describe("renderCueElement", () => {
 				expect(grip?.getAttribute("aria-valuenow")).toBe("240");
 				expect(grip?.getAttribute("aria-controls")).toBe(card.id);
 				expect(
-					grip?.parentElement?.classList.contains("cuecraft-cornell-cue")
+					grip?.parentElement?.classList.contains("firstrecall-cornell-cue")
 				).toBe(true);
 			}
 
@@ -931,7 +931,7 @@ describe("renderCueElement", () => {
 					editorCueWidthController: widthController,
 				});
 				expect(
-					card.querySelector(".cuecraft-editor-cue-width-grip")
+					card.querySelector(".firstrecall-editor-cue-width-grip")
 				).toBeNull();
 			}
 		});
@@ -966,12 +966,12 @@ describe("renderCueElement", () => {
 
 			expect(
 				wideWorkspaceCard.style.getPropertyValue(
-					"--cuecraft-editor-cue-width"
+					"--firstrecall-editor-cue-width"
 				)
 			).toBe("388px");
 			expect(
 				narrowWorkspaceCard.style.getPropertyValue(
-					"--cuecraft-editor-cue-width"
+					"--firstrecall-editor-cue-width"
 				)
 			).toBe("188px");
 		});
@@ -999,7 +999,7 @@ describe("renderCueElement", () => {
 			editor.append(source, peer);
 			document.body.appendChild(editor);
 			const grip = source.querySelector<HTMLElement>(
-				".cuecraft-editor-cue-width-grip"
+				".firstrecall-editor-cue-width-grip"
 			);
 			if (!grip) throw new Error("Expected resize grip");
 			const gripHost = grip.parentElement;
@@ -1017,28 +1017,28 @@ describe("renderCueElement", () => {
 
 			dispatchPointer(grip, "pointerdown", { pointerId: 7, clientX: 400 });
 			expect(
-				grip.style.getPropertyValue("--cuecraft-editor-cue-width-grip-top")
+				grip.style.getPropertyValue("--firstrecall-editor-cue-width-grip-top")
 			).toBe("240px");
 			sourceHeight = 640;
 			dispatchPointer(grip, "pointermove", { pointerId: 8, clientX: 360 });
 			expect(controller.previewWidthPx).not.toHaveBeenCalled();
 			dispatchPointer(grip, "pointermove", { pointerId: 7, clientX: 360 });
 			expect(controller.previewWidthPx).toHaveBeenLastCalledWith(280);
-			expect(source.style.getPropertyValue("--cuecraft-editor-cue-width")).toBe(
+			expect(source.style.getPropertyValue("--firstrecall-editor-cue-width")).toBe(
 				"280px"
 			);
-			expect(peer.style.getPropertyValue("--cuecraft-editor-cue-width")).toBe(
+			expect(peer.style.getPropertyValue("--firstrecall-editor-cue-width")).toBe(
 				"280px"
 			);
 			expect(
-				source.querySelector(".cuecraft-editor-cue-width-grip")
+				source.querySelector(".firstrecall-editor-cue-width-grip")
 			).toBe(grip);
 			expect(
-				grip.style.getPropertyValue("--cuecraft-editor-cue-width-grip-top")
+				grip.style.getPropertyValue("--firstrecall-editor-cue-width-grip-top")
 			).toBe("240px");
 			dispatchPointer(grip, "pointerup", { pointerId: 7, clientX: 360 });
 			expect(
-				grip.style.getPropertyValue("--cuecraft-editor-cue-width-grip-top")
+				grip.style.getPropertyValue("--firstrecall-editor-cue-width-grip-top")
 			).toBe("");
 			expect(controller.commitWidthPx).toHaveBeenCalledOnce();
 			expect(controller.commitWidthPx).toHaveBeenCalledWith(280);
@@ -1062,7 +1062,7 @@ describe("renderCueElement", () => {
 			editor.appendChild(card);
 			document.body.appendChild(editor);
 			const grip = card.querySelector<HTMLElement>(
-				".cuecraft-editor-cue-width-grip"
+				".firstrecall-editor-cue-width-grip"
 			);
 			if (!grip) throw new Error("Expected resize grip");
 			grip.setPointerCapture = vi.fn();
@@ -1079,13 +1079,13 @@ describe("renderCueElement", () => {
 
 			dispatchPointer(grip, "pointerdown", { pointerId: 3, clientX: 400 });
 			dispatchPointer(grip, "pointermove", { pointerId: 3, clientX: 350 });
-			expect(card.style.getPropertyValue("--cuecraft-editor-cue-width")).toBe(
+			expect(card.style.getPropertyValue("--firstrecall-editor-cue-width")).toBe(
 				"290px"
 			);
 			dispatchPointer(grip, "lostpointercapture", { pointerId: 3 });
 			expect(controller.flushWidthPreview).toHaveBeenLastCalledWith(240);
 			expect(controller.commitWidthPx).not.toHaveBeenCalled();
-			expect(card.style.getPropertyValue("--cuecraft-editor-cue-width")).toBe(
+			expect(card.style.getPropertyValue("--firstrecall-editor-cue-width")).toBe(
 				"240px"
 			);
 			dispatchPointer(grip, "pointercancel", { pointerId: 3 });
@@ -1099,7 +1099,7 @@ describe("renderCueElement", () => {
 			expect(controller.flushWidthPreview).toHaveBeenCalledTimes(2);
 			expect(controller.flushWidthPreview).toHaveBeenLastCalledWith(240);
 			expect(controller.commitWidthPx).not.toHaveBeenCalled();
-			expect(card.style.getPropertyValue("--cuecraft-editor-cue-width")).toBe(
+			expect(card.style.getPropertyValue("--firstrecall-editor-cue-width")).toBe(
 				"240px"
 			);
 		});
@@ -1124,7 +1124,7 @@ describe("renderCueElement", () => {
 			editor.appendChild(card);
 			document.body.appendChild(editor);
 			const grip = card.querySelector<HTMLElement>(
-				".cuecraft-editor-cue-width-grip"
+				".firstrecall-editor-cue-width-grip"
 			);
 			if (!grip) throw new Error("Expected resize grip");
 			grip.setPointerCapture = vi.fn();
@@ -1135,7 +1135,7 @@ describe("renderCueElement", () => {
 
 			expect(controller.flushWidthPreview).toHaveBeenLastCalledWith(240);
 			expect(controller.commitWidthPx).not.toHaveBeenCalled();
-			expect(card.style.getPropertyValue("--cuecraft-editor-cue-width")).toBe(
+			expect(card.style.getPropertyValue("--firstrecall-editor-cue-width")).toBe(
 				"240px"
 			);
 			dispatchPointer(grip, "pointermove", { pointerId: 5, clientX: 320 });
@@ -1159,7 +1159,7 @@ describe("renderCueElement", () => {
 			editor.appendChild(card);
 			document.body.appendChild(editor);
 			const grip = card.querySelector<HTMLElement>(
-				".cuecraft-editor-cue-width-grip"
+				".firstrecall-editor-cue-width-grip"
 			);
 			if (!grip) throw new Error("Expected resize grip");
 			const bubbled = vi.fn();
@@ -1208,7 +1208,7 @@ describe("renderCueElement", () => {
 			editor.appendChild(card);
 			document.body.appendChild(editor);
 			const grip = card.querySelector<HTMLElement>(
-				".cuecraft-editor-cue-width-grip"
+				".firstrecall-editor-cue-width-grip"
 			);
 			if (!grip) throw new Error("Expected resize grip");
 			const dispatchKey = (type: "keydown" | "keyup", key: string) => {
@@ -1244,14 +1244,14 @@ describe("renderCueElement", () => {
 				expect(button.type).toBe("button");
 				expect(button.getAttribute("aria-expanded")).toBe("true");
 				expect(
-					button.querySelector(".cuecraft-editor-hook-section-label")
+					button.querySelector(".firstrecall-editor-hook-section-label")
 				).not.toBeNull();
 				expect(
-					button.querySelector(".cuecraft-editor-hook-section-preview")?.hidden
+					button.querySelector(".firstrecall-editor-hook-section-preview")?.hidden
 				).toBe(true);
 				expect(
 					button
-						.querySelector(".cuecraft-editor-hook-section-chevron")
+						.querySelector(".firstrecall-editor-hook-section-chevron")
 						?.getAttribute("data-icon")
 				).toBe("chevron-down");
 				expect(disclosureBody(expanded, button)?.getAttribute("aria-hidden")).toBe(
@@ -1282,10 +1282,10 @@ describe("renderCueElement", () => {
 				disclosureButtons(collapsed).map((button) => ({
 					expanded: button.getAttribute("aria-expanded"),
 					preview: button.querySelector<HTMLElement>(
-						".cuecraft-editor-hook-section-preview"
+						".firstrecall-editor-hook-section-preview"
 					)?.textContent,
 					previewHidden: button.querySelector<HTMLElement>(
-						".cuecraft-editor-hook-section-preview"
+						".firstrecall-editor-hook-section-preview"
 					)?.hidden,
 					bodyHidden: disclosureBody(collapsed, button)?.getAttribute("aria-hidden"),
 				}))
@@ -1331,9 +1331,9 @@ describe("renderCueElement", () => {
 				element = widget?.toDOM();
 			});
 			if (!element) throw new Error("Expected inline cue widget");
-			expect(element.classList.contains("cuecraft-inline-cue-widget")).toBe(true);
+			expect(element.classList.contains("firstrecall-inline-cue-widget")).toBe(true);
 			expect(
-				element.querySelector(":scope > .cuecraft-cue")
+				element.querySelector(":scope > .firstrecall-cue")
 			).not.toBeNull();
 
 			const buttons = disclosureButtons(element);
@@ -1345,7 +1345,7 @@ describe("renderCueElement", () => {
 			expect(
 				buttons.map((button) =>
 					button
-						.querySelector(".cuecraft-label-icon")
+						.querySelector(".firstrecall-label-icon")
 						?.getAttribute("data-icon")
 				)
 			).toEqual(["notebook-text", "circle-question-mark", "tags"]);
@@ -1354,7 +1354,7 @@ describe("renderCueElement", () => {
 				"false",
 				"true",
 			]);
-			expect(element.querySelector(".cuecraft-editor-cue-width-grip")).toBeNull();
+			expect(element.querySelector(".firstrecall-editor-cue-width-grip")).toBeNull();
 
 			buttons[2]?.click();
 			expect(calls).toEqual([
@@ -1365,7 +1365,7 @@ describe("renderCueElement", () => {
 			const remountedTerms = widget
 				?.toDOM()
 				.querySelector<HTMLButtonElement>(
-					'.cuecraft-editor-hook-section-toggle[data-section="terms"]'
+					'.firstrecall-editor-hook-section-toggle[data-section="terms"]'
 				);
 			expect(remountedTerms?.getAttribute("aria-expanded")).toBe("false");
 		});
@@ -1411,7 +1411,7 @@ describe("renderCueElement", () => {
 					element = (decoration.spec.widget as { toDOM(): HTMLElement }).toDOM();
 				}
 			);
-			expect(element?.querySelector(".cuecraft-cue-question")).not.toBeNull();
+			expect(element?.querySelector(".firstrecall-cue-question")).not.toBeNull();
 			expect(payload.showQuestion).toBe(false);
 		});
 	});
@@ -1470,7 +1470,7 @@ describe("renderCueElement", () => {
 				parent,
 			});
 			const button = parent.querySelector<HTMLButtonElement>(
-				'.cuecraft-editor-hook-section-toggle[data-section="question"]'
+				'.firstrecall-editor-hook-section-toggle[data-section="question"]'
 			);
 			if (!button) throw new Error("Expected inline question toggle");
 
@@ -1531,7 +1531,7 @@ describe("renderCueElement", () => {
 			expect(body.getAttribute("aria-hidden")).toBe("true");
 			expect(
 				summary
-					.querySelector(".cuecraft-editor-hook-section-chevron")
+					.querySelector(".firstrecall-editor-hook-section-chevron")
 					?.getAttribute("data-icon")
 			).toBe("chevron-down");
 			expect(question?.getAttribute("aria-expanded")).toBe("true");
@@ -1557,7 +1557,7 @@ describe("renderCueElement", () => {
 			expect(measurementEvents).toEqual(["measure", "measure"]);
 
 			summary
-				.querySelector<HTMLElement>(".cuecraft-editor-hook-section-preview")
+				.querySelector<HTMLElement>(".firstrecall-editor-hook-section-preview")
 				?.click();
 			expect(calls.at(-1)).toEqual([
 				"notes/agents.md",
@@ -1610,7 +1610,7 @@ describe("renderCueElement", () => {
 			await Promise.resolve();
 
 			expect(consoleError).toHaveBeenCalledWith(
-				"CueCraft section card collapse persistence failed",
+				"FirstRecall section card collapse persistence failed",
 				error
 			);
 			expect(summary?.getAttribute("aria-expanded")).toBe("true");
@@ -1684,10 +1684,10 @@ describe("renderCueElement", () => {
 			const inline = renderCueElement(cue, "inline-cues", options);
 			expect(inline.dataset.questionVisible).toBe("false");
 			expect(inline.dataset.termsVisible).toBe("false");
-			expect(inline.querySelector(".cuecraft-cue-question")).toBeNull();
-			expect(inline.querySelector(".cuecraft-cue-keywords")).toBeNull();
+			expect(inline.querySelector(".firstrecall-cue-question")).toBeNull();
+			expect(inline.querySelector(".firstrecall-cue-keywords")).toBeNull();
 			expect(
-				inline.querySelector(".cuecraft-summary-takeaway")?.textContent
+				inline.querySelector(".firstrecall-summary-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
 			expect(
 				disclosureButtons(inline).map((button) => button.dataset.section)
@@ -1700,12 +1700,12 @@ describe("renderCueElement", () => {
 			);
 			expect(cornell.dataset.questionVisible).toBe("false");
 			expect(cornell.dataset.termsVisible).toBe("false");
-			expect(cornell.querySelector(".cuecraft-cornell-q")).toBeNull();
-			expect(cornell.querySelector(".cuecraft-cornell-kw")).toBeNull();
+			expect(cornell.querySelector(".firstrecall-cornell-q")).toBeNull();
+			expect(cornell.querySelector(".firstrecall-cornell-kw")).toBeNull();
 			expect(
-				cornell.querySelector(".cuecraft-summary-takeaway")?.textContent
+				cornell.querySelector(".firstrecall-summary-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
-			expect(cornell.querySelector(".cuecraft-cue-section-label")).toBeNull();
+			expect(cornell.querySelector(".firstrecall-cue-section-label")).toBeNull();
 		});
 	});
 
@@ -1726,7 +1726,7 @@ describe("renderCueElement", () => {
 				expect(
 					disclosureButtons(element).map((button) => button.dataset.section)
 				).toEqual(["question", "terms"]);
-				expect(element.querySelector(".cuecraft-summary")).toBeNull();
+				expect(element.querySelector(".firstrecall-summary")).toBeNull();
 			}
 		});
 	});
@@ -1776,49 +1776,49 @@ describe("renderNoteBriefElement", () => {
 			const current = renderNoteBriefElement(NOTE_BRIEF, "editor", "current");
 
 			expect(
-				outdated.querySelector(".cuecraft-freshness-badge")?.textContent
+				outdated.querySelector(".firstrecall-freshness-badge")?.textContent
 			).toBe("Outdated");
-			expect(current.querySelector(".cuecraft-freshness-badge")).toBeNull();
+			expect(current.querySelector(".firstrecall-freshness-badge")).toBeNull();
 		});
 	});
 
 	it("renders the overview and structured review cards", () => {
 		withDocument(() => {
 			const el = renderNoteBriefElement(NOTE_BRIEF, "editor");
-			expect(el.classList.contains("cuecraft-note-brief")).toBe(true);
-			expect(el.classList.contains("cuecraft-note-brief-editor")).toBe(true);
-			expect(el.querySelector(".cuecraft-note-brief-label")?.textContent).toBe(
+			expect(el.classList.contains("firstrecall-note-brief")).toBe(true);
+			expect(el.classList.contains("firstrecall-note-brief-editor")).toBe(true);
+			expect(el.querySelector(".firstrecall-note-brief-label")?.textContent).toBe(
 				"Note Brief"
 			);
 			expect(
-				el.querySelector(".cuecraft-note-brief-label .cuecraft-label-icon")
+				el.querySelector(".firstrecall-note-brief-label .firstrecall-label-icon")
 					?.getAttribute("data-icon")
 			).toBe("sparkles");
 			expect(
-				el.querySelector(".cuecraft-note-brief-overview")?.textContent
+				el.querySelector(".firstrecall-note-brief-overview")?.textContent
 			).toBe("The note explains how agents use tools to complete work.");
-			expect(el.querySelectorAll(".cuecraft-note-brief-insight")).toHaveLength(3);
+			expect(el.querySelectorAll(".firstrecall-note-brief-insight")).toHaveLength(3);
 			expect(
 				Array.from(
-					el.querySelectorAll(".cuecraft-note-brief-insight-badge")
+					el.querySelectorAll(".firstrecall-note-brief-insight-badge")
 				).map((label) => label.textContent)
 			).toEqual(["core idea", "review first", "self-test"]);
 			expect(
-				Array.from(el.querySelectorAll(".cuecraft-note-brief-insight")).every(
+				Array.from(el.querySelectorAll(".firstrecall-note-brief-insight")).every(
 					(insight) =>
 						insight.lastElementChild?.matches(
-							".cuecraft-note-brief-insight-badge.cuecraft-cue-term"
+							".firstrecall-note-brief-insight-badge.firstrecall-cue-term"
 						) === true
 				)
 			).toBe(true);
 			const reviewTitle =
-				"[data-card='reviewFirst'] .cuecraft-note-brief-insight-title";
+				"[data-card='reviewFirst'] .firstrecall-note-brief-insight-title";
 			expect(
 				el.querySelector(reviewTitle)?.textContent
 			).toBe("Agent versus chatbot");
 			expect(
 				el.querySelector(
-					"[data-card='sayItBack'] .cuecraft-note-brief-insight-title"
+					"[data-card='sayItBack'] .firstrecall-note-brief-insight-title"
 				)
 			).toBeNull();
 		});
@@ -1977,7 +1977,7 @@ describe("cue editor placement", () => {
 				extensions: [EditorView.decorations.of(cueDecorations)],
 			});
 			view = new EditorView({ state: focusedState, parent });
-			expect(parent.querySelector(".cuecraft-note-brief-editor")).not.toBeNull();
+			expect(parent.querySelector(".firstrecall-note-brief-editor")).not.toBeNull();
 			view.destroy();
 			view = null;
 			parent.replaceChildren();
@@ -1994,7 +1994,7 @@ describe("cue editor placement", () => {
 				],
 			});
 			view = new EditorView({ state: unfocusedState, parent });
-			expect(parent.querySelector(".cuecraft-note-brief-editor")).not.toBeNull();
+			expect(parent.querySelector(".firstrecall-note-brief-editor")).not.toBeNull();
 		} finally {
 			view?.destroy();
 			dom.window.close();
@@ -2064,19 +2064,19 @@ describe("cue editor placement", () => {
 	it("renders Cornell display with the Cornell cue card element in rail layout", () => {
 		withDocument(() => {
 			const el = renderCueElement(cues[0], "cornell");
-			expect(el.classList.contains("cuecraft-editor-hook")).toBe(true);
-			expect(el.classList.contains("cuecraft-editor-cornell-card")).toBe(true);
-			expect(el.classList.contains("cuecraft-editor-rail-card")).toBe(true);
+			expect(el.classList.contains("firstrecall-editor-hook")).toBe(true);
+			expect(el.classList.contains("firstrecall-editor-cornell-card")).toBe(true);
+			expect(el.classList.contains("firstrecall-editor-rail-card")).toBe(true);
 			expect(el.dataset.display).toBe("cornell");
-			expect(el.querySelector(".cuecraft-cornell-cue")).not.toBeNull();
-			expect(el.querySelector(".cuecraft-cornell-q")?.textContent).toBe(
+			expect(el.querySelector(".firstrecall-cornell-cue")).not.toBeNull();
+			expect(el.querySelector(".firstrecall-cornell-q")?.textContent).toBe(
 				"What is A?"
 			);
 			expect(
-				el.querySelector(".cuecraft-cornell-term")?.textContent
+				el.querySelector(".firstrecall-cornell-term")?.textContent
 			).toBe("alpha");
 			expect(
-				el.querySelector(".cuecraft-summary-takeaway")?.textContent
+				el.querySelector(".firstrecall-summary-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
 		});
 	});
@@ -2095,8 +2095,8 @@ describe("cue editor placement", () => {
 			if (!marker?.toDOM) throw new Error("Expected Cornell gutter marker");
 
 			const element = marker.toDOM(null as never) as HTMLElement;
-			expect(element.classList.contains("cuecraft-cuewidth-medium")).toBe(true);
-			expect(element.classList.contains("cuecraft-cuefont-large")).toBe(true);
+			expect(element.classList.contains("firstrecall-cuewidth-medium")).toBe(true);
+			expect(element.classList.contains("firstrecall-cuefont-large")).toBe(true);
 			expect(
 				disclosureButtons(element).map((button) => button.dataset.section)
 			).toEqual(["summary", "question", "terms"]);
@@ -2105,9 +2105,9 @@ describe("cue editor placement", () => {
 					button.getAttribute("aria-expanded")
 				)
 			).toEqual(["true", "false", "true"]);
-			expect(element.querySelector(".cuecraft-summary-phrase")).toBeNull();
+			expect(element.querySelector(".firstrecall-summary-phrase")).toBeNull();
 			expect(
-				element.querySelector(".cuecraft-summary-takeaway")?.textContent
+				element.querySelector(".firstrecall-summary-takeaway")?.textContent
 			).toBe("Agents use tools to complete multi-step work.");
 		});
 	});
@@ -2118,8 +2118,8 @@ describe("cue editor placement", () => {
 				const element = renderCueElement(cues[0], option.id, {
 					cueFontSize: "large",
 				});
-				expect(element.classList.contains("cuecraft-cuewidth-medium")).toBe(true);
-				expect(element.classList.contains("cuecraft-cuefont-large")).toBe(true);
+				expect(element.classList.contains("firstrecall-cuewidth-medium")).toBe(true);
+				expect(element.classList.contains("firstrecall-cuefont-large")).toBe(true);
 			}
 		});
 	});
@@ -2158,13 +2158,13 @@ describe("rail spacers", () => {
 		withDocument(() => {
 			const root = document.createElement("div");
 			const first = document.createElement("div");
-			first.className = "cuecraft-editor-rail-card";
+			first.className = "firstrecall-editor-rail-card";
 			first.dataset.line = "1";
 			first.getBoundingClientRect = () =>
 				({ top: 10, height: 200 }) as DOMRect;
 
 			const second = document.createElement("div");
-			second.className = "cuecraft-editor-rail-card";
+			second.className = "firstrecall-editor-rail-card";
 			second.dataset.line = "3";
 			second.getBoundingClientRect = () =>
 				({ top: 130, height: 90 }) as DOMRect;
@@ -2188,13 +2188,13 @@ describe("rail spacers", () => {
 		withDocument(() => {
 			const root = document.createElement("div");
 			const first = document.createElement("div");
-			first.className = "cuecraft-editor-rail-card";
+			first.className = "firstrecall-editor-rail-card";
 			first.dataset.line = "1";
 			first.getBoundingClientRect = () =>
 				({ top: 10, height: 200 }) as DOMRect;
 
 			const second = document.createElement("div");
-			second.className = "cuecraft-editor-rail-card";
+			second.className = "firstrecall-editor-rail-card";
 			second.dataset.line = "3";
 			second.getBoundingClientRect = () =>
 				({ top: 130, height: 90 }) as DOMRect;
@@ -2215,14 +2215,14 @@ describe("rail spacers", () => {
 		withDocument(() => {
 			const root = document.createElement("div");
 			const first = document.createElement("div");
-			first.className = "cuecraft-editor-rail-card";
+			first.className = "firstrecall-editor-rail-card";
 			first.dataset.line = "1";
 			first.getBoundingClientRect = () =>
 				({ top: 10, height: 200 }) as DOMRect;
 			Object.defineProperty(first, "scrollHeight", { value: 260 });
 
 			const second = document.createElement("div");
-			second.className = "cuecraft-editor-rail-card";
+			second.className = "firstrecall-editor-rail-card";
 			second.dataset.line = "3";
 			second.getBoundingClientRect = () =>
 				({ top: 230, height: 90 }) as DOMRect;
@@ -2276,7 +2276,7 @@ describe("rail spacers", () => {
 				}),
 			});
 			const cards = Array.from(
-				parent.querySelectorAll<HTMLElement>(".cuecraft-editor-rail-card")
+				parent.querySelectorAll<HTMLElement>(".firstrecall-editor-rail-card")
 			);
 			expect(cards).toHaveLength(2);
 			cards[0].getBoundingClientRect = () =>

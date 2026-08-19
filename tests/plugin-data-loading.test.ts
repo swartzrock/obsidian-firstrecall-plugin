@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import CueCraftPlugin from "../src/main";
+import FirstRecallPlugin from "../src/main";
 import { CACHE_SCHEMA_VERSION } from "../src/cache";
 import {
 	cacheContentRevision,
 	createCurrentMaintenanceState,
 } from "../src/study-material-state";
-import { normalizeCueCraftProviderSettings } from "../src/byok-cuecraft-adapter";
+import { normalizeFirstRecallProviderSettings } from "../src/byok-firstrecall-adapter";
 import { DEFAULT_SETTINGS } from "../src/settings";
 import type { SecureCredentialStore } from "../src/secure-credential-store";
 import {
@@ -45,7 +45,7 @@ function unavailableCredentialStore(): SecureCredentialStore {
 describe("plugin data loading", () => {
 	it("does not rewrite a complete current data snapshot", async () => {
 		const currentSettings = structuredClone(DEFAULT_SETTINGS);
-		normalizeCueCraftProviderSettings(
+		normalizeFirstRecallProviderSettings(
 			currentSettings,
 			DEFAULT_SETTINGS,
 			currentSettings
@@ -62,7 +62,7 @@ describe("plugin data loading", () => {
 			},
 		};
 		const saveData = vi.fn(async () => {});
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => loaded),
@@ -82,7 +82,7 @@ describe("plugin data loading", () => {
 	it("preserves a selected AI provider after loading", async () => {
 		const currentSettings = structuredClone(DEFAULT_SETTINGS);
 		currentSettings.byok.selectedProvider = "openai";
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => ({ settings: currentSettings })),
@@ -98,7 +98,7 @@ describe("plugin data loading", () => {
 
 	it("persists only the current settings schema", async () => {
 		const saveData = vi.fn(async () => {});
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => ({
@@ -122,7 +122,7 @@ describe("plugin data loading", () => {
 	it("does not turn a legacy global automatic-generation setting into coverage", async () => {
 		const saveData = vi.fn(async () => {});
 		const makeProvider = vi.fn();
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => ({
@@ -145,7 +145,7 @@ describe("plugin data loading", () => {
 	it("quarantines ambiguous legacy scopes without invoking a provider", async () => {
 		const saveData = vi.fn(async () => {});
 		const makeProvider = vi.fn();
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => ({
@@ -195,7 +195,7 @@ describe("plugin data loading", () => {
 
 	it("normalizes invalid current settings to their defaults", async () => {
 		const saveData = vi.fn(async () => {});
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => ({
@@ -225,7 +225,7 @@ describe("plugin data loading", () => {
 	});
 
 	it("preserves valid current settings", async () => {
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => ({
@@ -268,7 +268,7 @@ describe("plugin data loading", () => {
 			cueSectionCollapse: "collapsed",
 		};
 		const saveData = vi.fn(async () => {});
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => loaded),
@@ -304,7 +304,7 @@ describe("plugin data loading", () => {
 	it("loads malformed maintenance state as empty without discarding caches", async () => {
 		const cache = currentCache();
 		const saveData = vi.fn(async () => {});
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => ({
@@ -334,7 +334,7 @@ describe("plugin data loading", () => {
 		const cache = currentCache();
 		const state = createCurrentMaintenanceState("Current", "# Current\ntext", cache);
 		const saveData = vi.fn(async () => {});
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => ({
@@ -391,7 +391,7 @@ describe("plugin data loading", () => {
 			},
 		};
 		const saveData = vi.fn(async () => {});
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
 			loadData: vi.fn(async () => loaded),
@@ -418,7 +418,7 @@ describe("plugin data loading", () => {
 describe("study area creation", () => {
 	it("creates non-overlapping scopes paused without provider work", async () => {
 		const makeProvider = vi.fn();
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			settings: structuredClone(DEFAULT_SETTINGS),
 			saveSettings: vi.fn(async () => {}),
@@ -435,7 +435,7 @@ describe("study area creation", () => {
 	});
 
 	it("rejects overlapping scopes in either direction", async () => {
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			settings: {
 				...structuredClone(DEFAULT_SETTINGS),
@@ -475,7 +475,7 @@ interface PluginPersistenceHarness {
 function persistenceHarness(
 	saveData: (snapshot: unknown) => Promise<void>
 ): PluginPersistenceHarness {
-	const plugin = new CueCraftPlugin({} as never, {} as never);
+	const plugin = new FirstRecallPlugin({} as never, {} as never);
 	Object.assign(plugin as unknown as Record<string, unknown>, {
 		data: {
 			settings: { marker: "before" },

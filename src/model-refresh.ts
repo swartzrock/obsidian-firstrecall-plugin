@@ -11,7 +11,7 @@ export function resolveModelRefreshDescription(
 	if (
 		message.startsWith("Could not ") ||
 		message.startsWith("No ") ||
-		message.startsWith("CueCraft:")
+		message.startsWith("FirstRecall:")
 	) {
 		return message;
 	}

@@ -13,12 +13,12 @@ import {
 } from "../src/generator";
 import type { ByokProviderStatus } from "@swartzrock/byok-runtime";
 import type {
-	CueCraftCueBatchResult,
-	CueCraftCueInput,
-	CueCraftCueOutput,
-	CueCraftCueProviderRuntime,
-	CueCraftNoteBriefInput,
-	CueCraftNoteBriefOutput,
+	FirstRecallCueBatchResult,
+	FirstRecallCueInput,
+	FirstRecallCueOutput,
+	FirstRecallCueProviderRuntime,
+	FirstRecallNoteBriefInput,
+	FirstRecallNoteBriefOutput,
 } from "../src/cue-provider";
 
 interface MockOptions {
@@ -32,16 +32,16 @@ interface MockOptions {
 	failNoteBrief?: boolean;
 }
 
-function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
-	lastNoteBriefInput?: CueCraftNoteBriefInput;
-	cueInputs: CueCraftCueInput[];
-	batchInputs: CueCraftCueInput[][];
+function mockProvider(opts: MockOptions = {}): FirstRecallCueProviderRuntime & {
+	lastNoteBriefInput?: FirstRecallNoteBriefInput;
+	cueInputs: FirstRecallCueInput[];
+	batchInputs: FirstRecallCueInput[][];
 	noteBriefCalls: number;
 } {
-	const provider: CueCraftCueProviderRuntime & {
-		lastNoteBriefInput?: CueCraftNoteBriefInput;
-		cueInputs: CueCraftCueInput[];
-		batchInputs: CueCraftCueInput[][];
+	const provider: FirstRecallCueProviderRuntime & {
+		lastNoteBriefInput?: FirstRecallNoteBriefInput;
+		cueInputs: FirstRecallCueInput[];
+		batchInputs: FirstRecallCueInput[][];
 		noteBriefCalls: number;
 	} = {
 		id: "ollama",
@@ -49,9 +49,9 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 		requiresNetwork: false,
 		requiresDownload: false,
 		sectionConcurrencyLimit: opts.sectionConcurrencyLimit,
-		lastNoteBriefInput: undefined as CueCraftNoteBriefInput | undefined,
-		cueInputs: [] as CueCraftCueInput[],
-		batchInputs: [] as CueCraftCueInput[][],
+		lastNoteBriefInput: undefined as FirstRecallNoteBriefInput | undefined,
+		cueInputs: [] as FirstRecallCueInput[],
+		batchInputs: [] as FirstRecallCueInput[][],
 		noteBriefCalls: 0,
 		async testConnection(): Promise<ByokProviderStatus> {
 			return { ok: true, message: "ok" };
@@ -59,7 +59,7 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 		async listModels() {
 			return [];
 		},
-		async generateCue(input: CueCraftCueInput): Promise<CueCraftCueOutput> {
+		async generateCue(input: FirstRecallCueInput): Promise<FirstRecallCueOutput> {
 			provider.cueInputs.push(input);
 			opts.onCue?.();
 			if (opts.delayMs) {
@@ -79,8 +79,8 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 			};
 		},
 		async generateNoteBrief(
-			input: CueCraftNoteBriefInput
-		): Promise<CueCraftNoteBriefOutput> {
+			input: FirstRecallNoteBriefInput
+		): Promise<FirstRecallNoteBriefOutput> {
 			provider.noteBriefCalls++;
 			provider.lastNoteBriefInput = input;
 			if (opts.failNoteBrief) throw new Error("note brief boom");
@@ -94,8 +94,8 @@ function mockProvider(opts: MockOptions = {}): CueCraftCueProviderRuntime & {
 	};
 	if (opts.batch) {
 		provider.generateCues = async (
-			inputs: CueCraftCueInput[]
-		): Promise<CueCraftCueBatchResult[]> => {
+			inputs: FirstRecallCueInput[]
+		): Promise<FirstRecallCueBatchResult[]> => {
 			provider.batchInputs.push(inputs);
 			opts.onBatch?.();
 			return inputs.map((input) => {

@@ -2,16 +2,16 @@ import {
 	isAutoGenerationSettleDelaySeconds,
 	normalizeAutoGenerationSettleDelaySeconds,
 } from "./auto-generation-delay";
-import { normalizeCueCraftProviderSettings } from "./byok-cuecraft-adapter";
+import { normalizeFirstRecallProviderSettings } from "./byok-firstrecall-adapter";
 import { isCueFontSize } from "./cornell-layout";
 import { isQuestionType } from "./cue-generation";
 import { isEditorCueDisplay } from "./editor-cue-display";
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
-import { DEFAULT_SETTINGS, type CueCraftSettings } from "./settings";
+import { DEFAULT_SETTINGS, type FirstRecallSettings } from "./settings";
 import { loadStudyAreaSettings } from "./study-area";
 
-export interface ParsedCueCraftSettings {
-	settings: CueCraftSettings;
+export interface ParsedFirstRecallSettings {
+	settings: FirstRecallSettings;
 	changed: boolean;
 }
 
@@ -44,9 +44,9 @@ function isJsonEqual(left: unknown, right: unknown): boolean {
 }
 
 /** Parse the complete persisted settings boundary before values enter the app. */
-export function parsePersistedCueCraftSettings(
+export function parsePersistedFirstRecallSettings(
 	raw: unknown
-): ParsedCueCraftSettings {
+): ParsedFirstRecallSettings {
 	const record = isRecord(raw) ? raw : {};
 	let changed = raw !== undefined && raw !== null && !isRecord(raw);
 
@@ -151,7 +151,7 @@ export function parsePersistedCueCraftSettings(
 		changed = true;
 	}
 
-	const settings: CueCraftSettings = {
+	const settings: FirstRecallSettings = {
 		byok: DEFAULT_SETTINGS.byok,
 		questionType,
 		studyHideMode,
@@ -183,7 +183,7 @@ export function parsePersistedCueCraftSettings(
 			DEFAULT_SETTINGS.showTerms
 		),
 	};
-	normalizeCueCraftProviderSettings(settings, DEFAULT_SETTINGS, raw);
+	normalizeFirstRecallProviderSettings(settings, DEFAULT_SETTINGS, raw);
 	changed = !isJsonEqual(record, settings) || changed;
 	return { settings, changed };
 }

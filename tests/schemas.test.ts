@@ -27,7 +27,7 @@ describe("extractJson", () => {
 			question: "What does the product promise?",
 			keywords: ["promise", "study"],
 			summary: {
-				takeaway: "CueCraft turns notes into Section cues.",
+				takeaway: "FirstRecall turns notes into Section cues.",
 				keyPhrase: "Section cues",
 				explanation: "The phrase names the review output.",
 			},

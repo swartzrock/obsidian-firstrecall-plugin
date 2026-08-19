@@ -26,10 +26,10 @@ describe("pillAction", () => {
 describe("visibilityMenuLabel", () => {
 	it("offers to show when hidden and hide when shown", () => {
 		expect(visibilityMenuLabel(true)).toBe(
-			"CueCraft: Show generated content for this note"
+			"FirstRecall: Show generated content for this note"
 		);
 		expect(visibilityMenuLabel(false)).toBe(
-			"CueCraft: Hide generated content for this note"
+			"FirstRecall: Hide generated content for this note"
 		);
 	});
 });

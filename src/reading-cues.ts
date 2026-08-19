@@ -85,7 +85,7 @@ export function readingCueDisplayState(opts: {
 function clearReadingStudyCue(cue: HTMLElement): void {
 	readingStudyCueCleanup.get(cue)?.();
 	readingStudyCueCleanup.delete(cue);
-	cue.classList.remove("cuecraft-reading-study-cue");
+	cue.classList.remove("firstrecall-reading-study-cue");
 	delete cue.dataset.studySectionId;
 	delete cue.dataset.studyState;
 	cue.setAttribute("role", "note");
@@ -96,14 +96,14 @@ function clearReadingStudyCue(cue: HTMLElement): void {
 /** Restore block-owned Study state without disturbing rendered Markdown. */
 export function restoreReadingStudyBlock(root: HTMLElement): void {
 	for (const cue of root.querySelectorAll<HTMLElement>(
-		".cuecraft-cue[data-cuecraft-section-id]"
+		".firstrecall-cue[data-firstrecall-section-id]"
 	)) {
 		clearReadingStudyCue(cue);
 	}
 	for (const answer of root.querySelectorAll<HTMLElement>(
-		".cuecraft-reading-study-answer"
+		".firstrecall-reading-study-answer"
 	)) {
-		answer.classList.remove("cuecraft-reading-study-answer", "is-hidden");
+		answer.classList.remove("firstrecall-reading-study-answer", "is-hidden");
 		delete answer.dataset.studySectionId;
 		answer.removeAttribute("aria-hidden");
 	}
@@ -127,7 +127,7 @@ function studyBodyNodes(
 	while (sibling && !isHeading(sibling)) {
 		if (
 			sibling instanceof heading.ownerDocument.defaultView!.HTMLElement &&
-			!sibling.classList.contains("cuecraft-cue")
+			!sibling.classList.contains("firstrecall-cue")
 		) {
 			const info = getSectionInfo(sibling);
 			const lineStart = (info?.lineStart ?? -1) + 1;
@@ -171,7 +171,7 @@ export function projectReadingStudyBlock(
 	);
 	const cues = Array.from(
 		root.querySelectorAll<HTMLElement>(
-			".cuecraft-cue[data-cuecraft-section-id]"
+			".firstrecall-cue[data-firstrecall-section-id]"
 		)
 	);
 
@@ -182,18 +182,18 @@ export function projectReadingStudyBlock(
 		);
 		const cue = cues.find(
 			(candidate) =>
-				candidate.dataset.cuecraftSectionId === section.sectionId &&
+				candidate.dataset.firstrecallSectionId === section.sectionId &&
 				candidate.previousElementSibling === heading
 		);
 		if (!heading || !cue) continue;
 
-		cue.classList.add("cuecraft-reading-study-cue");
+		cue.classList.add("firstrecall-reading-study-cue");
 		cue.dataset.studySectionId = section.sectionId;
 		cue.dataset.studyState = section.revealed ? "revealed" : "hidden";
 
 		const toggle = cue.ownerDocument.createElement("button");
 		toggle.type = "button";
-		toggle.className = "cuecraft-study-section-toggle";
+		toggle.className = "firstrecall-study-section-toggle";
 		toggle.dataset.revealed = String(section.revealed);
 		const label = section.revealed ? "Hide answer" : "Show answer";
 		toggle.setAttribute("aria-label", label);
@@ -213,7 +213,7 @@ export function projectReadingStudyBlock(
 		});
 
 		for (const answer of studyBodyNodes(heading, section, getSectionInfo)) {
-			answer.classList.add("cuecraft-reading-study-answer");
+			answer.classList.add("firstrecall-reading-study-answer");
 			answer.dataset.studySectionId = section.sectionId;
 			answer.classList.toggle("is-hidden", !section.revealed);
 			if (section.revealed) answer.removeAttribute("aria-hidden");
@@ -230,7 +230,7 @@ function removeReadingStudyControlHost(host: HTMLElement): void {
 
 export function removeReadingStudyControls(container: HTMLElement): void {
 	for (const host of container.querySelectorAll<HTMLElement>(
-		".cuecraft-reading-study-controls"
+		".firstrecall-reading-study-controls"
 	)) {
 		removeReadingStudyControlHost(host);
 	}
@@ -244,7 +244,7 @@ export function syncReadingStudyControls(
 ): void {
 	const hosts = Array.from(
 		controlsContainer.querySelectorAll<HTMLElement>(
-			".cuecraft-reading-study-controls"
+			".firstrecall-reading-study-controls"
 		)
 	);
 	if (!projection?.snapshot.active) {
@@ -257,54 +257,54 @@ export function syncReadingStudyControls(
 	if (!host) {
 		const doc = container.ownerDocument;
 		host = doc.createElement("div");
-		host.className = "cuecraft-reading-study-controls";
+		host.className = "firstrecall-reading-study-controls";
 		host.setAttribute("role", "region");
 		host.setAttribute("aria-label", "Study controls");
 
 		const help = doc.createElement("span");
-		help.className = "cuecraft-study-help";
+		help.className = "firstrecall-study-help";
 		setIcon(help, "eye");
 		const helpCopy = doc.createElement("span");
-		helpCopy.className = "cuecraft-study-help-copy";
+		helpCopy.className = "firstrecall-study-help-copy";
 		const helpTitle = doc.createElement("span");
-		helpTitle.className = "cuecraft-study-help-title";
+		helpTitle.className = "firstrecall-study-help-title";
 		helpTitle.textContent = "Show or hide answers";
 		const helpDetail = doc.createElement("span");
-		helpDetail.className = "cuecraft-study-help-detail";
+		helpDetail.className = "firstrecall-study-help-detail";
 		helpDetail.textContent = "Click the eye icon on any section card.";
 		helpCopy.append(helpTitle, helpDetail);
 		help.append(helpCopy);
 
 		const progress = doc.createElement("span");
-		progress.className = "cuecraft-reading-study-progress";
+		progress.className = "firstrecall-reading-study-progress";
 		progress.setAttribute("aria-live", "polite");
 
 		const progressTrack = doc.createElement("div");
-		progressTrack.className = "cuecraft-study-progress-track";
+		progressTrack.className = "firstrecall-study-progress-track";
 		progressTrack.setAttribute("role", "progressbar");
 		progressTrack.setAttribute("aria-valuemin", "0");
 		progressTrack.setAttribute("aria-label", "Answers revealed");
 		const progressFill = doc.createElement("div");
-		progressFill.className = "cuecraft-study-progress-fill";
+		progressFill.className = "firstrecall-study-progress-fill";
 		progressTrack.append(progressFill);
 
 		const showAll = doc.createElement("button");
 		showAll.type = "button";
 		showAll.className =
-			"cuecraft-study-action cuecraft-reading-study-show-all";
+			"firstrecall-study-action firstrecall-reading-study-show-all";
 		setIcon(showAll, "eye");
 		showAll.append("Show All Answers");
 
 		const hideAll = doc.createElement("button");
 		hideAll.type = "button";
 		hideAll.className =
-			"cuecraft-study-action cuecraft-reading-study-hide-all";
+			"firstrecall-study-action firstrecall-reading-study-hide-all";
 		setIcon(hideAll, "eye-off");
 		hideAll.append("Hide All Answers");
 
 		const exit = doc.createElement("button");
 		exit.type = "button";
-		exit.className = "cuecraft-study-action cuecraft-reading-study-exit";
+		exit.className = "firstrecall-study-action firstrecall-reading-study-exit";
 		setIcon(exit, "log-out");
 		exit.append("Exit Study Mode");
 
@@ -319,7 +319,7 @@ export function syncReadingStudyControls(
 		hideAll.addEventListener("click", onHideAll);
 		exit.addEventListener("click", onExit);
 		const actions = doc.createElement("div");
-		actions.className = "cuecraft-study-actions";
+		actions.className = "firstrecall-study-actions";
 		actions.append(showAll, hideAll, exit);
 		host.append(help, progress, progressTrack, actions);
 		controlsContainer.prepend(host);
@@ -342,13 +342,13 @@ export function syncReadingStudyControls(
 	}
 
 	const progress = host.querySelector<HTMLElement>(
-		".cuecraft-reading-study-progress"
+		".firstrecall-reading-study-progress"
 	);
 	if (progress) {
 		progress.textContent = `${projection.snapshot.revealedCount} / ${projection.snapshot.total} answers revealed`;
 	}
 	const progressTrack = host.querySelector<HTMLElement>(
-		".cuecraft-study-progress-track"
+		".firstrecall-study-progress-track"
 	);
 	if (progressTrack) {
 		progressTrack.setAttribute(
@@ -360,7 +360,7 @@ export function syncReadingStudyControls(
 			String(projection.snapshot.revealedCount)
 		);
 		const progressFill = progressTrack.querySelector<HTMLElement>(
-			".cuecraft-study-progress-fill"
+			".firstrecall-study-progress-fill"
 		);
 		if (progressFill) {
 			progressFill.style.width = `${
@@ -371,14 +371,14 @@ export function syncReadingStudyControls(
 		}
 	}
 	const showAll = host.querySelector<HTMLButtonElement>(
-		".cuecraft-reading-study-show-all"
+		".firstrecall-reading-study-show-all"
 	);
 	if (showAll) {
 		showAll.disabled =
 			projection.snapshot.revealedCount === projection.snapshot.total;
 	}
 	const hideAll = host.querySelector<HTMLButtonElement>(
-		".cuecraft-reading-study-hide-all"
+		".firstrecall-reading-study-hide-all"
 	);
 	if (hideAll) hideAll.disabled = projection.snapshot.revealedCount === 0;
 }

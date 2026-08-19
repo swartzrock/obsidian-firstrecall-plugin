@@ -12,7 +12,7 @@ import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
 import type { StudySessionSnapshot } from "../src/study-session";
 import { resolveStudySections, type StudySessionController } from "../src/study-session";
-import CueCraftPlugin from "../src/main";
+import FirstRecallPlugin from "../src/main";
 import { DEFAULT_SETTINGS } from "../src/settings";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
@@ -230,7 +230,7 @@ describe("readingCueDisplayState", () => {
 
 describe("Reading freshness memoization", () => {
 	it("invalidates a same-source cue map when component freshness changes", () => {
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		const cache = cacheFrom();
 		const read = plugin as unknown as {
 			readingMapFor(
@@ -279,12 +279,12 @@ describe("projectReadingStudyBlock", () => {
 		const dom = new JSDOM(`
 			<div id="block">
 				<h2 data-lines="0:0">Strict</h2>
-				<div class="cuecraft-cue" data-cuecraft-section-id="strict">Prompt</div>
+				<div class="firstrecall-cue" data-firstrecall-section-id="strict">Prompt</div>
 				<p id="owned" data-lines="1:1">Owned answer</p>
 				<div id="ambiguous-a" data-lines="2:2">Ambiguous A</div>
 				<div id="ambiguous-b" data-lines="2:2">Ambiguous B</div>
 				<h2 data-lines="3:3">Fallback</h2>
-				<div class="cuecraft-cue" data-cuecraft-section-id="fallback">Fallback prompt</div>
+				<div class="firstrecall-cue" data-firstrecall-section-id="fallback">Fallback prompt</div>
 				<p data-lines="4:4">Fallback answer</p>
 			</div>
 		`);
@@ -310,24 +310,24 @@ describe("projectReadingStudyBlock", () => {
 		projectReadingStudyBlock(block, getSectionInfo, projection);
 
 		const strictCue = block.querySelector<HTMLElement>(
-			'[data-cuecraft-section-id="strict"]'
+			'[data-firstrecall-section-id="strict"]'
 		)!;
 		const fallbackCue = block.querySelector<HTMLElement>(
-			'[data-cuecraft-section-id="fallback"]'
+			'[data-firstrecall-section-id="fallback"]'
 		)!;
 		expect(strictCue.getAttribute("role")).toBe("note");
 		expect(strictCue.hasAttribute("tabindex")).toBe(false);
 		expect(fallbackCue.getAttribute("role")).toBe("note");
 		expect(fallbackCue.hasAttribute("tabindex")).toBe(false);
 		const toggle = strictCue.querySelector<HTMLButtonElement>(
-			".cuecraft-study-section-toggle"
+			".firstrecall-study-section-toggle"
 		)!;
 		expect(toggle.getAttribute("aria-label")).toBe("Show answer");
 		expect(toggle.getAttribute("aria-pressed")).toBe("false");
 		expect(toggle.dataset.icon).toBe("eye");
 		expect(toggle.dataset.tooltip).toBe("Show answer");
 		expect(toggle.dataset.tooltipPlacement).toBe("right");
-		expect(fallbackCue.querySelector(".cuecraft-study-section-toggle")).toBeNull();
+		expect(fallbackCue.querySelector(".firstrecall-study-section-toggle")).toBeNull();
 
 		strictCue.click();
 		strictCue.dispatchEvent(
@@ -343,7 +343,7 @@ describe("projectReadingStudyBlock", () => {
 		expect(toggleSection).toHaveBeenCalledWith("strict");
 
 		const owned = block.querySelector<HTMLElement>("#owned")!;
-		expect(owned.classList.contains("cuecraft-reading-study-answer")).toBe(true);
+		expect(owned.classList.contains("firstrecall-reading-study-answer")).toBe(true);
 		expect(owned.classList.contains("is-hidden")).toBe(true);
 		expect(owned.getAttribute("aria-hidden")).toBe("true");
 		for (const id of ["ambiguous-a", "ambiguous-b"]) {
@@ -357,7 +357,7 @@ describe("projectReadingStudyBlock", () => {
 		const dom = new JSDOM(`
 			<div id="block">
 				<h2 data-lines="0:0">Strict</h2>
-				<div class="cuecraft-cue" data-cuecraft-section-id="strict">Prompt</div>
+				<div class="firstrecall-cue" data-firstrecall-section-id="strict">Prompt</div>
 				<p id="answer" data-lines="1:1">Answer</p>
 			</div>
 		`);
@@ -381,7 +381,7 @@ describe("projectReadingStudyBlock", () => {
 		const answer = block.querySelector<HTMLElement>("#answer")!;
 		expect(answer.getAttribute("aria-hidden")).toBe("true");
 		expect(
-			block.querySelector<HTMLButtonElement>(".cuecraft-study-section-toggle")
+			block.querySelector<HTMLButtonElement>(".firstrecall-study-section-toggle")
 				?.getAttribute("aria-label")
 		).toBe("Show answer");
 
@@ -400,16 +400,16 @@ describe("projectReadingStudyBlock", () => {
 		expect(answer.classList.contains("is-hidden")).toBe(false);
 		expect(answer.hasAttribute("aria-hidden")).toBe(false);
 		const revealedToggle = block.querySelector<HTMLButtonElement>(
-			".cuecraft-study-section-toggle"
+			".firstrecall-study-section-toggle"
 		)!;
 		expect(revealedToggle.getAttribute("aria-label")).toBe("Hide answer");
 		expect(revealedToggle.getAttribute("aria-pressed")).toBe("true");
 		expect(revealedToggle.dataset.icon).toBe("eye-off");
 
 		projectReadingStudyBlock(block, getSectionInfo, null);
-		expect(answer.classList.contains("cuecraft-reading-study-answer")).toBe(false);
+		expect(answer.classList.contains("firstrecall-reading-study-answer")).toBe(false);
 		expect(answer.hasAttribute("aria-hidden")).toBe(false);
-		expect(block.querySelector(".cuecraft-study-section-toggle")).toBeNull();
+		expect(block.querySelector(".firstrecall-study-section-toggle")).toBeNull();
 	});
 });
 
@@ -437,31 +437,31 @@ describe("syncReadingStudyControls", () => {
 		syncReadingStudyControls(container, projection, controlsContainer);
 
 		expect(
-			controlsContainer.querySelectorAll(".cuecraft-reading-study-controls")
+			controlsContainer.querySelectorAll(".firstrecall-reading-study-controls")
 		).toHaveLength(1);
-		expect(container.querySelector(".cuecraft-reading-study-controls")).toBeNull();
+		expect(container.querySelector(".firstrecall-reading-study-controls")).toBeNull();
 		const controls = controlsContainer.querySelector<HTMLElement>(
-			".cuecraft-reading-study-controls"
+			".firstrecall-reading-study-controls"
 		)!;
 		expect(controls.textContent).toContain("0 / 1 answers revealed");
 		const help = controls.firstElementChild as HTMLElement;
-		expect(help.classList.contains("cuecraft-study-help")).toBe(true);
+		expect(help.classList.contains("firstrecall-study-help")).toBe(true);
 		expect(help.dataset.icon).toBe("eye");
-		expect(help.querySelector(".cuecraft-study-help-title")?.textContent).toBe(
+		expect(help.querySelector(".firstrecall-study-help-title")?.textContent).toBe(
 			"Show or hide answers"
 		);
-		expect(help.querySelector(".cuecraft-study-help-detail")?.textContent).toBe(
+		expect(help.querySelector(".firstrecall-study-help-detail")?.textContent).toBe(
 			"Click the eye icon on any section card."
 		);
-		expect(help.querySelectorAll(".cuecraft-study-help-copy > span")).toHaveLength(
+		expect(help.querySelectorAll(".firstrecall-study-help-copy > span")).toHaveLength(
 			2
 		);
 		const actions = controls.querySelector<HTMLElement>(
-			".cuecraft-study-actions"
+			".firstrecall-study-actions"
 		)!;
 		expect(actions.querySelectorAll("button")).toHaveLength(3);
 		const progressTrack = controls.querySelector<HTMLElement>(
-			".cuecraft-study-progress-track"
+			".firstrecall-study-progress-track"
 		)!;
 		expect(progressTrack.getAttribute("role")).toBe("progressbar");
 		expect(progressTrack.getAttribute("aria-valuenow")).toBe("0");
@@ -486,7 +486,7 @@ describe("syncReadingStudyControls", () => {
 		expect(hideAll).not.toHaveBeenCalled();
 		expect(exit).toHaveBeenCalledTimes(1);
 		expect(
-			controlsContainer.querySelector(".cuecraft-reading-study-controls")
+			controlsContainer.querySelector(".firstrecall-reading-study-controls")
 		).toBeNull();
 
 		buttons[0].click();
@@ -548,7 +548,7 @@ describe("Reading postprocessor Study plumbing", () => {
 			reviewFirst: { title: "Tools", detail: "Review tool use first." },
 			sayItBack: { title: "Recall", detail: "Explain why tools matter." },
 		};
-		const plugin = new CueCraftPlugin({} as never, {} as never);
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		const container = dom.window.document.querySelector<HTMLElement>("#container")!;
 		const block = dom.window.document.querySelector<HTMLElement>("#block")!;
 		const view = {
@@ -610,9 +610,9 @@ describe("Reading postprocessor Study plumbing", () => {
 		render();
 		render();
 
-		expect(block.querySelectorAll(".cuecraft-cue-reading")).toHaveLength(3);
+		expect(block.querySelectorAll(".firstrecall-cue-reading")).toHaveLength(3);
 		expect(
-			block.querySelectorAll(".cuecraft-cue-reading.cuecraft-cuefont-large")
+			block.querySelectorAll(".firstrecall-cue-reading.firstrecall-cuefont-large")
 		).toHaveLength(3);
 		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
 			"true"
@@ -623,11 +623,11 @@ describe("Reading postprocessor Study plumbing", () => {
 				.visibility.isHidden(path)
 		).toBe(true);
 		expect(
-			container.querySelector(".cuecraft-study-material-banner")?.textContent
+			container.querySelector(".firstrecall-study-material-banner")?.textContent
 		).toContain("out of date");
 
 		const firstCueSelector =
-			`[data-cuecraft-section-id="${cache.sections[0].id}"]`;
+			`[data-firstrecall-section-id="${cache.sections[0].id}"]`;
 		block.querySelector<HTMLElement>(firstCueSelector)?.click();
 		render();
 		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
@@ -635,7 +635,7 @@ describe("Reading postprocessor Study plumbing", () => {
 		);
 		block
 			.querySelector<HTMLElement>(firstCueSelector)
-			?.querySelector<HTMLButtonElement>(".cuecraft-study-section-toggle")
+			?.querySelector<HTMLButtonElement>(".firstrecall-study-section-toggle")
 			?.click();
 		render();
 		expect(block.querySelector<HTMLElement>("#a")?.hasAttribute("aria-hidden")).toBe(
@@ -645,34 +645,34 @@ describe("Reading postprocessor Study plumbing", () => {
 			"true"
 		);
 		expect(
-			container.querySelector(".cuecraft-reading-study-controls")?.textContent
+			container.querySelector(".firstrecall-reading-study-controls")?.textContent
 		).toContain("1 / 3 answers revealed");
 
 		container
-			.querySelector<HTMLButtonElement>(".cuecraft-reading-study-hide-all")
+			.querySelector<HTMLButtonElement>(".firstrecall-reading-study-hide-all")
 			?.click();
 		render();
 		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
 			"true"
 		);
 		expect(
-			container.querySelector(".cuecraft-reading-study-controls")?.textContent
+			container.querySelector(".firstrecall-reading-study-controls")?.textContent
 		).toContain("0 / 3 answers revealed");
 
 		container
-			.querySelector<HTMLButtonElement>(".cuecraft-reading-study-exit")
+			.querySelector<HTMLButtonElement>(".firstrecall-reading-study-exit")
 			?.click();
 		expect(block.querySelector<HTMLElement>("#a")?.hasAttribute("aria-hidden")).toBe(
 			false
 		);
-		expect(container.querySelector(".cuecraft-reading-study-controls")).toBeNull();
+		expect(container.querySelector(".firstrecall-reading-study-controls")).toBeNull();
 		expect(controller.snapshot().active).toBe(false);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			visibility: { isHidden: () => false },
 		});
 		render();
-		expect(block.querySelectorAll(".cuecraft-cue-reading")).toHaveLength(0);
-		expect(block.querySelector(".cuecraft-note-brief")).not.toBeNull();
+		expect(block.querySelectorAll(".firstrecall-cue-reading")).toHaveLength(0);
+		expect(block.querySelector(".firstrecall-note-brief")).not.toBeNull();
 		expect(plugin.settings).toMatchObject({
 			showSummary: false,
 			showQuestion: false,
@@ -681,17 +681,17 @@ describe("Reading postprocessor Study plumbing", () => {
 
 		plugin.settings.showSummary = true;
 		render();
-		expect(block.querySelectorAll(".cuecraft-cue-reading")).toHaveLength(3);
-		expect(block.querySelector(".cuecraft-summary")).not.toBeNull();
-		expect(block.querySelector(".cuecraft-cue-question")).toBeNull();
-		expect(block.querySelector(".cuecraft-cue-keywords")).toBeNull();
+		expect(block.querySelectorAll(".firstrecall-cue-reading")).toHaveLength(3);
+		expect(block.querySelector(".firstrecall-summary")).not.toBeNull();
+		expect(block.querySelector(".firstrecall-cue-question")).toBeNull();
+		expect(block.querySelector(".firstrecall-cue-keywords")).toBeNull();
 
 		plugin.settings.showSummary = false;
 		plugin.settings.showTerms = true;
 		render();
-		expect(block.querySelector(".cuecraft-summary")).toBeNull();
-		expect(block.querySelector(".cuecraft-cue-question")).toBeNull();
-		expect(block.querySelector(".cuecraft-cue-keywords")?.textContent).toContain(
+		expect(block.querySelector(".firstrecall-summary")).toBeNull();
+		expect(block.querySelector(".firstrecall-cue-question")).toBeNull();
+		expect(block.querySelector(".firstrecall-cue-keywords")?.textContent).toContain(
 			"k1"
 		);
 	});

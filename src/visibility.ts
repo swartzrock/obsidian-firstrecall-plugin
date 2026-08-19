@@ -25,8 +25,8 @@ export function pillAction(status: string): PillAction {
 /** Context-menu label reflecting the note's current visibility. */
 export function visibilityMenuLabel(isHidden: boolean): string {
 	return isHidden
-		? "CueCraft: Show generated content for this note"
-		: "CueCraft: Hide generated content for this note";
+		? "FirstRecall: Show generated content for this note"
+		: "FirstRecall: Hide generated content for this note";
 }
 
 /** Coerce arbitrary stored data into a hidden-paths map (defensive on load). */

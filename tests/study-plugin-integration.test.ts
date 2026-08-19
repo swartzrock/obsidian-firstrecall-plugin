@@ -4,8 +4,8 @@ import { buildNoteCache, type NoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import { DEFAULT_SETTINGS } from "../src/settings";
 import type {
-	CueCraftCueInput,
-	CueCraftNoteBriefInput,
+	FirstRecallCueInput,
+	FirstRecallNoteBriefInput,
 } from "../src/cue-provider";
 
 const { notices } = vi.hoisted(() => ({ notices: [] as string[] }));
@@ -25,7 +25,7 @@ vi.mock("obsidian", async (importOriginal) => {
 });
 
 import { TFile } from "obsidian";
-import CueCraftPlugin from "../src/main";
+import FirstRecallPlugin from "../src/main";
 import type { StudySessionController } from "../src/study-session";
 import {
 	createCurrentMaintenanceState,
@@ -35,7 +35,7 @@ import type { StudyMaterialMaintenance } from "../src/study-material-maintenance
 
 const NOTE = "# Agents\nAgents use tools.";
 const OTHER_NOTE = "# Memory\nRetrieval strengthens memory.";
-const GENERATE_FIRST = "CueCraft: generate study material for this note first.";
+const GENERATE_FIRST = "FirstRecall: generate study material for this note first.";
 
 function cacheFor(markdown: string): NoteCache {
 	const section = parseSections(markdown)[0];
@@ -249,7 +249,7 @@ function createHarness() {
 			getMarkdownFiles: () => [noteFile, otherFile],
 		},
 	};
-	const plugin = new CueCraftPlugin(app as never, {} as never);
+	const plugin = new FirstRecallPlugin(app as never, {} as never);
 	const registerView = vi.fn();
 	const data = {
 		settings: structuredClone(DEFAULT_SETTINGS),
@@ -508,7 +508,7 @@ describe("Study plugin orchestration", () => {
 			).toBeTruthy();
 			expect(
 				harness.firstView.contentEl.querySelector(
-					".cuecraft-study-material-banner"
+					".firstrecall-study-material-banner"
 				)
 			).toBeNull();
 		});
@@ -528,8 +528,8 @@ describe("Study plugin orchestration", () => {
 				createdAt: "2026-08-18T00:00:00.000Z",
 			},
 		];
-		const cueInputs: CueCraftCueInput[] = [];
-		const noteBriefInputs: CueCraftNoteBriefInput[] = [];
+		const cueInputs: FirstRecallCueInput[] = [];
+		const noteBriefInputs: FirstRecallNoteBriefInput[] = [];
 		const makeProvider = vi.fn(async () => ({
 			id: "test",
 			label: "Test",
@@ -537,11 +537,11 @@ describe("Study plugin orchestration", () => {
 			requiresDownload: false,
 			async testConnection() { return { ok: true, message: "ok" }; },
 			async listModels() { return []; },
-			async generateCue(input: CueCraftCueInput) {
+			async generateCue(input: FirstRecallCueInput) {
 				cueInputs.push(input);
 				return { question: `Q:${input.heading}`, keywords: [input.heading] };
 			},
-			async generateNoteBrief(input: CueCraftNoteBriefInput) {
+			async generateNoteBrief(input: FirstRecallNoteBriefInput) {
 				noteBriefInputs.push(input);
 				return {
 					overview: "Brief",
@@ -586,7 +586,7 @@ describe("Study plugin orchestration", () => {
 		const harness = createHarness();
 		delete harness.data.caches[harness.noteFile.path];
 		harness.data.hidden[harness.noteFile.path] = true;
-		const generateCue = vi.fn(async (input: CueCraftCueInput) => ({
+		const generateCue = vi.fn(async (input: FirstRecallCueInput) => ({
 			question: `Q:${input.heading}`,
 			keywords: [input.heading],
 		}));
@@ -631,7 +631,7 @@ describe("Study plugin orchestration", () => {
 		harness.layoutReady();
 
 		const headerAction = document.querySelector<HTMLElement>(
-			".cuecraft-study-header-action"
+			".firstrecall-study-header-action"
 		)!;
 		expect(harness.firstView.addAction).toHaveBeenCalledTimes(1);
 		expect(headerAction.textContent).toContain("Study");
@@ -661,7 +661,7 @@ describe("Study plugin orchestration", () => {
 		await harness.plugin.onload();
 		harness.layoutReady();
 		const headerAction = document.querySelector<HTMLElement>(
-			".cuecraft-study-header-action"
+			".firstrecall-study-header-action"
 		)!;
 		headerAction.click();
 		expect(harness.controller().snapshot()).toMatchObject({
@@ -700,7 +700,7 @@ describe("Study plugin orchestration", () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
 		harness.layoutReady();
-		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		document.querySelector<HTMLElement>(".firstrecall-study-header-action")?.click();
 		const start = harness.dispatches.length;
 		const study = harness.dispatches.at(-1)?.payload.study as {
 			documentChanged(markdown: string): void;
@@ -727,7 +727,7 @@ describe("Study plugin orchestration", () => {
 		);
 		await harness.plugin.onload();
 		harness.layoutReady();
-		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		document.querySelector<HTMLElement>(".firstrecall-study-header-action")?.click();
 
 		resolveRead(NOTE);
 		await Promise.resolve();
@@ -744,7 +744,7 @@ describe("Study plugin orchestration", () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
 		harness.layoutReady();
-		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		document.querySelector<HTMLElement>(".firstrecall-study-header-action")?.click();
 
 		await (
 			harness.plugin as unknown as {
@@ -765,7 +765,7 @@ describe("Study plugin orchestration", () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
 		harness.layoutReady();
-		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		document.querySelector<HTMLElement>(".firstrecall-study-header-action")?.click();
 		const study = harness.dispatches.at(-1)?.payload.study as {
 			snapshot: { sections: Array<{ sectionId: string }> };
 			toggleSection(sectionId: string): void;
@@ -824,7 +824,7 @@ describe("Study plugin orchestration", () => {
 
 		secondView.file = harness.noteFile;
 		harness.setActiveView(secondView, harness.noteFile);
-		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		document.querySelector<HTMLElement>(".firstrecall-study-header-action")?.click();
 		const renamedFile = file("notes/renamed.md");
 		await assertRestoreBeforeClear(() =>
 			harness.vaultEvents.get("rename")?.(
@@ -872,7 +872,7 @@ describe("Study plugin orchestration", () => {
 		const unloadHarness = createHarness();
 		await unloadHarness.plugin.onload();
 		unloadHarness.layoutReady();
-		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		document.querySelector<HTMLElement>(".firstrecall-study-header-action")?.click();
 		const unloadStart = unloadHarness.dispatches.length;
 		unloadHarness.plugin.onunload();
 		expect(unloadHarness.controller().snapshot().active).toBe(false);
@@ -882,7 +882,7 @@ describe("Study plugin orchestration", () => {
 				.some(({ payload, active }) => active && !("study" in payload))
 		).toBe(true);
 		expect(
-			document.querySelector(".cuecraft-study-header-action")
+			document.querySelector(".firstrecall-study-header-action")
 		).toBeNull();
 	});
 
@@ -890,7 +890,7 @@ describe("Study plugin orchestration", () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
 		harness.layoutReady();
-		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		document.querySelector<HTMLElement>(".firstrecall-study-header-action")?.click();
 		const study = harness.dispatches.at(-1)?.payload.study as {
 			snapshot: { sections: Array<{ sectionId: string }> };
 			toggleSection(sectionId: string): void;
@@ -904,7 +904,7 @@ describe("Study plugin orchestration", () => {
 
 		harness.setActiveView(harness.firstView, harness.noteFile);
 		harness.workspaceEvents.get("file-open")?.(harness.noteFile as never);
-		document.querySelector<HTMLElement>(".cuecraft-study-header-action")?.click();
+		document.querySelector<HTMLElement>(".firstrecall-study-header-action")?.click();
 		expect(harness.controller().snapshot()).toMatchObject({
 			active: true,
 			revealedCount: 0,

@@ -268,8 +268,8 @@ if ("Bun" in globalThis && !process.env.VITEST) {
 }
 
 type SettingsModule = typeof import("../src/settings");
-type CueCraftSettingTab = import("../src/settings").CueCraftSettingTab;
-type CueCraftSettings = import("../src/settings").CueCraftSettings;
+type FirstRecallSettingTab = import("../src/settings").FirstRecallSettingTab;
+type FirstRecallSettings = import("../src/settings").FirstRecallSettings;
 
 let settingsModulePromise: Promise<SettingsModule> | undefined;
 
@@ -279,7 +279,7 @@ function loadSettingsModule(): Promise<SettingsModule> {
 }
 
 type MockPlugin = {
-	settings: CueCraftSettings;
+	settings: FirstRecallSettings;
 	saveSettings: ReturnType<typeof vi.fn>;
 	refreshEditorCues: ReturnType<typeof vi.fn>;
 	refreshReadingModeSurface: ReturnType<typeof vi.fn>;
@@ -329,10 +329,10 @@ async function setupSettingsTab(opts: {
 	providerConfigured?: boolean;
 	loadedFiles?: Array<{ path: string; extension?: string; folder?: boolean }>;
 } = {}): Promise<{
-	tab: CueCraftSettingTab;
+	tab: FirstRecallSettingTab;
 	plugin: MockPlugin;
 }> {
-	const { CueCraftSettingTab, DEFAULT_SETTINGS } = await loadSettingsModule();
+	const { FirstRecallSettingTab, DEFAULT_SETTINGS } = await loadSettingsModule();
 	const dom = new JSDOM("<div id=\"root\"></div>");
 	globalThis.window = dom.window as unknown as typeof globalThis.window;
 	globalThis.document = dom.window.document;
@@ -383,7 +383,7 @@ async function setupSettingsTab(opts: {
 		isProviderConfigured: vi.fn(() => opts.providerConfigured ?? false),
 		createStudyArea: vi.fn(async () => null),
 		updateStudyArea: vi.fn(async (
-			area: CueCraftSettings["studyAreas"][number]
+			area: FirstRecallSettings["studyAreas"][number]
 		) => {
 			plugin.settings.studyAreas = plugin.settings.studyAreas.map((current) =>
 				current.id === area.id ? area : current
@@ -411,14 +411,14 @@ async function setupSettingsTab(opts: {
 	};
 	const app = {
 		vault: {
-			getName: () => "CueCraft",
+			getName: () => "FirstRecall",
 			getAllLoadedFiles: () =>
 				(opts.loadedFiles ?? []).map((file) =>
 					file.folder ? { path: file.path, children: [] } : file
 				),
 		},
 	};
-	const tab = new CueCraftSettingTab(app as never, plugin as never);
+	const tab = new FirstRecallSettingTab(app as never, plugin as never);
 	return { tab, plugin };
 }
 
@@ -426,7 +426,7 @@ function settingText(containerEl: HTMLElement): string {
 	return containerEl.textContent ?? "";
 }
 
-function openSettingsCard(tab: CueCraftSettingTab, label: string): void {
+function openSettingsCard(tab: FirstRecallSettingTab, label: string): void {
 	const card = tab.containerEl.querySelector<HTMLElement>(
 		`[aria-label="${label}"]`
 	);
@@ -585,7 +585,7 @@ describe("settings defaults", () => {
 			)
 		).toBe(true);
 		expect(
-			tab.containerEl.querySelector(".cuecraft-active-provider-panel")
+			tab.containerEl.querySelector(".firstrecall-active-provider-panel")
 		).toBeNull();
 	});
 
@@ -692,7 +692,7 @@ describe("settings defaults", () => {
 		expect(text).not.toContain("Review first");
 		expect(text).not.toContain("Self-test");
 		expect(
-			tab.containerEl.querySelectorAll(".cuecraft-settings-artifact-part")
+			tab.containerEl.querySelectorAll(".firstrecall-settings-artifact-part")
 		).toHaveLength(0);
 	});
 
@@ -759,13 +759,13 @@ describe("settings defaults", () => {
 		);
 
 		const advanced = tab.containerEl.querySelector<HTMLDetailsElement>(
-			".cuecraft-generation-advanced"
+			".firstrecall-generation-advanced"
 		)!;
 		const disclosure = advanced.querySelector("summary")!;
 		expect(advanced.open).toBe(false);
 		expect(disclosure.getAttribute("aria-expanded")).toBe("false");
 		expect(disclosure.getAttribute("aria-controls")).toBe(
-			"cuecraft-generation-instructions"
+			"firstrecall-generation-instructions"
 		);
 		const section = advanced.querySelector<HTMLTextAreaElement>(
 			'textarea[aria-label="Section study card instructions"]'
@@ -840,7 +840,7 @@ describe("folders and automatic updates settings", () => {
 
 		const text = settingText(tab.containerEl);
 		expect(text).toContain(
-			"CueCraft turns your notes into active-recall study material: a Note Brief for the whole note and a study card for each section. Choose an AI provider and model to get started. Your Markdown files are never modified."
+			"FirstRecall turns your notes into active-recall study material: a Note Brief for the whole note and a study card for each section. Choose an AI provider and model to get started. Your Markdown files are never modified."
 		);
 		expect(text).not.toContain("Ollama");
 		const ordered = [
@@ -871,13 +871,13 @@ describe("folders and automatic updates settings", () => {
 		openSettingsCard(tab, "Managed folders");
 		const settingsText = settingText(tab.containerEl);
 		expect(settingsText).toContain(
-			"Add a folder—or your entire vault—to generate and refresh study material in bulk. Turn on automatic updates when you want CueCraft to keep future changes current."
+			"Add a folder—or your entire vault—to generate and refresh study material in bulk. Turn on automatic updates when you want FirstRecall to keep future changes current."
 		);
 		expect(settingsText.indexOf("Add folder or vault")).toBeLessThan(
 			settingsText.indexOf("Automatic update delay")
 		);
 		expect(settingsText).toContain(
-			"After you stop typing in an automatically-updated note, CueCraft waits this long before updating its study material. Longer delays reduce repeated AI requests."
+			"After you stop typing in an automatically-updated note, FirstRecall waits this long before updating its study material. Longer delays reduce repeated AI requests."
 		);
 		const input = tab.containerEl.querySelector<HTMLInputElement>(
 			'input[placeholder="Choose a folder or Entire vault..."]'
@@ -1008,7 +1008,7 @@ describe("folders and automatic updates settings", () => {
 			expect.objectContaining({ maintenanceMode: "maintain-on-save" })
 		);
 		expect(settingText(tab.containerEl)).toContain(
-			"CueCraft automatically updates new and changed study material after the selected delay."
+			"FirstRecall automatically updates new and changed study material after the selected delay."
 		);
 		expect(settingText(tab.containerEl)).not.toContain("the wait above");
 		expect(plugin.runStudyArea).not.toHaveBeenCalled();
@@ -1054,7 +1054,7 @@ describe("folders and automatic updates settings", () => {
 		expect(text).not.toContain("Exclusions");
 		expect(tab.containerEl.querySelector("[aria-label^='Exclusions for']")).toBeNull();
 		const row = tab.containerEl.querySelector<HTMLElement>(
-			".cuecraft-study-area-row"
+			".firstrecall-study-area-row"
 		)!;
 		expect(row.textContent?.match(/Claudes/g)).toHaveLength(1);
 		expect(plugin.updateStudyArea).not.toHaveBeenCalled();
@@ -1072,7 +1072,7 @@ describe("folders and automatic updates settings", () => {
 		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
 
 		tab.containerEl.querySelector<HTMLButtonElement>(
-			'.cuecraft-study-area-remove[aria-label="Remove Claudes"]'
+			'.firstrecall-study-area-remove[aria-label="Remove Claudes"]'
 		)?.click();
 
 		const modal = document.body.querySelector<HTMLElement>(".modal-content")!;

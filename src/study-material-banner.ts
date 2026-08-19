@@ -36,7 +36,7 @@ function removeHost(host: HTMLElement): void {
 export function removeStudyMaterialBanner(container: HTMLElement): void {
 	const hosts = Array.from(
 		container.querySelectorAll<HTMLElement>(
-			":scope > .cuecraft-study-material-banner"
+			":scope > .firstrecall-study-material-banner"
 		)
 	);
 	const hadFocus = hosts.some((host) => host.contains(host.ownerDocument.activeElement));
@@ -55,7 +55,7 @@ export function syncStudyMaterialBanner(
 ): HTMLElement | null {
 	const existing = Array.from(
 		container.querySelectorAll<HTMLElement>(
-			":scope > .cuecraft-study-material-banner"
+			":scope > .firstrecall-study-material-banner"
 		)
 	);
 	if (!state) {
@@ -81,7 +81,7 @@ export function syncStudyMaterialBanner(
 		: undefined;
 	bannerCleanup.get(host)?.();
 	host.replaceChildren();
-	host.className = `cuecraft-study-material-banner is-${state.kind}`;
+	host.className = `firstrecall-study-material-banner is-${state.kind}`;
 	host.dataset.revision = state.revision;
 	host.dataset.renderKey = renderKey;
 	host.setAttribute("role", state.kind === "failed" ? "alert" : "status");
@@ -92,14 +92,14 @@ export function syncStudyMaterialBanner(
 	}
 
 	const message = container.ownerDocument.createElement("span");
-	message.className = "cuecraft-study-material-banner-message";
+	message.className = "firstrecall-study-material-banner-message";
 	message.textContent = state.kind === "failed"
 		? "Some study material could not be updated. Your last successful version is still shown."
 		: "This note has study material that is out of date.";
 	host.appendChild(message);
 
 	const controls = container.ownerDocument.createElement("span");
-	controls.className = "cuecraft-study-material-banner-actions";
+	controls.className = "firstrecall-study-material-banner-actions";
 	host.appendChild(controls);
 	const listeners: Array<{
 		button: HTMLButtonElement;
@@ -112,7 +112,7 @@ export function syncStudyMaterialBanner(
 		const button = container.ownerDocument.createElement("button");
 		button.type = "button";
 		button.dataset.bannerAction = action;
-		button.className = `cuecraft-study-material-banner-${action}`;
+		button.className = `firstrecall-study-material-banner-${action}`;
 		button.textContent = label;
 		const listener = (event: MouseEvent): void => {
 			event.preventDefault();
