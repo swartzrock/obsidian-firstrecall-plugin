@@ -1324,9 +1324,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		);
 	}
 
-	// ── Content shown in notes ────────────────────────────────────────────
+	// ── Display ────────────────────────────────────────────
 	private renderArtifactVisibilitySection(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Content shown in notes").setHeading();
+		new Setting(containerEl).setName("Display").setHeading();
 		containerEl.createEl("p", {
 			cls: "firstrecall-settings-visibility-note",
 			text: "These controls only change what appears in Editing and Reading. Hiding generated material never disables automatic maintenance.",

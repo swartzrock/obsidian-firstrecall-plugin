@@ -667,7 +667,7 @@ describe("settings defaults", () => {
 		tab.display();
 
 		const text = settingText(tab.containerEl);
-		expect(text).toContain("Content shown in notes");
+		expect(text).toContain("Display");
 		expect(text).not.toContain("Generated components");
 		expect(text).toContain("Appearance");
 		expect(text).not.toContain("Editing View");
@@ -847,7 +847,7 @@ describe("folders and automatic updates settings", () => {
 			"AI model",
 			"Generation",
 			"Managed folders",
-			"Content shown in notes",
+			"Display",
 			"Appearance",
 			"Study Mode",
 		].map((label) => text.indexOf(label));

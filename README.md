@@ -43,7 +43,7 @@ coverage. If an update fails, FirstRecall keeps the last successful material vis
 outdated, and offers **Retry update**. Scanning, generation, automatic updates, and retries
 never write to the source note; neither do rendering or export.
 
-## Content shown in notes
+## Display
 
 Visibility settings control whether the Note Brief, section cards, and their
 components appear in Editing and Reading. Hidden material remains cached and, when
