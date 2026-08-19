@@ -348,7 +348,7 @@ it("keeps stable command IDs while using the approved vocabulary", async () => {
 		"Retry folder or vault update\u2026"
 	);
 	expect(harness.commands.get("manage-study-areas")?.name).toBe(
-		"Manage folders & automatic updates"
+		"Folders & automatic updates"
 	);
 	expect(harness.commands.get("export-cues-markdown")?.name).toBe(
 		"Export Recall Questions and Key Terms to Markdown"
