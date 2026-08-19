@@ -133,7 +133,6 @@ import {
 	normalizeVaultPath,
 	planStudyAreaGeneration,
 	studyAreaNameForParentPath,
-	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
 	validateStudyAreaScope,
 	type StudyArea,
@@ -920,7 +919,7 @@ export default class FirstRecallPlugin extends Plugin {
 				.setTitle(isStudying ? "Exit Study" : "Study this note")
 				.setIcon(STUDY_RIBBON_ICON)
 				.setDisabled(!canStudy)
-				.onClick(() => this.toggleStudyForView(view))
+				.onClick(this.toggleStudyForActiveView)
 		);
 		menu.addItem((item) =>
 			item
@@ -999,14 +998,14 @@ export default class FirstRecallPlugin extends Plugin {
 		});
 	}
 
-	private toggleStudyForActiveView(): void {
+	private toggleStudyForActiveView = (): void => {
 		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!view) {
 			new Notice("FirstRecall: open a Markdown note to study.");
 			return;
 		}
 		this.toggleStudyForView(view);
-	}
+	};
 
 	private toggleStudyForView(view: MarkdownView): void {
 		if (this.app.workspace.getActiveViewOfType(MarkdownView) !== view) {
@@ -1954,23 +1953,6 @@ export default class FirstRecallPlugin extends Plugin {
 		await this.generateCuesForFile(this.app.workspace.getActiveFile());
 	}
 
-	private pickStudyAreaAndRun(mode: StudyAreaPlanMode): void {
-		const areas = this.settings.studyAreas;
-		if (!areas.length) {
-			new Notice("FirstRecall: add a folder or Entire vault in Settings first.");
-			this.openSettings();
-			return;
-		}
-		const run = (area: StudyArea): void => {
-			void this.runStudyArea(area.id, mode);
-		};
-		if (areas.length === 1) {
-			run(areas[0]);
-			return;
-		}
-		new StudyAreaSuggestModal(this.app, areas, run).open();
-	}
-
 	async previewStudyArea(
 		areaId: string,
 		mode: StudyAreaPlanMode = "backfill"
@@ -2350,25 +2332,3 @@ class SectionSuggestModal extends FuzzySuggestModal<Section> {
 	}
 }
 
-class StudyAreaSuggestModal extends FuzzySuggestModal<StudyArea> {
-	constructor(
-		app: InstanceType<typeof Plugin>["app"],
-		private readonly areas: StudyArea[],
-		private readonly onChoose: (area: StudyArea) => void
-	) {
-		super(app);
-		this.setPlaceholder("Pick a folder or Entire vault...");
-	}
-
-	getItems(): StudyArea[] {
-		return this.areas;
-	}
-
-	getItemText(item: StudyArea): string {
-		return `${item.name} - ${studyAreaScopeLabel(item.parentPath)}`;
-	}
-
-	onChooseItem(item: StudyArea): void {
-		this.onChoose(item);
-	}
-}

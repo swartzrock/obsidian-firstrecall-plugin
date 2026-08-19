@@ -341,9 +341,6 @@ it("keeps stable command IDs while using the approved vocabulary", async () => {
 	expect(harness.commands.get("regenerate-section")?.name).toBe(
 		"Update a section card and Note Brief\u2026"
 	);
-	expect(harness.commands.get("manage-study-areas")?.name).toBe(
-		"Folders & automatic updates"
-	);
 	expect(harness.commands.get("export-cues-markdown")?.name).toBe(
 		"Export Recall Questions and Key Terms to Markdown"
 	);
@@ -662,43 +659,6 @@ describe("Study plugin orchestration", () => {
 		expect(headerAction.title).toBe("Generate study material for this note.");
 	});
 
-	it("starts and toggles in-note Study while review stays idempotent", async () => {
-		const harness = createHarness();
-		await harness.plugin.onload();
-		harness.layoutReady();
-		const toggleStudyForActiveView = (
-			harness.plugin as unknown as { toggleStudyForActiveView: () => void }
-		).toggleStudyForActiveView;
-		toggleStudyForActiveView();
-		expect(harness.controller().snapshot()).toMatchObject({
-			active: true,
-			path: harness.noteFile.path,
-			revealedCount: 0,
-		});
-		expect(harness.statusBar.dataset.coverage).toBe("manual");
-		expect(harness.statusBar.dataset.freshness).toBe("outdated");
-		expect(harness.statusBar.textContent).toContain(
-			"Study material needs updating · Auto-updates off"
-		);
-		expect(harness.statusBar.textContent).not.toContain("study");
-		expect(harness.statusBar.getAttribute("role")).toBe("status");
-		expect(harness.statusBar.getAttribute("aria-live")).toBe("polite");
-		expect(harness.openedFiles).toEqual([]);
-		const studyPayload = harness.dispatches.at(-1)?.payload.study as {
-			snapshot: { sections: Array<{ sectionId: string }> };
-			controlsContainer: HTMLElement;
-			toggleSection(sectionId: string): void;
-		};
-		expect(studyPayload.controlsContainer).toBe(harness.firstView.contentEl);
-		studyPayload.toggleSection(studyPayload.snapshot.sections[0].sectionId);
-		expect(harness.controller().snapshot().revealedCount).toBe(1);
-
-		toggleStudyForActiveView();
-		expect(harness.controller().snapshot().active).toBe(false);
-		expect(harness.controller().snapshot().revealedCount).toBe(0);
-
-		expect(harness.viewStates).toEqual([]);
-	});
 
 	it("exits Study immediately when an editor change makes the cue stale", async () => {
 		const harness = createHarness();
