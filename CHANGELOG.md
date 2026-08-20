@@ -1,5 +1,11 @@
 # firstrecall
 
+## 0.4.1
+
+### Patch Changes
+
+- b58127b: updating manifest to match
+
 ## 0.4.0
 
 ### Minor Changes
