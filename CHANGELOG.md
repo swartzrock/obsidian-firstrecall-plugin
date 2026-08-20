@@ -1,5 +1,11 @@
 # firstrecall
 
+## 0.4.3
+
+### Patch Changes
+
+- ddf620c: Added a note to the AI settings that the API keys are stored in Obsidian's secret storage, with a link to the Obsidian page for more details.
+
 ## 0.4.2
 
 ### Patch Changes
