@@ -1,7 +1,7 @@
 {
 	"id": "first-recall",
 	"name": "FirstRecall",
-	"version": "0.1.0",
+	"version": "0.3.0",
 	"minAppVersion": "1.11.4",
 	"description": "Create active-recall Note Briefs and Section Study Cards without modifying your notes.",
 	"author": "swartzrock",
