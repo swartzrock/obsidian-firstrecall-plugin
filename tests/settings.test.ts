@@ -575,6 +575,14 @@ describe("settings defaults", () => {
 		expect(settingText(tab.containerEl)).toContain(
 			"Select an AI provider to generate study material"
 		);
+		expect(settingText(tab.containerEl)).toContain(
+			"Your API keys are stored securely in Obsidian's secret storage."
+		);
+		expect(
+			tab.containerEl.querySelector<HTMLAnchorElement>(
+				'a[href="https://docs.obsidian.md/plugins/guides/secret-storage"]'
+			)?.textContent
+		).toBe("Learn more.");
 		const providerOptions = [
 			...tab.containerEl.querySelectorAll('[role="radio"]'),
 		];

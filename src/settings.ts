@@ -489,6 +489,18 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			"Provider",
 			"Pick where FirstRecall should generate section study cards and Note Briefs."
 		);
+		const secretStorageEl = providerFlowEl.createDiv({
+			cls: "firstrecall-settings-flow-desc",
+		});
+		secretStorageEl.createSpan({
+			text: "Your API keys are stored securely in Obsidian's secret storage. ",
+		});
+		secretStorageEl.createEl("a", {
+			text: "Learn more.",
+			attr: {
+				href: "https://docs.obsidian.md/plugins/guides/secret-storage",
+			},
+		});
 
 		this.renderProviderPicker(providerFlowEl);
 
