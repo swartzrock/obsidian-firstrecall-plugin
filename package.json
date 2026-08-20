@@ -45,6 +45,6 @@
 		"zod": "4.4.3"
 	},
 	"dependencies": {
-		"@swartzrock/byok-runtime": "3.0.0"
+		"@swartzrock/byok-runtime": "3.1.0"
 	}
 }

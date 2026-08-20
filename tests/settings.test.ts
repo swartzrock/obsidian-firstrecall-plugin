@@ -586,7 +586,7 @@ describe("settings defaults", () => {
 		const providerOptions = [
 			...tab.containerEl.querySelectorAll('[role="radio"]'),
 		];
-		expect(providerOptions).toHaveLength(13);
+		expect(providerOptions).toHaveLength(15);
 		expect(
 			providerOptions.every(
 				(option) => option.getAttribute("aria-checked") === "false"

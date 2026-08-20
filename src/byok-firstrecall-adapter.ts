@@ -22,7 +22,7 @@ import {
 	deriveProviderSetupStatus,
 	recordProviderConnectionSuccess,
 } from "./byok-setup-status";
-import { sortFetchedModelIds } from "./byok-model-options";
+import { displayModelOptions, sortFetchedModelIds } from "./byok-model-options";
 import {
 	
 	buildSectionCuePrompt,
@@ -749,14 +749,16 @@ export async function listFirstRecallProviderModelsFromStore(
 	if (definition.credentialKind === "api-key") {
 		const cloudProvider = provider as FirstRecallCloudCredentialProvider;
 		const apiKey = await readFirstRecallCloudCredential(cloudProvider, credentialStore);
-		return listModels({ provider: cloudProvider, apiKey, deps });
+		const options = await listModels({ provider: cloudProvider, apiKey, deps });
+		return displayModelOptions(provider, options);
 	}
 	if (definition.credentialKind === "url") {
-		return listModels({
+		const options = await listModels({
 			provider: provider as FirstRecallUrlProvider,
 			url: stored.credential,
 			deps,
 		});
+		return displayModelOptions(provider, options);
 	}
 	const runtime = createByokNodeProvider(
 		{
@@ -766,7 +768,8 @@ export async function listFirstRecallProviderModelsFromStore(
 		},
 		deps
 	);
-	return runtime.listModels();
+	const options = await runtime.listModels();
+	return displayModelOptions(provider, options);
 }
 
 export async function makeFirstRecallByokProviderFromStore(

@@ -58,7 +58,7 @@ FirstRecall supports:
 
 - **Local servers:** Ollama and LM Studio
 - **Cloud APIs:** Anthropic, OpenAI, Google, xAI, OpenRouter, Groq, Mistral, DeepSeek,
-  and DeepInfra
+  DeepInfra, Together AI, and Fireworks AI
 - **Desktop CLIs:** Codex CLI and Claude CLI
 
 Cloud API keys are stored with Obsidian's Secret Storage API. When using a cloud API or a
