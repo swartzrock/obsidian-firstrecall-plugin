@@ -1,5 +1,11 @@
 # firstrecall
 
+## 0.4.0
+
+### Minor Changes
+
+- 0e2a0fb: fixing release assets for obsidian plugins
+
 ## 0.3.0
 
 ### Minor Changes
