@@ -515,4 +515,12 @@ describe("settings CSS", () => {
 		expect(cueRule).toContain("position: relative");
 		expect(styles).not.toContain(".firstrecall-reading-review");
 	});
+
+	it("outlines the OpenRouter icon so its bright brand color stays legible in light mode", () => {
+		const rule = ruleFor(
+			'.firstrecall-provider-icon[data-provider="openrouter"] svg path'
+		);
+		expect(rule).toContain("stroke:");
+		expect(rule).toContain("stroke-width:");
+	});
 });
