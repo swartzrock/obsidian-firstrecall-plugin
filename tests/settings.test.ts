@@ -18,6 +18,10 @@ import {
 } from "../src/cue-instructions";
 import { buildNoteBriefInstructionsTemplate } from "../src/study-material-instructions";
 import { QUESTION_TYPES } from "../src/cue-generation";
+import {
+	byokProviderDefinition,
+	type FirstRecallProviderDefinition,
+} from "../src/byok-provider-metadata";
 
 function createObsidianMock() {
 	class MockPluginSettingTab {
@@ -586,7 +590,7 @@ describe("settings defaults", () => {
 		const providerOptions = [
 			...tab.containerEl.querySelectorAll('[role="radio"]'),
 		];
-		expect(providerOptions).toHaveLength(13);
+		expect(providerOptions).toHaveLength(15);
 		expect(
 			providerOptions.every(
 				(option) => option.getAttribute("aria-checked") === "false"
@@ -595,6 +599,64 @@ describe("settings defaults", () => {
 		expect(
 			tab.containerEl.querySelector(".firstrecall-active-provider-panel")
 		).toBeNull();
+	});
+
+	it("renders every provider icon with real paint", async () => {
+		const { tab } = await setupSettingsTab();
+		tab.display();
+		openSettingsCard(tab, "AI model");
+
+		const icons = [
+			...tab.containerEl.querySelectorAll<HTMLElement>(".firstrecall-provider-icon"),
+		];
+		expect(icons).toHaveLength(15);
+		for (const iconEl of icons) {
+			// The provider id is exposed via data-provider so CSS can target one icon
+			// specifically (e.g. OpenRouter's light-mode contrast fix) without touching
+			// the shared renderer.
+			expect(iconEl.getAttribute("data-provider")).toBeTruthy();
+
+			const svg = iconEl.querySelector("svg");
+			const paths = [...(svg?.querySelectorAll("path") ?? [])];
+			expect(paths.length).toBeGreaterThan(0);
+			for (const path of paths) {
+				expect(path.getAttribute("d")).toBeTruthy();
+			}
+		}
+	});
+
+	it("gives duplicate gradient icons unique ids so two instances on the page don't collide", async () => {
+		// Google's Gemini icon uses three gradient fills. In the real settings page it's
+		// rendered once in the provider list and once more in the active-provider header
+		// when it's selected; exercise that directly against the icon renderer rather than
+		// through the full credential-settings render tree.
+		const { tab } = await setupSettingsTab();
+		const renderer = tab as unknown as {
+			renderProviderIcon(
+				containerEl: HTMLElement,
+				definition: FirstRecallProviderDefinition
+			): void;
+		};
+		const definition = byokProviderDefinition("google");
+		const first = document.createElement("div");
+		const second = document.createElement("div");
+		renderer.renderProviderIcon(first, definition);
+		renderer.renderProviderIcon(second, definition);
+
+		const gradientIds = [
+			...first.querySelectorAll("linearGradient"),
+			...second.querySelectorAll("linearGradient"),
+		].map((el) => el.getAttribute("id") ?? "");
+		expect(gradientIds).toHaveLength(6);
+		expect(new Set(gradientIds).size).toBe(6);
+
+		// Every gradient-filled path resolves to a gradient id defined in its own instance.
+		for (const container of [first, second]) {
+			for (const path of container.querySelectorAll("path[fill^='url(#']")) {
+				const fillId = path.getAttribute("fill")?.slice(5, -1) ?? "";
+				expect(container.querySelector(`[id="${fillId}"]`)).not.toBeNull();
+			}
+		}
 	});
 
 	it("defaults auto-generation settle delay to 10 seconds", () => {

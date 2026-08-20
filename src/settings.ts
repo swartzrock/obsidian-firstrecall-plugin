@@ -43,6 +43,10 @@ import {
 	type FirstRecallProviderDefinition,
 } from "./byok-provider-metadata";
 import {
+	parseProviderIconGradients,
+	parseProviderIconViewBox,
+} from "./provider-icons";
+import {
 	ANTHROPIC_CUSTOM_MODEL_ID,
 	buildAnthropicModelOptions,
 	describeAnthropicModel,
@@ -140,6 +144,7 @@ const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 	"clip-rule",
 	"d",
 	"fill",
+	"fill-opacity",
 	"fill-rule",
 	"stroke",
 	"stroke-width",
@@ -244,6 +249,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private plugin: FirstRecallPlugin;
 	private currentSubpage: FirstRecallSettingsSubpage = "home";
 	private readonly studyAreaUi = new Map<string, StudyAreaUiState>();
+	private providerIconRenderCount = 0;
 
 	constructor(app: App, plugin: FirstRecallPlugin) {
 		super(app, plugin);
@@ -602,23 +608,56 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	): void {
 		const iconEl = containerEl.createSpan({
 			cls: "firstrecall-provider-icon",
-			attr: { "aria-hidden": "true" },
+			attr: { "aria-hidden": "true", "data-provider": definition.id },
 		});
 		if (typeof definition.icon === "string") {
 			setIcon(iconEl, definition.icon);
 			return;
 		}
+		const iconSvg = definition.icon.svg;
 		const svgEl = activeDocument.createElementNS(SVG_NS, "svg");
-		svgEl.setAttribute("viewBox", definition.icon.viewBox);
+		svgEl.setAttribute("viewBox", parseProviderIconViewBox(iconSvg));
 		svgEl.setAttribute("fill", "currentColor");
 		svgEl.setAttribute("focusable", "false");
-		for (const match of definition.icon.svg.matchAll(/<path\s+([^>]*)\/?>/g)) {
+
+		// A few colored icons (e.g. Codex, Gemini) fill their path with a gradient rather
+		// than a flat color. Give each render its own gradient ids so two instances of the
+		// same icon on the page (e.g. the provider list and the active-provider header)
+		// don't collide.
+		const gradients = parseProviderIconGradients(iconSvg);
+		const gradientIdPrefix = `firstrecall-provider-icon-${this.providerIconRenderCount++}`;
+		if (gradients.length > 0) {
+			const defsEl = activeDocument.createElementNS(SVG_NS, "defs");
+			for (const gradient of gradients) {
+				const gradientEl = activeDocument.createElementNS(SVG_NS, "linearGradient");
+				gradientEl.setAttribute("id", `${gradientIdPrefix}-${gradient.id}`);
+				gradientEl.setAttribute("gradientUnits", "userSpaceOnUse");
+				gradientEl.setAttribute("x1", gradient.x1);
+				gradientEl.setAttribute("y1", gradient.y1);
+				gradientEl.setAttribute("x2", gradient.x2);
+				gradientEl.setAttribute("y2", gradient.y2);
+				for (const stop of gradient.stops) {
+					const stopEl = activeDocument.createElementNS(SVG_NS, "stop");
+					if (stop.offset) stopEl.setAttribute("offset", stop.offset);
+					stopEl.setAttribute("stop-color", stop.color);
+					if (stop.opacity) stopEl.setAttribute("stop-opacity", stop.opacity);
+					gradientEl.appendChild(stopEl);
+				}
+				defsEl.appendChild(gradientEl);
+			}
+			svgEl.appendChild(defsEl);
+		}
+
+		for (const match of iconSvg.matchAll(/<path\s+([^>]*)\/?>/g)) {
 			const pathEl = activeDocument.createElementNS(SVG_NS, "path");
 			for (const attr of (match[1] ?? "").matchAll(/([a-z-]+)="([^"]*)"/g)) {
 				const [, name, value] = attr;
-				if (name && value && SVG_PATH_ATTRIBUTE_ALLOWLIST.has(name)) {
-					pathEl.setAttribute(name, value);
-				}
+				if (!name || !value || !SVG_PATH_ATTRIBUTE_ALLOWLIST.has(name)) continue;
+				const gradientRef = /^url\(#([\w-]+)\)$/.exec(value);
+				pathEl.setAttribute(
+					name,
+					gradientRef ? `url(#${gradientIdPrefix}-${gradientRef[1]})` : value
+				);
 			}
 			svgEl.appendChild(pathEl);
 		}
