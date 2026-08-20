@@ -1,5 +1,11 @@
 # firstrecall
 
+## 0.4.2
+
+### Patch Changes
+
+- e381f7e: another version bump
+
 ## 0.4.1
 
 ### Patch Changes
