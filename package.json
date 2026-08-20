@@ -8,7 +8,7 @@
 		"build": "tsc -noEmit -skipLibCheck && bun esbuild.config.mjs production",
 		"check": "bun run lint && bun run build && bun run typecheck && bun run test",
 		"changeset": "changeset",
-		"changeset:version": "changeset version",
+		"changeset:version": "changeset version && node version-bump.mjs",
 		"dev": "bun esbuild.config.mjs",
 		"lint": "eslint .",
 		"test": "vitest run",
