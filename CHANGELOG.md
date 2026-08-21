@@ -1,5 +1,16 @@
 # firstrecall
 
+## 0.5.0
+
+### Minor Changes
+
+- 7e63eb0: Replaced the AI provider icons in Settings → AI model with colored logos from the `@lobehub/icons-static-svg` package (imported directly rather than hand-copied), matching each provider's real brand color where one exists. Providers whose official mark is monochrome (OpenAI, xAI, Groq, Ollama, LM Studio) keep an accurate black/white icon since there's no official colored version. Added a subtle outline to the OpenRouter icon so its bright brand color stays legible in light mode.
+- 05f54af: Updated the BYOK runtime to v3.1.0, adding support for Together AI and Fireworks AI as cloud providers with their own logos in the AI settings.
+
+### Patch Changes
+
+- 05f54af: Fireworks AI's model dropdown now shows the short model name (e.g. "llama-v3p1-70b-instruct") instead of the full "accounts/.../models/..." ID. The full ID is still used as the underlying model value and appears as a detail line under the selected option.
+
 ## 0.4.3
 
 ### Patch Changes

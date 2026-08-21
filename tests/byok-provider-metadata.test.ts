@@ -41,6 +41,8 @@ describe("FirstRecall BYOK provider metadata", () => {
 		["mistral", "api-key"],
 		["deepseek", "api-key"],
 		["deepinfra", "api-key"],
+		["together", "api-key"],
+		["fireworks", "api-key"],
 		["ollama", "url"],
 		["lm-studio", "url"],
 		["codex-cli", "command"],
