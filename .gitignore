@@ -1,3 +1,6 @@
+# Raw screen recordings (unoptimized source for docs/media GIFs)
+docs/media/raw/
+
 # Logs
 logs
 *.log
