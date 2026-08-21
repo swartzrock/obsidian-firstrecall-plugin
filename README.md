@@ -5,8 +5,7 @@
 
 
 
-[![Obsidian](https://img.shields.io/badge/Obsidian-1.6.0%2B-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md)
-[![Platform](https://img.shields.io/badge/platform-desktop-4B5563)](#compatibility-notes)
+[![Obsidian](https://img.shields.io/badge/Obsidian-1.11.4%2B-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md)
 [![Language](https://img.shields.io/badge/language-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Package manager](https://img.shields.io/badge/package_manager-bun_1.3.14-000000?logo=bun&logoColor=white)](https://bun.sh/)
 [![GitHub release](https://img.shields.io/github/v/release/swartzrock/obsidian-firstrecall-plugin?include_prereleases&label=release)](https://github.com/swartzrock/obsidian-firstrecall-plugin/releases)
@@ -33,7 +32,6 @@ Your Markdown files are never touched. FirstRecall uses your selected AI / LLM p
 - [What FirstRecall Adds](#what-firstrecall-adds)
 - [More Features](#more-features)
 - [How FirstRecall is different](#how-firstrecall-is-different)
-- [License](#license)
 
 ## Why FirstRecall
 
@@ -54,6 +52,10 @@ Your Markdown files are never touched. FirstRecall uses your selected AI / LLM p
 
 
 ## Installation
+
+The FirstRecall plugin is designed for Obsidian Desktop v1.11.4 or later (to use Obsidian's   [Secret Storage](https://docs.obsidian.md/plugins/guides/secret-storage) for securely storing API keys)
+
+
 
 BRAT is the easiest way to try pre-release Obsidian plugins and keep them updated from GitHub.
 
@@ -142,6 +144,14 @@ or a desktop CLI backed by an online account, the selected provider receives the
 content needed for generation. Ollama and LM Studio can keep generation entirely
 local when connected to a local server.
 
+> 
+> **Data Privacy & Third-Party LLM Usage**
+>
+> When using features powered by external LLM providers (e.g., Anthropic Claude), **your note content and cues are sent directly to their API servers**. 
+>
+> * **API Key Required:** You must supply your own API key to enable these features.
+> * **Privacy Policy:** Please review your LLM provider's privacy policy regarding data retention and model training policies before enabling.
+
 ### Visibility Customization
 
 Click the toggle icon on each **section study card** area to hide it for that section, or hide it for all notes in the **Display** settings.
@@ -162,7 +172,3 @@ deliberately isn't either:
 
 Terminology and product language are defined in the
 [FirstRecall glossary](./docs/FirstRecall-Glossary.md).
-
-## License
-
-MIT
