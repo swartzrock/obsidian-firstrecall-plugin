@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FirstRecall Trial LLM Hosting - Plan</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --canvas: #f5f3ed;
+      --surface: #fffdf7;
+      --surface-2: #efede5;
+      --ink: #20231f;
+      --muted: #61675e;
+      --line: #d8d5ca;
+      --accent: #176b5b;
+      --accent-soft: #dcefe9;
+      --accent-text: #0d5447;
+      --warn: #8a5314;
+      --warn-soft: #f7ead3;
+      --warn-text: #70400b;
+      --danger: #963c35;
+      --danger-soft: #f6dfdc;
+      --danger-text: #7d2f29;
+      --info: #335f91;
+      --info-soft: #e0eaf5;
+      --info-text: #284f7c;
+      --shadow: 0 18px 60px rgb(39 45 38 / 10%);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --serif: Iowan Old Style, Palatino Linotype, Book Antiqua, Palatino, Georgia, serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --canvas: #171a17;
+        --surface: #20241f;
+        --surface-2: #292e28;
+        --ink: #edf0e8;
+        --muted: #b5bcb0;
+        --line: #3c433a;
+        --accent: #70c6b3;
+        --accent-soft: #183b33;
+        --accent-text: #a7e2d4;
+        --warn: #e1ae69;
+        --warn-soft: #44331f;
+        --warn-text: #f2ca91;
+        --danger: #df8d83;
+        --danger-soft: #472824;
+        --danger-text: #f1b0a8;
+        --info: #89b4e4;
+        --info-soft: #23374f;
+        --info-text: #b8d5f3;
+        --shadow: 0 18px 60px rgb(0 0 0 / 28%);
+      }
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--ink);
+      font: 15px/1.62 var(--sans);
+    }
+    a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+    a:hover { text-decoration-thickness: 2px; }
+    strong { color: inherit; }
+    code {
+      padding: .1rem .35rem;
+      border-radius: 6px;
+      background: var(--surface-2);
+      font: .9em var(--mono);
+    }
+    .page {
+      width: min(960px, calc(100% - 32px));
+      margin: 28px auto 64px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .hero {
+      padding: clamp(28px, 6vw, 64px);
+      background:
+        radial-gradient(circle at 85% 5%, color-mix(in srgb, var(--accent-soft) 88%, transparent) 0 18%, transparent 19%),
+        var(--surface);
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent-text);
+      font-size: .75rem;
+      font-weight: 800;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 {
+      font-family: var(--serif);
+      letter-spacing: -.018em;
+      line-height: 1.16;
+    }
+    h1 { max-width: 18ch; margin: 0; font-size: clamp(2.15rem, 6vw, 4.4rem); }
+    h2 { margin: 0 0 18px; font-size: clamp(1.55rem, 3vw, 2.15rem); }
+    h3 { margin: 0 0 10px; font-size: 1.25rem; }
+    .dek { max-width: 68ch; margin: 20px 0 0; color: var(--muted); font-size: 1.08rem; }
+    .verdict {
+      max-width: 70ch;
+      margin-top: 26px;
+      padding: 18px 20px;
+      border-radius: var(--radius);
+      background: var(--accent-soft);
+      color: var(--accent-text);
+    }
+    .verdict b { display: block; margin-bottom: 4px; font-size: .77rem; letter-spacing: .1em; text-transform: uppercase; }
+    .metadata {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      margin: 30px 0 0;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--line);
+    }
+    .metadata div { min-width: 0; padding: 12px 14px; background: var(--surface); }
+    .metadata dt { margin: 0 0 4px; color: var(--muted); font-size: .68rem; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+    .metadata dd { margin: 0; overflow-wrap: anywhere; font: .77rem/1.35 var(--mono); }
+    .toc {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 18px clamp(24px, 5vw, 48px);
+      border-bottom: 1px solid var(--line);
+      background: var(--surface-2);
+    }
+    .toc a {
+      padding: 6px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      font-size: .78rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    main { padding: 8px clamp(24px, 5vw, 48px) 44px; }
+    section { padding-top: 38px; }
+    p, li { max-width: 72ch; }
+    .lede { font-size: 1.06rem; }
+    .goal-grid, .card-grid, .boundary-grid, .metric-grid {
+      display: grid;
+      gap: 14px;
+    }
+    .goal-grid { grid-template-columns: 1.6fr 1fr 1fr; }
+    .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .boundary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .card, .goal-card, .boundary, .metric, .decision, .acceptance, .flow-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 18px;
+    }
+    .goal-card.primary { background: var(--accent-soft); color: var(--accent-text); }
+    .label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: .68rem;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .goal-card.primary .label { color: var(--accent-text); }
+    .goal-card p, .boundary p, .decision p, .metric p { margin: 0; }
+    .metric strong { display: block; margin-bottom: 4px; font: 700 1.5rem/1 var(--serif); }
+    .metric small { color: var(--muted); }
+    .metric.accent { background: var(--accent-soft); color: var(--accent-text); }
+    .metric.accent small { color: var(--accent-text); }
+    .metric.warn { background: var(--warn-soft); color: var(--warn-text); }
+    .metric.warn small { color: var(--warn-text); }
+    .decision { margin-bottom: 12px; }
+    .decision .decision-title { display: block; margin-bottom: 6px; }
+    .provenance { margin-top: 8px !important; color: var(--muted); font-size: .78rem; }
+    .architecture {
+      margin-top: 20px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface-2);
+      overflow-x: auto;
+    }
+    .architecture svg { display: block; min-width: 820px; width: 100%; height: auto; }
+    .architecture figcaption { max-width: 72ch; margin-top: 12px; color: var(--muted); font-size: .83rem; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); }
+    table { width: 100%; border-collapse: collapse; min-width: 720px; }
+    th, td { padding: 13px 14px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    tr:last-child td { border-bottom: 0; }
+    th { background: var(--surface-2); color: var(--muted); font-size: .7rem; letter-spacing: .08em; text-transform: uppercase; }
+    td:first-child { font-weight: 700; }
+    .recommended-row td { background: var(--accent-soft); color: var(--accent-text); }
+    .chip {
+      display: inline-block;
+      padding: 3px 8px;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent-text);
+      font-size: .68rem;
+      font-weight: 800;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .chip.warn { background: var(--warn-soft); color: var(--warn-text); }
+    .chip.danger { background: var(--danger-soft); color: var(--danger-text); }
+    .requirements-group { margin-top: 24px; }
+    .requirements-group > h3 { font-family: var(--sans); font-size: 1rem; letter-spacing: 0; }
+    .requirements { list-style: none; margin: 0; padding: 0; }
+    .requirements li {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 12px;
+      max-width: none;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .requirements li:last-child { border-bottom: 0; }
+    .rid { color: var(--accent-text); font: 800 .82rem var(--mono); }
+    .actors { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .actor { padding: 16px; border-radius: var(--radius); background: var(--surface-2); }
+    .actor b { display: block; margin-bottom: 6px; }
+    .actor p { margin: 0; color: var(--muted); font-size: .9rem; }
+    .flow-card { margin-bottom: 12px; }
+    .flow-card p { margin: 6px 0; }
+    .flow-id, .ae-id { color: var(--accent-text); font: 800 .8rem var(--mono); }
+    .acceptance { margin-bottom: 12px; background: var(--info-soft); color: var(--info-text); }
+    .acceptance p { margin: 5px 0; }
+    .boundary.in { background: var(--accent-soft); color: var(--accent-text); }
+    .boundary.deferred { background: var(--warn-soft); color: var(--warn-text); }
+    .boundary.out { background: var(--danger-soft); color: var(--danger-text); }
+    .boundary ul { margin: 8px 0 0; padding-left: 18px; }
+    .callout {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: var(--radius);
+      background: var(--warn-soft);
+      color: var(--warn-text);
+    }
+    .callout p { margin: 0; }
+    .source-list { columns: 2; column-gap: 34px; padding-left: 20px; }
+    .source-list li { break-inside: avoid; margin-bottom: 9px; }
+    .composition-signal {
+      padding: 22px clamp(24px, 5vw, 48px);
+      border-top: 1px solid var(--line);
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: .78rem;
+    }
+    @media (max-width: 760px) {
+      .metadata, .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .goal-grid, .card-grid, .boundary-grid, .actors { grid-template-columns: 1fr; }
+      .source-list { columns: 1; }
+      .page { width: min(100% - 16px, 960px); margin-top: 8px; border-radius: 16px; }
+    }
+    @media print {
+      body { background: white; color: black; }
+      .page { width: 100%; margin: 0; border: 0; box-shadow: none; }
+      .toc { display: none; }
+      a { color: inherit; }
+      section { break-inside: avoid-page; }
+    }
+  </style>
+</head>
+<body>
+  <article class="page">
+    <header class="hero">
+      <p class="eyebrow">Requirements-only plan · hosting decision report</p>
+      <h1>FirstRecall Trial LLM Hosting - Plan</h1>
+      <p class="dek">A low-cost path to make FirstRecall useful on first launch: give new installations a small, selected-by-default Qwen trial without operating a model-serving stack or exposing a master API credential.</p>
+      <div class="verdict">
+        <b>Recommendation</b>
+        Mint short-lived, model-restricted DeepInfra scoped JWTs from a tiny serverless issuer. Let the plugin call Qwen3.5-9B directly, cap each token at roughly half a cent, and cap the whole account at $8 per month with no automatic top-up.
+      </div>
+      <dl class="metadata">
+        <div><dt>title</dt><dd>FirstRecall Trial LLM Hosting - Plan</dd></div>
+        <div><dt>type</dt><dd>feat</dd></div>
+        <div><dt>date</dt><dd><time datetime="2026-08-23">2026-08-23</time></dd></div>
+        <div><dt>topic</dt><dd>firstrecall-trial-llm-hosting</dd></div>
+        <div><dt>artifact_contract</dt><dd>ce-unified-plan/v1</dd></div>
+        <div><dt>artifact_readiness</dt><dd>requirements-only</dd></div>
+        <div><dt>product_contract_source</dt><dd>ce-brainstorm</dd></div>
+        <div><dt>execution</dt><dd>code</dd></div>
+      </dl>
+    </header>
+
+    <nav class="toc" aria-label="Document sections">
+      <a href="#goal-capsule">Goal Capsule</a>
+      <a href="#product-contract">Product Contract</a>
+      <a href="#options">Options</a>
+      <a href="#cost-model">Cost Model</a>
+      <a href="#product-requirements">Requirements</a>
+      <a href="#abuse-model">Abuse Model</a>
+      <a href="#acceptance-examples">Acceptance Examples</a>
+      <a href="#sources">Sources</a>
+    </nav>
+
+    <main>
+      <section id="goal-capsule">
+        <p class="eyebrow">Goal Capsule</p>
+        <h2>Goal Capsule</h2>
+        <div class="goal-grid">
+          <article class="goal-card primary">
+            <span class="label">Objective</span>
+            <p>New FirstRecall users can generate real study material immediately, while the operator can serve many small trials without spending $10 or more in a month.</p>
+          </article>
+          <article class="goal-card">
+            <span class="label">Product authority</span>
+            <p>This plan owns the default trial provider, its user-visible lifecycle, its cost ceiling, and abuse posture.</p>
+          </article>
+          <article class="goal-card">
+            <span class="label">Open blockers</span>
+            <p>Provider cap enforcement and model output quality must pass a bounded pre-launch spike.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="product-contract">
+        <p class="eyebrow">Product Contract</p>
+        <h2>Product Contract</h2>
+
+        <section id="summary">
+          <h3>Summary</h3>
+          <p class="lede">FirstRecall will add a distinct trial provider that is enabled and selected for fresh installations. A lightweight issuer will grant a tiny, expiring credential for one Qwen model; inference will travel directly from the plugin to the model host.</p>
+        </section>
+
+        <section id="problem-frame">
+          <h3>Problem Frame</h3>
+          <p>FirstRecall currently opens with no provider selected. Before users can see a Note Brief or section study cards, they must choose a provider, obtain a credential, choose a model, save the key, and test the connection. That setup wall appears before the product proves its value.</p>
+          <p>The operating budget rules out a conventional hosted GPU. It also rules out an unlimited anonymous proxy: a public desktop plugin can be inspected and automated, and any static secret embedded in it is public in practice. The useful constraint is therefore not “prevent all abuse,” which is impossible without stronger identity, but “make every stolen trial tiny, make mass issuance expensive, and make the global loss finite.”</p>
+        </section>
+
+        <section id="key-decisions">
+          <h3>Key Decisions</h3>
+          <article class="decision">
+            <strong class="decision-title">Host credential issuance, not inference.</strong>
+            <p>The service remains small and note content bypasses FirstRecall-operated infrastructure. Governs R3, R8, R9, R13.</p>
+            <p class="provenance">(session-settled: user-approved — chosen over a task-specific inference gateway and self-hosted GPU: it removes the model-serving and request-proxy stack while keeping provider-enforced limits.)</p>
+          </article>
+          <article class="decision">
+            <strong class="decision-title">Use DeepInfra scoped JWTs as the launch path.</strong>
+            <p>DeepInfra exposes model, expiry, and spend restrictions intended for third-party access. Governs R7, R8, R10.</p>
+            <p class="provenance">(session-settled: user-approved — chosen over OpenRouter micro-keys: it provides the needed delegation controls with fewer routing and privacy layers.)</p>
+          </article>
+          <article class="decision">
+            <strong class="decision-title">Keep activation anonymous at launch.</strong>
+            <p>A browser challenge and risk limits protect issuance without requiring an account. Governs R4, R11, R12.</p>
+            <p class="provenance">(session-settled: user-approved — chosen over mandatory GitHub or email sign-in: first-use friction matters more than perfect person-level uniqueness for a half-cent trial.)</p>
+          </article>
+          <article class="decision">
+            <strong class="decision-title">Start the quality gate with Qwen3.5-9B in non-thinking mode.</strong>
+            <p>The current model is inexpensive, supports JSON output, and reports strong instruction-following results. Governs R14, R15.</p>
+            <p class="provenance">(session-settled: user-approved — chosen over larger Qwen models as the initial candidate: the trial needs representative study cards, not frontier reasoning.)</p>
+          </article>
+        </section>
+
+        <figure class="architecture" aria-labelledby="architecture-title">
+          <svg viewBox="0 0 900 270" role="img" aria-labelledby="architecture-title architecture-desc">
+            <title id="architecture-title">Recommended trial architecture</title>
+            <desc id="architecture-desc">A fresh FirstRecall installation opens a browser claim page. Turnstile and rate limits protect a token issuer. The issuer returns a scoped JWT. The plugin calls DeepInfra directly with that JWT, and DeepInfra runs Qwen3.5-9B.</desc>
+            <defs>
+              <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+              </marker>
+            </defs>
+            <rect x="20" y="92" width="145" height="92" rx="16" fill="var(--surface)" stroke="var(--line)"/>
+            <text x="92" y="122" text-anchor="middle" fill="var(--ink)" font-family="var(--sans)" font-size="14" font-weight="700">FirstRecall</text>
+            <text x="92" y="145" text-anchor="middle" fill="var(--muted)" font-family="var(--sans)" font-size="12">fresh install</text>
+            <text x="92" y="165" text-anchor="middle" fill="var(--muted)" font-family="var(--sans)" font-size="12">device keypair</text>
+
+            <line x1="165" y1="138" x2="205" y2="138" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="185" y="120" text-anchor="middle" fill="var(--accent-text)" font-family="var(--sans)" font-size="11">claim</text>
+
+            <rect x="207" y="92" width="145" height="92" rx="16" fill="var(--info-soft)" stroke="var(--info)"/>
+            <text x="279" y="122" text-anchor="middle" fill="var(--info-text)" font-family="var(--sans)" font-size="14" font-weight="700">Browser check</text>
+            <text x="279" y="145" text-anchor="middle" fill="var(--info-text)" font-family="var(--sans)" font-size="12">Turnstile</text>
+            <text x="279" y="165" text-anchor="middle" fill="var(--info-text)" font-family="var(--sans)" font-size="12">IP velocity</text>
+
+            <line x1="352" y1="138" x2="392" y2="138" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="372" y="120" text-anchor="middle" fill="var(--accent-text)" font-family="var(--sans)" font-size="11">verify</text>
+
+            <rect x="394" y="76" width="160" height="124" rx="16" fill="var(--accent-soft)" stroke="var(--accent)"/>
+            <text x="474" y="108" text-anchor="middle" fill="var(--accent-text)" font-family="var(--sans)" font-size="14" font-weight="700">Token issuer</text>
+            <text x="474" y="132" text-anchor="middle" fill="var(--accent-text)" font-family="var(--sans)" font-size="12">free serverless tier</text>
+            <text x="474" y="154" text-anchor="middle" fill="var(--accent-text)" font-family="var(--sans)" font-size="12">model + expiry</text>
+            <text x="474" y="176" text-anchor="middle" fill="var(--accent-text)" font-family="var(--sans)" font-size="12">≈ $0.005 cap</text>
+
+            <path d="M 474 200 L 474 235 L 92 235 L 92 185" fill="none" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="286" y="228" text-anchor="middle" fill="var(--accent-text)" font-family="var(--sans)" font-size="11">return scoped JWT to secure storage</text>
+
+            <line x1="554" y1="138" x2="598" y2="138" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="576" y="120" text-anchor="middle" fill="var(--accent-text)" font-family="var(--sans)" font-size="11">direct API</text>
+
+            <rect x="600" y="92" width="130" height="92" rx="16" fill="var(--surface)" stroke="var(--line)"/>
+            <text x="665" y="122" text-anchor="middle" fill="var(--ink)" font-family="var(--sans)" font-size="14" font-weight="700">DeepInfra</text>
+            <text x="665" y="145" text-anchor="middle" fill="var(--muted)" font-family="var(--sans)" font-size="12">enforces token</text>
+            <text x="665" y="165" text-anchor="middle" fill="var(--muted)" font-family="var(--sans)" font-size="12">and global cap</text>
+
+            <line x1="730" y1="138" x2="770" y2="138" stroke="var(--accent)" stroke-width="2" marker-end="url(#arrow)"/>
+            <text x="750" y="120" text-anchor="middle" fill="var(--accent-text)" font-family="var(--sans)" font-size="11">infer</text>
+
+            <rect x="772" y="92" width="108" height="92" rx="16" fill="var(--warn-soft)" stroke="var(--warn)"/>
+            <text x="826" y="122" text-anchor="middle" fill="var(--warn-text)" font-family="var(--sans)" font-size="14" font-weight="700">Qwen</text>
+            <text x="826" y="145" text-anchor="middle" fill="var(--warn-text)" font-family="var(--sans)" font-size="12">3.5 · 9B</text>
+            <text x="826" y="165" text-anchor="middle" fill="var(--warn-text)" font-family="var(--sans)" font-size="12">non-thinking</text>
+          </svg>
+          <figcaption>The issuer never receives note text. A stolen scoped JWT can be used outside FirstRecall, but only for the allowed model, before expiry, and within its micro-budget; the account-wide cap contains mass issuance.</figcaption>
+        </figure>
+
+        <section id="options">
+          <p class="eyebrow">Decision surface</p>
+          <h3>Hosting Options</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Option</th><th>What FirstRecall hosts</th><th>Abuse containment</th><th>Operating burden</th><th>Fit</th></tr>
+              </thead>
+              <tbody>
+                <tr class="recommended-row">
+                  <td>DeepInfra scoped JWT <span class="chip">Recommended</span></td>
+                  <td>A small claim page and token issuer; inference is direct.</td>
+                  <td>Per-token model, expiry, and spend limits plus an account limit.</td>
+                  <td>Low. No request proxy, GPU, queue, or prompt-serving backend.</td>
+                  <td>Best launch balance.</td>
+                </tr>
+                <tr>
+                  <td>OpenRouter micro-key</td>
+                  <td>A key issuer using OpenRouter's management API.</td>
+                  <td>Per-key budgets, workspace budgets, model guardrails, and prepaid credits.</td>
+                  <td>Low to moderate. Better fallback, but one more data-routing layer.</td>
+                  <td>Best fallback if direct DeepInfra delegation fails validation.</td>
+                </tr>
+                <tr>
+                  <td>Task-specific gateway</td>
+                  <td>Every inference request, quotas, prompt contracts, and provider credentials.</td>
+                  <td>Strongest: body caps, fixed prompt shapes, token caps, and per-operation quotas.</td>
+                  <td>Moderate to high. The gateway becomes a production data path.</td>
+                  <td>Upgrade path if micro-token abuse becomes material.</td>
+                </tr>
+                <tr>
+                  <td>Serverless self-hosted Qwen</td>
+                  <td>Model image, GPU worker, scaling, queue, API, limits, and monitoring.</td>
+                  <td>No inherent advantage; the public endpoint still needs all application controls.</td>
+                  <td>High. Cold starts, model lifecycle, GPU variance, and capacity tuning remain.</td>
+                  <td><span class="chip danger">Not for pre-release</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="cost-model">
+          <p class="eyebrow">Budget model</p>
+          <h3>What “many users under $10” can mean</h3>
+          <div class="metric-grid">
+            <article class="metric accent"><strong>$0.10 / M</strong><small>Qwen3.5-9B input tokens</small></article>
+            <article class="metric accent"><strong>$0.15 / M</strong><small>Qwen3.5-9B output tokens</small></article>
+            <article class="metric warn"><strong>$8</strong><small>recommended monthly inference hard cap</small></article>
+            <article class="metric"><strong>≈ 1,600+</strong><small>half-cent installation trials per $8</small></article>
+          </div>
+          <p>The current plugin limits note text injected into a prompt to 8,000 characters. A representative eight-section note is estimated at roughly 22,000 input tokens and 1,300 output tokens across section cards and the Note Brief. At current Qwen3.5-9B pricing, that is about $0.0024 before retries. A $0.005 lifetime token should therefore cover at least one representative note while keeping stolen-token value negligible.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Assumption</th><th>Working value</th><th>Why it matters</th></tr></thead>
+              <tbody>
+                <tr><td>Representative note</td><td>8 eligible sections; default context bound</td><td>Defines the minimum useful trial rather than an arbitrary request count.</td></tr>
+                <tr><td>Estimated base cost</td><td>About $0.0024</td><td>Leaves room inside a half-cent cap for variation or one repair retry.</td></tr>
+                <tr><td>Installation allowance</td><td>$0.005 lifetime; 7-day expiry</td><td>Supports one meaningful test and makes leaked credentials unattractive.</td></tr>
+                <tr><td>Global inference cap</td><td>$8 per calendar month; no auto top-up</td><td>Leaves margin below the user's strict $10 all-in ceiling.</td></tr>
+                <tr><td>Issuer hosting</td><td>Free tier</td><td>Cloudflare Workers currently includes 100,000 requests per day; other free serverless hosts are viable.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout">
+            <p><strong>Interpretation:</strong> the system can support many installations, not unlimited simultaneous entitlement. Once the monthly cap is reached, trial issuance and inference fail closed until reset; BYOK providers remain available.</p>
+          </div>
+        </section>
+
+        <section id="actors">
+          <h3>Actors</h3>
+          <div class="actors">
+            <article class="actor" id="a1"><b>A1. New FirstRecall user</b><p>Wants to see useful study material before learning provider setup.</p></article>
+            <article class="actor" id="a2"><b>A2. FirstRecall operator</b><p>Funds the shared trial, observes aggregate health, and must retain a hard loss ceiling.</p></article>
+            <article class="actor" id="a3"><b>A3. Automated abuser</b><p>Can inspect plugin code, replay network calls, rotate installations, and repurpose any transferable token.</p></article>
+          </div>
+        </section>
+
+        <section id="product-requirements">
+          <p class="eyebrow">Product Requirements</p>
+          <h3>Product Requirements</h3>
+
+          <div class="requirements-group">
+            <h3>Default experience and lifecycle</h3>
+            <ol class="requirements">
+              <li id="r1"><span class="rid">R1.</span><span>A fresh installation presents a distinct FirstRecall Trial provider as enabled and selected by default.</span></li>
+              <li id="r2"><span class="rid">R2.</span><span>Existing installations preserve their saved provider selection and credentials during upgrade.</span></li>
+              <li id="r3"><span class="rid">R3.</span><span>A new user can start the trial without supplying an API key or choosing a model.</span></li>
+              <li id="r4"><span class="rid">R4.</span><span>The first generation may require a one-time browser anti-bot claim, but not account creation.</span></li>
+              <li id="r5"><span class="rid">R5.</span><span>The trial communicates remaining availability in human terms and directs exhausted users to existing BYOK providers.</span></li>
+              <li id="r6"><span class="rid">R6.</span><span>Trial exhaustion never silently switches a user's note to another funded model or another user's credential.</span></li>
+            </ol>
+          </div>
+
+          <div class="requirements-group">
+            <h3>Cost and delegated access</h3>
+            <ol class="requirements">
+              <li id="r7"><span class="rid">R7.</span><span>The combined trial infrastructure hard-stops below $10 per calendar month, with an $8 default inference cap and no automatic top-up.</span></li>
+              <li id="r8"><span class="rid">R8.</span><span>Each installation receives only an expiring credential restricted to the selected trial model and a lifetime micro-budget.</span></li>
+              <li id="r9"><span class="rid">R9.</span><span>The plugin never contains, downloads, or persists the master provider credential.</span></li>
+              <li id="r10"><span class="rid">R10.</span><span>The provider account enforces a second global spending limit independent of FirstRecall's issuer state.</span></li>
+            </ol>
+          </div>
+
+          <div class="requirements-group">
+            <h3>Abuse resistance and privacy</h3>
+            <ol class="requirements">
+              <li id="r11"><span class="rid">R11.</span><span>Trial issuance validates a single-use browser challenge and rejects abnormal claim velocity by installation and network risk signals.</span></li>
+              <li id="r12"><span class="rid">R12.</span><span>The issuer records only the minimum pseudonymous data needed to prevent repeated claims and expires that data on a documented schedule.</span></li>
+              <li id="r13"><span class="rid">R13.</span><span>Note content travels directly from Obsidian to the inference provider and is never sent to the FirstRecall token issuer.</span></li>
+              <li id="r14"><span class="rid">R14.</span><span>Before first generation, FirstRecall discloses that the selected trial sends relevant note content to DeepInfra and links its current data-handling policy.</span></li>
+              <li id="r15"><span class="rid">R15.</span><span>The operator can stop new issuance immediately and existing trial credentials expire without a plugin release.</span></li>
+            </ol>
+          </div>
+
+          <div class="requirements-group">
+            <h3>Model quality and compatibility</h3>
+            <ol class="requirements">
+              <li id="r16"><span class="rid">R16.</span><span>The launch model passes the existing section-card and Note Brief JSON contracts on a representative note corpus before becoming the default.</span></li>
+              <li id="r17"><span class="rid">R17.</span><span>The trial disables model thinking and caps completion length so hidden reasoning cannot consume the allowance.</span></li>
+              <li id="r18"><span class="rid">R18.</span><span>Existing Anthropic, OpenAI, DeepInfra, OpenRouter, local, and CLI provider choices remain available without trial coupling.</span></li>
+            </ol>
+          </div>
+        </section>
+
+        <section id="abuse-model">
+          <p class="eyebrow">Threat model</p>
+          <h3>Abuse Model</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Attack</th><th>Expected defense</th><th>Residual risk</th></tr></thead>
+              <tbody>
+                <tr><td>Extract a secret from the plugin</td><td>No master secret ships; only a per-install scoped JWT is returned.</td><td>The scoped JWT is transferable until expiry, within its micro-budget.</td></tr>
+                <tr><td>Automate repeated trial claims</td><td>Turnstile, single-use verification, installation keys, IP-prefix velocity, and issuance ceilings.</td><td>Residential proxies and human CAPTCHA solving remain possible.</td></tr>
+                <tr><td>Use the token as a general Qwen API</td><td>One-model allowlist, short expiry, and roughly $0.005 total spend.</td><td>The attacker can choose arbitrary prompts until the tiny allowance ends.</td></tr>
+                <tr><td>Race many calls before quota updates</td><td>Provider cap plus global cap; validate concurrent enforcement before launch.</td><td>If provider accounting is delayed, the design must fall back to a gateway.</td></tr>
+                <tr><td>Drain the entire monthly pool</td><td>$8 provider hard limit, no auto top-up, alert thresholds, and a kill switch.</td><td>Legitimate users may lose the trial for the rest of the month; BYOK still works.</td></tr>
+                <tr><td>Submit giant prompts</td><td>The plugin retains its current context clamp and completion cap.</td><td>A modified client can bypass local caps, but not the scoped dollar cap.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout">
+            <p><strong>Security posture:</strong> an anonymous desktop trial cannot prove “one human, one trial.” The launch bar is economic containment: the work needed to obtain enough half-cent credentials should cost materially more than the inference they unlock, and a failure must never exceed the global cap.</p>
+          </div>
+        </section>
+
+        <section id="key-flows">
+          <h3>Key Flows</h3>
+          <article class="flow-card" id="f1">
+            <span class="flow-id">F1.</span>
+            <p><strong>Trigger:</strong> A fresh installation opens FirstRecall or requests its first generation.</p>
+            <p><strong>Flow:</strong> The trial is already selected. FirstRecall opens a browser claim, receives the scoped credential, stores it through Obsidian Secret Storage, and starts generation.</p>
+            <p><strong>Covers R1, R3, R4, R8, R9, R11.</strong></p>
+          </article>
+          <article class="flow-card" id="f2">
+            <span class="flow-id">F2.</span>
+            <p><strong>Trigger:</strong> The user generates study material while trial capacity remains.</p>
+            <p><strong>Flow:</strong> FirstRecall sends the bounded prompt directly to DeepInfra with thinking disabled, validates the JSON result, and uses the existing single repair path when needed.</p>
+            <p><strong>Covers R13, R16, R17.</strong></p>
+          </article>
+          <article class="flow-card" id="f3">
+            <span class="flow-id">F3.</span>
+            <p><strong>Trigger:</strong> The installation allowance, credential expiry, or monthly pool is exhausted.</p>
+            <p><strong>Flow:</strong> FirstRecall explains that the trial has ended and offers the existing provider picker; saved study material remains usable.</p>
+            <p><strong>Covers R5, R6, R7, R10, R18.</strong></p>
+          </article>
+          <article class="flow-card" id="f4">
+            <span class="flow-id">F4.</span>
+            <p><strong>Trigger:</strong> Abuse or cost signals exceed the operator's tolerance.</p>
+            <p><strong>Flow:</strong> The operator disables issuance or lowers the provider cap without releasing a new plugin; issued credentials age out.</p>
+            <p><strong>Covers R10, R15.</strong></p>
+          </article>
+        </section>
+
+        <section id="acceptance-examples">
+          <h3>Acceptance Examples</h3>
+          <article class="acceptance" id="ae1"><span class="ae-id">AE1.</span><p><strong>Covers R1-R4.</strong> Given a fresh installation with no settings, when the user asks for study material, the FirstRecall Trial is already selected and the only setup interruption is the one-time browser claim.</p></article>
+          <article class="acceptance" id="ae2"><span class="ae-id">AE2.</span><p><strong>Covers R2, R18.</strong> Given an upgrade with OpenAI selected, when the new plugin loads, OpenAI remains selected and no trial credential is requested.</p></article>
+          <article class="acceptance" id="ae3"><span class="ae-id">AE3.</span><p><strong>Covers R5-R7.</strong> Given an exhausted installation or global allowance, when generation is requested, no paid inference begins and the user sees how to choose a BYOK provider.</p></article>
+          <article class="acceptance" id="ae4"><span class="ae-id">AE4.</span><p><strong>Covers R8-R10.</strong> Given a copied trial JWT, when it is used after expiry, for another model, or beyond its spend cap, DeepInfra rejects it without exposing the master credential.</p></article>
+          <article class="acceptance" id="ae5"><span class="ae-id">AE5.</span><p><strong>Covers R11, R12.</strong> Given automated repeated claims from one installation or network range, when the configured velocity is exceeded, the issuer denies additional credentials without consuming inference budget.</p></article>
+          <article class="acceptance" id="ae6"><span class="ae-id">AE6.</span><p><strong>Covers R13, R14.</strong> Given a user has not yet accepted the trial disclosure, when they begin activation, note content is not transmitted until the disclosure is shown and accepted.</p></article>
+          <article class="acceptance" id="ae7"><span class="ae-id">AE7.</span><p><strong>Covers R16, R17.</strong> Given the launch evaluation corpus, when Qwen3.5-9B runs with thinking disabled, section-card and Note Brief outputs pass existing schemas at the agreed quality threshold and within the trial cost envelope.</p></article>
+        </section>
+
+        <section id="success-criteria">
+          <h3>Success Criteria</h3>
+          <ul>
+            <li>A new user can produce a Note Brief and section study cards without bringing an API key.</li>
+            <li>Measured paid trial infrastructure remains below $10 in every calendar month, including abuse events.</li>
+            <li>At least 95% of the launch evaluation corpus produces schema-valid output within the existing initial-plus-repair allowance.</li>
+            <li>No plugin package, settings file, renderer surface, or network response exposes a master inference credential.</li>
+            <li>Disabling the trial never disables or alters user-funded providers.</li>
+          </ul>
+        </section>
+
+        <section id="scope-boundaries">
+          <h3>Scope Boundaries</h3>
+          <div class="boundary-grid">
+            <article class="boundary in">
+              <span class="label">In scope</span>
+              <ul><li>Fresh-install default provider</li><li>Anonymous activation</li><li>Scoped credential issuance</li><li>Hard spend controls</li><li>Trial lifecycle and BYOK handoff</li></ul>
+            </article>
+            <article class="boundary deferred">
+              <span class="label">Deferred for later</span>
+              <ul><li>Email or GitHub identity</li><li>Per-user recurring allowances</li><li>Provider failover</li><li>Operator analytics beyond aggregate cost and abuse signals</li><li>Task-specific proxy enforcement</li></ul>
+            </article>
+            <article class="boundary out">
+              <span class="label">Outside this product's identity</span>
+              <ul><li>General-purpose free chat API</li><li>Guaranteed trial availability</li><li>Hosted GPU operations</li><li>Subscriptions or payments</li><li>Training on user notes</li></ul>
+            </article>
+          </div>
+        </section>
+
+        <section id="dependencies-assumptions">
+          <h3>Dependencies / Assumptions</h3>
+          <ul>
+            <li>DeepInfra continues to support scoped JWTs restricted by model, expiry, and dollar spend.</li>
+            <li>DeepInfra's account-level spending limit is configured independently from FirstRecall's issuer.</li>
+            <li>A free serverless tier can host the claim and issuance path within its request limits.</li>
+            <li>Obsidian Secret Storage remains the trusted location for the issued trial credential.</li>
+            <li>The user accepts that a strict global budget can make the trial temporarily unavailable during a popular release.</li>
+            <li>DeepInfra currently states that ordinary inference input and output are held in memory and not used for training, subject to its documented security-debugging exception.</li>
+          </ul>
+        </section>
+
+        <section id="outstanding-questions">
+          <h3>Outstanding Questions</h3>
+          <div class="card-grid">
+            <article class="card">
+              <span class="chip warn">Deferred to Planning</span>
+              <p><strong>What is the smallest scoped-JWT spend limit DeepInfra accepts, and how does enforcement behave under concurrent requests?</strong> Planning must run a bounded spike; failure routes the design to the task-specific gateway.</p>
+            </article>
+            <article class="card">
+              <span class="chip warn">Deferred to Planning</span>
+              <p><strong>What launch corpus and human rubric define “good enough” study material?</strong> Use the existing JSON contracts as the mechanical floor and compare Qwen3.5-9B against at least one larger Qwen candidate.</p>
+            </article>
+          </div>
+        </section>
+
+        <section id="sources">
+          <p class="eyebrow">Evidence</p>
+          <h3>Sources / Research</h3>
+          <ul class="source-list">
+            <li><a href="https://docs.deepinfra.com/account/authentication">DeepInfra scoped JWT authentication</a> — model, expiry, and spending restrictions.</li>
+            <li><a href="https://deepinfra.com/Qwen/Qwen3.5-9B">DeepInfra Qwen3.5-9B model card</a> — pricing, JSON support, and non-thinking configuration.</li>
+            <li><a href="https://deepinfra.com/pricing">DeepInfra pricing</a> — current Qwen alternatives.</li>
+            <li><a href="https://docs.deepinfra.com/account/data-privacy">DeepInfra data privacy</a> — inference retention, training, and logging posture.</li>
+            <li><a href="https://docs.deepinfra.com/api-reference/billing/set-config">DeepInfra spending-limit API</a> — account cap.</li>
+            <li><a href="https://openrouter.ai/docs/guides/overview/auth/management-api-keys">OpenRouter management API</a> — programmatic customer keys.</li>
+            <li><a href="https://openrouter.ai/docs/guides/features/workspaces/workspace-budgets">OpenRouter workspace budgets</a> — alternative global caps.</li>
+            <li><a href="https://openrouter.ai/docs/guides/features/guardrails/overview">OpenRouter guardrails</a> — model allowlists and key budgets.</li>
+            <li><a href="https://developers.cloudflare.com/turnstile/plans/">Cloudflare Turnstile plans</a> — free challenges.</li>
+            <li><a href="https://developers.cloudflare.com/turnstile/get-started/server-side-validation/">Turnstile server validation</a> — single-use, five-minute tokens.</li>
+            <li><a href="https://developers.cloudflare.com/workers/platform/pricing/">Cloudflare Workers pricing</a> — free issuer-hosting envelope.</li>
+            <li><a href="https://modal.com/pricing">Modal pricing</a> and <a href="https://www.runpod.io/product/serverless">Runpod Serverless pricing</a> — self-hosted GPU comparison.</li>
+            <li><a href="https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/src/settings.ts">src/settings.ts</a> — fresh-install provider default.</li>
+            <li><a href="https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/src/generator.ts">src/generator.ts</a> — context and concurrency bounds.</li>
+            <li><a href="https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/src/byok-provider-metadata.ts">src/byok-provider-metadata.ts</a> — existing provider inventory and setup semantics.</li>
+            <li><a href="https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/src/byok-firstrecall-adapter.ts">src/byok-firstrecall-adapter.ts</a> — JSON generation, repair retry, and credential resolution.</li>
+            <li><a href="https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/README.md">README.md</a> — current BYOK and privacy disclosure.</li>
+          </ul>
+        </section>
+      </section>
+    </main>
+
+    <footer class="composition-signal">Composed <time datetime="2026-08-23T15:49:34-07:00">2026-08-23T15:49:34-07:00</time> by <code>ce-brainstorm</code> from the confirmed FirstRecall trial-LLM hosting prompt, repository grounding, and linked provider documentation.</footer>
+  </article>
+</body>
+</html>
