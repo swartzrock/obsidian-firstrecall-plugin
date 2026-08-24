@@ -646,24 +646,33 @@ describe("settings defaults", () => {
 		).toBe("Learn more.");
 		const pathButtons = [
 			...tab.containerEl.querySelectorAll<HTMLButtonElement>(
-				".firstrecall-provider-path-button, .firstrecall-provider-browse-all"
+				".firstrecall-provider-path-button"
 			),
 		];
 		expect(pathButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
-			"Online service",
+			"LLM API Provider",
 			"Installed AI tool",
-			"Model server",
-			"Browse all providers",
+			"Self-Hosted LLM Provider",
 		]);
 		expect(settingText(tab.containerEl)).toContain(
-			"Connect with a provider API key."
+			"Use an API key from Anthropic, OpenAI, Gemini, or another provider."
 		);
 		expect(settingText(tab.containerEl)).toContain(
-			"Use Codex CLI or Claude CLI already installed and signed in."
+			"Use Codex or Claude Code if one is already installed and signed in on this device."
 		);
 		expect(settingText(tab.containerEl)).toContain(
-			"Connect to a running Ollama or LM Studio server."
+			"Connect to Ollama or LM Studio running on a model server you control."
 		);
+		expect(settingText(tab.containerEl)).not.toContain("Browse all providers");
+		for (const button of pathButtons) {
+			const descriptionId = button.getAttribute("aria-describedby");
+			const descriptionEl = descriptionId
+				? tab.containerEl.querySelector<HTMLElement>(`#${descriptionId}`)
+				: null;
+			expect(button.textContent).toBe(button.getAttribute("aria-label"));
+			expect(descriptionEl).not.toBeNull();
+			expect(button.contains(descriptionEl)).toBe(false);
+		}
 		expect(
 			pathButtons.every(
 				(button) =>
@@ -685,10 +694,9 @@ describe("settings defaults", () => {
 		openSettingsCard(tab, "AI model");
 		const definitions = byokProviderDefinitions();
 		const scenarios = [
-			{ label: "Online service", kind: "api-key", count: 11 },
+			{ label: "LLM API Provider", kind: "api-key", count: 11 },
 			{ label: "Installed AI tool", kind: "command", count: 2 },
-			{ label: "Model server", kind: "url", count: 2 },
-			{ label: "Browse all providers", kind: null, count: 15 },
+			{ label: "Self-Hosted LLM Provider", kind: "url", count: 2 },
 		] as const;
 
 		for (const scenario of scenarios) {
@@ -696,9 +704,9 @@ describe("settings defaults", () => {
 				`button[aria-label="${scenario.label}"]`
 			)!;
 			button.click();
-			const expected = scenario.kind
-				? definitions.filter((definition) => definition.credentialKind === scenario.kind)
-				: definitions;
+			const expected = definitions.filter(
+				(definition) => definition.credentialKind === scenario.kind
+			);
 			const radios = [
 				...tab.containerEl.querySelectorAll<HTMLElement>(
 					"#firstrecall-provider-results [role='radio']"
@@ -710,7 +718,7 @@ describe("settings defaults", () => {
 			expect(radios).toHaveLength(scenario.count);
 			expect(
 				[...tab.containerEl.querySelectorAll<HTMLButtonElement>(
-					".firstrecall-provider-path-button, .firstrecall-provider-browse-all"
+					".firstrecall-provider-path-button"
 				)].filter((candidate) => candidate.getAttribute("aria-expanded") === "true")
 			).toEqual([button]);
 		}
@@ -787,29 +795,32 @@ describe("settings defaults", () => {
 		expect(tab.containerEl.querySelector('[role="radio"]')).toBe(firstRadio);
 	});
 
-	it("preserves an explicit Browse all path after provider selection and resets it on hide", async () => {
+	it("preserves the selected path after provider selection and resets it on hide", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
 		tab.containerEl
-			.querySelector<HTMLButtonElement>('button[aria-label="Browse all providers"]')!
+			.querySelector<HTMLButtonElement>('button[aria-label="LLM API Provider"]')!
 			.click();
 		tab.containerEl
-			.querySelector<HTMLButtonElement>('[role="radio"][aria-label="Anthropic (Claude)"]')!
+			.querySelector<HTMLElement>(
+				'[role="radio"][aria-label="Anthropic (Claude)"] .firstrecall-provider-button-label'
+			)!
 			.click();
 
 		await vi.waitFor(() => expect(plugin.settings.byok.selectedProvider).toBe("anthropic"));
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
 		expect(
-			tab.containerEl.querySelector('button[aria-label="Browse all providers"]')
+			tab.containerEl.querySelector('button[aria-label="LLM API Provider"]')
 				?.getAttribute("aria-expanded")
 		).toBe("true");
-		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(15);
+		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(11);
 
 		tab.hide();
 		tab.display();
 		openSettingsCard(tab, "AI model");
 		expect(
-			tab.containerEl.querySelector('button[aria-label="Online service"]')
+			tab.containerEl.querySelector('button[aria-label="LLM API Provider"]')
 				?.getAttribute("aria-expanded")
 		).toBe("true");
 		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(11);
@@ -821,7 +832,7 @@ describe("settings defaults", () => {
 		tab.display();
 		openSettingsCard(tab, "AI model");
 		tab.containerEl
-			.querySelector<HTMLButtonElement>('button[aria-label="Online service"]')
+			.querySelector<HTMLButtonElement>('button[aria-label="LLM API Provider"]')
 			?.click();
 		tab.containerEl
 			.querySelector<HTMLButtonElement>('[role="radio"][aria-label="Anthropic (Claude)"]')
@@ -841,27 +852,37 @@ describe("settings defaults", () => {
 		const { tab } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
-		tab.containerEl
-			.querySelector<HTMLButtonElement>('button[aria-label="Browse all providers"]')
-			?.click();
+		const providerIds = new Set<string>();
+		for (const pathLabel of [
+			"LLM API Provider",
+			"Installed AI tool",
+			"Self-Hosted LLM Provider",
+		]) {
+			tab.containerEl
+				.querySelector<HTMLButtonElement>(`button[aria-label="${pathLabel}"]`)
+				?.click();
+			const icons = [
+				...tab.containerEl.querySelectorAll<HTMLElement>(
+					"#firstrecall-provider-results .firstrecall-provider-icon"
+				),
+			];
+			for (const iconEl of icons) {
+				// The provider id is exposed via data-provider so CSS can target one icon
+				// specifically (e.g. OpenRouter's light-mode contrast fix) without touching
+				// the shared renderer.
+				const providerId = iconEl.getAttribute("data-provider");
+				expect(providerId).toBeTruthy();
+				providerIds.add(providerId!);
 
-		const icons = [
-			...tab.containerEl.querySelectorAll<HTMLElement>(".firstrecall-provider-icon"),
-		];
-		expect(icons).toHaveLength(15);
-		for (const iconEl of icons) {
-			// The provider id is exposed via data-provider so CSS can target one icon
-			// specifically (e.g. OpenRouter's light-mode contrast fix) without touching
-			// the shared renderer.
-			expect(iconEl.getAttribute("data-provider")).toBeTruthy();
-
-			const svg = iconEl.querySelector("svg");
-			const paths = [...(svg?.querySelectorAll("path") ?? [])];
-			expect(paths.length).toBeGreaterThan(0);
-			for (const path of paths) {
-				expect(path.getAttribute("d")).toBeTruthy();
+				const svg = iconEl.querySelector("svg");
+				const paths = [...(svg?.querySelectorAll("path") ?? [])];
+				expect(paths.length).toBeGreaterThan(0);
+				for (const path of paths) {
+					expect(path.getAttribute("d")).toBeTruthy();
+				}
 			}
 		}
+		expect(providerIds.size).toBe(15);
 	});
 
 	it("gives duplicate gradient icons unique ids so two instances on the page don't collide", async () => {

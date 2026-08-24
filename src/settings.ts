@@ -251,7 +251,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private currentSubpage: FirstRecallSettingsSubpage = "home";
 	private readonly studyAreaUi = new Map<string, StudyAreaUiState>();
 	private providerIconRenderCount = 0;
-	private providerPickerPath: FirstRecallCredentialKind | "all" | null = null;
+	private providerPickerPath: FirstRecallCredentialKind | null = null;
 
 	constructor(app: App, plugin: FirstRecallPlugin) {
 		super(app, plugin);
@@ -582,7 +582,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		const resultsId = "firstrecall-provider-results";
 		const pathControls: Array<{
 			buttonEl: HTMLButtonElement;
-			path: FirstRecallCredentialKind | "all";
+			path: FirstRecallCredentialKind;
 		}> = [];
 		const pathDefinitions: Array<{
 			path: FirstRecallCredentialKind;
@@ -591,54 +591,49 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		}> = [
 			{
 				path: "api-key",
-				title: "Online service",
-				description: "Connect with a provider API key.",
+				title: "LLM API Provider",
+				description:
+					"Use an API key from Anthropic, OpenAI, Gemini, or another provider.",
 			},
 			{
 				path: "command",
 				title: "Installed AI tool",
-				description: "Use Codex CLI or Claude CLI already installed and signed in.",
+				description:
+					"Use Codex or Claude Code if one is already installed and signed in on this device.",
 			},
 			{
 				path: "url",
-				title: "Model server",
-				description: "Connect to a running Ollama or LM Studio server.",
+				title: "Self-Hosted LLM Provider",
+				description:
+					"Connect to Ollama or LM Studio running on a model server you control.",
 			},
 		];
 		const pathPickerEl = containerEl.createDiv({
 			cls: "firstrecall-provider-paths",
 		});
 		for (const definition of pathDefinitions) {
-			const buttonEl = pathPickerEl.createEl("button", {
+			const optionEl = pathPickerEl.createDiv({
+				cls: "firstrecall-provider-path-option",
+			});
+			const descriptionId = `firstrecall-provider-path-description-${definition.path}`;
+			const buttonEl = optionEl.createEl("button", {
 				cls: `firstrecall-provider-path-button${this.providerPickerPath === definition.path ? " is-selected" : ""}`,
+				text: definition.title,
 				attr: {
 					type: "button",
 					"aria-label": definition.title,
+					"aria-describedby": descriptionId,
 					"aria-expanded": String(this.providerPickerPath === definition.path),
 					"aria-controls": resultsId,
 				},
 			}) as HTMLButtonElement;
-			buttonEl.createSpan({
-				cls: "firstrecall-provider-path-title",
-				text: definition.title,
-			});
-			buttonEl.createSpan({
+			optionEl.createDiv({
 				cls: "firstrecall-provider-path-description",
 				text: definition.description,
+				attr: { id: descriptionId },
 			});
 			pathControls.push({ buttonEl, path: definition.path });
 		}
-		const browseAllEl = containerEl.createEl("button", {
-			cls: `firstrecall-provider-browse-all${this.providerPickerPath === "all" ? " is-selected" : ""}`,
-			text: "Browse all providers",
-			attr: {
-				type: "button",
-				"aria-label": "Browse all providers",
-				"aria-expanded": String(this.providerPickerPath === "all"),
-				"aria-controls": resultsId,
-			},
-		}) as HTMLButtonElement;
-		pathControls.push({ buttonEl: browseAllEl, path: "all" });
 
 		const resultsEl = containerEl.createDiv({
 			cls: "firstrecall-provider-results",
@@ -673,7 +668,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private renderProviderOptions(
 		containerEl: HTMLElement,
-		path: FirstRecallCredentialKind | "all"
+		path: FirstRecallCredentialKind
 	): void {
 		const pickerEl = containerEl.createDiv({
 			cls: "firstrecall-provider-picker",
@@ -684,7 +679,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		});
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
 		const definitions = byokProviderDefinitions().filter(
-			(definition) => path === "all" || definition.credentialKind === path
+			(definition) => definition.credentialKind === path
 		);
 		for (const definition of definitions) {
 			const isSelected = definition.id === selectedProvider;

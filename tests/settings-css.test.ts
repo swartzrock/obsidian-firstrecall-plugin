@@ -24,17 +24,17 @@ describe("settings CSS", () => {
 		const pathGridRule = ruleFor(".firstrecall-provider-paths");
 		const providerGridRules =
 			styles.match(/\.firstrecall-provider-picker\s*\{[^}]*\}/g) ?? [];
-		expect(pathGridRule).toContain("margin: 12px 0 8px");
+		expect(pathGridRule).toContain("margin: 12px 0 16px");
 		expect(
 			providerGridRules.some((rule) => rule.includes("margin: 8px 0 12px"))
 		).toBe(true);
 	});
 
-	it("styles provider paths as accessible equal-weight cards", () => {
+	it("styles compact path buttons with descriptions underneath", () => {
 		const pathButtonRule = ruleFor(".firstrecall-provider-path-button");
-		expect(pathButtonRule).toContain("min-height: 78px");
-		expect(pathButtonRule).toContain("flex-direction: column");
-		expect(pathButtonRule).toContain("align-items: flex-start");
+		expect(pathButtonRule).toContain("min-height: 44px");
+		expect(pathButtonRule).toContain("font-size: var(--font-ui-small)");
+		expect(pathButtonRule).toContain("font-weight: var(--font-semibold)");
 		const sharedCardRule = ruleFor(
 			".firstrecall-provider-path-button,\n.firstrecall-provider-button"
 		);
@@ -55,30 +55,14 @@ describe("settings CSS", () => {
 			".firstrecall-provider-path-button:focus-visible"
 		);
 
-		const titleRule = ruleFor(".firstrecall-provider-path-title");
-		expect(titleRule).toContain("font-size: var(--font-ui-small)");
-		expect(titleRule).toContain("font-weight: var(--font-semibold)");
-
 		const descriptionRule = ruleFor(
 			".firstrecall-provider-path-description"
 		);
 		expect(descriptionRule).toContain("font-size: var(--font-ui-smaller)");
 		expect(descriptionRule).toContain("color: var(--text-muted)");
 		expect(descriptionRule).toContain("white-space: normal");
-	});
-
-	it("keeps Browse all visually secondary to the guided paths", () => {
-		const browseRule = ruleFor(".firstrecall-provider-browse-all");
-		expect(browseRule).toContain("min-height: 44px");
-		expect(browseRule).toContain("background: transparent");
-		expect(browseRule).toContain("color: var(--text-muted)");
-		expect(styles).toContain(".firstrecall-provider-browse-all:hover");
-		expect(styles).toContain(".firstrecall-provider-browse-all:focus-visible");
-
-		const selectedRule = ruleFor(
-			".firstrecall-provider-browse-all.is-selected"
-		);
-		expect(selectedRule).toContain("color: var(--interactive-accent)");
+		expect(descriptionRule).toContain("margin:");
+		expect(styles).not.toContain(".firstrecall-provider-browse-all");
 	});
 
 	it("collapses provider paths from three columns to two and then one", () => {
