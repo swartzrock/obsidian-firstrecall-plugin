@@ -766,7 +766,7 @@ describe("settings defaults", () => {
 		expect(settingText(tab.containerEl)).toContain("Performance");
 	});
 
-	it("switches paths in place without losing provider setup input or focus", async () => {
+	it("hides mismatched setup without losing provider input or focus", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.byok.selectedProvider = "anthropic";
 		document.body.appendChild(tab.containerEl);
@@ -793,6 +793,7 @@ describe("settings defaults", () => {
 		expect(tab.containerEl.querySelector(".firstrecall-active-provider-panel")).toBe(
 			setupPanel
 		);
+		expect(setupPanel.hidden).toBe(true);
 		expect(tab.containerEl.querySelector(".firstrecall-api-key-input")).toBe(
 			apiKeyInput
 		);
@@ -814,6 +815,26 @@ describe("settings defaults", () => {
 		const firstRadio = tab.containerEl.querySelector('[role="radio"]');
 		installedButton.click();
 		expect(tab.containerEl.querySelector('[role="radio"]')).toBe(firstRadio);
+
+		const apiButton = tab.containerEl.querySelector<HTMLButtonElement>(
+			'button[aria-label="LLM API Provider"]'
+		)!;
+		apiButton.click();
+		expect(setupPanel.hidden).toBe(false);
+		expect(tab.containerEl.querySelector(".firstrecall-active-provider-panel")).toBe(
+			setupPanel
+		);
+		expect(tab.containerEl.querySelector(".firstrecall-api-key-input")).toBe(
+			apiKeyInput
+		);
+		expect(apiKeyInput.value).toBe("sk-ant-unsaved");
+		expect(
+			tab.containerEl.querySelector(
+				'[role="radio"][aria-label="Anthropic (Claude)"]'
+			)?.getAttribute("aria-checked")
+		).toBe("true");
+		expect(plugin.settings.byok.selectedProvider).toBe("anthropic");
+		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
 
 	it("preserves the selected path after provider selection and resets it on hide", async () => {

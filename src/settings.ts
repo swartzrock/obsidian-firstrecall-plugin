@@ -516,6 +516,10 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		if (!firstRecallSelectedProvider(this.plugin.settings)) return;
 
 		this.renderProviderSetupPanel(providerFlowEl);
+		this.syncProviderSetupPanelVisibility(
+			providerFlowEl,
+			this.providerPickerPath
+		);
 		this.renderAiModelPerformanceSection(containerEl);
 	}
 
@@ -571,6 +575,18 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		this.renderProviderCredentialSettings(fieldsEl);
 		this.renderProviderModelSettings(fieldsEl);
 		this.renderProviderSetupStatus(fieldsEl);
+	}
+
+	private syncProviderSetupPanelVisibility(
+		containerEl: HTMLElement,
+		path: FirstRecallCredentialKind | null
+	): void {
+		const panelEl = containerEl.querySelector<HTMLElement>(
+			".firstrecall-active-provider-panel"
+		);
+		const provider = firstRecallSelectedProvider(this.plugin.settings);
+		if (!panelEl || !provider) return;
+		panelEl.hidden = byokProviderDefinition(provider).credentialKind !== path;
 	}
 
 	private renderProviderPicker(containerEl: HTMLElement): void {
@@ -671,6 +687,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				}
 				resultsEl.empty();
 				this.renderProviderOptions(resultsEl, control.path);
+				this.syncProviderSetupPanelVisibility(containerEl, control.path);
 			});
 		}
 	}

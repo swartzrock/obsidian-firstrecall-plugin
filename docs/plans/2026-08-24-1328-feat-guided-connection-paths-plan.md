@@ -51,7 +51,7 @@ New AI users may recognize a product name but not know whether FirstRecall needs
 **Selection and setup continuity**
 
 - R5. When a provider is already selected, opening AI model settings initially reveals that provider's matching path and checked provider radio.
-- R6. Changing the visible path preserves the selected provider, setup panel and its existing provider-name heading, performance controls, focus on the activating path control, and unsaved setup input. The named setup panel remains visually separate from the browsed provider results so the active connection stays clear when its radio is filtered out.
+- R6. Changing the visible path preserves the selected provider, mounted setup panel and its existing provider-name heading, performance controls, focus on the activating path control, and unsaved setup input. When the selected provider belongs to another path, its mounted setup panel is hidden; returning to its matching path restores the same panel and input. This keeps the visible hierarchy consistent without discarding configuration.
 - R7. Selecting a visible provider retains the current save-and-rerender behavior and preserves the user's explicit path choice through that rerender.
 
 **Accessibility and responsive behavior**
@@ -70,7 +70,7 @@ New AI users may recognize a product name but not know whether FirstRecall needs
 - AE1. **Clean install.** Covers R1, R3, R4, R8, R9. Given no selected provider, when the user opens AI model settings, then three collapsed compact path buttons and their external descriptions are visible, no provider radio or setup panel is present, and settings remain unchanged.
 - AE2. **LLM API Provider path.** Covers R2, R4, R8, R9. Given the clean-install chooser, when the user activates LLM API Provider, then the shared results region contains the 11 API-key providers in metadata order and no provider is selected.
 - AE3. **Returning user.** Covers R5, R11. Given a selected provider from any credential contract, when the user opens AI model settings, then its matching path is expanded, its provider radio is checked, and its existing setup and performance UI are visible.
-- AE4. **Browse without disrupting setup.** Covers R6, R8. Given a selected cloud provider with unsaved text in its API-key input, when the user activates another path, then focus remains on that control and the selected provider panel and unsaved text remain intact.
+- AE4. **Browse without disrupting setup.** Covers R6, R8. Given a selected cloud provider with unsaved text in its API-key input, when the user activates another path, then focus remains on that control, the mismatched setup panel is hidden but remains mounted with its unsaved text intact, and returning to the cloud path restores that same panel and input.
 - AE5. **Select from a path.** Covers R3, R7, R11. Given a path is expanded, when the user selects one of its providers, then FirstRecall saves that provider once, rerenders the matching setup panel, and keeps that path expanded.
 
 ### Scope Boundaries
@@ -97,7 +97,7 @@ New AI users may recognize a product name but not know whether FirstRecall needs
 
 ### Assumptions
 
-- A selected provider's setup and performance UI remain visible when the user browses a different path, even if no visible provider radio is checked.
+- A selected provider's setup panel remains mounted but hidden when the user browses a different path; global performance controls remain visible.
 - Activating the already-expanded path is idempotent and does not collapse the provider catalog.
 - Path descriptions remain outside the clickable buttons and are associated with them through accessible description references.
 - Existing Tab and Enter/Space provider-card behavior remains in scope; new arrow-key handling is deferred.
@@ -151,7 +151,7 @@ flowchart TB
 
 - **Unsaved input loss:** A full settings rerender during path activation would discard the pending API-key value. KTD3 prevents this and AE4 verifies it.
 - **Misleading path copy:** Installed AI tools may use online services, and editable model-server URLs are not guaranteed to be on-device. Path descriptions must state prerequisites without assuming users understand “CLI” or promising privacy or offline behavior.
-- **State ambiguity:** The visible filter can differ from the active provider. Tests must distinguish path expanded state from provider checked state.
+- **State ambiguity:** The visible filter can differ from the active provider. Hide a setup panel that does not belong to the visible path, while retaining it in the DOM so unsaved input survives; tests must distinguish path expanded state from provider checked state.
 - **Icon duplication:** Rendering hidden copies of every provider group would duplicate SVG catalogs and gradient IDs. KTD3 requires one rendered results region.
 - **Dependency:** Provider grouping relies on the exhaustive `credentialKind` union in `src/byok-provider-metadata.ts` and the stable order of `byokProviderDefinitions()`.
 
