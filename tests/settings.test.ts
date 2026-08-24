@@ -20,6 +20,7 @@ import { buildNoteBriefInstructionsTemplate } from "../src/study-material-instru
 import { QUESTION_TYPES } from "../src/cue-generation";
 import {
 	byokProviderDefinition,
+	byokProviderDefinitions,
 	type FirstRecallProviderDefinition,
 } from "../src/byok-provider-metadata";
 
@@ -624,7 +625,7 @@ describe("settings defaults", () => {
 	});
 
 	it("prompts a clean install to select an AI provider", async () => {
-		const { tab } = await setupSettingsTab();
+		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 
 		expect(settingText(tab.containerEl)).toContain(
@@ -636,25 +637,182 @@ describe("settings defaults", () => {
 			"Select an AI provider to generate study material"
 		);
 		expect(settingText(tab.containerEl)).toContain(
-			"Your API keys are stored securely in Obsidian's secret storage."
+			"When a provider requires an API key, FirstRecall stores it securely in Obsidian's Secret Storage."
 		);
 		expect(
 			tab.containerEl.querySelector<HTMLAnchorElement>(
 				'a[href="https://docs.obsidian.md/plugins/guides/secret-storage"]'
 			)?.textContent
 		).toBe("Learn more.");
-		const providerOptions = [
-			...tab.containerEl.querySelectorAll('[role="radio"]'),
+		const pathButtons = [
+			...tab.containerEl.querySelectorAll<HTMLButtonElement>(
+				".firstrecall-provider-path-button, .firstrecall-provider-browse-all"
+			),
 		];
-		expect(providerOptions).toHaveLength(15);
+		expect(pathButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
+			"Online service",
+			"Installed AI tool",
+			"Model server",
+			"Browse all providers",
+		]);
+		expect(settingText(tab.containerEl)).toContain(
+			"Connect with a provider API key."
+		);
+		expect(settingText(tab.containerEl)).toContain(
+			"Use Codex CLI or Claude CLI already installed and signed in."
+		);
+		expect(settingText(tab.containerEl)).toContain(
+			"Connect to a running Ollama or LM Studio server."
+		);
 		expect(
-			providerOptions.every(
-				(option) => option.getAttribute("aria-checked") === "false"
+			pathButtons.every(
+				(button) =>
+					button.getAttribute("aria-expanded") === "false" &&
+					button.getAttribute("aria-controls") === "firstrecall-provider-results"
 			)
 		).toBe(true);
+		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(0);
 		expect(
 			tab.containerEl.querySelector(".firstrecall-active-provider-panel")
 		).toBeNull();
+		expect(plugin.settings.byok.selectedProvider).toBeNull();
+		expect(plugin.saveSettings).not.toHaveBeenCalled();
+	});
+
+	it("reveals each connection path in stable provider order without selecting", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		tab.display();
+		openSettingsCard(tab, "AI model");
+		const definitions = byokProviderDefinitions();
+		const scenarios = [
+			{ label: "Online service", kind: "api-key", count: 11 },
+			{ label: "Installed AI tool", kind: "command", count: 2 },
+			{ label: "Model server", kind: "url", count: 2 },
+			{ label: "Browse all providers", kind: null, count: 15 },
+		] as const;
+
+		for (const scenario of scenarios) {
+			const button = tab.containerEl.querySelector<HTMLButtonElement>(
+				`button[aria-label="${scenario.label}"]`
+			)!;
+			button.click();
+			const expected = scenario.kind
+				? definitions.filter((definition) => definition.credentialKind === scenario.kind)
+				: definitions;
+			const radios = [
+				...tab.containerEl.querySelectorAll<HTMLElement>(
+					"#firstrecall-provider-results [role='radio']"
+				),
+			];
+			expect(radios.map((radio) => radio.getAttribute("aria-label"))).toEqual(
+				expected.map((definition) => definition.label)
+			);
+			expect(radios).toHaveLength(scenario.count);
+			expect(
+				[...tab.containerEl.querySelectorAll<HTMLButtonElement>(
+					".firstrecall-provider-path-button, .firstrecall-provider-browse-all"
+				)].filter((candidate) => candidate.getAttribute("aria-expanded") === "true")
+			).toEqual([button]);
+		}
+
+		expect(plugin.settings.byok.selectedProvider).toBeNull();
+		expect(plugin.saveSettings).not.toHaveBeenCalled();
+	});
+
+	it("derives the connection path for an existing provider", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.byok.selectedProvider = "codex-cli";
+		tab.display();
+		openSettingsCard(tab, "AI model");
+
+		expect(
+			tab.containerEl.querySelector('button[aria-label="Installed AI tool"]')
+				?.getAttribute("aria-expanded")
+		).toBe("true");
+		expect(
+			tab.containerEl.querySelector('[role="radio"][aria-label="Codex CLI"]')
+				?.getAttribute("aria-checked")
+		).toBe("true");
+		expect(settingText(tab.containerEl)).toContain("Codex CLI command");
+		expect(settingText(tab.containerEl)).toContain("Performance");
+	});
+
+	it("switches paths in place without losing provider setup input or focus", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.byok.selectedProvider = "anthropic";
+		document.body.appendChild(tab.containerEl);
+		tab.display();
+		openSettingsCard(tab, "AI model");
+		const setupPanel = tab.containerEl.querySelector<HTMLElement>(
+			".firstrecall-active-provider-panel"
+		)!;
+		const performanceControl = tab.containerEl.querySelector<HTMLInputElement>(
+			'[data-setting-name="Parallel requests"] input'
+		)!;
+		const apiKeyInput = setupPanel.querySelector<HTMLInputElement>(
+			".firstrecall-api-key-input"
+		) as HTMLInputElement & { __onChange?: (value: string) => void };
+		apiKeyInput.value = "sk-ant-unsaved";
+		apiKeyInput.__onChange?.(apiKeyInput.value);
+		const installedButton = tab.containerEl.querySelector<HTMLButtonElement>(
+			'button[aria-label="Installed AI tool"]'
+		)!;
+		installedButton.focus();
+		installedButton.click();
+
+		expect(document.activeElement).toBe(installedButton);
+		expect(tab.containerEl.querySelector(".firstrecall-active-provider-panel")).toBe(
+			setupPanel
+		);
+		expect(tab.containerEl.querySelector(".firstrecall-api-key-input")).toBe(
+			apiKeyInput
+		);
+		expect(
+			setupPanel.querySelector(".firstrecall-active-provider-title")?.textContent
+		).toBe("Anthropic (Claude)");
+		expect(apiKeyInput.value).toBe("sk-ant-unsaved");
+		expect(
+			tab.containerEl.querySelector('[data-setting-name="Parallel requests"] input')
+		).toBe(performanceControl);
+		expect(
+			[...tab.containerEl.querySelectorAll('[role="radio"]')].every(
+				(radio) => radio.getAttribute("aria-checked") === "false"
+			)
+		).toBe(true);
+		expect(plugin.settings.byok.selectedProvider).toBe("anthropic");
+		expect(plugin.saveSettings).not.toHaveBeenCalled();
+
+		const firstRadio = tab.containerEl.querySelector('[role="radio"]');
+		installedButton.click();
+		expect(tab.containerEl.querySelector('[role="radio"]')).toBe(firstRadio);
+	});
+
+	it("preserves an explicit Browse all path after provider selection and resets it on hide", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		tab.display();
+		openSettingsCard(tab, "AI model");
+		tab.containerEl
+			.querySelector<HTMLButtonElement>('button[aria-label="Browse all providers"]')!
+			.click();
+		tab.containerEl
+			.querySelector<HTMLButtonElement>('[role="radio"][aria-label="Anthropic (Claude)"]')!
+			.click();
+
+		await vi.waitFor(() => expect(plugin.settings.byok.selectedProvider).toBe("anthropic"));
+		expect(
+			tab.containerEl.querySelector('button[aria-label="Browse all providers"]')
+				?.getAttribute("aria-expanded")
+		).toBe("true");
+		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(15);
+
+		tab.hide();
+		tab.display();
+		openSettingsCard(tab, "AI model");
+		expect(
+			tab.containerEl.querySelector('button[aria-label="Online service"]')
+				?.getAttribute("aria-expanded")
+		).toBe("true");
+		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(11);
 	});
 
 	it("links a cloud credential field to the selected provider's API key guide", async () => {
@@ -662,6 +820,9 @@ describe("settings defaults", () => {
 		const definition = byokProviderDefinition("anthropic");
 		tab.display();
 		openSettingsCard(tab, "AI model");
+		tab.containerEl
+			.querySelector<HTMLButtonElement>('button[aria-label="Online service"]')
+			?.click();
 		tab.containerEl
 			.querySelector<HTMLButtonElement>('[role="radio"][aria-label="Anthropic (Claude)"]')
 			?.click();
@@ -680,6 +841,9 @@ describe("settings defaults", () => {
 		const { tab } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
+		tab.containerEl
+			.querySelector<HTMLButtonElement>('button[aria-label="Browse all providers"]')
+			?.click();
 
 		const icons = [
 			...tab.containerEl.querySelectorAll<HTMLElement>(".firstrecall-provider-icon"),

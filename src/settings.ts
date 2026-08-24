@@ -40,6 +40,7 @@ import {
 import {
 	byokProviderDefinition,
 	byokProviderDefinitions,
+	type FirstRecallCredentialKind,
 	type FirstRecallProviderDefinition,
 } from "./byok-provider-metadata";
 import {
@@ -250,6 +251,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private currentSubpage: FirstRecallSettingsSubpage = "home";
 	private readonly studyAreaUi = new Map<string, StudyAreaUiState>();
 	private providerIconRenderCount = 0;
+	private providerPickerPath: FirstRecallCredentialKind | "all" | null = null;
 
 	constructor(app: App, plugin: FirstRecallPlugin) {
 		super(app, plugin);
@@ -301,6 +303,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		super.hide();
 		this.currentSubpage = "home";
 		this.studyAreaUi.clear();
+		this.providerPickerPath = null;
 		this.plugin.promptForCueSettingsRegeneration();
 	}
 
@@ -499,7 +502,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			cls: "firstrecall-settings-flow-desc",
 		});
 		secretStorageEl.createSpan({
-			text: "Your API keys are stored securely in Obsidian's secret storage. ",
+			text: "When a provider requires an API key, FirstRecall stores it securely in Obsidian's Secret Storage. ",
 		});
 		secretStorageEl.createEl("a", {
 			text: "Learn more.",
@@ -571,6 +574,98 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	}
 
 	private renderProviderPicker(containerEl: HTMLElement): void {
+		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
+		if (this.providerPickerPath === null && selectedProvider) {
+			this.providerPickerPath = byokProviderDefinition(selectedProvider).credentialKind;
+		}
+
+		const resultsId = "firstrecall-provider-results";
+		const pathControls: Array<{
+			buttonEl: HTMLButtonElement;
+			path: FirstRecallCredentialKind | "all";
+		}> = [];
+		const pathDefinitions: Array<{
+			path: FirstRecallCredentialKind;
+			title: string;
+			description: string;
+		}> = [
+			{
+				path: "api-key",
+				title: "Online service",
+				description: "Connect with a provider API key.",
+			},
+			{
+				path: "command",
+				title: "Installed AI tool",
+				description: "Use Codex CLI or Claude CLI already installed and signed in.",
+			},
+			{
+				path: "url",
+				title: "Model server",
+				description: "Connect to a running Ollama or LM Studio server.",
+			},
+		];
+		const pathPickerEl = containerEl.createDiv({
+			cls: "firstrecall-provider-paths",
+		});
+		for (const definition of pathDefinitions) {
+			const buttonEl = pathPickerEl.createEl("button", {
+				cls: `firstrecall-provider-path-button${this.providerPickerPath === definition.path ? " is-selected" : ""}`,
+				attr: {
+					type: "button",
+					"aria-label": definition.title,
+					"aria-expanded": String(this.providerPickerPath === definition.path),
+					"aria-controls": resultsId,
+				},
+			}) as HTMLButtonElement;
+			buttonEl.createSpan({
+				cls: "firstrecall-provider-path-title",
+				text: definition.title,
+			});
+			buttonEl.createSpan({
+				cls: "firstrecall-provider-path-description",
+				text: definition.description,
+			});
+			pathControls.push({ buttonEl, path: definition.path });
+		}
+		const browseAllEl = containerEl.createEl("button", {
+			cls: `firstrecall-provider-browse-all${this.providerPickerPath === "all" ? " is-selected" : ""}`,
+			text: "Browse all providers",
+			attr: {
+				type: "button",
+				"aria-label": "Browse all providers",
+				"aria-expanded": String(this.providerPickerPath === "all"),
+				"aria-controls": resultsId,
+			},
+		}) as HTMLButtonElement;
+		pathControls.push({ buttonEl: browseAllEl, path: "all" });
+
+		const resultsEl = containerEl.createDiv({
+			cls: "firstrecall-provider-results",
+			attr: { id: resultsId },
+		});
+		if (this.providerPickerPath !== null) {
+			this.renderProviderOptions(resultsEl, this.providerPickerPath);
+		}
+		for (const control of pathControls) {
+			this.plugin.registerDomEvent(control.buttonEl, "click", () => {
+				if (this.providerPickerPath === control.path) return;
+				this.providerPickerPath = control.path;
+				for (const current of pathControls) {
+					const isSelected = current.path === control.path;
+					current.buttonEl.classList.toggle("is-selected", isSelected);
+					current.buttonEl.setAttribute("aria-expanded", String(isSelected));
+				}
+				resultsEl.empty();
+				this.renderProviderOptions(resultsEl, control.path);
+			});
+		}
+	}
+
+	private renderProviderOptions(
+		containerEl: HTMLElement,
+		path: FirstRecallCredentialKind | "all"
+	): void {
 		const pickerEl = containerEl.createDiv({
 			cls: "firstrecall-provider-picker",
 			attr: {
@@ -579,7 +674,10 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			},
 		});
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		for (const definition of byokProviderDefinitions()) {
+		const definitions = byokProviderDefinitions().filter(
+			(definition) => path === "all" || definition.credentialKind === path
+		);
+		for (const definition of definitions) {
 			const isSelected = definition.id === selectedProvider;
 			const buttonEl = pickerEl.createEl("button", {
 				cls: `firstrecall-provider-button${isSelected ? " is-selected" : ""}`,
