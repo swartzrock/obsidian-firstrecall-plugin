@@ -15,6 +15,7 @@ export interface FirstRecallCredentialFieldDefinition {
 	label: string;
 	placeholder: string;
 	description: string;
+	helpUrl?: string;
 	secret: boolean;
 	missingMessage: string;
 	resetModelsMessage?: string;
@@ -55,6 +56,8 @@ interface CloudDefinitionOptions {
 
 const HOST_CREDENTIAL_DESCRIPTION =
 	"Saved in Obsidian's secure storage and provided to the AI service at runtime.";
+const CLOUD_API_KEY_GUIDE_URL =
+	"https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/docs/cloud-api-keys.md";
 
 function providerIcon(
 	provider: ByokProviderId,
@@ -79,6 +82,7 @@ function cloudDefinition(
 			label: opts.credentialLabel,
 			placeholder: opts.credentialPlaceholder,
 			description: HOST_CREDENTIAL_DESCRIPTION,
+			helpUrl: `${CLOUD_API_KEY_GUIDE_URL}#${opts.id}`,
 			secret: true,
 			missingMessage: `Enter your ${opts.credentialLabel} first.`,
 			resetModelsMessage: `Enter your ${opts.credentialLabel} first to fetch models.`,

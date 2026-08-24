@@ -1931,6 +1931,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					);
 				});
 			});
+		if (opts.field.helpUrl) {
+			setting.descEl.append(" ");
+			setting.descEl.createEl("a", {
+				text: "How to find your API key",
+				attr: { href: opts.field.helpUrl },
+			});
+		}
 		setting.addButton((button) =>
 			button
 				.setButtonText(displayState.saveButtonLabel)

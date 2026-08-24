@@ -121,6 +121,15 @@ export class Setting {
 		return this;
 	}
 
+	addText(callback: (text: MockText) => void): this {
+		const input = this.settingEl.ownerDocument.createElement("input");
+		input.type = "text";
+		input.dataset.control = "text";
+		this.controlEl.appendChild(input);
+		callback(new MockText(input));
+		return this;
+	}
+
 	addButton(callback: (button: MockButton) => void): this {
 		const input = this.settingEl.ownerDocument.createElement("button");
 		input.type = "button";
@@ -222,11 +231,44 @@ class MockTextArea {
 	}
 }
 
+class MockText {
+	constructor(readonly inputEl: HTMLInputElement) {}
+
+	setPlaceholder(value: string): this {
+		this.inputEl.placeholder = value;
+		return this;
+	}
+
+	setValue(value: string): this {
+		this.inputEl.value = value;
+		return this;
+	}
+
+	setDisabled(value: boolean): this {
+		this.inputEl.disabled = value;
+		return this;
+	}
+
+	onChange(callback: (value: string) => void | Promise<void>): this {
+		(
+			this.inputEl as HTMLInputElement & {
+				__onChange?: typeof callback;
+			}
+		).__onChange = callback;
+		return this;
+	}
+}
+
 class MockButton {
 	constructor(private button: HTMLButtonElement) {}
 
 	setButtonText(value: string): this {
 		this.button.textContent = value;
+		return this;
+	}
+
+	setDisabled(value: boolean): this {
+		this.button.disabled = value;
 		return this;
 	}
 

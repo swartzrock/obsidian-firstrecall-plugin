@@ -110,6 +110,15 @@ function createObsidianMock() {
 			return this;
 		}
 
+		addText(callback: (text: MockText) => void): this {
+			const input = this.settingEl.ownerDocument.createElement("input");
+			input.type = "text";
+			input.dataset.control = "text";
+			this.controlEl.appendChild(input);
+			callback(new MockText(input));
+			return this;
+		}
+
 		addButton(callback: (button: MockButton) => void): this {
 			const input = this.settingEl.ownerDocument.createElement("button");
 			input.type = "button";
@@ -211,6 +220,34 @@ function createObsidianMock() {
 		}
 	}
 
+	class MockText {
+		constructor(readonly inputEl: HTMLInputElement) {}
+
+		setPlaceholder(value: string): this {
+			this.inputEl.placeholder = value;
+			return this;
+		}
+
+		setValue(value: string): this {
+			this.inputEl.value = value;
+			return this;
+		}
+
+		setDisabled(value: boolean): this {
+			this.inputEl.disabled = value;
+			return this;
+		}
+
+		onChange(callback: (value: string) => void | Promise<void>): this {
+			(
+				this.inputEl as HTMLInputElement & {
+					__onChange?: typeof callback;
+				}
+			).__onChange = callback;
+			return this;
+		}
+	}
+
 	class MockModal {
 		readonly contentEl: HTMLElement;
 
@@ -235,6 +272,11 @@ function createObsidianMock() {
 
 		setButtonText(value: string): this {
 			this.button.textContent = value;
+			return this;
+		}
+
+		setDisabled(value: boolean): this {
+			this.button.disabled = value;
 			return this;
 		}
 
@@ -290,6 +332,10 @@ type MockPlugin = {
 	noteCueSettingsChanged: ReturnType<typeof vi.fn>;
 	promptForCueSettingsRegeneration: ReturnType<typeof vi.fn>;
 	isProviderConfigured: ReturnType<typeof vi.fn>;
+	secureCredentialStorageStatus: ReturnType<typeof vi.fn>;
+	isProviderCredentialSaved: ReturnType<typeof vi.fn>;
+	saveCloudProviderCredential: ReturnType<typeof vi.fn>;
+	clearCloudProviderCredential: ReturnType<typeof vi.fn>;
 	createStudyArea: ReturnType<typeof vi.fn>;
 	updateStudyArea: ReturnType<typeof vi.fn>;
 	removeStudyArea: ReturnType<typeof vi.fn>;
@@ -341,7 +387,13 @@ async function setupSettingsTab(opts: {
 	globalThis.window = dom.window as unknown as typeof globalThis.window;
 	globalThis.document = dom.window.document;
 	globalThis.HTMLElement = dom.window.HTMLElement;
-	Object.assign(globalThis, { activeDocument: dom.window.document });
+	Object.assign(globalThis, {
+		activeDocument: dom.window.document,
+		createEl: (tag: string, options: DomCreateOptions = {}) => {
+			const wrapper = dom.window.document.createElement("div");
+			return appendElement(wrapper, tag, options);
+		},
+	});
 
 	const proto = dom.window.HTMLElement.prototype as HTMLElement & {
 		empty?: () => void;
@@ -385,6 +437,10 @@ async function setupSettingsTab(opts: {
 		noteCueSettingsChanged: vi.fn(),
 		promptForCueSettingsRegeneration: vi.fn(),
 		isProviderConfigured: vi.fn(() => opts.providerConfigured ?? false),
+		secureCredentialStorageStatus: vi.fn(() => ({ ok: true })),
+		isProviderCredentialSaved: vi.fn(() => false),
+		saveCloudProviderCredential: vi.fn(async () => ({ ok: true })),
+		clearCloudProviderCredential: vi.fn(async () => ({ ok: true })),
 		createStudyArea: vi.fn(async () => null),
 		updateStudyArea: vi.fn(async (
 			area: FirstRecallSettings["studyAreas"][number]
@@ -599,6 +655,25 @@ describe("settings defaults", () => {
 		expect(
 			tab.containerEl.querySelector(".firstrecall-active-provider-panel")
 		).toBeNull();
+	});
+
+	it("links a cloud credential field to the selected provider's API key guide", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		const definition = byokProviderDefinition("anthropic");
+		tab.display();
+		openSettingsCard(tab, "AI model");
+		tab.containerEl
+			.querySelector<HTMLButtonElement>('[role="radio"][aria-label="Anthropic (Claude)"]')
+			?.click();
+
+		await vi.waitFor(() =>
+			expect(plugin.settings.byok.selectedProvider).toBe("anthropic")
+		);
+		const link = tab.containerEl.querySelector<HTMLAnchorElement>(
+			".firstrecall-api-key-setting .setting-item-description a"
+		);
+		expect(link?.textContent).toBe("How to find your API key");
+		expect(link?.href).toBe(definition.credentialField.helpUrl);
 	});
 
 	it("renders every provider icon with real paint", async () => {
