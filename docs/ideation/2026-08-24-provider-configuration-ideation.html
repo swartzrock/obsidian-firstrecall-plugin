@@ -1,0 +1,637 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ideation: Easier AI provider configuration</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --page: #f5f7fb;
+      --surface: #ffffff;
+      --surface-soft: #eef4ff;
+      --surface-warm: #fff5e9;
+      --surface-green: #ecf8f2;
+      --text: #182033;
+      --muted: #5c667a;
+      --border: #d7deea;
+      --accent: #1664d9;
+      --accent-text: #0d4cae;
+      --warm-text: #914b0f;
+      --green-text: #1c6b49;
+      --shadow: 0 12px 30px rgba(35, 51, 84, 0.08);
+      --radius: 18px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --page: #101521;
+        --surface: #171e2c;
+        --surface-soft: #182a46;
+        --surface-warm: #33261b;
+        --surface-green: #172e26;
+        --text: #edf2fb;
+        --muted: #aab6ca;
+        --border: #354157;
+        --accent: #7eb0ff;
+        --accent-text: #b7d2ff;
+        --warm-text: #ffc483;
+        --green-text: #8ad6b4;
+        --shadow: 0 12px 30px rgba(0, 0, 0, 0.26);
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    a { color: var(--accent); text-underline-offset: 0.18em; }
+    a:hover { text-decoration-thickness: 2px; }
+    strong { color: inherit; }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.9em;
+    }
+
+    .page {
+      width: min(94vw, 960px);
+      margin: 0 auto;
+      padding: 56px 0 72px;
+    }
+
+    .hero {
+      padding: clamp(28px, 5vw, 52px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent-text);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1, h2, h3 { line-height: 1.18; letter-spacing: -0.025em; }
+    h1 { margin: 0; font-size: clamp(2.05rem, 6vw, 3.65rem); max-width: 17ch; }
+    h2 { margin: 0 0 18px; font-size: clamp(1.55rem, 3.5vw, 2.2rem); }
+    h3 { margin: 0; font-size: clamp(1.2rem, 2.5vw, 1.55rem); }
+    p { max-width: 72ch; }
+
+    .lede {
+      margin: 20px 0 0;
+      max-width: 68ch;
+      color: var(--muted);
+      font-size: 1.08rem;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 26px 0 0;
+    }
+
+    .meta div, .metric {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 7px;
+      padding: 7px 11px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--page);
+    }
+
+    .meta dt, .metric span:first-child {
+      color: var(--muted);
+      font-size: 0.73rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .meta dd { margin: 0; font-weight: 700; }
+
+    .pov {
+      margin-top: 22px;
+      padding: 18px 20px;
+      background: var(--surface-soft);
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+      border-radius: 14px;
+      color: var(--accent-text);
+    }
+
+    .pov p { margin: 0; }
+
+    .toc, .jump-list {
+      margin-top: 22px;
+      padding: 18px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+    }
+
+    .toc strong, .jump-list strong { display: block; margin-bottom: 8px; }
+    .toc ul, .jump-list ol { margin: 0; padding-left: 1.25rem; columns: 2; }
+    .toc li, .jump-list li { break-inside: avoid; margin: 4px 0; }
+
+    section { margin-top: 58px; scroll-margin-top: 24px; }
+
+    .context-grid, .axis-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .context-card, .axis-card {
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+    }
+
+    .context-card h3, .axis-card h3 { margin-bottom: 8px; }
+    .context-card p, .axis-card p { margin: 0; color: var(--muted); }
+
+    .metric-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 20px 0;
+    }
+
+    .metric { background: var(--surface); }
+    .metric span:last-child { font-weight: 800; }
+
+    .idea {
+      margin-top: 22px;
+      padding: clamp(22px, 4vw, 34px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      scroll-margin-top: 24px;
+    }
+
+    .idea-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .rank {
+      flex: 0 0 auto;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: var(--surface-soft);
+      color: var(--accent-text);
+      font-size: 0.78rem;
+      font-weight: 850;
+      letter-spacing: 0.06em;
+    }
+
+    .idea > p { margin: 0 0 18px; }
+
+    .idea-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .idea-meta div {
+      padding: 12px 14px;
+      background: var(--page);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .idea-meta dt {
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .idea-meta dd { margin: 3px 0 0; font-weight: 750; }
+
+    .field {
+      margin-top: 14px;
+      padding: 16px 18px;
+      border-radius: 13px;
+      background: var(--page);
+      border: 1px solid var(--border);
+    }
+
+    .field h4 {
+      margin: 0 0 5px;
+      color: var(--muted);
+      font-size: 0.74rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .field p { margin: 0; }
+    .field.external { background: var(--surface-green); color: var(--green-text); }
+    .field.caution { background: var(--surface-warm); color: var(--warm-text); }
+
+    figure {
+      margin: 22px 0 4px;
+      padding: 16px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--page);
+    }
+
+    figure svg { display: block; min-width: 760px; width: 100%; height: auto; }
+    figcaption { margin-top: 10px; color: var(--muted); font-size: 0.86rem; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    th, td { padding: 13px 15px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+    th { background: var(--page); font-size: 0.76rem; letter-spacing: 0.06em; text-transform: uppercase; }
+    tr:last-child td { border-bottom: 0; }
+
+    .references {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .references li {
+      padding: 15px 17px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 13px;
+    }
+
+    .composition-signal {
+      margin-top: 58px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    @media (max-width: 700px) {
+      .page { width: min(92vw, 960px); padding-top: 22px; }
+      .context-grid, .axis-grid, .references { grid-template-columns: 1fr; }
+      .idea-meta { grid-template-columns: 1fr; }
+      .toc ul, .jump-list ol { columns: 1; }
+      .idea-head { flex-direction: column-reverse; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <p class="eyebrow">Ideation</p>
+      <h1>Easier AI provider configuration</h1>
+      <p class="lede">A grounded exploration of how FirstRecall can replace a dizzying 15-brand wall with choices new AI users can understand—without hiding providers or implying a preferred vendor.</p>
+
+      <dl class="meta" aria-label="Document metadata">
+        <div><dt>Date</dt><dd><time datetime="2026-08-24">2026-08-24</time></dd></div>
+        <div><dt>Topic</dt><dd>provider-configuration</dd></div>
+        <div><dt>Mode</dt><dd>repo-grounded</dd></div>
+      </dl>
+
+      <aside class="pov">
+        <p><strong>Point of view:</strong> split the providers, but do not lead with the infrastructure labels “Cloud / CLI / Local.” Lead with three equal-weight connection paths—<strong>Use an API key</strong>, <strong>Use an installed AI tool</strong>, and <strong>Use a model server</strong>—then explain the technical category.</p>
+      </aside>
+    </header>
+
+    <nav class="toc" aria-label="Document sections">
+      <strong>In this document</strong>
+      <ul>
+        <li><a href="#codebase-context">Codebase Context</a></li>
+        <li><a href="#topic-axes">Topic Axes</a></li>
+        <li><a href="#ranked-ideas">Ranked Ideas</a></li>
+        <li><a href="#rejection-summary">Rejection Summary</a></li>
+        <li><a href="#references">Sources &amp; References</a></li>
+      </ul>
+    </nav>
+
+    <section id="codebase-context">
+      <p class="eyebrow">Grounding Context</p>
+      <h2>Codebase Context</h2>
+      <div class="metric-strip" aria-label="Provider inventory">
+        <div class="metric"><span>Total providers</span><span>15</span></div>
+        <div class="metric"><span>API-key providers</span><span>11</span></div>
+        <div class="metric"><span>Local servers</span><span>2</span></div>
+        <div class="metric"><span>Installed tools</span><span>2</span></div>
+      </div>
+      <div class="context-grid">
+        <article class="context-card">
+          <h3>What users see now</h3>
+          <p>One accessible 15-option radio grid gives every brand the same visual weight. A tile shows icon, name, and selection state—but no prerequisite, billing distinction, model requirement, or connection type.</p>
+        </article>
+        <article class="context-card">
+          <h3>What the code already knows</h3>
+          <p>Central provider metadata encodes three credential contracts: API key, URL, and command. It also knows model requirements, listing behavior, labels, descriptions, and provider help links.</p>
+        </article>
+        <article class="context-card">
+          <h3>Where setup becomes difficult</h3>
+          <p>Users choose a brand before seeing whether it needs separate API access and billing, a running local server, or an installed and authenticated desktop tool.</p>
+        </article>
+        <article class="context-card">
+          <h3>Where leverage exists</h3>
+          <p>The picker and selected-provider setup panel are centralized, and settings persist per provider. The information architecture can change without changing runtime provider behavior.</p>
+        </article>
+      </div>
+      <div class="field external">
+        <h4>External evidence</h4>
+        <p>VS Code separates everyday model choice from model-provider management. Open WebUI distinguishes cloud providers from local servers before connection details. Choice-architecture research favors concise classification and sequencing when alternatives differ across several attributes, provided users can still reach every option.</p>
+      </div>
+    </section>
+
+    <section id="topic-axes">
+      <p class="eyebrow">What the concepts must cover</p>
+      <h2>Topic Axes</h2>
+      <div class="axis-grid">
+        <article class="axis-card"><h3>Catalog organization</h3><p>Help users scan and compare provider choices without losing the complete catalog.</p></article>
+        <article class="axis-card"><h3>Setup comprehension</h3><p>Explain prerequisites, model behavior, API billing, and connection mechanics before commitment.</p></article>
+        <article class="axis-card"><h3>First-run guidance</h3><p>Help a novice reach a viable provider without assuming AI infrastructure vocabulary.</p></article>
+        <article class="axis-card"><h3>Returning-user efficiency</h3><p>Make configured providers and everyday switching faster after onboarding.</p></article>
+      </div>
+    </section>
+
+    <section id="ranked-ideas">
+      <p class="eyebrow">Six survivors</p>
+      <h2>Ranked Ideas</h2>
+      <nav class="jump-list" aria-label="Ranked idea jump list">
+        <strong>Jump to an idea</strong>
+        <ol>
+          <li><a href="#i1">I1. Guided connection paths</a></li>
+          <li><a href="#i2">I2. Provider “what you’ll need” labels</a></li>
+          <li><a href="#i3">I3. Your connections / Add a connection</a></li>
+          <li><a href="#i4">I4. Pair before activating</a></li>
+          <li><a href="#i5">I5. Provider-aware setup checklist</a></li>
+          <li><a href="#i6">I6. Check this computer</a></li>
+        </ol>
+      </nav>
+
+      <article class="idea" id="i1">
+        <div class="idea-head">
+          <h3>I1. Guided connection paths</h3>
+          <span class="rank">Rank 1 · Top pick</span>
+        </div>
+        <p><strong>Description:</strong> Replace the first 15-way brand decision with three equal-weight paths: <strong>Online service — use an API key</strong>; <strong>Installed AI tool — use Codex or Claude already installed</strong>; and <strong>Model server — use Ollama or LM Studio</strong>. Each path reveals every matching provider in stable order. A persistent <strong>Browse all providers</strong> escape prevents the paths from becoming hidden defaults. On a clean install, the prompt can be phrased as “What do you already have?”</p>
+        <dl class="idea-meta">
+          <div><dt>Axis</dt><dd>Catalog organization + first-run guidance</dd></div>
+          <div><dt>Confidence</dt><dd>93%</dd></div>
+          <div><dt>Complexity</dt><dd>Medium</dd></div>
+        </dl>
+        <div class="field">
+          <h4>Basis</h4>
+          <p><strong>direct:</strong> <code>src/byok-provider-metadata.ts</code> already defines 11 API-key, two command, and two URL providers; <code>README.md</code> already explains Cloud APIs, Desktop CLIs, and Local servers. <strong>external:</strong> Open WebUI similarly separates hosted APIs and local servers before connection details.</p>
+        </div>
+        <div class="field">
+          <h4>Rationale</h4>
+          <p>The user’s grouping instinct is right, but “CLI” is a technical implementation label and a vertical Cloud-first list can still feel like a recommendation. Equal-weight, plain-language paths ask a question novices can answer from what they possess.</p>
+        </div>
+        <div class="field caution">
+          <h4>Downsides</h4>
+          <p>Adds one navigation decision before a provider. The path labels must clarify that installed CLI tools may still use online services, while custom model-server URLs are not guaranteed to be on-device.</p>
+        </div>
+
+        <figure>
+          <svg viewBox="0 0 820 280" role="img" aria-labelledby="i1-diagram-title i1-diagram-desc">
+            <title id="i1-diagram-title">From fifteen equivalent brands to three connection paths</title>
+            <desc id="i1-diagram-desc">The current brand wall becomes three equal connection paths, each leading to its matching provider list with all providers still available.</desc>
+            <rect x="20" y="58" width="190" height="164" rx="18" fill="var(--surface)" stroke="var(--border)" stroke-width="2"/>
+            <text x="115" y="88" text-anchor="middle" fill="var(--text)" font-size="16" font-weight="750">15 equal brand tiles</text>
+            <g fill="var(--surface-soft)" stroke="var(--border)">
+              <rect x="48" y="108" width="34" height="28" rx="7"/><rect x="92" y="108" width="34" height="28" rx="7"/><rect x="136" y="108" width="34" height="28" rx="7"/>
+              <rect x="48" y="146" width="34" height="28" rx="7"/><rect x="92" y="146" width="34" height="28" rx="7"/><rect x="136" y="146" width="34" height="28" rx="7"/>
+              <rect x="48" y="184" width="34" height="18" rx="7"/><rect x="92" y="184" width="34" height="18" rx="7"/><rect x="136" y="184" width="34" height="18" rx="7"/>
+            </g>
+            <line x1="225" y1="140" x2="265" y2="140" stroke="var(--accent)" stroke-width="3"/>
+            <polygon points="265,140 254,133 254,147" fill="var(--accent)"/>
+            <g>
+              <rect x="285" y="26" width="250" height="64" rx="15" fill="var(--surface-soft)" stroke="var(--border)"/>
+              <text x="410" y="53" text-anchor="middle" fill="var(--text)" font-size="16" font-weight="750">Use an API key</text>
+              <text x="410" y="73" text-anchor="middle" fill="var(--accent-text)" font-size="13">Online service · 11 providers</text>
+              <rect x="285" y="108" width="250" height="64" rx="15" fill="var(--surface-warm)" stroke="var(--border)"/>
+              <text x="410" y="135" text-anchor="middle" fill="var(--text)" font-size="16" font-weight="750">Use an installed AI tool</text>
+              <text x="410" y="155" text-anchor="middle" fill="var(--warm-text)" font-size="13">Codex or Claude · 2 providers</text>
+              <rect x="285" y="190" width="250" height="64" rx="15" fill="var(--surface-green)" stroke="var(--border)"/>
+              <text x="410" y="217" text-anchor="middle" fill="var(--text)" font-size="16" font-weight="750">Use a model server</text>
+              <text x="410" y="237" text-anchor="middle" fill="var(--green-text)" font-size="13">Ollama or LM Studio · 2 providers</text>
+            </g>
+            <line x1="550" y1="140" x2="590" y2="140" stroke="var(--accent)" stroke-width="3"/>
+            <polygon points="590,140 579,133 579,147" fill="var(--accent)"/>
+            <rect x="610" y="70" width="190" height="140" rx="18" fill="var(--surface)" stroke="var(--border)" stroke-width="2"/>
+            <text x="705" y="111" text-anchor="middle" fill="var(--text)" font-size="16" font-weight="750">Matching providers</text>
+            <text x="705" y="139" text-anchor="middle" fill="var(--muted)" font-size="13">Stable order</text>
+            <text x="705" y="162" text-anchor="middle" fill="var(--muted)" font-size="13">Clear prerequisites</text>
+            <text x="705" y="185" text-anchor="middle" fill="var(--accent-text)" font-size="13" font-weight="700">Browse all remains visible</text>
+          </svg>
+          <figcaption>Conceptual direction: classify by a choice the user can answer, then reveal the brands. This is not a detailed UI specification.</figcaption>
+        </figure>
+      </article>
+
+      <article class="idea" id="i2">
+        <div class="idea-head">
+          <h3>I2. Provider “what you’ll need” labels</h3>
+          <span class="rank">Rank 2</span>
+        </div>
+        <p><strong>Description:</strong> Add a standardized compact contract to every provider before selection: what credential or software is needed, whether model selection is required, and whether cloud API access can involve separate billing from consumer subscriptions. The same facts should carry into the selected setup panel so preview and setup do not drift.</p>
+        <dl class="idea-meta">
+          <div><dt>Axis</dt><dd>Setup comprehension</dd></div>
+          <div><dt>Confidence</dt><dd>84%</dd></div>
+          <div><dt>Complexity</dt><dd>Low</dd></div>
+        </dl>
+        <div class="field">
+          <h4>Basis</h4>
+          <p><strong>direct:</strong> Provider metadata already contains credential kind, credential description, help URL, model behavior, and listing support. <code>docs/cloud-api-keys.md</code> documents that API access is separate from consumer subscriptions and may require billing or credits.</p>
+        </div>
+        <div class="field">
+          <h4>Rationale</h4>
+          <p>The easiest catalog to scan is one where unfamiliar brands are still operationally legible. Repeated fields work like a nutrition label: users compare the same facts in the same order.</p>
+        </div>
+        <div class="field caution">
+          <h4>Downsides</h4>
+          <p>More copy can make tiles noisier. Provider-level privacy claims are not uniformly supportable: an editable “local” URL might point elsewhere, and installed CLIs may call online services. Keep those claims precise and category-level.</p>
+        </div>
+      </article>
+
+      <article class="idea" id="i3">
+        <div class="idea-head">
+          <h3>I3. Your connections / Add a connection</h3>
+          <span class="rank">Rank 3</span>
+        </div>
+        <p><strong>Description:</strong> Treat first use and repeat use as different jobs. A clean installation opens to the guided paths. After one or more providers are configured, the page leads with <strong>Your connections</strong>: provider, saved model or default, and verified, stale, or untested status. The complete catalog stays directly available under <strong>Add a connection</strong>. Everyday <strong>Use now</strong> switching is distinct from managing credentials and tests.</p>
+        <dl class="idea-meta">
+          <div><dt>Axis</dt><dd>Returning-user efficiency</dd></div>
+          <div><dt>Confidence</dt><dd>91%</dd></div>
+          <div><dt>Complexity</dt><dd>High</dd></div>
+        </dl>
+        <div class="field">
+          <h4>Basis</h4>
+          <p><strong>direct:</strong> FirstRecall already persists credentials, models, fetched options, and verification state separately per provider. <strong>external:</strong> VS Code separates everyday model selection from the Language Models management surface.</p>
+        </div>
+        <div class="field">
+          <h4>Rationale</h4>
+          <p>No fixed Cloud / CLI / Local order serves both a clean install and a mature setup. Lifecycle state is a stronger repeat-use signal than provider category: known connections should lead only after the user creates them.</p>
+        </div>
+        <div class="field caution">
+          <h4>Downsides</h4>
+          <p>This is a larger information-architecture shift than adding group headings. “Configured,” “verified,” and “active” must remain visually and semantically distinct.</p>
+        </div>
+
+        <figure>
+          <svg viewBox="0 0 820 250" role="img" aria-labelledby="i3-diagram-title i3-diagram-desc">
+            <title id="i3-diagram-title">Different front doors for clean and returning states</title>
+            <desc id="i3-diagram-desc">A clean install begins with guided connection paths, while a returning setup begins with the user's configured connections and keeps the complete catalog below.</desc>
+            <rect x="30" y="30" width="350" height="190" rx="20" fill="var(--surface)" stroke="var(--border)" stroke-width="2"/>
+            <text x="205" y="65" text-anchor="middle" fill="var(--text)" font-size="18" font-weight="800">Clean install</text>
+            <rect x="65" y="87" width="280" height="48" rx="12" fill="var(--surface-soft)" stroke="var(--border)"/>
+            <text x="205" y="116" text-anchor="middle" fill="var(--accent-text)" font-size="15" font-weight="700">How do you want to connect?</text>
+            <rect x="65" y="151" width="280" height="42" rx="12" fill="var(--page)" stroke="var(--border)"/>
+            <text x="205" y="177" text-anchor="middle" fill="var(--muted)" font-size="14">Browse all providers</text>
+            <rect x="440" y="30" width="350" height="190" rx="20" fill="var(--surface)" stroke="var(--border)" stroke-width="2"/>
+            <text x="615" y="65" text-anchor="middle" fill="var(--text)" font-size="18" font-weight="800">Returning setup</text>
+            <rect x="475" y="87" width="280" height="48" rx="12" fill="var(--surface-green)" stroke="var(--border)"/>
+            <text x="615" y="116" text-anchor="middle" fill="var(--green-text)" font-size="15" font-weight="700">Your connections · status · Use now</text>
+            <rect x="475" y="151" width="280" height="42" rx="12" fill="var(--page)" stroke="var(--border)"/>
+            <text x="615" y="177" text-anchor="middle" fill="var(--muted)" font-size="14">Add a connection · full catalog</text>
+          </svg>
+          <figcaption>Conceptual direction: the same settings page changes emphasis as the user establishes connections. The provider catalog never disappears.</figcaption>
+        </figure>
+      </article>
+
+      <article class="idea" id="i4">
+        <div class="idea-head">
+          <h3>I4. Pair before activating</h3>
+          <span class="rank">Rank 4</span>
+        </div>
+        <p><strong>Description:</strong> Opening a provider begins inspection and configuration; it does not immediately replace the active provider. A separate <strong>Use this provider</strong> action activates the connection after setup, analogous to pairing a device before selecting it as the active output.</p>
+        <dl class="idea-meta">
+          <div><dt>Axis</dt><dd>First-run guidance + returning-user efficiency</dd></div>
+          <div><dt>Confidence</dt><dd>90%</dd></div>
+          <div><dt>Complexity</dt><dd>Medium</dd></div>
+        </dl>
+        <div class="field">
+          <h4>Basis</h4>
+          <p><strong>direct:</strong> Clicking a provider currently writes <code>selectedProvider</code> immediately, and that same value drives generation. The repository already keeps per-provider records, so editing an inactive provider has a credible state foundation.</p>
+        </div>
+        <div class="field">
+          <h4>Rationale</h4>
+          <p>Browsing should not carry a hidden operational commitment. This lets novices compare setup paths and lets experienced users prepare a backup without displacing a known-good provider.</p>
+        </div>
+        <div class="field caution">
+          <h4>Downsides</h4>
+          <p>Introduces another state and action. The interface must make active, configured, incomplete, and merely inspected states unmistakable.</p>
+        </div>
+      </article>
+
+      <article class="idea" id="i5">
+        <div class="idea-head">
+          <h3>I5. Provider-aware setup checklist</h3>
+          <span class="rank">Rank 5</span>
+        </div>
+        <p><strong>Description:</strong> Present the selected setup as visible status-bearing steps: connect with a key, URL, or command; choose a model when required; then test. Focus the next incomplete action, mark CLI model override as optional, and move directly into model selection after a successful connection instead of making users rediscover a fetch control.</p>
+        <dl class="idea-meta">
+          <div><dt>Axis</dt><dd>Setup comprehension</dd></div>
+          <div><dt>Confidence</dt><dd>92%</dd></div>
+          <div><dt>Complexity</dt><dd>Medium</dd></div>
+        </dl>
+        <div class="field">
+          <h4>Basis</h4>
+          <p><strong>direct:</strong> The current panel already renders credentials, model, then setup status and computes missing, saved, selected, verified, stale, and untested states. The cloud test flow already fetches models when none is selected.</p>
+        </div>
+        <div class="field">
+          <h4>Rationale</h4>
+          <p>The controls already have an order; exposing it turns hidden dependencies into one coherent route to “ready to generate.”</p>
+        </div>
+        <div class="field caution">
+          <h4>Downsides</h4>
+          <p>A universal-looking checklist can misrepresent provider differences. Local servers require models, while CLI model overrides are optional; the steps must render from each provider contract.</p>
+        </div>
+      </article>
+
+      <article class="idea" id="i6">
+        <div class="idea-head">
+          <h3>I6. Check this computer</h3>
+          <span class="rank">Rank 6</span>
+        </div>
+        <p><strong>Description:</strong> Offer an explicit availability check for Ollama, LM Studio, Codex CLI, and Claude CLI using the existing default endpoints and command names. Report factual signals such as “Ollama endpoint reachable” or “Codex command found,” never silently select a provider, and retain manual custom URL or command setup.</p>
+        <dl class="idea-meta">
+          <div><dt>Axis</dt><dd>First-run guidance</dd></div>
+          <div><dt>Confidence</dt><dd>86%</dd></div>
+          <div><dt>Complexity</dt><dd>Medium</dd></div>
+        </dl>
+        <div class="field">
+          <h4>Basis</h4>
+          <p><strong>direct:</strong> FirstRecall already has default localhost endpoints and command names, and the installed runtime can check endpoint reachability and executable presence without launching the CLIs.</p>
+        </div>
+        <div class="field">
+          <h4>Rationale</h4>
+          <p>Users who already installed a supported tool should be able to begin from what demonstrably exists on their computer instead of understanding URLs and commands first.</p>
+        </div>
+        <div class="field caution">
+          <h4>Downsides</h4>
+          <p>Detection is not authentication or complete readiness. The copy must avoid overstating “command found” as “ready,” and custom paths remain a separate case.</p>
+        </div>
+      </article>
+    </section>
+
+    <section id="rejection-summary">
+      <p class="eyebrow">Ideas considered and cut</p>
+      <h2>Rejection Summary</h2>
+      <table>
+        <thead><tr><th scope="col">#</th><th scope="col">Idea</th><th scope="col">Reason rejected</th></tr></thead>
+        <tbody>
+          <tr><td>C1</td><td>Faceted all-provider directory</td><td>Factual filters are feasible, but with 15 providers they add controls while explaining prerequisites less directly than three connection paths.</td></tr>
+          <tr><td>C2</td><td>Declarative provider presentation schema</td><td>This is a useful implementation seam, not a user-facing product direction for the ideation meeting.</td></tr>
+          <tr><td>C3</td><td>Strict sequential chooser</td><td>It duplicates the first-run router while adding navigation and hiding the concise cross-category overview.</td></tr>
+          <tr><td>C4</td><td>Scale-first searchable catalog</td><td>The much-larger-catalog premise is not grounded in the repository and would add search, pins, and filters before the current problem warrants them.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="references">
+      <p class="eyebrow">Evidence index</p>
+      <h2>Sources &amp; References</h2>
+      <ul class="references">
+        <li><a href="https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/src/byok-provider-metadata.ts"><code>src/byok-provider-metadata.ts</code></a> — provider contracts and presentation metadata.</li>
+        <li><a href="https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/src/settings.ts"><code>src/settings.ts</code></a> — current picker, persistence, setup controls, and connection checks.</li>
+        <li><a href="https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/src/byok-setup-status.ts"><code>src/byok-setup-status.ts</code></a> — provider-specific missing, verified, and stale state.</li>
+        <li><a href="https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/docs/cloud-api-keys.md"><code>docs/cloud-api-keys.md</code></a> — API access, billing, safety, and provider-specific key guidance.</li>
+        <li><a href="https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/README.md"><code>README.md</code></a> — Cloud API, local server, and desktop CLI concepts.</li>
+        <li><a href="https://code.visualstudio.com/docs/agent-customization/language-models">VS Code: AI language models</a> — everyday model choice and provider management.</li>
+        <li><a href="https://docs.openwebui.com/getting-started/quick-start/connect-a-provider/">Open WebUI: Connect a Provider</a> — cloud-provider and local-server connection classes.</li>
+        <li><a href="https://docs.github.com/en/copilot/concepts/models/bring-your-own-key">GitHub Copilot: Bring your own key</a> — focused provider connection and BYOK framing.</li>
+      </ul>
+    </section>
+
+    <footer class="composition-signal">Composed <time datetime="2026-08-24T20:06:56Z">2026-08-24T20:06:56Z</time> by ce-ideate from the user’s provider-configuration prompt and the current FirstRecall repository.</footer>
+  </main>
+</body>
+</html>
