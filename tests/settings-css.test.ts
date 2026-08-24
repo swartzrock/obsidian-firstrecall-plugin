@@ -12,18 +12,22 @@ function ruleFor(selector: string): string {
 
 describe("settings CSS", () => {
 	it("keeps guided provider paths distinct from the provider grid", () => {
-		const pathGridRule = ruleFor(".firstrecall-provider-paths");
-		expect(pathGridRule).toContain("display: grid");
-		expect(pathGridRule).toContain(
+		const sharedGridRule = ruleFor(
+			".firstrecall-provider-paths,\n.firstrecall-provider-picker"
+		);
+		expect(sharedGridRule).toContain("display: grid");
+		expect(sharedGridRule).toContain(
 			"grid-template-columns: repeat(3, minmax(0, 1fr))"
 		);
-		expect(pathGridRule).toContain("gap: 8px");
+		expect(sharedGridRule).toContain("gap: 8px");
 
-		const providerGridRule = ruleFor(".firstrecall-provider-picker");
-		expect(providerGridRule).toContain(
-			"grid-template-columns: repeat(3, minmax(0, 1fr))"
-		);
-		expect(pathGridRule).not.toContain(".firstrecall-provider-picker");
+		const pathGridRule = ruleFor(".firstrecall-provider-paths");
+		const providerGridRules =
+			styles.match(/\.firstrecall-provider-picker\s*\{[^}]*\}/g) ?? [];
+		expect(pathGridRule).toContain("margin: 12px 0 8px");
+		expect(
+			providerGridRules.some((rule) => rule.includes("margin: 8px 0 12px"))
+		).toBe(true);
 	});
 
 	it("styles provider paths as accessible equal-weight cards", () => {
@@ -31,14 +35,17 @@ describe("settings CSS", () => {
 		expect(pathButtonRule).toContain("min-height: 78px");
 		expect(pathButtonRule).toContain("flex-direction: column");
 		expect(pathButtonRule).toContain("align-items: flex-start");
-		expect(pathButtonRule).toContain(
+		const sharedCardRule = ruleFor(
+			".firstrecall-provider-path-button,\n.firstrecall-provider-button"
+		);
+		expect(sharedCardRule).toContain(
 			"border: 1px solid var(--background-modifier-border)"
 		);
-		expect(pathButtonRule).toContain("background: var(--background-primary)");
-		expect(pathButtonRule).toContain("color: var(--text-normal)");
+		expect(sharedCardRule).toContain("background: var(--background-primary)");
+		expect(sharedCardRule).toContain("color: var(--text-normal)");
 
 		const selectedRule = ruleFor(
-			".firstrecall-provider-path-button.is-selected"
+			".firstrecall-provider-path-button.is-selected,\n.firstrecall-provider-button.is-selected"
 		);
 		expect(selectedRule).toContain("border-color: var(--interactive-accent)");
 		expect(selectedRule).toContain(
@@ -80,11 +87,15 @@ describe("settings CSS", () => {
 		const mediumStyles = styles.slice(mediumMediaIndex, narrowMediaIndex);
 		const narrowStyles = styles.slice(narrowMediaIndex);
 
-		expect(mediumStyles).toContain(".firstrecall-provider-paths {");
+		expect(mediumStyles).toContain(
+			".firstrecall-provider-paths,\n\t.firstrecall-provider-picker {"
+		);
 		expect(mediumStyles).toContain(
 			"grid-template-columns: repeat(2, minmax(0, 1fr))"
 		);
-		expect(narrowStyles).toContain(".firstrecall-provider-paths {");
+		expect(narrowStyles).toContain(
+			".firstrecall-provider-paths,\n\t.firstrecall-provider-picker {"
+		);
 		expect(narrowStyles).toContain("grid-template-columns: 1fr");
 	});
 

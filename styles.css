@@ -260,10 +260,14 @@
 	margin-bottom: 2px;
 }
 
-.firstrecall-provider-paths {
+.firstrecall-provider-paths,
+.firstrecall-provider-picker {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 8px;
+}
+
+.firstrecall-provider-paths {
 	margin: 12px 0 8px;
 }
 
@@ -274,10 +278,14 @@
 	justify-content: center;
 	gap: 4px;
 	width: 100%;
-	min-width: 0;
 	min-height: 78px;
 	height: 100%;
 	padding: 12px;
+}
+
+.firstrecall-provider-path-button,
+.firstrecall-provider-button {
+	min-width: 0;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 14px;
 	background: var(--background-primary);
@@ -288,12 +296,15 @@
 }
 
 .firstrecall-provider-path-button:hover,
-.firstrecall-provider-path-button:focus-visible {
+.firstrecall-provider-path-button:focus-visible,
+.firstrecall-provider-button:hover,
+.firstrecall-provider-button:focus-visible {
 	border-color: var(--interactive-accent);
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 18%, transparent);
 }
 
-.firstrecall-provider-path-button.is-selected {
+.firstrecall-provider-path-button.is-selected,
+.firstrecall-provider-button.is-selected {
 	border-color: var(--interactive-accent);
 	box-shadow: 0 0 0 2px var(--interactive-accent);
 }
@@ -343,9 +354,6 @@
 }
 
 .firstrecall-provider-picker {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 8px;
 	margin: 8px 0 12px;
 }
 
@@ -354,27 +362,8 @@
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	min-width: 0;
 	min-height: 58px;
 	padding: 10px 34px 10px 12px;
-	border: 1px solid var(--background-modifier-border);
-	border-radius: 14px;
-	background: var(--background-primary);
-	color: var(--text-normal);
-	box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
-	cursor: pointer;
-	text-align: left;
-}
-
-.firstrecall-provider-button:hover,
-.firstrecall-provider-button:focus-visible {
-	border-color: var(--interactive-accent);
-	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 18%, transparent);
-}
-
-.firstrecall-provider-button.is-selected {
-	border-color: var(--interactive-accent);
-	box-shadow: 0 0 0 2px var(--interactive-accent);
 }
 
 .firstrecall-provider-icon {
@@ -1153,10 +1142,7 @@
 		padding-inline: 12px;
 	}
 
-	.firstrecall-provider-paths {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-	}
-
+	.firstrecall-provider-paths,
 	.firstrecall-provider-picker {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -1206,10 +1192,7 @@
 }
 
 @media (max-width: 420px) {
-	.firstrecall-provider-paths {
-		grid-template-columns: 1fr;
-	}
-
+	.firstrecall-provider-paths,
 	.firstrecall-provider-picker {
 		grid-template-columns: 1fr;
 	}

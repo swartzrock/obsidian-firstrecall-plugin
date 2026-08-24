@@ -644,6 +644,15 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			cls: "firstrecall-provider-results",
 			attr: { id: resultsId },
 		});
+		this.plugin.registerDomEvent(resultsEl, "click", (event) => {
+			const buttonEl = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
+				".firstrecall-provider-button"
+			);
+			const definition = byokProviderDefinitions().find(
+				(candidate) => candidate.id === buttonEl?.dataset.provider
+			);
+			if (definition) void this.selectProvider(definition.id);
+		});
 		if (this.providerPickerPath !== null) {
 			this.renderProviderOptions(resultsEl, this.providerPickerPath);
 		}
@@ -686,6 +695,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					role: "radio",
 					"aria-checked": String(isSelected),
 					"aria-label": definition.label,
+					"data-provider": definition.id,
 				},
 			});
 			this.renderProviderIcon(buttonEl, definition);
@@ -694,9 +704,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				text: definition.shortLabel,
 			});
 			buttonEl.createSpan({ cls: "firstrecall-provider-radio" });
-			this.plugin.registerDomEvent(buttonEl, "click", () => {
-				void this.selectProvider(definition.id);
-			});
 		}
 	}
 
