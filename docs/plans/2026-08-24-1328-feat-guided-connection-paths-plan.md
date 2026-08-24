@@ -43,7 +43,7 @@ New AI users may recognize a product name but not know whether FirstRecall needs
 
 **Connection-path catalog**
 
-- R1. The clean-install provider chooser presents three compact native buttons containing titles only, with their descriptions immediately underneath: **LLM API Provider** — “Use an API key from Anthropic, OpenAI, Gemini, or another provider.”; **Installed AI tool** — “Use Codex or Claude Code if one is already installed and signed in on this device.”; and **Self-Hosted LLM Provider** — “Connect to Ollama or LM Studio running on a model server you control.” The existing storage notice uses path-neutral copy: “When a provider requires an API key, FirstRecall stores it securely in Obsidian's Secret Storage.”
+- R1. The clean-install provider chooser presents a **Connection type** group with three compact, flat native buttons containing titles only, with their descriptions immediately underneath: **LLM API Provider** — “Use an API key from Anthropic, OpenAI, Gemini, or another provider.”; **Installed AI tool** — “Use Codex or Claude Code if one is already installed and signed in on this device.”; and **Self-Hosted LLM Provider** — “Connect to Ollama or LM Studio running on a model server you control.” Revealed choices sit under an **Available providers** label and retain their raised radio-card treatment so the two selection levels are visually distinct. The existing storage notice uses path-neutral copy: “When a provider requires an API key, FirstRecall stores it securely in Obsidian's Secret Storage.”
 - R2. Each path reveals every matching provider in the stable order returned by the existing provider metadata.
 - R3. The three paths collectively expose every supported provider; no combined all-provider control is shown.
 - R4. Revealing or changing a path must not select a provider, persist settings, or recommend a vendor.
@@ -188,7 +188,7 @@ flowchart TB
 
 ### U2. Style compact paths and preserve responsive layout
 
-- **Goal:** Make the three title buttons compact and responsive, keep their explanatory copy underneath, and leave provider cards unchanged.
+- **Goal:** Make the three title buttons compact, flat, and responsive inside a labeled connection-type band, keep their explanatory copy underneath, and leave provider cards visibly raised beneath an Available providers label.
 - **Requirements:** R1, R3, R10-R12.
 - **Dependencies:** U1.
 - **Files:**

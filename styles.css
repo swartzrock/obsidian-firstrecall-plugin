@@ -268,7 +268,19 @@
 }
 
 .firstrecall-provider-paths {
-	margin: 12px 0 16px;
+	margin: 6px 0 16px;
+	padding: 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 12px;
+	background: var(--background-secondary);
+}
+
+.firstrecall-provider-step-label {
+	margin-top: 12px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	letter-spacing: 0.02em;
 }
 
 .firstrecall-provider-path-option {
@@ -279,13 +291,19 @@
 	width: 100%;
 	min-height: 44px;
 	padding: 8px 10px;
+	border: 0;
+	border-radius: var(--radius-s);
+	background: transparent;
+	color: var(--text-muted);
+	box-shadow: none;
+	cursor: pointer;
+	text-align: left;
 	font-size: var(--font-ui-small);
 	font-weight: var(--font-semibold);
 	line-height: 1.25;
 	overflow-wrap: anywhere;
 }
 
-.firstrecall-provider-path-button,
 .firstrecall-provider-button {
 	min-width: 0;
 	border: 1px solid var(--background-modifier-border);
@@ -297,15 +315,30 @@
 	text-align: left;
 }
 
-.firstrecall-provider-path-button:hover,
-.firstrecall-provider-path-button:focus-visible,
+.firstrecall-provider-path-button:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.firstrecall-provider-path-button:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 1px;
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
+.firstrecall-provider-path-button.is-selected {
+	background: var(--background-primary);
+	color: var(--text-normal);
+	box-shadow: inset 0 -2px 0 var(--interactive-accent);
+}
+
 .firstrecall-provider-button:hover,
 .firstrecall-provider-button:focus-visible {
 	border-color: var(--interactive-accent);
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 18%, transparent);
 }
 
-.firstrecall-provider-path-button.is-selected,
 .firstrecall-provider-button.is-selected {
 	border-color: var(--interactive-accent);
 	box-shadow: 0 0 0 2px var(--interactive-accent);

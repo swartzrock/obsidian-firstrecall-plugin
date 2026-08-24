@@ -24,36 +24,48 @@ describe("settings CSS", () => {
 		const pathGridRule = ruleFor(".firstrecall-provider-paths");
 		const providerGridRules =
 			styles.match(/\.firstrecall-provider-picker\s*\{[^}]*\}/g) ?? [];
-		expect(pathGridRule).toContain("margin: 12px 0 16px");
+		expect(pathGridRule).toContain("margin: 6px 0 16px");
+		expect(pathGridRule).toContain("padding: 8px");
+		expect(pathGridRule).toContain("background: var(--background-secondary)");
+		expect(pathGridRule).toContain("border-radius: 12px");
 		expect(
 			providerGridRules.some((rule) => rule.includes("margin: 8px 0 12px"))
 		).toBe(true);
 	});
 
-	it("styles compact path buttons with descriptions underneath", () => {
+	it("styles path controls as flat tabs and provider choices as cards", () => {
 		const pathButtonRule = ruleFor(".firstrecall-provider-path-button");
 		expect(pathButtonRule).toContain("min-height: 44px");
 		expect(pathButtonRule).toContain("font-size: var(--font-ui-small)");
 		expect(pathButtonRule).toContain("font-weight: var(--font-semibold)");
-		const sharedCardRule = ruleFor(
-			".firstrecall-provider-path-button,\n.firstrecall-provider-button"
-		);
-		expect(sharedCardRule).toContain(
+		expect(pathButtonRule).toContain("border: 0");
+		expect(pathButtonRule).toContain("background: transparent");
+		expect(pathButtonRule).toContain("box-shadow: none");
+
+		const providerCardRule = ruleFor(".firstrecall-provider-button");
+		expect(providerCardRule).toContain(
 			"border: 1px solid var(--background-modifier-border)"
 		);
-		expect(sharedCardRule).toContain("background: var(--background-primary)");
-		expect(sharedCardRule).toContain("color: var(--text-normal)");
+		expect(providerCardRule).toContain("background: var(--background-primary)");
+		expect(providerCardRule).toContain("box-shadow: 0 1px 3px rgb(0 0 0 / 8%)");
 
-		const selectedRule = ruleFor(
-			".firstrecall-provider-path-button.is-selected,\n.firstrecall-provider-button.is-selected"
+		const selectedPathRule = ruleFor(
+			".firstrecall-provider-path-button.is-selected"
 		);
-		expect(selectedRule).toContain("border-color: var(--interactive-accent)");
-		expect(selectedRule).toContain(
+		expect(selectedPathRule).toContain("background: var(--background-primary)");
+		expect(selectedPathRule).toContain(
+			"box-shadow: inset 0 -2px 0 var(--interactive-accent)"
+		);
+		const selectedProviderRule = ruleFor(
+			".firstrecall-provider-button.is-selected"
+		);
+		expect(selectedProviderRule).toContain(
 			"box-shadow: 0 0 0 2px var(--interactive-accent)"
 		);
 		expect(styles).toContain(
 			".firstrecall-provider-path-button:focus-visible"
 		);
+		expect(styles).toContain(".firstrecall-provider-step-label");
 
 		const descriptionRule = ruleFor(
 			".firstrecall-provider-path-description"

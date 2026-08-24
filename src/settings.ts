@@ -608,8 +608,17 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					"Connect to Ollama or LM Studio running on a model server you control.",
 			},
 		];
+		containerEl.createDiv({
+			cls: "firstrecall-provider-step-label",
+			text: "Connection type",
+			attr: { id: "firstrecall-provider-paths-label" },
+		});
 		const pathPickerEl = containerEl.createDiv({
 			cls: "firstrecall-provider-paths",
+			attr: {
+				role: "group",
+				"aria-labelledby": "firstrecall-provider-paths-label",
+			},
 		});
 		for (const definition of pathDefinitions) {
 			const optionEl = pathPickerEl.createDiv({
@@ -670,11 +679,16 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		containerEl: HTMLElement,
 		path: FirstRecallCredentialKind
 	): void {
+		containerEl.createDiv({
+			cls: "firstrecall-provider-step-label",
+			text: "Available providers",
+			attr: { id: "firstrecall-provider-options-label" },
+		});
 		const pickerEl = containerEl.createDiv({
 			cls: "firstrecall-provider-picker",
 			attr: {
 				role: "radiogroup",
-				"aria-label": "AI provider",
+				"aria-labelledby": "firstrecall-provider-options-label",
 			},
 		});
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);

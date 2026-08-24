@@ -639,6 +639,13 @@ describe("settings defaults", () => {
 		expect(settingText(tab.containerEl)).toContain(
 			"When a provider requires an API key, FirstRecall stores it securely in Obsidian's Secret Storage."
 		);
+		expect(settingText(tab.containerEl)).toContain("Connection type");
+		expect(settingText(tab.containerEl)).not.toContain("Available providers");
+		expect(
+			tab.containerEl
+				.querySelector(".firstrecall-provider-paths")
+				?.getAttribute("aria-labelledby")
+		).toBe("firstrecall-provider-paths-label");
 		expect(
 			tab.containerEl.querySelector<HTMLAnchorElement>(
 				'a[href="https://docs.obsidian.md/plugins/guides/secret-storage"]'
@@ -704,6 +711,12 @@ describe("settings defaults", () => {
 				`button[aria-label="${scenario.label}"]`
 			)!;
 			button.click();
+			expect(settingText(tab.containerEl)).toContain("Available providers");
+			expect(
+				tab.containerEl
+					.querySelector(".firstrecall-provider-picker")
+					?.getAttribute("aria-labelledby")
+			).toBe("firstrecall-provider-options-label");
 			const expected = definitions.filter(
 				(definition) => definition.credentialKind === scenario.kind
 			);
