@@ -52,6 +52,23 @@ describe("FirstRecall BYOK provider metadata", () => {
 		expect(byokProviderDefinition(provider).credentialKind).toBe(credentialKind);
 	});
 
+	it("identifies command providers as terminal tools without CLI jargon", () => {
+		const codex = byokProviderDefinition("codex-cli");
+		const claude = byokProviderDefinition("claude-cli");
+
+		expect([codex.label, codex.shortLabel]).toEqual([
+			"Codex terminal tool",
+			"Codex terminal tool",
+		]);
+		expect([claude.label, claude.shortLabel]).toEqual([
+			"Claude Code terminal tool",
+			"Claude Code terminal tool",
+		]);
+		expect(codex.credentialField.label).toBe("Codex command");
+		expect(claude.credentialField.label).toBe("Claude Code command");
+		expect(JSON.stringify([codex, claude])).not.toMatch(/\bCLI\b/);
+	});
+
 	it("links every cloud provider to its API key guide section", () => {
 		const guideUrl =
 			"https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/docs/cloud-api-keys.md";

@@ -751,10 +751,13 @@ describe("settings defaults", () => {
 				?.getAttribute("aria-expanded")
 		).toBe("true");
 		expect(
-			tab.containerEl.querySelector('[role="radio"][aria-label="Codex CLI"]')
+			tab.containerEl.querySelector(
+				'[role="radio"][aria-label="Codex terminal tool"]'
+			)
 				?.getAttribute("aria-checked")
 		).toBe("true");
-		expect(settingText(tab.containerEl)).toContain("Codex CLI command");
+		expect(settingText(tab.containerEl)).toContain("Codex command");
+		expect(settingText(tab.containerEl)).not.toContain("Codex CLI");
 		expect(settingText(tab.containerEl)).toContain("Performance");
 	});
 
