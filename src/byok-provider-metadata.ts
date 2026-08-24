@@ -263,7 +263,7 @@ const PROVIDER_DEFINITIONS: Record<
 	[ByokProvider.CodexCli]: {
 		id: ByokProvider.CodexCli,
 		label: "Codex terminal tool",
-		shortLabel: "Codex terminal tool",
+		shortLabel: "Codex (terminal)",
 		icon: providerIcon(ByokProvider.CodexCli, "terminal"),
 		credentialKind: "command",
 		credentialField: {
@@ -290,7 +290,7 @@ const PROVIDER_DEFINITIONS: Record<
 	[ByokProvider.ClaudeCli]: {
 		id: ByokProvider.ClaudeCli,
 		label: "Claude Code terminal tool",
-		shortLabel: "Claude Code terminal tool",
+		shortLabel: "Claude Code (terminal)",
 		icon: providerIcon(ByokProvider.ClaudeCli, "terminal"),
 		credentialKind: "command",
 		credentialField: {

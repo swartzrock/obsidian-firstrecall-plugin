@@ -758,6 +758,11 @@ describe("settings defaults", () => {
 		).toBe("true");
 		expect(settingText(tab.containerEl)).toContain("Codex command");
 		expect(settingText(tab.containerEl)).not.toContain("Codex CLI");
+		expect(
+			tab.containerEl.querySelector(
+				'.firstrecall-provider-button[data-provider="codex-cli"] .firstrecall-provider-button-label'
+			)?.textContent
+		).toBe("Codex (terminal)");
 		expect(settingText(tab.containerEl)).toContain("Performance");
 	});
 

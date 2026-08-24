@@ -34,30 +34,38 @@ describe("settings CSS", () => {
 	});
 
 	it("styles path controls as flat tabs and provider choices as cards", () => {
-		const pathButtonRule = ruleFor(".firstrecall-provider-path-button");
+		const pathButtonRule = ruleFor("button.firstrecall-provider-path-button");
 		expect(pathButtonRule).toContain("min-height: 44px");
 		expect(pathButtonRule).toContain("font-size: var(--font-ui-small)");
 		expect(pathButtonRule).toContain("font-weight: var(--font-semibold)");
-		expect(pathButtonRule).toContain("border: 0");
-		expect(pathButtonRule).toContain("background: transparent");
+		expect(pathButtonRule).toContain(
+			"border: 1px solid var(--background-modifier-border)"
+		);
+		expect(pathButtonRule).toContain("background: var(--background-primary)");
 		expect(pathButtonRule).toContain("box-shadow: none");
 
-		const providerCardRule = ruleFor(".firstrecall-provider-button");
+		const providerCardRule = ruleFor("button.firstrecall-provider-button");
 		expect(providerCardRule).toContain(
 			"border: 1px solid var(--background-modifier-border)"
 		);
+		expect(providerCardRule).toContain("min-height: 64px");
 		expect(providerCardRule).toContain("background: var(--background-primary)");
 		expect(providerCardRule).toContain("box-shadow: 0 1px 3px rgb(0 0 0 / 8%)");
 
 		const selectedPathRule = ruleFor(
-			".firstrecall-provider-path-button.is-selected"
+			"button.firstrecall-provider-path-button.is-selected"
 		);
-		expect(selectedPathRule).toContain("background: var(--background-primary)");
+		expect(selectedPathRule).toContain(
+			"background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary))"
+		);
 		expect(selectedPathRule).toContain(
 			"box-shadow: inset 0 -2px 0 var(--interactive-accent)"
 		);
 		const selectedProviderRule = ruleFor(
-			".firstrecall-provider-button.is-selected"
+			"button.firstrecall-provider-button.is-selected"
+		);
+		expect(selectedProviderRule).toContain(
+			"background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary))"
 		);
 		expect(selectedProviderRule).toContain(
 			"box-shadow: 0 0 0 2px var(--interactive-accent)"
@@ -75,6 +83,13 @@ describe("settings CSS", () => {
 		expect(descriptionRule).toContain("white-space: normal");
 		expect(descriptionRule).toContain("margin:");
 		expect(styles).not.toContain(".firstrecall-provider-browse-all");
+	});
+
+	it("shows complete provider labels instead of truncating them", () => {
+		const labelRule = ruleFor(".firstrecall-provider-button-label");
+		expect(labelRule).toContain("white-space: normal");
+		expect(labelRule).toContain("overflow-wrap: anywhere");
+		expect(labelRule).not.toContain("text-overflow: ellipsis");
 	});
 
 	it("collapses provider paths from three columns to two and then one", () => {

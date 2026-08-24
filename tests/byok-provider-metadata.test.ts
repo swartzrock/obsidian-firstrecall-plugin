@@ -58,11 +58,11 @@ describe("FirstRecall BYOK provider metadata", () => {
 
 		expect([codex.label, codex.shortLabel]).toEqual([
 			"Codex terminal tool",
-			"Codex terminal tool",
+			"Codex (terminal)",
 		]);
 		expect([claude.label, claude.shortLabel]).toEqual([
 			"Claude Code terminal tool",
-			"Claude Code terminal tool",
+			"Claude Code (terminal)",
 		]);
 		expect(codex.credentialField.label).toBe("Codex command");
 		expect(claude.credentialField.label).toBe("Claude Code command");
