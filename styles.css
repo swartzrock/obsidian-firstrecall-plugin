@@ -260,20 +260,57 @@
 	margin-bottom: 2px;
 }
 
+.firstrecall-provider-paths,
 .firstrecall-provider-picker {
 	display: grid;
 	grid-template-columns: repeat(3, minmax(0, 1fr));
 	gap: 8px;
-	margin: 8px 0 12px;
 }
 
-.firstrecall-provider-button {
+.firstrecall-provider-paths {
+	margin: 6px 0 16px;
+	padding: 8px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 12px;
+	background: var(--background-secondary);
+}
+
+.firstrecall-provider-step-label {
+	margin-top: 12px;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	font-weight: var(--font-semibold);
+	letter-spacing: 0.02em;
+}
+
+.firstrecall-provider-path-option {
+	min-width: 0;
+}
+
+button.firstrecall-provider-path-button {
+	width: 100%;
+	min-height: 44px;
+	padding: 8px 10px;
+	border: 1px solid var(--background-modifier-border);
+	border-radius: var(--radius-s);
+	background: var(--background-primary);
+	color: var(--text-normal);
+	box-shadow: none;
+	cursor: pointer;
+	text-align: left;
+	font-size: var(--font-ui-small);
+	font-weight: var(--font-semibold);
+	line-height: 1.25;
+	overflow-wrap: anywhere;
+}
+
+button.firstrecall-provider-button {
 	position: relative;
 	display: flex;
 	align-items: center;
 	gap: 10px;
 	min-width: 0;
-	min-height: 58px;
+	min-height: 64px;
 	padding: 10px 34px 10px 12px;
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 14px;
@@ -284,15 +321,49 @@
 	text-align: left;
 }
 
-.firstrecall-provider-button:hover,
-.firstrecall-provider-button:focus-visible {
+button.firstrecall-provider-path-button:hover {
+	border-color: var(--background-modifier-border-hover);
+	background: color-mix(in srgb, var(--interactive-accent) 6%, var(--background-primary));
+	color: var(--text-normal);
+}
+
+button.firstrecall-provider-path-button:focus-visible {
+	outline: 2px solid var(--interactive-accent);
+	outline-offset: 1px;
+	background: color-mix(in srgb, var(--interactive-accent) 6%, var(--background-primary));
+	color: var(--text-normal);
+}
+
+button.firstrecall-provider-path-button.is-selected {
 	border-color: var(--interactive-accent);
+	background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary));
+	color: var(--text-normal);
+	box-shadow: inset 0 -2px 0 var(--interactive-accent);
+}
+
+button.firstrecall-provider-button:hover,
+button.firstrecall-provider-button:focus-visible {
+	border-color: var(--interactive-accent);
+	background: color-mix(in srgb, var(--interactive-accent) 6%, var(--background-primary));
 	box-shadow: 0 0 0 2px color-mix(in srgb, var(--interactive-accent) 18%, transparent);
 }
 
-.firstrecall-provider-button.is-selected {
+button.firstrecall-provider-button.is-selected {
 	border-color: var(--interactive-accent);
+	background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary));
 	box-shadow: 0 0 0 2px var(--interactive-accent);
+}
+
+.firstrecall-provider-path-description {
+	margin: 6px 2px 0;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	line-height: 1.35;
+	overflow-wrap: anywhere;
+	white-space: normal;
+}
+.firstrecall-provider-picker {
+	margin: 8px 0 12px;
 }
 
 .firstrecall-provider-icon {
@@ -321,13 +392,13 @@
 }
 
 .firstrecall-provider-button-label {
-	overflow: hidden;
+	min-width: 0;
 	color: var(--text-normal);
 	font-size: var(--font-ui-small);
 	font-weight: var(--font-semibold);
 	line-height: 1.2;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	overflow-wrap: anywhere;
+	white-space: normal;
 }
 
 .firstrecall-provider-radio {
@@ -1071,6 +1142,7 @@
 		padding-inline: 12px;
 	}
 
+	.firstrecall-provider-paths,
 	.firstrecall-provider-picker {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
 	}
@@ -1120,6 +1192,7 @@
 }
 
 @media (max-width: 420px) {
+	.firstrecall-provider-paths,
 	.firstrecall-provider-picker {
 		grid-template-columns: 1fr;
 	}

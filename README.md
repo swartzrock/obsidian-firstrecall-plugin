@@ -45,7 +45,7 @@ Your Markdown files are never touched. FirstRecall uses your selected AI / LLM p
 
 - **Syncs with your changes**  Avoid stale summaries by turning on automatic updates for your managed folder(s). FirstRecall will update any changed sections after you finish editing.
 
-- **Runs on Your LLM** Use your Anthropic, OpenAI, Gemini, xAI, or other LLM providers with your preferred model, or even your private LLM using Ollama and LMStudio for maximum privacy (Codex and Claude CLI's are also supported!)
+- **Runs on Your LLM** Use your Anthropic, OpenAI, Gemini, xAI, or other LLM providers with your preferred model, or even your private LLM using Ollama and LMStudio for maximum privacy (the Codex and Claude Code terminal tools are also supported!)
 
   <img src="docs/media/ai-providers.jpg" width="300">
 
@@ -137,10 +137,10 @@ FirstRecall supports:
   your machine
 - **Cloud APIs:** Anthropic, OpenAI, Google, xAI, OpenRouter, Groq, Mistral,
   DeepSeek, DeepInfra, Together AI, and Fireworks AI
-- **Desktop CLIs:** Codex CLI and Claude CLI
+- **Terminal tools:** Codex and Claude Code
 
 Cloud API keys are stored with Obsidian's Secret Storage API. When using a cloud API
-or a desktop CLI backed by an online account, the selected provider receives the note
+or a terminal tool backed by an online account, the selected provider receives the note
 content needed for generation. Ollama and LM Studio can keep generation entirely
 local when connected to a local server.
 

@@ -11,6 +11,105 @@ function ruleFor(selector: string): string {
 }
 
 describe("settings CSS", () => {
+	it("keeps guided provider paths distinct from the provider grid", () => {
+		const sharedGridRule = ruleFor(
+			".firstrecall-provider-paths,\n.firstrecall-provider-picker"
+		);
+		expect(sharedGridRule).toContain("display: grid");
+		expect(sharedGridRule).toContain(
+			"grid-template-columns: repeat(3, minmax(0, 1fr))"
+		);
+		expect(sharedGridRule).toContain("gap: 8px");
+
+		const pathGridRule = ruleFor(".firstrecall-provider-paths");
+		const providerGridRules =
+			styles.match(/\.firstrecall-provider-picker\s*\{[^}]*\}/g) ?? [];
+		expect(pathGridRule).toContain("margin: 6px 0 16px");
+		expect(pathGridRule).toContain("padding: 8px");
+		expect(pathGridRule).toContain("background: var(--background-secondary)");
+		expect(pathGridRule).toContain("border-radius: 12px");
+		expect(
+			providerGridRules.some((rule) => rule.includes("margin: 8px 0 12px"))
+		).toBe(true);
+	});
+
+	it("styles path controls as flat tabs and provider choices as cards", () => {
+		const pathButtonRule = ruleFor("button.firstrecall-provider-path-button");
+		expect(pathButtonRule).toContain("min-height: 44px");
+		expect(pathButtonRule).toContain("font-size: var(--font-ui-small)");
+		expect(pathButtonRule).toContain("font-weight: var(--font-semibold)");
+		expect(pathButtonRule).toContain(
+			"border: 1px solid var(--background-modifier-border)"
+		);
+		expect(pathButtonRule).toContain("background: var(--background-primary)");
+		expect(pathButtonRule).toContain("box-shadow: none");
+
+		const providerCardRule = ruleFor("button.firstrecall-provider-button");
+		expect(providerCardRule).toContain(
+			"border: 1px solid var(--background-modifier-border)"
+		);
+		expect(providerCardRule).toContain("min-height: 64px");
+		expect(providerCardRule).toContain("background: var(--background-primary)");
+		expect(providerCardRule).toContain("box-shadow: 0 1px 3px rgb(0 0 0 / 8%)");
+
+		const selectedPathRule = ruleFor(
+			"button.firstrecall-provider-path-button.is-selected"
+		);
+		expect(selectedPathRule).toContain(
+			"background: color-mix(in srgb, var(--interactive-accent) 12%, var(--background-primary))"
+		);
+		expect(selectedPathRule).toContain(
+			"box-shadow: inset 0 -2px 0 var(--interactive-accent)"
+		);
+		const selectedProviderRule = ruleFor(
+			"button.firstrecall-provider-button.is-selected"
+		);
+		expect(selectedProviderRule).toContain(
+			"background: color-mix(in srgb, var(--interactive-accent) 10%, var(--background-primary))"
+		);
+		expect(selectedProviderRule).toContain(
+			"box-shadow: 0 0 0 2px var(--interactive-accent)"
+		);
+		expect(styles).toContain(
+			".firstrecall-provider-path-button:focus-visible"
+		);
+		expect(styles).toContain(".firstrecall-provider-step-label");
+
+		const descriptionRule = ruleFor(
+			".firstrecall-provider-path-description"
+		);
+		expect(descriptionRule).toContain("font-size: var(--font-ui-smaller)");
+		expect(descriptionRule).toContain("color: var(--text-muted)");
+		expect(descriptionRule).toContain("white-space: normal");
+		expect(descriptionRule).toContain("margin:");
+		expect(styles).not.toContain(".firstrecall-provider-browse-all");
+	});
+
+	it("shows complete provider labels instead of truncating them", () => {
+		const labelRule = ruleFor(".firstrecall-provider-button-label");
+		expect(labelRule).toContain("white-space: normal");
+		expect(labelRule).toContain("overflow-wrap: anywhere");
+		expect(labelRule).not.toContain("text-overflow: ellipsis");
+	});
+
+	it("collapses provider paths from three columns to two and then one", () => {
+		const mediumMediaIndex = styles.indexOf("@media (max-width: 700px)");
+		const narrowMediaIndex = styles.indexOf("@media (max-width: 420px)");
+		const mediumStyles = styles.slice(mediumMediaIndex, narrowMediaIndex);
+		const narrowStyles = styles.slice(narrowMediaIndex);
+
+		expect(mediumStyles).toContain(
+			".firstrecall-provider-paths,\n\t.firstrecall-provider-picker {"
+		);
+		expect(mediumStyles).toContain(
+			"grid-template-columns: repeat(2, minmax(0, 1fr))"
+		);
+		expect(narrowStyles).toContain(
+			".firstrecall-provider-paths,\n\t.firstrecall-provider-picker {"
+		);
+		expect(narrowStyles).toContain("grid-template-columns: 1fr");
+	});
+
 	it("styles artifact-matched settings cards without fixed widths", () => {
 		const cardRule = ruleFor(".firstrecall-settings-artifact-card");
 		expect(cardRule).toContain("min-width: 0");

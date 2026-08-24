@@ -2,6 +2,7 @@ import {
 	BYOK_PROVIDER_IDS,
 	type ByokProviderId,
 } from "@swartzrock/byok-runtime";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
 	byokProviderDefinition,
@@ -49,5 +50,47 @@ describe("FirstRecall BYOK provider metadata", () => {
 		["claude-cli", "command"],
 	] as const)("classifies %s credentials as %s", (provider, credentialKind) => {
 		expect(byokProviderDefinition(provider).credentialKind).toBe(credentialKind);
+	});
+
+	it("identifies command providers as terminal tools without CLI jargon", () => {
+		const codex = byokProviderDefinition("codex-cli");
+		const claude = byokProviderDefinition("claude-cli");
+
+		expect([codex.label, codex.shortLabel]).toEqual([
+			"Codex terminal tool",
+			"Codex (terminal)",
+		]);
+		expect([claude.label, claude.shortLabel]).toEqual([
+			"Claude Code terminal tool",
+			"Claude Code (terminal)",
+		]);
+		expect(codex.credentialField.label).toBe("Codex command");
+		expect(claude.credentialField.label).toBe("Claude Code command");
+		expect(JSON.stringify([codex, claude])).not.toMatch(/\bCLI\b/);
+	});
+
+	it("links every cloud provider to its API key guide section", () => {
+		const guideUrl =
+			"https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/docs/cloud-api-keys.md";
+		const guide = readFileSync("docs/cloud-api-keys.md", "utf8");
+		const guideSections = new Set<string>();
+		for (const line of guide.split("\n")) {
+			if (!line.startsWith("## ")) continue;
+			guideSections.add(
+				line.slice(3).trim().toLowerCase().replace(/ /g, "-")
+			);
+		}
+		const cloudProviders = BYOK_PROVIDER_IDS.filter(
+			(provider) =>
+				byokProviderDefinition(provider).credentialKind === "api-key"
+		);
+
+		expect(cloudProviders).toHaveLength(11);
+		for (const provider of cloudProviders) {
+				expect(
+					byokProviderDefinition(provider).credentialField.helpUrl
+				).toBe(`${guideUrl}#${provider}`);
+			expect(guideSections).toContain(provider);
+		}
 	});
 });
