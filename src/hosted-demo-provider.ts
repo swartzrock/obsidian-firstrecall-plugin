@@ -429,21 +429,41 @@ export function createHostedDemoProvider(
 				throw protocolError(`request is invalid: ${formatZodError(requestBody.error)}`);
 			}
 
-			const response = await deps.transport(
-				new Request(HOSTED_DEMO_ENDPOINT, {
-					method: "POST",
-					headers: { "content-type": "application/json" },
-					body: JSON.stringify(requestBody.data),
-					signal,
-				})
-			);
+			const request = new Request(HOSTED_DEMO_ENDPOINT, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(requestBody.data),
+				signal,
+			});
+			// eslint-disable-next-line obsidianmd/rule-custom-message -- Trial API diagnostics are intentionally visible in Obsidian's developer console.
+			console.log("[FirstRecall trial] Request", {
+				url: request.url,
+				method: request.method,
+				headers: Object.fromEntries(request.headers.entries()),
+				body: requestBody.data,
+			});
+			const response = await deps.transport(request);
 
+			let responseText = await response.text();
 			let rawResponse: unknown;
 			try {
-				rawResponse = await response.json();
+				rawResponse = JSON.parse(responseText) as unknown;
 			} catch {
+				// eslint-disable-next-line obsidianmd/rule-custom-message -- Trial API diagnostics are intentionally visible in Obsidian's developer console.
+				console.log("[FirstRecall trial] Response", {
+					status: response.status,
+					headers: Object.fromEntries(response.headers.entries()),
+					body: responseText,
+				});
 				throw protocolError("returned a response that was not valid JSON");
 			}
+			responseText = "";
+			// eslint-disable-next-line obsidianmd/rule-custom-message -- Trial API diagnostics are intentionally visible in Obsidian's developer console.
+			console.log("[FirstRecall trial] Response", {
+				status: response.status,
+				headers: Object.fromEntries(response.headers.entries()),
+				body: rawResponse,
+			});
 			const parsed = hostedDemoResponseSchema.safeParse(rawResponse);
 			if (!parsed.success) {
 				throw protocolError(
