@@ -1,5 +1,11 @@
 # firstrecall
 
+## 0.6.0
+
+### Minor Changes
+
+- e6dedbe: Add provider-specific API key setup links and documentation to AI model settings.
+
 ## 0.5.0
 
 ### Minor Changes
