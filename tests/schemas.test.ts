@@ -26,11 +26,7 @@ describe("extractJson", () => {
 		const cue = {
 			question: "What does the product promise?",
 			keywords: ["promise", "study"],
-			summary: {
-				takeaway: "FirstRecall turns notes into Section cues.",
-				keyPhrase: "Section cues",
-				explanation: "The phrase names the review output.",
-			},
+			summary: "FirstRecall turns notes into Section cues.",
 		};
 		const raw =
 			'<think>I considered {"shape":"draft"} before writing the answer.</think>\n' +
@@ -81,6 +77,20 @@ describe("validateCue", () => {
 			JSON.stringify({
 				question: "Q",
 				keywords: ["a", "b"],
+				summary: "Focus on agent autonomy.",
+			})
+		);
+		expect(r.ok).toBe(true);
+		if (r.ok) {
+			expect(r.value.summary).toBe("Focus on agent autonomy.");
+		}
+	});
+
+	it("normalizes legacy Summary fields down to the takeaway", () => {
+		const r = validateCue(
+			JSON.stringify({
+				question: "Q",
+				keywords: ["a", "b"],
 				summary: {
 					takeaway: "Focus on agent autonomy.",
 					keyPhrase: "agent autonomy",
@@ -90,7 +100,7 @@ describe("validateCue", () => {
 		);
 		expect(r.ok).toBe(true);
 		if (r.ok) {
-			expect(r.value.summary?.keyPhrase).toBe("agent autonomy");
+			expect(r.value.summary).toBe("Focus on agent autonomy.");
 		}
 	});
 
@@ -99,14 +109,11 @@ describe("validateCue", () => {
 			JSON.stringify({
 				question: "Q",
 				keywords: ["a", "b"],
-				summary: {
-					keyPhrase: "agent autonomy",
-					explanation: "This phrase separates multi-step work from chat.",
-				},
+				summary: " ",
 			})
 		);
 		expect(r.ok).toBe(false);
-		if (!r.ok) expect(r.error).toMatch(/summary\.takeaway/);
+		if (!r.ok) expect(r.error).toMatch(/summary/);
 	});
 
 	it("rejects an empty question", () => {

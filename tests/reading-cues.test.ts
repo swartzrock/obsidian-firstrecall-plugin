@@ -14,13 +14,10 @@ import type { StudySessionSnapshot } from "../src/study-session";
 import { resolveStudySections, type StudySessionController } from "../src/study-session";
 import FirstRecallPlugin from "../src/main";
 import { DEFAULT_SETTINGS } from "../src/settings";
+import { CueSectionCollapseStore } from "../src/cue-section-collapse";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
-const SECTION_SUMMARY = {
-	keyPhrase: "agent autonomy",
-	takeaway: "Agents use tools to complete multi-step work.",
-	explanation: "The section contrasts one-shot chat with tool-using agents.",
-};
+const SECTION_SUMMARY = "Agents use tools to complete multi-step work.";
 
 function cacheFrom(
 	overrides: (
@@ -117,7 +114,9 @@ describe("buildReadingCueMap", () => {
 
 	it("includes Summary by default", () => {
 		const map = buildReadingCueMap(cacheFrom(), NOTE);
-		expect(map.get(1)?.summary?.keyPhrase).toBe("agent autonomy");
+		expect(map.get(1)?.summary).toBe(
+			"Agents use tools to complete multi-step work."
+		);
 	});
 
 	it("re-resolves lines after content shifts headings down", () => {
@@ -549,6 +548,7 @@ describe("Reading postprocessor Study plumbing", () => {
 			sayItBack: { title: "Recall", detail: "Explain why tools matter." },
 		};
 		const plugin = new FirstRecallPlugin({} as never, {} as never);
+		const persistCueSectionCollapse = vi.fn(async () => undefined);
 		const container = dom.window.document.querySelector<HTMLElement>("#container")!;
 		const block = dom.window.document.querySelector<HTMLElement>("#block")!;
 		const view = {
@@ -576,6 +576,10 @@ describe("Reading postprocessor Study plumbing", () => {
 			},
 			cacheStore: { get: () => cache, getState: () => null },
 			visibility: { isHidden: () => true },
+			cueSectionCollapse: new CueSectionCollapseStore(
+				{},
+				persistCueSectionCollapse
+			),
 			refreshReadingModeSurface: vi.fn(),
 			refreshEditorCues: vi.fn(),
 		});
@@ -614,6 +618,23 @@ describe("Reading postprocessor Study plumbing", () => {
 		expect(
 			block.querySelectorAll(".firstrecall-cue-reading.firstrecall-cuefont-large")
 		).toHaveLength(3);
+		const firstReadingCue = block.querySelector<HTMLElement>(
+			".firstrecall-cue-reading"
+		);
+		expect(firstReadingCue?.classList.contains("firstrecall-editor-hook-sectioned")).toBe(
+			true
+		);
+		expect(
+			Array.from(
+				firstReadingCue?.querySelectorAll<HTMLElement>(
+					".firstrecall-editor-hook-section-toggle"
+				) ?? []
+			).map((button) => button.dataset.section)
+		).toEqual(["question"]);
+		expect(
+			firstReadingCue?.querySelector(".firstrecall-editor-hook-section-label")
+				?.textContent
+		).toContain("RECALL QUESTION");
 		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
 			"true"
 		);
@@ -683,6 +704,29 @@ describe("Reading postprocessor Study plumbing", () => {
 		render();
 		expect(block.querySelectorAll(".firstrecall-cue-reading")).toHaveLength(3);
 		expect(block.querySelector(".firstrecall-summary")).not.toBeNull();
+		expect(
+			block.querySelector(".firstrecall-summary-takeaway")?.textContent
+		).toBe(SECTION_SUMMARY);
+		expect(block.querySelector(".firstrecall-summary-phrase")).toBeNull();
+		expect(
+			block.querySelector(
+				'.firstrecall-editor-hook-section-toggle[data-section="summary"]'
+			)
+		).not.toBeNull();
+		const summaryToggle = block.querySelector<HTMLButtonElement>(
+			'.firstrecall-editor-hook-section-toggle[data-section="summary"]'
+		)!;
+		summaryToggle.click();
+		expect(summaryToggle.getAttribute("aria-expanded")).toBe("false");
+		render();
+		expect(
+			block
+				.querySelector<HTMLButtonElement>(
+					'.firstrecall-editor-hook-section-toggle[data-section="summary"]'
+				)
+				?.getAttribute("aria-expanded")
+		).toBe("false");
+		expect(persistCueSectionCollapse).toHaveBeenCalled();
 		expect(block.querySelector(".firstrecall-cue-question")).toBeNull();
 		expect(block.querySelector(".firstrecall-cue-keywords")).toBeNull();
 
@@ -694,6 +738,18 @@ describe("Reading postprocessor Study plumbing", () => {
 		expect(block.querySelector(".firstrecall-cue-keywords")?.textContent).toContain(
 			"k1"
 		);
+		expect(
+			Array.from(
+				block.querySelectorAll(
+					".firstrecall-cue-reading .firstrecall-cue-term"
+				)
+			).map((term) => term.textContent)
+		).toEqual(["k1", "k2", "k1", "k2", "k1", "k2"]);
+		expect(
+			block.querySelector(
+				'.firstrecall-editor-hook-section-toggle[data-section="terms"]'
+			)
+		).not.toBeNull();
 	});
 });
 

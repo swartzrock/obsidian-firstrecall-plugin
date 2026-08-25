@@ -457,14 +457,14 @@ function renderCornellCueElement(
 	if (showSummary && cue.summary) {
 		const summary = doc.createElement("div");
 		summary.className = "firstrecall-summary";
-		const takeaway = doc.createElement("span");
-		takeaway.className = "firstrecall-summary-takeaway";
-		takeaway.textContent = cue.summary.takeaway;
-		summary.appendChild(takeaway);
+		const summaryText = doc.createElement("span");
+		summaryText.className = "firstrecall-summary-takeaway";
+		summaryText.textContent = cue.summary;
+		summary.appendChild(summaryText);
 		appendEditorHookDisclosure(
 			card,
 			"summary",
-			cue.summary.takeaway,
+			cue.summary,
 			summary,
 			options.collapse
 		);
@@ -526,14 +526,14 @@ function renderInlineCueElement(
 	if (showSummary && cue.summary) {
 		const summary = cueDocument().createElement("div");
 		summary.className = "firstrecall-summary";
-		const takeaway = cueDocument().createElement("span");
-		takeaway.className = "firstrecall-summary-takeaway";
-		takeaway.textContent = cue.summary.takeaway;
-		summary.appendChild(takeaway);
+		const summaryText = cueDocument().createElement("span");
+		summaryText.className = "firstrecall-summary-takeaway";
+		summaryText.textContent = cue.summary;
+		summary.appendChild(summaryText);
 		appendEditorHookDisclosure(
 			root,
 			"summary",
-			cue.summary.takeaway,
+			cue.summary,
 			summary,
 			options.collapse
 		);
@@ -1290,39 +1290,8 @@ export function renderNoteBriefElement(
 	return root;
 }
 
-export function appendSummary(
-	parent: HTMLElement,
-	summary: SectionSummary | null
-): void {
-	if (!summary) return;
-	const doc = parent.ownerDocument;
-	const root = doc.createElement("div");
-	root.className = "firstrecall-summary";
-
-	const phrase = doc.createElement("span");
-	phrase.className = "firstrecall-summary-phrase";
-	phrase.textContent = summary.keyPhrase;
-	root.appendChild(phrase);
-
-	root.appendChild(doc.createTextNode(" - "));
-
-	const takeaway = doc.createElement("span");
-	takeaway.className = "firstrecall-summary-takeaway";
-	takeaway.textContent = summary.takeaway;
-	root.appendChild(takeaway);
-
-	const explanation = doc.createElement("div");
-	explanation.className = "firstrecall-summary-explanation";
-	explanation.textContent = summary.explanation;
-	root.appendChild(explanation);
-
-	parent.appendChild(root);
-}
-
 function summaryKey(summary: SectionSummary | null): string {
-	return summary
-		? [summary.keyPhrase, summary.takeaway, summary.explanation].join("\u0001")
-		: "";
+	return summary ?? "";
 }
 
 function noteBriefKey(noteBrief: NoteBriefOutput | null | undefined): string {
@@ -1572,7 +1541,7 @@ function cueCollapseRenderOptions(
 	};
 }
 
-function cueSectionCollapsedState(
+export function cueSectionCollapsedState(
 	controller: CueSectionCollapseController,
 	notePath: string,
 	sectionId: string

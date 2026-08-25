@@ -36,11 +36,7 @@ import type {
 import type { StudySessionSnapshot } from "../src/study-session";
 
 const NOTE = "# A\nalpha\n## B\nbeta\n## C\ngamma";
-const SECTION_SUMMARY = {
-	keyPhrase: "agent autonomy",
-	takeaway: "Agents use tools to complete multi-step work.",
-	explanation: "The section contrasts one-shot chat with tool-using agents.",
-};
+const SECTION_SUMMARY = "Agents use tools to complete multi-step work.";
 const NOTE_BRIEF = {
 	overview: "The note explains how agents use tools to complete work.",
 	whatMatters: {
