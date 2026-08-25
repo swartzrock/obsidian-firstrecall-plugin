@@ -92,6 +92,27 @@ describe("hosted trial plugin wiring", () => {
 		).not.toBe("not-a-uuid");
 	});
 
+	it("canonicalizes a stored installation id once and reuses it", async () => {
+		const uppercaseInstallationId = VALID_INSTALLATION_ID.toUpperCase();
+		const { plugin, requests, saveData } = pluginHarness(uppercaseInstallationId);
+
+		await captureIdentity(plugin);
+		await captureIdentity(plugin);
+
+		const identities = await Promise.all(
+			requests.map(async (request) =>
+				(await request.clone().json() as { identity: Record<string, string> })
+					.identity
+			)
+		);
+		expect(identities[0].installationId).toBe(VALID_INSTALLATION_ID);
+		expect(identities[1].installationId).toBe(VALID_INSTALLATION_ID);
+		expect(saveData).toHaveBeenCalledTimes(1);
+		expect(saveData).toHaveBeenCalledWith(
+			expect.objectContaining({ installationId: VALID_INSTALLATION_ID })
+		);
+	});
+
 	it("keeps session ids scoped to a plugin load", async () => {
 		const first = pluginHarness(VALID_INSTALLATION_ID);
 		const second = pluginHarness(VALID_INSTALLATION_ID);

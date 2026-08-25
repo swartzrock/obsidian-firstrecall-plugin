@@ -1810,7 +1810,14 @@ export default class FirstRecallPlugin extends Plugin {
 	}
 
 	private async hostedDemoInstallationId(): Promise<string> {
-		if (isUuid(this.data.installationId)) return this.data.installationId;
+		if (isUuid(this.data.installationId)) {
+			const installationId = this.data.installationId.toLowerCase();
+			if (installationId !== this.data.installationId) {
+				this.data.installationId = installationId;
+				await this.persistPluginData();
+			}
+			return installationId;
+		}
 		const installationId = crypto.randomUUID();
 		this.data.installationId = installationId;
 		await this.persistPluginData();

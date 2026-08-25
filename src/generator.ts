@@ -245,12 +245,15 @@ function completeProgress(
 	}
 }
 
-async function generateNoteBundle(
+export async function generateNoteBundleForSections(
 	params: GenerateNoteParams,
-	sections: GenerateSectionParams["section"][],
-	generateBundle: NonNullable<FirstRecallCueProviderRuntime["generateBundle"]>
+	sections: GenerateSectionParams["section"][]
 ): Promise<NoteGenerationResult> {
 	const { noteTitle, markdown, signal, onProgress } = params;
+	const generateBundle = params.provider.generateBundle?.bind(params.provider);
+	if (!generateBundle) {
+		throw new Error("Provider does not support atomic bundle generation.");
+	}
 	const total = sections.length + 1;
 	onProgress?.(0, total);
 
@@ -457,9 +460,8 @@ export async function generateNote(
 ): Promise<NoteGenerationResult> {
 	const { provider, markdown, noteTitle, signal, onProgress } = params;
 	const sections = cueEligibleSections(parseSections(markdown));
-	const generateBundle = provider.generateBundle?.bind(provider);
-	if (generateBundle && sections.length > 0) {
-		return generateNoteBundle(params, sections, generateBundle);
+	if (provider.generateBundle && sections.length > 0) {
+		return generateNoteBundleForSections(params, sections);
 	}
 	const options = resolveGenerationOptions(params.options);
 	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;

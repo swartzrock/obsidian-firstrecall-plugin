@@ -6,9 +6,11 @@ import {
 import type { CueGenerationOptions } from "./cue-generation";
 import type { FirstRecallCueProviderRuntime } from "./cue-provider";
 import {
+	generateNoteBundleForSections,
 	generateNoteBriefForSections,
 	generateSectionCueBatch,
 	resolveEffectiveSectionConcurrency,
+	type NoteGenerationResult,
 	type SectionResult,
 } from "./generator";
 import { cueEligibleSections, parseSections, type Section } from "./parser";
@@ -626,19 +628,52 @@ export class StudyMaterialMaintenance {
 		const targets = plan.components.sectionIds
 			.map((id) => eligibleById.get(id))
 			.filter((section): section is Section => Boolean(section));
-		const generated: SectionResult[] = [];
-		const concurrency = resolveEffectiveSectionConcurrency(
-			this.deps.sectionConcurrency(),
-			provider
-		);
-		for (let start = 0; start < targets.length; start += concurrency) {
-			const results = await generateSectionCueBatch({
-				sections: targets.slice(start, start + concurrency),
-				provider,
-				options: this.deps.generationOptions(),
-				noteContext: source.markdown,
-			});
-			generated.push(...results);
+		let generated: SectionResult[] = [];
+		let bundledBrief: NoteGenerationResult["noteBrief"] = null;
+		let bundledBriefError: string | null = null;
+		let canceled = false;
+		if (provider.generateBundle) {
+			const eligible = [...eligibleById.values()];
+			const bundleTargets = targets.length ? targets : eligible.slice(0, 1);
+			const bundleResult = await generateNoteBundleForSections(
+				{
+					noteTitle: source.noteTitle,
+					markdown: source.markdown,
+					provider,
+					options: this.deps.generationOptions(),
+				},
+				bundleTargets
+			);
+			const requestedIds = new Set(plan.components.sectionIds);
+			generated = bundleResult.sections.filter((section) =>
+				requestedIds.has(section.id)
+			);
+			canceled = bundleResult.canceled;
+			if (
+				plan.components.noteBrief &&
+				bundleResult.noteBriefOutcome?.status === "success"
+			) {
+				bundledBrief = bundleResult.noteBrief;
+			} else if (
+				plan.components.noteBrief &&
+				bundleResult.noteBriefOutcome?.status === "failed"
+			) {
+				bundledBriefError = bundleResult.noteBriefOutcome.error;
+			}
+		} else {
+			const concurrency = resolveEffectiveSectionConcurrency(
+				this.deps.sectionConcurrency(),
+				provider
+			);
+			for (let start = 0; start < targets.length; start += concurrency) {
+				const results = await generateSectionCueBatch({
+					sections: targets.slice(start, start + concurrency),
+					provider,
+					options: this.deps.generationOptions(),
+					noteContext: source.markdown,
+				});
+				generated.push(...results);
+			}
 		}
 
 		const successful = generated.filter((result) => !result.error);
@@ -665,10 +700,12 @@ export class StudyMaterialMaintenance {
 			);
 		}
 
-		let briefError: string | null = null;
+		let briefError = bundledBriefError;
 		let briefSucceeded = false;
-		let canceled = false;
-		if (plan.components.noteBrief) {
+		if (bundledBrief && nextCache) {
+			nextCache = { ...nextCache, noteBrief: bundledBrief };
+			briefSucceeded = true;
+		} else if (plan.components.noteBrief && !provider.generateBundle) {
 			const briefOutcome = await generateNoteBriefForSections({
 				noteTitle: source.noteTitle,
 				markdown: source.markdown,
@@ -704,10 +741,10 @@ export class StudyMaterialMaintenance {
 					!failedComponents.sectionIds.includes(id)
 			),
 		};
-		const errors = [
+		const errors = unique([
 			...componentErrorMessages(failed),
 			...(briefError ? [briefError] : []),
-		];
+		]);
 
 		if (!await this.canCommitSource(item, plan.revision)) {
 			const latestSource = await this.deps.readSource(request.path);

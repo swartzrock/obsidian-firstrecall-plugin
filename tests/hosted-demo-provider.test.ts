@@ -4,6 +4,7 @@ import {
 	HostedDemoApiError,
 	HostedDemoProtocolError,
 	type HostedDemoBundleInput,
+	type HostedDemoErrorCode,
 } from "../src/hosted-demo-provider";
 import { INSUFFICIENT_SOURCE_ERROR } from "../src/schemas";
 
@@ -75,6 +76,43 @@ function successResponse(
 		operationId,
 		attemptConsumed: true,
 		bundle: { sections, noteBrief: noteBrief() },
+	};
+}
+
+type FailureScope =
+	| "network_burst"
+	| "session"
+	| "installation_hour"
+	| "installation_day"
+	| "global_attempts"
+	| "global_neurons"
+	| "operation";
+
+function failureResponse(
+	code: HostedDemoErrorCode,
+	overrides: {
+		attemptConsumed?: boolean;
+		retryable?: boolean;
+		scope?: FailureScope | null;
+		retryAt?: string | null;
+		resetAt?: string | null;
+		minimumClientVersion?: string | null;
+	} = {}
+) {
+	return {
+		contractVersion: "v1",
+		status: "error",
+		operationId: OPERATION_ID,
+		attemptConsumed: overrides.attemptConsumed ?? false,
+		error: {
+			code,
+			message: `Failure: ${code}`,
+			retryable: overrides.retryable ?? false,
+			scope: overrides.scope ?? null,
+			retryAt: overrides.retryAt ?? null,
+			resetAt: overrides.resetAt ?? null,
+			minimumClientVersion: overrides.minimumClientVersion ?? null,
+		},
 	};
 }
 
@@ -168,35 +206,179 @@ describe("hosted demo provider", () => {
 		expect(transport).toHaveBeenCalledTimes(1);
 	});
 
-	it("surfaces a structured API error and never auto-retries", async () => {
-		const response = {
-			contractVersion: "v1",
-			status: "error",
-			operationId: OPERATION_ID,
-			attemptConsumed: false,
-			error: {
-				code: "BURST_LIMITED",
-				message: "Please try again in a moment.",
+	it.each([
+		...([
+			"INVALID_REQUEST",
+			"NOT_FOUND",
+			"METHOD_NOT_ALLOWED",
+			"REQUEST_TOO_LARGE",
+			"UNSUPPORTED_MEDIA_TYPE",
+		] as const).map((code) => [`simple unconsumed: ${code}`, failureResponse(code)] as const),
+		...([
+			"INFERENCE_FAILED",
+			"MODEL_OUTPUT_INVALID",
+			"MODEL_OUTPUT_INSUFFICIENT",
+			"INFERENCE_TIMEOUT",
+		] as const).map(
+			(code) =>
+				[
+					`consumed inference: ${code}`,
+					failureResponse(code, { attemptConsumed: true }),
+				] as const
+		),
+		[
+			"unsupported contract",
+			failureResponse("UNSUPPORTED_CONTRACT_VERSION", {
+				minimumClientVersion: "0.6.0",
+			}),
+		],
+		[
+			"client update",
+			failureResponse("CLIENT_UPDATE_REQUIRED", {
+				minimumClientVersion: "0.6.0",
+			}),
+		],
+		[
+			"burst",
+			failureResponse("BURST_LIMITED", {
 				retryable: true,
 				scope: "network_burst",
 				retryAt: "2026-08-24T20:30:00Z",
-				resetAt: null,
-				minimumClientVersion: null,
-			},
-		};
-		const { provider, transport } = providerWithResponse(response);
+			}),
+		],
+		["quota: session", failureResponse("QUOTA_EXHAUSTED", { scope: "session" })],
+		[
+			"quota: installation hour",
+			failureResponse("QUOTA_EXHAUSTED", {
+				retryable: true,
+				scope: "installation_hour",
+				retryAt: "2026-08-24T21:00:00Z",
+			}),
+		],
+		...([
+			"installation_day",
+			"global_attempts",
+			"global_neurons",
+		] as const).map(
+			(scope) =>
+				[
+					`quota: ${scope}`,
+					failureResponse("QUOTA_EXHAUSTED", {
+						retryable: true,
+						scope,
+						retryAt: "2026-08-25T00:00:00Z",
+						resetAt: "2026-08-25T00:00:00Z",
+					}),
+				] as const
+		),
+		...(["OPERATION_IN_PROGRESS", "OPERATION_ALREADY_CONSUMED"] as const).map(
+			(code) =>
+				[
+					`operation: ${code}`,
+					failureResponse(code, {
+						attemptConsumed: true,
+						scope: "operation",
+					}),
+				] as const
+		),
+		[
+			"service unavailable",
+			failureResponse("SERVICE_UNAVAILABLE", {
+				retryable: true,
+				retryAt: "2026-08-24T20:30:00Z",
+			}),
+		],
+		[
+			"internal error",
+			failureResponse("INTERNAL_ERROR", { attemptConsumed: true }),
+		],
+	])("accepts a valid failure envelope: %s", async (_label, body) => {
+		const { provider, transport } = providerWithResponse(body);
 
 		const error = await provider.generateBundle(input()).catch((reason: unknown) => reason);
 
 		expect(error).toBeInstanceOf(HostedDemoApiError);
 		expect(error).toMatchObject({
-			message: "Please try again in a moment.",
-			code: "BURST_LIMITED",
-			attemptConsumed: false,
-			retryable: true,
-			scope: "network_burst",
-			retryAt: "2026-08-24T20:30:00Z",
+			message: body.error.message,
+			code: body.error.code,
+			attemptConsumed: body.attemptConsumed,
+			retryable: body.error.retryable,
+			scope: body.error.scope,
+			retryAt: body.error.retryAt,
+			resetAt: body.error.resetAt,
+			minimumClientVersion: body.error.minimumClientVersion,
 		});
+		expect(transport).toHaveBeenCalledTimes(1);
+	});
+
+	it.each([
+		[
+			"simple unconsumed",
+			failureResponse("INVALID_REQUEST", { attemptConsumed: true }),
+		],
+		[
+			"consumed inference",
+			failureResponse("INFERENCE_FAILED", { attemptConsumed: false }),
+		],
+		[
+			"unsupported contract",
+			failureResponse("UNSUPPORTED_CONTRACT_VERSION", { retryable: true }),
+		],
+		["client update", failureResponse("CLIENT_UPDATE_REQUIRED")],
+		[
+			"burst",
+			failureResponse("BURST_LIMITED", {
+				retryable: true,
+				scope: "network_burst",
+			}),
+		],
+		[
+			"quota: session",
+			failureResponse("QUOTA_EXHAUSTED", {
+				retryable: true,
+				scope: "session",
+			}),
+		],
+		[
+			"quota: installation hour",
+			failureResponse("QUOTA_EXHAUSTED", {
+				retryable: true,
+				scope: "installation_hour",
+				retryAt: "2026-08-24T21:00:00Z",
+				resetAt: "2026-08-24T21:00:00Z",
+			}),
+		],
+		[
+			"quota: reset-bearing scopes",
+			failureResponse("QUOTA_EXHAUSTED", {
+				retryable: true,
+				scope: "installation_day",
+				retryAt: "2026-08-25T00:00:00Z",
+			}),
+		],
+		[
+			"operation",
+			failureResponse("OPERATION_IN_PROGRESS", {
+				attemptConsumed: true,
+			}),
+		],
+		[
+			"service unavailable",
+			failureResponse("SERVICE_UNAVAILABLE", {
+				retryable: true,
+				scope: "network_burst",
+			}),
+		],
+		[
+			"internal error",
+			failureResponse("INTERNAL_ERROR", { retryable: true }),
+		],
+	])("rejects an invalid failure envelope: %s", async (_label, body) => {
+		const { provider, transport } = providerWithResponse(body);
+
+		await expect(provider.generateBundle(input())).rejects.toBeInstanceOf(
+			HostedDemoProtocolError
+		);
 		expect(transport).toHaveBeenCalledTimes(1);
 	});
 
@@ -205,24 +387,6 @@ describe("hosted demo provider", () => {
 		[
 			"out-of-bounds cue",
 			successResponse([{ ...completeSection(), question: "q".repeat(501) }]),
-		],
-		[
-			"invalid failure combination",
-			{
-				contractVersion: "v1",
-				status: "error",
-				operationId: OPERATION_ID,
-				attemptConsumed: true,
-				error: {
-					code: "QUOTA_EXHAUSTED",
-					message: "Daily limit reached.",
-					retryable: true,
-					scope: "installation_day",
-					retryAt: "2026-08-25T00:00:00Z",
-					resetAt: "2026-08-25T00:00:00Z",
-					minimumClientVersion: null,
-				},
-			},
 		],
 	])("rejects a malformed response: %s", async (_label, body) => {
 		const { provider } = providerWithResponse(body);
