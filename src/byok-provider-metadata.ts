@@ -44,11 +44,6 @@ export interface FirstRecallProviderDefinition {
 	supportsModelListing: boolean;
 }
 
-export const FIRSTRECALL_PROVIDER_IDS: readonly FirstRecallProviderId[] = [
-	"hosted-demo",
-	...BYOK_PROVIDER_IDS,
-];
-
 const HOSTED_DEMO_DEFINITION: FirstRecallProviderDefinition = {
 	id: "hosted-demo",
 	label: "FirstRecall trial",
