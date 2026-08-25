@@ -2227,8 +2227,7 @@ export default class FirstRecallPlugin extends Plugin {
 		this.endStudyForPath(file.path);
 		await this.maintenance.delete(file.path);
 		new Notice("FirstRecall: cleared generated study material for this note.");
-		await this.updateStatusForFile(file);
-		this.renderCues(file);
+		this.refreshGeneratedSurfaces(file);
 	}
 
 	/**

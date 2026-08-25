@@ -347,9 +347,10 @@ it("keeps stable command IDs while using the approved vocabulary", async () => {
 });
 
 describe("Study plugin orchestration", () => {
-	it("routes clear through maintenance lifecycle invalidation", async () => {
+	it("clears cached material and refreshes Reading View", async () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
+		harness.setMode("preview");
 		const maintenance = (
 			harness.plugin as unknown as { maintenance: StudyMaterialMaintenance }
 		).maintenance;
@@ -359,6 +360,7 @@ describe("Study plugin orchestration", () => {
 
 		expect(remove).toHaveBeenCalledWith(harness.noteFile.path);
 		expect(harness.data.caches).not.toHaveProperty(harness.noteFile.path);
+		expect(harness.firstView.previewMode.rerender).toHaveBeenCalledWith(true);
 	});
 
 	it("passes planned section targets into scope maintenance requests", async () => {
