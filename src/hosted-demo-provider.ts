@@ -23,6 +23,14 @@ const headingSchema = z
 		/^(?![ \t]{0,3}#{1,6}(?:[ \t]+|$))(?![\s\S]*\n[ \t]{0,3}#{1,6}(?:[ \t]+|$))(?![\s\S]*[^\s\n][^\n]*\n[ \t]{0,3}(?:=+|-+)[ \t]*(?:\n|$))/,
 		"must not contain Markdown heading syntax"
 	);
+const questionSchema = z
+	.string()
+	.min(1)
+	.max(500)
+	.regex(
+		/^(?=(?:[^\p{L}\p{N}]*[\p{L}\p{N}]){2})[\s\S]*[?？؟]\s*$/u,
+		"must contain at least two letters or numbers and end with a question mark"
+	);
 
 const hostedDemoSectionInputSchema = z
 	.object({
@@ -59,21 +67,13 @@ const hostedDemoRequestSchema = z
 	})
 	.strict();
 
-const summarySchema = z
-	.object({
-		takeaway: z.string().min(1).max(500),
-		keyPhrase: z.string().min(1).max(200),
-		explanation: z.string().min(1).max(500),
-	})
-	.strict();
-
 const completeSectionSchema = z
 	.object({
 		sectionId: sectionIdSchema,
 		contentHash: contentHashSchema,
-		question: z.string().min(1).max(500),
+		question: questionSchema,
 		keywords: z.array(z.string().min(1).max(80)).min(2).max(5),
-		summary: summarySchema,
+		summary: z.string().min(1).max(500),
 	})
 	.strict();
 
@@ -92,12 +92,16 @@ const noteBriefCardSchema = z
 	})
 	.strict();
 
+const sayItBackCardSchema = noteBriefCardSchema.extend({
+	title: questionSchema.max(200),
+});
+
 const hostedDemoNoteBriefSchema = z
 	.object({
 		overview: z.string().min(1).max(1_200),
 		whatMatters: noteBriefCardSchema,
 		reviewFirst: noteBriefCardSchema,
-		sayItBack: noteBriefCardSchema,
+		sayItBack: sayItBackCardSchema,
 	})
 	.strict();
 

@@ -58,11 +58,7 @@ function completeSection(
 		contentHash,
 		question: "How does retrieval practice strengthen memory?",
 		keywords: ["active recall", "feedback"],
-		summary: {
-			takeaway: "Effortful recall strengthens later access to a memory.",
-			keyPhrase: "retrieval practice",
-			explanation: "The act of recall is what produces the learning benefit.",
-		},
+		summary: "Effortful recall strengthens later access to a memory.",
 	};
 }
 
@@ -146,11 +142,7 @@ describe("hosted demo provider", () => {
 					cue: {
 						question: "How does retrieval practice strengthen memory?",
 						keywords: ["active recall", "feedback"],
-						summary: {
-							takeaway: "Effortful recall strengthens later access to a memory.",
-							keyPhrase: "retrieval practice",
-							explanation: "The act of recall is what produces the learning benefit.",
-						},
+						summary: "Effortful recall strengthens later access to a memory.",
 					},
 				},
 			],
@@ -388,6 +380,46 @@ describe("hosted demo provider", () => {
 			"out-of-bounds cue",
 			successResponse([{ ...completeSection(), question: "q".repeat(501) }]),
 		],
+		[
+			"punctuation-only question",
+			successResponse([{ ...completeSection(), question: "???" }]),
+		],
+		[
+			"question without a question mark",
+			successResponse([
+				{
+					...completeSection(),
+					question: "Retrieval practice strengthens memory.",
+				},
+			]),
+		],
+		[
+			"punctuation-only say-it-back question",
+			{
+				...successResponse(),
+				bundle: {
+					...successResponse().bundle,
+					noteBrief: {
+						...noteBrief(),
+						sayItBack: { ...noteBrief().sayItBack, title: "???" },
+					},
+				},
+			},
+		],
+		[
+			"legacy summary object",
+			successResponse([
+				{
+					...completeSection(),
+					summary: {
+						takeaway: "Effortful recall strengthens later access to a memory.",
+						keyPhrase: "retrieval practice",
+						explanation:
+							"The act of recall is what produces the learning benefit.",
+					},
+				},
+			]),
+		],
 	])("rejects a malformed response: %s", async (_label, body) => {
 		const { provider } = providerWithResponse(body);
 
@@ -488,7 +520,9 @@ describe("hosted demo provider", () => {
 		const result = await provider.generateBundle(realisticInput);
 
 		expect(result.sections).toHaveLength(3);
-		expect(result.sections[0].cue?.summary?.keyPhrase).toBe("retrieval practice");
+		expect(result.sections[0].cue?.summary).toBe(
+			"Effortful recall strengthens later access to a memory."
+		);
 		expect(result.sections[1].cue?.question).toContain("retrieval practice");
 		expect(result.sections[2]).toEqual({ error: INSUFFICIENT_SOURCE_ERROR });
 		expect(result.noteBrief.sayItBack.title).toBe(
