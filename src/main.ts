@@ -22,6 +22,7 @@ import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import {
 	type ByokProviderId,
 	type ByokTransport,
+	isByokProviderId,
 } from "@swartzrock/byok-runtime";
 import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
@@ -34,9 +35,10 @@ import {
 	secureFirstRecallCloudCredentials,
 	listFirstRecallProviderModelsFromStore,
 	makeFirstRecallByokProviderFromStore,
-	type FirstRecallByokRuntime,
+	makeFirstRecallHostedDemoProvider,
 	type FirstRecallFetchedModelProvider,
 } from "./byok-firstrecall-adapter";
+import type { FirstRecallCueProviderRuntime } from "./cue-provider";
 import {
 	createSecureCredentialStore,
 	type FirstRecallCloudCredentialProvider,
@@ -146,10 +148,18 @@ interface PluginData {
 	maintenanceStates: MaintenanceStateMap;
 	hidden: Record<string, true>;
 	cueSectionCollapse: CueSectionCollapseMap;
+	installationId?: unknown;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUuid(value: unknown): value is string {
+	return typeof value === "string" &&
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+			value
+		);
 }
 
 function abortReason(signal: AbortSignal): Error {
@@ -224,6 +234,7 @@ export default class FirstRecallPlugin extends Plugin {
 	private cueSectionCollapse!: CueSectionCollapseStore;
 	private credentialStore!: SecureCredentialStore;
 	private credentialStorageWarnings: string[] = [];
+	private readonly hostedDemoSessionId = crypto.randomUUID();
 	private readonly editorCueWidthController: EditorCueWidthController = {
 		getCommittedWidthPx: () => this.settings.editorCueCustomWidthPx,
 		previewWidthPx: (widthPx) => this.previewEditorCueWidth(widthPx),
@@ -442,6 +453,9 @@ export default class FirstRecallPlugin extends Plugin {
 			maintenanceStates,
 			hidden,
 			cueSectionCollapse,
+			...(Object.prototype.hasOwnProperty.call(loadedRecord, "installationId")
+				? { installationId: loadedRecord.installationId }
+				: {}),
 		};
 		this.settings = this.data.settings;
 		if (
@@ -1152,6 +1166,7 @@ export default class FirstRecallPlugin extends Plugin {
 	private isConfigured(): boolean {
 		const provider = firstRecallSelectedProvider(this.settings);
 		if (!provider) return false;
+		if (provider === "hosted-demo") return true;
 		const definition = byokProviderDefinition(provider);
 		const hasCredential =
 			definition.credentialKind === "api-key"
@@ -1178,7 +1193,10 @@ export default class FirstRecallPlugin extends Plugin {
 	}
 
 	isProviderCredentialSaved(provider?: ByokProviderId): boolean {
-		provider ??= firstRecallSelectedProvider(this.settings) ?? undefined;
+		const selectedProvider = firstRecallSelectedProvider(this.settings);
+		provider ??= selectedProvider && isByokProviderId(selectedProvider)
+			? selectedProvider
+			: undefined;
 		if (!provider) return false;
 		return firstRecallProviderCredentialSaved(this.settings, provider);
 	}
@@ -1775,10 +1793,28 @@ export default class FirstRecallPlugin extends Plugin {
 	}
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
-	async makeProvider(): Promise<FirstRecallByokRuntime> {
+	async makeProvider(): Promise<FirstRecallCueProviderRuntime> {
+		if (firstRecallSelectedProvider(this.settings) === "hosted-demo") {
+			const installationId = await this.hostedDemoInstallationId();
+			return makeFirstRecallHostedDemoProvider({
+				transport: this.makeTransport(),
+				clientVersion: this.manifest.version,
+				installationId,
+				sessionId: this.hostedDemoSessionId,
+				createOperationId: () => crypto.randomUUID(),
+			});
+		}
 		return makeFirstRecallByokProviderFromStore(this.settings, {
 			transport: this.makeTransport(),
 		}, this.credentialStore);
+	}
+
+	private async hostedDemoInstallationId(): Promise<string> {
+		if (isUuid(this.data.installationId)) return this.data.installationId;
+		const installationId = crypto.randomUUID();
+		this.data.installationId = installationId;
+		await this.persistPluginData();
+		return installationId;
 	}
 
 	async listProviderModels(
@@ -1791,7 +1827,7 @@ export default class FirstRecallPlugin extends Plugin {
 
 	private async makeProviderForRun(
 		opts: { automatic?: boolean } = {}
-	): Promise<FirstRecallByokRuntime | null> {
+	): Promise<FirstRecallCueProviderRuntime | null> {
 		try {
 			return await this.makeProvider();
 		} catch (error) {
@@ -1816,6 +1852,7 @@ export default class FirstRecallPlugin extends Plugin {
 	private selectedModelName(): string {
 		const provider = firstRecallSelectedProvider(this.settings);
 		if (!provider) return "";
+		if (provider === "hosted-demo") return "Included trial model";
 		const model = firstRecallProviderModel(this.settings, provider).trim();
 		return byokProviderDefinition(provider).modelBehavior === "optional"
 			? model || "CLI default"

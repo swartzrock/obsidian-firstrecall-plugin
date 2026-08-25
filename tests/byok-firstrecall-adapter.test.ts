@@ -12,6 +12,7 @@ import {
 	makeFirstRecallByokProviderFromStore,
 	secureFirstRecallCloudCredentials,
 	normalizeFirstRecallProviderSettings,
+	makeFirstRecallHostedDemoProvider,
 	recordFirstRecallProviderConnectionSuccess,
 	resetFirstRecallFetchedModels,
 	resolveFirstRecallProviderConfigFromStore,
@@ -282,6 +283,29 @@ describe("firstRecallProviderConfigFromSettings", () => {
 		expect(
 			makeFirstRecallByokProvider(providerSettings, { transport }).id
 		).toBe(provider);
+	});
+
+	it("wraps the hosted trial as a configured FirstRecall runtime", async () => {
+		const provider = makeFirstRecallHostedDemoProvider({
+			transport,
+			clientVersion: "0.5.0",
+			installationId: "7f4b9f2c-2f2c-4e90-a8b7-5ac2e40dc40a",
+			sessionId: "c1f63499-1afd-4462-bb71-c816679b0e22",
+			createOperationId: () => "9ac782b9-edde-41c0-91d0-6ec020224b6a",
+		});
+
+		expect(provider).toMatchObject({
+			id: "hosted-demo",
+			label: "FirstRecall trial",
+			requiresNetwork: true,
+			requiresDownload: false,
+		});
+		expect(await provider.testConnection()).toMatchObject({ ok: true });
+		expect(await provider.listModels()).toEqual([
+			{ id: "included-trial", label: "Included trial model" },
+		]);
+		expect(typeof provider.generateBundle).toBe("function");
+		expect(provider.generateCue).toBeUndefined();
 	});
 
 	it("wraps generic text providers with FirstRecall cue generation", async () => {
@@ -633,6 +657,20 @@ describe("firstRecallProviderConfigFromSettings", () => {
 });
 
 describe("FirstRecall provider settings normalization", () => {
+	it("preserves the explicit hosted trial selection without adding provider settings", () => {
+		const raw = settings({ selectedProvider: "openai" });
+		(raw.byok as { selectedProvider: unknown }).selectedProvider = "hosted-demo";
+		const normalized = structuredClone(DEFAULT_SETTINGS);
+
+		normalizeFirstRecallProviderSettings(normalized, DEFAULT_SETTINGS, raw);
+
+		expect(normalized.byok.selectedProvider).toBe("hosted-demo");
+		expect(normalized.byok.providers.openai).toMatchObject(
+			raw.byok.providers.openai ?? {}
+		);
+		expect(normalized.byok.providers).not.toHaveProperty("hosted-demo");
+	});
+
 	it.each([
 		["codex", "codex-cli"],
 		["claude", "claude-cli"],

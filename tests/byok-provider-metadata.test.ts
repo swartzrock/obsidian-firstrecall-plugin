@@ -7,10 +7,28 @@ import { describe, expect, it } from "vitest";
 import {
 	byokProviderDefinition,
 	byokProviderDefinitions,
+	firstRecallProviderDefinition,
+	firstRecallProviderDefinitions,
 } from "../src/byok-provider-metadata";
 import { BYOK_PROVIDER_ICONS } from "../src/provider-icons";
 
 describe("FirstRecall BYOK provider metadata", () => {
+	it("registers the plugin-owned trial separately from BYOK providers", () => {
+		expect(firstRecallProviderDefinitions().map(({ id }) => id)).toEqual([
+			"hosted-demo",
+			...BYOK_PROVIDER_IDS,
+		]);
+		expect(byokProviderDefinitions().map(({ id }) => id)).toEqual(
+			BYOK_PROVIDER_IDS
+		);
+		expect(firstRecallProviderDefinition("hosted-demo")).toMatchObject({
+			label: "FirstRecall trial",
+			shortLabel: "FirstRecall trial",
+			credentialKind: "trial",
+			modelBehavior: "included",
+		});
+	});
+
 	it("covers every provider supported by the runtime", () => {
 		expect(byokProviderDefinitions().map((definition) => definition.id)).toEqual(
 			BYOK_PROVIDER_IDS

@@ -20,7 +20,7 @@ import { buildNoteBriefInstructionsTemplate } from "../src/study-material-instru
 import { QUESTION_TYPES } from "../src/cue-generation";
 import {
 	byokProviderDefinition,
-	byokProviderDefinitions,
+	firstRecallProviderDefinitions,
 	type FirstRecallProviderDefinition,
 } from "../src/byok-provider-metadata";
 
@@ -657,6 +657,7 @@ describe("settings defaults", () => {
 			),
 		];
 		expect(pathButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
+			"FirstRecall trial",
 			"LLM API Provider",
 			"Installed AI tool",
 			"Self-Hosted LLM Provider",
@@ -699,8 +700,9 @@ describe("settings defaults", () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
-		const definitions = byokProviderDefinitions();
+		const definitions = firstRecallProviderDefinitions();
 		const scenarios = [
+			{ label: "FirstRecall trial", kind: "trial", count: 1 },
 			{ label: "LLM API Provider", kind: "api-key", count: 11 },
 			{ label: "Installed AI tool", kind: "command", count: 2 },
 			{ label: "Self-Hosted LLM Provider", kind: "url", count: 2 },
@@ -738,6 +740,45 @@ describe("settings defaults", () => {
 
 		expect(plugin.settings.byok.selectedProvider).toBeNull();
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
+	});
+
+	it("offers the included trial first and selects it without setup fields", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		tab.display();
+		openSettingsCard(tab, "AI model");
+
+		const pathButtons = [
+			...tab.containerEl.querySelectorAll<HTMLButtonElement>(
+				".firstrecall-provider-path-button"
+			),
+		];
+		expect(pathButtons[0]?.getAttribute("aria-label")).toBe("FirstRecall trial");
+		expect(settingText(tab.containerEl)).toContain(
+			"included, sends selected note content to FirstRecall's hosted service, is very rate-limited, and requires no API key"
+		);
+		pathButtons[0]?.click();
+		const trial = tab.containerEl.querySelector<HTMLButtonElement>(
+			'[role="radio"][aria-label="FirstRecall trial"]'
+		);
+		expect(trial).not.toBeNull();
+		trial?.click();
+
+		await vi.waitFor(() =>
+			expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo")
+		);
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+		expect(settingText(tab.containerEl)).toContain("Included trial model");
+		expect(tab.containerEl.querySelector(".firstrecall-api-key-input")).toBeNull();
+		expect(tab.containerEl.querySelector(".firstrecall-model-setting")).toBeNull();
+		expect(settingText(tab.containerEl)).not.toContain("Test connection");
+		expect(plugin.settings.byok.providers).not.toHaveProperty("hosted-demo");
+
+		tab.containerEl
+			.querySelector<HTMLButtonElement>('[aria-label="Back to settings"]')
+			?.click();
+		expect(settingText(tab.containerEl)).toContain(
+			"FirstRecall trial · Included trial model"
+		);
 	});
 
 	it("derives the connection path for an existing provider", async () => {
@@ -896,6 +937,7 @@ describe("settings defaults", () => {
 		openSettingsCard(tab, "AI model");
 		const providerIds = new Set<string>();
 		for (const pathLabel of [
+			"FirstRecall trial",
 			"LLM API Provider",
 			"Installed AI tool",
 			"Self-Hosted LLM Provider",
@@ -917,6 +959,10 @@ describe("settings defaults", () => {
 				providerIds.add(providerId!);
 
 				const svg = iconEl.querySelector("svg");
+				if (!svg) {
+					expect(iconEl.dataset.icon).toBeTruthy();
+					continue;
+				}
 				const paths = [...(svg?.querySelectorAll("path") ?? [])];
 				expect(paths.length).toBeGreaterThan(0);
 				for (const path of paths) {
@@ -924,7 +970,7 @@ describe("settings defaults", () => {
 				}
 			}
 		}
-		expect(providerIds.size).toBe(15);
+		expect(providerIds.size).toBe(16);
 	});
 
 	it("gives duplicate gradient icons unique ids so two instances on the page don't collide", async () => {

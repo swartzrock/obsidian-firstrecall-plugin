@@ -1,15 +1,17 @@
 import {
 	BYOK_PROVIDER_IDS,
 	ByokProvider,
+	isByokProviderId,
 	type ByokProviderId,
 } from "@swartzrock/byok-runtime";
 import {
 	BYOK_PROVIDER_ICONS,
 	type FirstRecallProviderIconDefinition,
 } from "./provider-icons";
+import type { FirstRecallProviderId } from "./cue-provider";
 
-export type FirstRecallCredentialKind = "api-key" | "url" | "command";
-export type FirstRecallModelBehavior = "required" | "optional";
+export type FirstRecallCredentialKind = "trial" | "api-key" | "url" | "command";
+export type FirstRecallModelBehavior = "included" | "required" | "optional";
 
 export interface FirstRecallCredentialFieldDefinition {
 	label: string;
@@ -31,7 +33,7 @@ export interface FirstRecallModelFieldDefinition {
 }
 
 export interface FirstRecallProviderDefinition {
-	id: ByokProviderId;
+	id: FirstRecallProviderId;
 	label: string;
 	shortLabel: string;
 	icon: FirstRecallProviderIconDefinition | string;
@@ -41,6 +43,33 @@ export interface FirstRecallProviderDefinition {
 	modelField: FirstRecallModelFieldDefinition;
 	supportsModelListing: boolean;
 }
+
+export const FIRSTRECALL_PROVIDER_IDS: readonly FirstRecallProviderId[] = [
+	"hosted-demo",
+	...BYOK_PROVIDER_IDS,
+];
+
+const HOSTED_DEMO_DEFINITION: FirstRecallProviderDefinition = {
+	id: "hosted-demo",
+	label: "FirstRecall trial",
+	shortLabel: "FirstRecall trial",
+	icon: "sparkles",
+	credentialKind: "trial",
+	credentialField: {
+		label: "",
+		placeholder: "",
+		description: "",
+		secret: false,
+		missingMessage: "",
+	},
+	modelBehavior: "included",
+	modelField: {
+		label: "Included trial model",
+		placeholder: "",
+		description: "Included trial model",
+	},
+	supportsModelListing: false,
+};
 
 interface CloudDefinitionOptions {
 	id: ByokProviderId;
@@ -326,4 +355,22 @@ export function byokProviderDefinition(
 
 export function byokProviderDefinitions(): FirstRecallProviderDefinition[] {
 	return BYOK_PROVIDER_IDS.map(byokProviderDefinition);
+}
+
+export function isFirstRecallProviderId(
+	value: unknown
+): value is FirstRecallProviderId {
+	return value === "hosted-demo" || isByokProviderId(value);
+}
+
+export function firstRecallProviderDefinition(
+	provider: FirstRecallProviderId
+): FirstRecallProviderDefinition {
+	return provider === "hosted-demo"
+		? HOSTED_DEMO_DEFINITION
+		: byokProviderDefinition(provider);
+}
+
+export function firstRecallProviderDefinitions(): FirstRecallProviderDefinition[] {
+	return [HOSTED_DEMO_DEFINITION, ...byokProviderDefinitions()];
 }

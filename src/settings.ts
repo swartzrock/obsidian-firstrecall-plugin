@@ -39,10 +39,13 @@ import {
 } from "@swartzrock/byok-runtime";
 import {
 	byokProviderDefinition,
-	byokProviderDefinitions,
+	firstRecallProviderDefinition,
+	firstRecallProviderDefinitions,
+	isFirstRecallProviderId,
 	type FirstRecallCredentialKind,
 	type FirstRecallProviderDefinition,
 } from "./byok-provider-metadata";
+import type { FirstRecallProviderId } from "./cue-provider";
 import {
 	parseProviderIconGradients,
 	parseProviderIconViewBox,
@@ -170,7 +173,7 @@ interface StudyAreaUiState {
 
 export interface FirstRecallSettings {
 	byok: Omit<ByokStoredSettings, "selectedProvider"> & {
-		selectedProvider: ByokProviderId | null;
+		selectedProvider: FirstRecallProviderId | null;
 	};
 	questionType: QuestionType;
 	studyHideMode: StudyHideMode;
@@ -422,6 +425,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private aiModelSummary(): string {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return "Select an AI provider to generate study material";
+		if (provider === "hosted-demo") {
+			return "FirstRecall trial · Included trial model · Ready";
+		}
 		const setup = deriveFirstRecallProviderSetupStatus(this.plugin.settings);
 		const providerLabel = this.providerDisplayName(provider);
 		const modelLabel = this.selectedModelLabel() || "No model selected";
@@ -456,14 +462,15 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		return `${count} folder${count === 1 ? "" : "s"} · ${enabled} update automatically`;
 	}
 
-	private providerDisplayName(provider: ByokProviderId): string {
-		return byokProviderDefinition(provider).shortLabel;
+	private providerDisplayName(provider: FirstRecallProviderId): string {
+		return firstRecallProviderDefinition(provider).shortLabel;
 	}
 
 	private selectedModelLabel(): string {
 		const settings = this.plugin.settings;
 		const provider = firstRecallSelectedProvider(settings);
 		if (!provider) return "";
+		if (provider === "hosted-demo") return "Included trial model";
 		const modelId = firstRecallProviderModel(settings, provider).trim();
 		if (provider === "anthropic") {
 			if (!modelId) return "";
@@ -557,7 +564,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private renderProviderSetupPanel(containerEl: HTMLElement): void {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return;
-		const definition = byokProviderDefinition(provider);
+		const definition = firstRecallProviderDefinition(provider);
 		const panelEl = containerEl.createDiv({
 			cls: "firstrecall-active-provider-panel",
 		});
@@ -572,6 +579,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		const fieldsEl = panelEl.createDiv({
 			cls: "firstrecall-active-provider-fields",
 		});
+		if (provider === "hosted-demo") {
+			fieldsEl.createDiv({
+				cls: "firstrecall-settings-flow-desc",
+				text: "Included trial model. No API key or model setup is required.",
+			});
+			return;
+		}
 		this.renderProviderCredentialSettings(fieldsEl);
 		this.renderProviderModelSettings(fieldsEl);
 		this.renderProviderSetupStatus(fieldsEl);
@@ -586,13 +600,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		);
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!panelEl || !provider) return;
-		panelEl.hidden = byokProviderDefinition(provider).credentialKind !== path;
+		panelEl.hidden = firstRecallProviderDefinition(provider).credentialKind !== path;
 	}
 
 	private renderProviderPicker(containerEl: HTMLElement): void {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
 		if (this.providerPickerPath === null && selectedProvider) {
-			this.providerPickerPath = byokProviderDefinition(selectedProvider).credentialKind;
+			this.providerPickerPath = firstRecallProviderDefinition(selectedProvider).credentialKind;
 		}
 
 		const resultsId = "firstrecall-provider-results";
@@ -605,6 +619,12 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			title: string;
 			description: string;
 		}> = [
+			{
+				path: "trial",
+				title: "FirstRecall trial",
+				description:
+					"The trial is included, sends selected note content to FirstRecall's hosted service, is very rate-limited, and requires no API key.",
+			},
 			{
 				path: "api-key",
 				title: "LLM API Provider",
@@ -668,7 +688,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			const buttonEl = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
 				".firstrecall-provider-button"
 			);
-			const definition = byokProviderDefinitions().find(
+			const definition = firstRecallProviderDefinitions().find(
 				(candidate) => candidate.id === buttonEl?.dataset.provider
 			);
 			if (definition) void this.selectProvider(definition.id);
@@ -709,7 +729,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			},
 		});
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		const definitions = byokProviderDefinitions().filter(
+		const definitions = firstRecallProviderDefinitions().filter(
 			(definition) => definition.credentialKind === path
 		);
 		for (const definition of definitions) {
@@ -796,7 +816,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	}
 
 	private async selectProvider(provider: string): Promise<void> {
-		if (!isByokProviderId(provider)) return;
+		if (!isFirstRecallProviderId(provider)) return;
 		if (provider === firstRecallSelectedProvider(this.plugin.settings)) return;
 		setFirstRecallSelectedProvider(this.plugin.settings, provider);
 		await this.plugin.saveSettings();
@@ -805,7 +825,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private renderProviderSetupStatus(containerEl: HTMLElement): void {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!provider) return;
+		if (!provider || !isByokProviderId(provider)) return;
 		const status = deriveFirstRecallProviderSetupStatus(this.plugin.settings);
 		const isCli = isFirstRecallLocalCliProvider(provider);
 		const cliModelLabel = this.selectedModelLabel() === "CLI default"
@@ -1924,7 +1944,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private renderProviderCredentialSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		const provider = firstRecallSelectedProvider(s);
-		if (!provider) return;
+		if (!provider || !isByokProviderId(provider)) return;
 		const definition = byokProviderDefinition(provider);
 		if (provider === "anthropic") {
 			this.renderAnthropicCredentialSettings(containerEl);
@@ -1969,7 +1989,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private renderProviderModelSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		const provider = firstRecallSelectedProvider(s);
-		if (!provider) return;
+		if (!provider || !isByokProviderId(provider)) return;
 		if (provider === "anthropic") {
 			this.renderAnthropicModelSettings(containerEl);
 			return;
@@ -2283,7 +2303,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	/** Verify the selected provider is reachable and reports a readable result. */
 	private async testConnection(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		const definition = byokProviderDefinition(selectedProvider);
 		if (definition.credentialKind === "command") {
 			await this.testLocalCliProvider();
@@ -2298,7 +2318,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private async testLocalCliProvider(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		const command = firstRecallProviderCredential(
 			this.plugin.settings,
 			selectedProvider
@@ -2320,7 +2340,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private async testUrlProvider(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		const definition = byokProviderDefinition(selectedProvider);
 		const url = firstRecallProviderCredential(this.plugin.settings, selectedProvider);
 		if (!url.trim()) {
@@ -2345,7 +2365,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private async testCloudProvider(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		if (!this.plugin.isProviderCredentialSaved(selectedProvider)) {
 			const providerName = firstRecallProviderLabel(selectedProvider);
 			new Notice(`FirstRecall: enter your ${providerName} API key first.`);
