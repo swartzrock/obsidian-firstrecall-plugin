@@ -65,20 +65,12 @@ describe("local CLI cue batch prompt", () => {
 								{
 									question: "What makes a stack LIFO?",
 									keywords: ["stack", "LIFO"],
-									summary: {
-										takeaway: "Stacks remove the newest item first.",
-										keyPhrase: "last-in-first-out",
-										explanation: "The phrase defines stack order.",
-									},
+									summary: "Stacks remove the newest item first.",
 								},
 								{
 									question: "What makes a queue FIFO?",
 									keywords: ["queue", "FIFO"],
-									summary: {
-										takeaway: "Queues remove the oldest item first.",
-										keyPhrase: "first-in-first-out",
-										explanation: "The phrase defines queue order.",
-									},
+									summary: "Queues remove the oldest item first.",
 								},
 							],
 						}),
@@ -113,17 +105,21 @@ describe("local CLI cue batch prompt", () => {
 			expect(call.prompt).toContain(
 				"Create exactly one section study card for each of the 2 supplied sections"
 			);
-			expect(call.prompt).toContain("Recall question: Ask one precise exam-style question");
-			for (const field of [
-				"question",
-				"keywords",
-				"summary",
-				"takeaway",
-				"keyPhrase",
-				"explanation",
-			]) {
+			expect(call.prompt).toContain(
+				'"question": "<Ask one precise exam-style question'
+			);
+			expect(call.prompt).toContain(
+				'Return only valid JSON with a "cues" array containing exactly 2 entries in input order.'
+			);
+			expect(call.prompt).toContain(
+				"Do not include markdown, commentary, a separate answer, or additional fields."
+			);
+			for (const field of ["question", "keywords", "summary"]) {
 				expect(call.prompt).toContain(field);
 			}
+			expect(call.prompt).not.toContain('"takeaway"');
+			expect(call.prompt).not.toContain('"keyPhrase"');
+			expect(call.prompt).not.toContain('"explanation"');
 			expect(call.prompt).toContain("A stack removes the newest item first.");
 			expect(call.prompt).toContain("A queue removes the oldest item first.");
 			expect(call.jsonSchema).toBe(cueBatchJsonSchema(2));
@@ -173,11 +169,7 @@ describe("local CLI cue batch prompt", () => {
 		const validCue = {
 			question: "What makes a queue FIFO?",
 			keywords: ["queue", "FIFO"],
-			summary: {
-				takeaway: "Queues remove the oldest item first.",
-				keyPhrase: "first-in-first-out",
-				explanation: "The phrase defines queue order.",
-			},
+			summary: "Queues remove the oldest item first.",
 		};
 		const runtime: ByokProviderRuntime = {
 			id: "codex-cli",

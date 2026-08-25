@@ -4,11 +4,22 @@ import { z } from "zod/v3";
  * Validation for FirstRecall provider output. The app accepts a little model
  * variation at the boundary, then normalizes to the section-card and Note Brief contracts.
  */
-export const sectionSummarySchema = z.object({
-	takeaway: z.string().trim().min(1, "summary.takeaway is required"),
-	keyPhrase: z.string().trim().min(1, "summary.keyPhrase is required"),
-	explanation: z.string().trim().min(1, "summary.explanation is required"),
-});
+function coerceSectionSummary(value: unknown): unknown {
+	if (
+		typeof value === "object" &&
+		value !== null &&
+		!Array.isArray(value) &&
+		"takeaway" in value
+	) {
+		return (value as { takeaway?: unknown }).takeaway;
+	}
+	return value;
+}
+
+export const sectionSummarySchema = z.preprocess(
+	coerceSectionSummary,
+	z.string().trim().min(1, "summary is required")
+);
 
 /** Drop blanks, trim, dedupe case-insensitively, and cap at 5 keywords. */
 function coerceKeywords(value: unknown): unknown {
@@ -62,18 +73,8 @@ export const cueGenerationSchema = z.object({
 		.array(z.string())
 		.describe("2 to 5 short key terms that help recall the answer."),
 	summary: z
-		.object({
-			takeaway: z
-				.string()
-				.describe("One short sentence summarizing the section's most important idea."),
-			keyPhrase: z
-				.string()
-				.describe("The most important phrase or term to notice."),
-			explanation: z
-				.string()
-				.describe("One short sentence explaining why the phrase matters for recall."),
-		})
-		.describe("A compact Summary for this section."),
+		.string()
+		.describe("One short sentence summarizing the section's most important idea."),
 });
 
 export const cueGenerationResponseSchema = z.union([

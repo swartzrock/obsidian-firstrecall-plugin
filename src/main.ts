@@ -18,7 +18,6 @@ import {
 	DEFAULT_SETTINGS,
 } from "./settings";
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
-import { cueFontSizeClass } from "./cornell-layout";
 import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import {
 	type ByokProviderId,
@@ -64,11 +63,11 @@ import {
 } from "./study-material-maintenance";
 import {
 	applyEditorCueWidthPreview,
-	appendFreshnessBadge,
-	appendSummary,
 	buildCueLineData,
+	cueSectionCollapsedState,
 	cueEditorExtension,
 	railLayoutAppliesToDisplay,
+	renderCueElement,
 	renderNoteBriefElement,
 	setCuesEffect,
 	type EditorCueWidthController,
@@ -1566,12 +1565,12 @@ export default class FirstRecallPlugin extends Plugin {
 				next?.hasClass("firstrecall-cue-reading") &&
 				(next as HTMLElement).dataset.firstrecallSectionId === cue.sectionId
 			) {
-				next.replaceWith(this.buildReadingCueEl(cue, cueVisibility));
+				next.replaceWith(this.buildReadingCueEl(path, cue, cueVisibility));
 				continue;
 			}
 			heading.insertAdjacentElement(
 				"afterend",
-				this.buildReadingCueEl(cue, cueVisibility)
+				this.buildReadingCueEl(path, cue, cueVisibility)
 			);
 		}
 
@@ -1695,35 +1694,28 @@ export default class FirstRecallPlugin extends Plugin {
 		return true;
 	}
 
-	/** Build the reading-view cue element (mirrors the editor cue widget DOM). */
+	/** Build a Reading View cue with the shared section disclosure state. */
 	private buildReadingCueEl(
+		notePath: string,
 		cue: CueLineData,
 		visibility: ReadingCueVisibility
 	): HTMLElement {
-		const root = createDiv({ cls: "firstrecall-cue firstrecall-cue-reading" });
-		root.addClass(cueFontSizeClass(this.settings.cueFontSize));
+		const root = renderCueElement(cue, "inline-cues", {
+			...visibility,
+			cueFontSize: this.settings.cueFontSize,
+			collapse: {
+				notePath,
+				sectionId: cue.sectionId,
+				controller: this.cueSectionCollapse,
+				collapsed: cueSectionCollapsedState(
+					this.cueSectionCollapse,
+					notePath,
+					cue.sectionId
+				),
+			},
+		});
+		root.addClass("firstrecall-cue-reading");
 		root.dataset.firstrecallSectionId = cue.sectionId;
-		root.setAttr("role", "note");
-		appendFreshnessBadge(root, cue.freshness);
-		if (cue.error) {
-			root.addClass("firstrecall-cue-error");
-			root.setAttr("title", cue.error);
-			root.createDiv({
-				cls: "firstrecall-cue-question",
-				text: "\u26a0 Generation failed \u2014 regenerate",
-			});
-			return root;
-		}
-		appendSummary(root, cue.summary);
-		if (visibility.showQuestion) {
-			root.createDiv({ cls: "firstrecall-cue-question", text: cue.question });
-		}
-		if (cue.keywords.length) {
-			root.createDiv({
-				cls: "firstrecall-cue-keywords",
-				text: cue.keywords.join(" \u00b7 "),
-			});
-		}
 		return root;
 	}
 
@@ -2235,8 +2227,7 @@ export default class FirstRecallPlugin extends Plugin {
 		this.endStudyForPath(file.path);
 		await this.maintenance.delete(file.path);
 		new Notice("FirstRecall: cleared generated study material for this note.");
-		await this.updateStatusForFile(file);
-		this.renderCues(file);
+		this.refreshGeneratedSurfaces(file);
 	}
 
 	/**
@@ -2331,4 +2322,3 @@ class SectionSuggestModal extends FuzzySuggestModal<Section> {
 		this.onChoose(item);
 	}
 }
-

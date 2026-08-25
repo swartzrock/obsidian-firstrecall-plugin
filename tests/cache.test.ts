@@ -63,11 +63,7 @@ describe("buildNoteCache + validateCache", () => {
 
 	it("persists generated Summary and Note Brief data", () => {
 		const result = sampleResult();
-		result.sections[0].summary = {
-			takeaway: "Focus on A.",
-			keyPhrase: "A",
-			explanation: "A frames the rest of the note.",
-		};
+		result.sections[0].summary = "Focus on A.";
 		result.noteBrief = {
 			overview: "A and B explain the note.",
 			whatMatters: { title: "A matters", detail: "It frames the note." },
@@ -83,9 +79,30 @@ describe("buildNoteCache + validateCache", () => {
 			noteModifiedAt: 1000,
 		});
 
-		expect(cache.sections[0].summary?.keyPhrase).toBe("A");
+		expect(cache.sections[0].summary).toBe("Focus on A.");
 		expect(cache.noteBrief?.reviewFirst.title).toBe("A");
 		expect(validateCache(cache).ok).toBe(true);
+	});
+
+	it("loads legacy Summary objects without retaining removed fields", () => {
+		const cache = build();
+		const legacy = {
+			...cache,
+			sections: cache.sections.map((section, index) =>
+				index === 0
+					? {
+							...section,
+							summary: {
+								takeaway: "Focus on A.",
+								keyPhrase: "A",
+								explanation: "A frames the rest of the note.",
+							},
+						}
+					: section
+			),
+		};
+
+		expect(loadCache(legacy)?.sections[0].summary).toBe("Focus on A.");
 	});
 
 	it("rejects objects that are not valid caches", () => {

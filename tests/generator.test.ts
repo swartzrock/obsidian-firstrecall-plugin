@@ -71,11 +71,7 @@ function mockProvider(opts: MockOptions = {}): FirstRecallCueProviderRuntime & {
 			return {
 				question: `Q:${input.heading}`,
 				keywords: ["k1", "k2"],
-				summary: {
-					takeaway: `${input.heading} carries the main review idea.`,
-					keyPhrase: input.heading || "section",
-					explanation: "This phrase anchors recall for the section.",
-				},
+				summary: `${input.heading} carries the main review idea.`,
 			};
 		},
 		async generateNoteBrief(
@@ -109,11 +105,7 @@ function mockProvider(opts: MockOptions = {}): FirstRecallCueProviderRuntime & {
 					cue: {
 						question: `Q:${input.heading}`,
 						keywords: ["k1", "k2"],
-						summary: {
-							takeaway: `${input.heading} carries the main review idea.`,
-							keyPhrase: input.heading || "section",
-							explanation: "This phrase anchors recall for the section.",
-						},
+						summary: `${input.heading} carries the main review idea.`,
 					},
 				};
 			});
@@ -146,7 +138,7 @@ describe("generateNote", () => {
 		]);
 		expect(provider.noteBriefCalls).toBe(1);
 		expect(result.noteBrief?.overview).toBe("the note brief");
-		expect(result.sections[0].summary?.keyPhrase).toBe("A");
+		expect(result.sections[0].summary).toBe("A carries the main review idea.");
 		expect(provider.lastNoteBriefInput?.sections.map((s) => s.heading)).toEqual([
 			"A",
 			"B",
@@ -515,7 +507,7 @@ describe("generateSectionCue", () => {
 		expect(result.id).toBe("terms");
 		expect(result.question).toBe("Q:Terms");
 		expect(result.keywords).toEqual(["k1", "k2"]);
-		expect(result.summary?.keyPhrase).toBe("Terms");
+		expect(result.summary).toBe("Terms carries the main review idea.");
 		expect(result.error).toBeNull();
 		expect(result.contentHash).toBe("abc123");
 	});
