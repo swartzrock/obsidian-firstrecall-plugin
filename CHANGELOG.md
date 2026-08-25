@@ -1,5 +1,11 @@
 # firstrecall
 
+## 0.6.1
+
+### Patch Changes
+
+- 8523299: Use Editing View's inline section cards in Reading View and simplify section summaries to a single string.
+
 ## 0.6.0
 
 ### Minor Changes
