@@ -567,6 +567,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		const definition = firstRecallProviderDefinition(provider);
 		const panelEl = containerEl.createDiv({
 			cls: "firstrecall-active-provider-panel",
+			attr: { id: "firstrecall-active-provider-panel" },
 		});
 		const headerEl = panelEl.createDiv({
 			cls: "firstrecall-active-provider-header",
@@ -621,25 +622,25 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		}> = [
 			{
 				path: "trial",
-				title: "FirstRecall trial",
+				title: "Included trial",
 				description:
 					"The trial is included, sends selected note content to FirstRecall's hosted service, is very rate-limited, and requires no API key.",
 			},
 			{
 				path: "api-key",
-				title: "LLM API Provider",
+				title: "API key",
 				description:
 					"Use an API key from Anthropic, OpenAI, Gemini, or another provider.",
 			},
 			{
 				path: "command",
-				title: "Installed AI tool",
+				title: "Installed tool",
 				description:
 					"Use Codex or Claude Code if one is already installed and signed in on this device.",
 			},
 			{
 				path: "url",
-				title: "Self-Hosted LLM Provider",
+				title: "Local server",
 				description:
 					"Connect to Ollama or LM Studio running on a model server you control.",
 			},
@@ -669,7 +670,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					"aria-label": definition.title,
 					"aria-describedby": descriptionId,
 					"aria-expanded": String(this.providerPickerPath === definition.path),
-					"aria-controls": resultsId,
+					"aria-controls": definition.path === "trial"
+						? "firstrecall-active-provider-panel"
+						: resultsId,
 				},
 			}) as HTMLButtonElement;
 			optionEl.createDiv({
@@ -708,6 +711,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				resultsEl.empty();
 				this.renderProviderOptions(resultsEl, control.path);
 				this.syncProviderSetupPanelVisibility(containerEl, control.path);
+				if (control.path === "trial") {
+					void this.selectProvider("hosted-demo");
+				}
 			});
 		}
 	}
@@ -716,6 +722,12 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		containerEl: HTMLElement,
 		path: FirstRecallCredentialKind
 	): void {
+		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
+		const definitions = firstRecallProviderDefinitions().filter(
+			(definition) => definition.credentialKind === path
+		);
+		if (path === "trial") return;
+
 		containerEl.createDiv({
 			cls: "firstrecall-provider-step-label",
 			text: "Available providers",
@@ -728,10 +740,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				"aria-labelledby": "firstrecall-provider-options-label",
 			},
 		});
-		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		const definitions = firstRecallProviderDefinitions().filter(
-			(definition) => definition.credentialKind === path
-		);
 		for (const definition of definitions) {
 			const isSelected = definition.id === selectedProvider;
 			const buttonEl = pickerEl.createEl("button", {

@@ -12,18 +12,19 @@ function ruleFor(selector: string): string {
 
 describe("settings CSS", () => {
 	it("keeps guided provider paths distinct from the provider grid", () => {
-		const sharedGridRule = ruleFor(
-			".firstrecall-provider-paths,\n.firstrecall-provider-picker"
-		);
-		expect(sharedGridRule).toContain("display: grid");
-		expect(sharedGridRule).toContain(
-			"grid-template-columns: repeat(3, minmax(0, 1fr))"
-		);
-		expect(sharedGridRule).toContain("gap: 8px");
-
 		const pathGridRule = ruleFor(".firstrecall-provider-paths");
+		expect(pathGridRule).toContain("display: grid");
+		expect(pathGridRule).toContain(
+			"grid-template-columns: repeat(2, minmax(0, 1fr))"
+		);
+		expect(pathGridRule).toContain("gap: 8px");
 		const providerGridRules =
 			styles.match(/\.firstrecall-provider-picker\s*\{[^}]*\}/g) ?? [];
+		expect(
+			providerGridRules.some((rule) =>
+				rule.includes("grid-template-columns: repeat(3, minmax(0, 1fr))")
+			)
+		).toBe(true);
 		expect(pathGridRule).toContain("margin: 6px 0 16px");
 		expect(pathGridRule).toContain("padding: 8px");
 		expect(pathGridRule).toContain("background: var(--background-secondary)");
@@ -92,7 +93,7 @@ describe("settings CSS", () => {
 		expect(labelRule).not.toContain("text-overflow: ellipsis");
 	});
 
-	it("collapses provider paths from three columns to two and then one", () => {
+	it("keeps connection paths balanced and collapses both grids when narrow", () => {
 		const mediumMediaIndex = styles.indexOf("@media (max-width: 700px)");
 		const narrowMediaIndex = styles.indexOf("@media (max-width: 420px)");
 		const mediumStyles = styles.slice(mediumMediaIndex, narrowMediaIndex);

@@ -657,10 +657,10 @@ describe("settings defaults", () => {
 			),
 		];
 		expect(pathButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
-			"FirstRecall trial",
-			"LLM API Provider",
-			"Installed AI tool",
-			"Self-Hosted LLM Provider",
+			"Included trial",
+			"API key",
+			"Installed tool",
+			"Local server",
 		]);
 		expect(settingText(tab.containerEl)).toContain(
 			"Use an API key from Anthropic, OpenAI, Gemini, or another provider."
@@ -683,10 +683,19 @@ describe("settings defaults", () => {
 		}
 		expect(
 			pathButtons.every(
-				(button) =>
-					button.getAttribute("aria-expanded") === "false" &&
-					button.getAttribute("aria-controls") === "firstrecall-provider-results"
+				(button) => button.getAttribute("aria-expanded") === "false"
 			)
+		).toBe(true);
+		expect(pathButtons[0]?.getAttribute("aria-controls")).toBe(
+			"firstrecall-active-provider-panel"
+		);
+		expect(
+			pathButtons
+				.slice(1)
+				.every(
+					(button) =>
+						button.getAttribute("aria-controls") === "firstrecall-provider-results"
+				)
 		).toBe(true);
 		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(0);
 		expect(
@@ -696,16 +705,15 @@ describe("settings defaults", () => {
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
 
-	it("reveals each connection path in stable provider order without selecting", async () => {
+	it("reveals multi-provider connection paths in stable order without selecting", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
 		const definitions = firstRecallProviderDefinitions();
 		const scenarios = [
-			{ label: "FirstRecall trial", kind: "trial", count: 1 },
-			{ label: "LLM API Provider", kind: "api-key", count: 11 },
-			{ label: "Installed AI tool", kind: "command", count: 2 },
-			{ label: "Self-Hosted LLM Provider", kind: "url", count: 2 },
+			{ label: "API key", kind: "api-key", count: 11 },
+			{ label: "Installed tool", kind: "command", count: 2 },
+			{ label: "Local server", kind: "url", count: 2 },
 		] as const;
 
 		for (const scenario of scenarios) {
@@ -752,21 +760,18 @@ describe("settings defaults", () => {
 				".firstrecall-provider-path-button"
 			),
 		];
-		expect(pathButtons[0]?.getAttribute("aria-label")).toBe("FirstRecall trial");
+		expect(pathButtons[0]?.getAttribute("aria-label")).toBe("Included trial");
 		expect(settingText(tab.containerEl)).toContain(
 			"included, sends selected note content to FirstRecall's hosted service, is very rate-limited, and requires no API key"
 		);
 		pathButtons[0]?.click();
-		const trial = tab.containerEl.querySelector<HTMLButtonElement>(
-			'[role="radio"][aria-label="FirstRecall trial"]'
-		);
-		expect(trial).not.toBeNull();
-		trial?.click();
-
 		await vi.waitFor(() =>
 			expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo")
 		);
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+		expect(settingText(tab.containerEl)).not.toContain("Available providers");
+		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(0);
+		expect(settingText(tab.containerEl).match(/FirstRecall trial/g)).toHaveLength(1);
 		expect(settingText(tab.containerEl)).toContain("Included trial model");
 		expect(tab.containerEl.querySelector(".firstrecall-api-key-input")).toBeNull();
 		expect(tab.containerEl.querySelector(".firstrecall-model-setting")).toBeNull();
@@ -788,7 +793,7 @@ describe("settings defaults", () => {
 		openSettingsCard(tab, "AI model");
 
 		expect(
-			tab.containerEl.querySelector('button[aria-label="Installed AI tool"]')
+			tab.containerEl.querySelector('button[aria-label="Installed tool"]')
 				?.getAttribute("aria-expanded")
 		).toBe("true");
 		expect(
@@ -825,7 +830,7 @@ describe("settings defaults", () => {
 		apiKeyInput.value = "sk-ant-unsaved";
 		apiKeyInput.__onChange?.(apiKeyInput.value);
 		const installedButton = tab.containerEl.querySelector<HTMLButtonElement>(
-			'button[aria-label="Installed AI tool"]'
+			'button[aria-label="Installed tool"]'
 		)!;
 		installedButton.focus();
 		installedButton.click();
@@ -858,7 +863,7 @@ describe("settings defaults", () => {
 		expect(tab.containerEl.querySelector('[role="radio"]')).toBe(firstRadio);
 
 		const apiButton = tab.containerEl.querySelector<HTMLButtonElement>(
-			'button[aria-label="LLM API Provider"]'
+			'button[aria-label="API key"]'
 		)!;
 		apiButton.click();
 		expect(setupPanel.hidden).toBe(false);
@@ -883,7 +888,7 @@ describe("settings defaults", () => {
 		tab.display();
 		openSettingsCard(tab, "AI model");
 		tab.containerEl
-			.querySelector<HTMLButtonElement>('button[aria-label="LLM API Provider"]')!
+			.querySelector<HTMLButtonElement>('button[aria-label="API key"]')!
 			.click();
 		tab.containerEl
 			.querySelector<HTMLElement>(
@@ -894,7 +899,7 @@ describe("settings defaults", () => {
 		await vi.waitFor(() => expect(plugin.settings.byok.selectedProvider).toBe("anthropic"));
 		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
 		expect(
-			tab.containerEl.querySelector('button[aria-label="LLM API Provider"]')
+			tab.containerEl.querySelector('button[aria-label="API key"]')
 				?.getAttribute("aria-expanded")
 		).toBe("true");
 		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(11);
@@ -903,7 +908,7 @@ describe("settings defaults", () => {
 		tab.display();
 		openSettingsCard(tab, "AI model");
 		expect(
-			tab.containerEl.querySelector('button[aria-label="LLM API Provider"]')
+			tab.containerEl.querySelector('button[aria-label="API key"]')
 				?.getAttribute("aria-expanded")
 		).toBe("true");
 		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(11);
@@ -915,7 +920,7 @@ describe("settings defaults", () => {
 		tab.display();
 		openSettingsCard(tab, "AI model");
 		tab.containerEl
-			.querySelector<HTMLButtonElement>('button[aria-label="LLM API Provider"]')
+			.querySelector<HTMLButtonElement>('button[aria-label="API key"]')
 			?.click();
 		tab.containerEl
 			.querySelector<HTMLButtonElement>('[role="radio"][aria-label="Anthropic (Claude)"]')
@@ -932,22 +937,27 @@ describe("settings defaults", () => {
 	});
 
 	it("renders every provider icon with real paint", async () => {
-		const { tab } = await setupSettingsTab();
+		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
 		const providerIds = new Set<string>();
 		for (const pathLabel of [
-			"FirstRecall trial",
-			"LLM API Provider",
-			"Installed AI tool",
-			"Self-Hosted LLM Provider",
+			"Included trial",
+			"API key",
+			"Installed tool",
+			"Local server",
 		]) {
 			tab.containerEl
 				.querySelector<HTMLButtonElement>(`button[aria-label="${pathLabel}"]`)
 				?.click();
+			if (pathLabel === "Included trial") {
+				await vi.waitFor(() =>
+					expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo")
+				);
+			}
 			const icons = [
 				...tab.containerEl.querySelectorAll<HTMLElement>(
-					"#firstrecall-provider-results .firstrecall-provider-icon"
+					"#firstrecall-provider-results .firstrecall-provider-icon, .firstrecall-active-provider-panel .firstrecall-provider-icon"
 				),
 			];
 			for (const iconEl of icons) {
