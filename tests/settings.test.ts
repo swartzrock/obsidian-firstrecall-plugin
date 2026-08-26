@@ -657,7 +657,7 @@ describe("settings defaults", () => {
 			),
 		];
 		expect(pathButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
-			"Included trial",
+			"FirstRecall LLM trial",
 			"API key",
 			"Installed tool",
 			"Local server",
@@ -750,7 +750,7 @@ describe("settings defaults", () => {
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
 
-	it("offers the included trial first and selects it without setup fields", async () => {
+	it("offers the FirstRecall LLM trial first and selects it without setup fields", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
@@ -760,9 +760,9 @@ describe("settings defaults", () => {
 				".firstrecall-provider-path-button"
 			),
 		];
-		expect(pathButtons[0]?.getAttribute("aria-label")).toBe("Included trial");
+		expect(pathButtons[0]?.getAttribute("aria-label")).toBe("FirstRecall LLM trial");
 		expect(settingText(tab.containerEl)).toContain(
-			"included, sends selected note content to FirstRecall's hosted service, is very rate-limited, and requires no API key"
+			"trial LLM API"
 		);
 		pathButtons[0]?.click();
 		await vi.waitFor(() =>
@@ -942,7 +942,7 @@ describe("settings defaults", () => {
 		openSettingsCard(tab, "AI model");
 		const providerIds = new Set<string>();
 		for (const pathLabel of [
-			"Included trial",
+			"FirstRecall LLM trial",
 			"API key",
 			"Installed tool",
 			"Local server",
@@ -950,7 +950,7 @@ describe("settings defaults", () => {
 			tab.containerEl
 				.querySelector<HTMLButtonElement>(`button[aria-label="${pathLabel}"]`)
 				?.click();
-			if (pathLabel === "Included trial") {
+			if (pathLabel === "FirstRecall LLM trial") {
 				await vi.waitFor(() =>
 					expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo")
 				);

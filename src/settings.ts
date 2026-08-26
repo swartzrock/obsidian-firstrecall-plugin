@@ -622,9 +622,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		}> = [
 			{
 				path: "trial",
-				title: "Included trial",
+				title: "FirstRecall LLM trial",
 				description:
-					"The trial is included, sends selected note content to FirstRecall's hosted service, is very rate-limited, and requires no API key.",
+					"Use FirstRecall's trial LLM API (subject to usage rate limits)."
 			},
 			{
 				path: "api-key",
