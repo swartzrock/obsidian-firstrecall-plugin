@@ -70,8 +70,14 @@ export interface CueLineData {
 	summary: SectionSummary | null;
 	/** Generation error message, when this section failed. */
 	error: string | null;
+	/** Explanation when the selected provider intentionally omitted this section. */
+	unavailable: string | null;
 	/** Freshness of this generated card for the current source revision. */
 	freshness: ComponentFreshness;
+}
+
+function providerLimitMessage(section: NonNullable<NoteCache["sections"][number]["unavailable"]>): string {
+	return `${section.providerLabel} limit reached — only the first ${section.maxSections} section cards were generated. Choose another provider to generate this section.`;
 }
 
 export interface CueLineDataOptions {
@@ -157,11 +163,12 @@ export function buildCueLineData(
 
 	const out: CueLineData[] = [];
 	for (const sec of cache.sections) {
-		if (!sec.question && !sec.error) continue;
+		if (!sec.question && !sec.error && !sec.unavailable) continue;
 		const current = byId.get(sec.id);
 		if (current && !isCueEligibleSection(current)) continue;
 		const line = current ? current.lineNumber : sec.lineNumber;
-		const failed = Boolean(sec.error) || !sec.question;
+		const unavailable = sec.unavailable ? providerLimitMessage(sec.unavailable) : null;
+		const failed = Boolean(sec.error) || (!sec.question && !unavailable);
 		const cue = {
 			line,
 			sectionId: sec.id,
@@ -170,10 +177,12 @@ export function buildCueLineData(
 			keywords: failed || !showTerms ? [] : sec.keywords ?? [],
 			summary: failed || !showSummary ? null : sec.summary ?? null,
 			error: failed ? sec.error ?? "Generation failed" : null,
+			unavailable,
 			freshness: options.sectionFreshness?.get(sec.id) ?? "current",
 		};
 		if (
 			cue.error ||
+			cue.unavailable ||
 			(showQuestion && cue.question.trim().length > 0) ||
 			cue.summary ||
 			cue.keywords.length > 0
@@ -207,6 +216,7 @@ class CueWidget extends WidgetType {
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			summaryKey(other.cue.summary) === summaryKey(this.cue.summary) &&
 			other.cue.error === this.cue.error &&
+			other.cue.unavailable === this.cue.unavailable &&
 			other.cue.freshness === this.cue.freshness
 		);
 	}
@@ -310,6 +320,7 @@ class CueGutterMarker extends GutterMarker {
 			other.cue.keywords.join("\u0001") === this.cue.keywords.join("\u0001") &&
 			summaryKey(other.cue.summary) === summaryKey(this.cue.summary) &&
 			other.cue.error === this.cue.error &&
+			other.cue.unavailable === this.cue.unavailable &&
 			other.cue.freshness === this.cue.freshness
 		);
 	}
@@ -452,6 +463,14 @@ function renderCornellCueElement(
 		card.appendChild(q);
 		return finalizeRailCard(root, options);
 	}
+	if (cue.unavailable) {
+		card.classList.add("firstrecall-cornell-cue-unavailable");
+		const q = doc.createElement("div");
+		q.className = "firstrecall-cornell-q";
+		q.textContent = cue.unavailable;
+		card.appendChild(q);
+		return finalizeRailCard(root, options);
+	}
 
 	root.classList.add("firstrecall-editor-hook-sectioned");
 	if (showSummary && cue.summary) {
@@ -519,6 +538,14 @@ function renderInlineCueElement(
 		const q = cueDocument().createElement("div");
 		q.className = "firstrecall-cue-question";
 		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
+		root.appendChild(q);
+		return root;
+	}
+	if (cue.unavailable) {
+		root.classList.add("firstrecall-cue-unavailable");
+		const q = cueDocument().createElement("div");
+		q.className = "firstrecall-cue-question";
+		q.textContent = cue.unavailable;
 		root.appendChild(q);
 		return root;
 	}
@@ -1505,7 +1532,7 @@ function shouldRenderEditorCue(
 	cue: CueLineData,
 	studyOptions: Pick<CueRenderOptions, "showQuestion" | "study">
 ): boolean {
-	if (cue.error) return true;
+	if (cue.error || cue.unavailable) return true;
 	const inStudy = Boolean(studyOptions.study);
 	return Boolean(
 		((inStudy || (payload.showQuestion ?? true)) &&

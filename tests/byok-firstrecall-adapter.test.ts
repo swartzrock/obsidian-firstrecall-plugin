@@ -299,6 +299,7 @@ describe("firstRecallProviderConfigFromSettings", () => {
 			label: "FirstRecall trial",
 			requiresNetwork: true,
 			requiresDownload: false,
+			maxGeneratedSections: 5,
 		});
 		expect(await provider.testConnection()).toMatchObject({ ok: true });
 		expect(await provider.listModels()).toEqual([

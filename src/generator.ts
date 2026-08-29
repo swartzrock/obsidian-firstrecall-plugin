@@ -11,6 +11,7 @@ import type {
 	FirstRecallBundleInput,
 	FirstRecallCueBatchResult,
 	FirstRecallCueProviderRuntime,
+	FirstRecallSectionUnavailable,
 } from "./cue-provider";
 import type { NoteBriefOutput, SectionSummary } from "./schemas";
 
@@ -25,6 +26,8 @@ export interface SectionResult {
 	summary: SectionSummary | null;
 	/** Non-null when this section failed validation/generation (isolated). */
 	error: string | null;
+	/** Non-null when the selected provider intentionally cannot generate this section. */
+	unavailable?: FirstRecallSectionUnavailable | null;
 }
 
 export interface NoteGenerationResult {
@@ -99,12 +102,9 @@ export type NoteBriefGenerationOutcome =
 /** Default budget for note text injected into a single prompt. */
 export const DEFAULT_MAX_CONTEXT_CHARS = 8000;
 export const DEFAULT_SECTION_CONCURRENCY = 5;
-const BUNDLE_MAX_SECTIONS = 5;
 const BUNDLE_MAX_TITLE_CHARS = 200;
 const BUNDLE_MAX_CONTEXT_CHARS = 12_000;
 const BUNDLE_MAX_SECTION_CHARS = 4_000;
-const BUNDLE_SECTION_LIMIT_ERROR =
-	"Hosted demo generation supports at most 5 eligible sections.";
 
 /** Trim long text to a char budget, adding a marker so the model knows it was cut. */
 export function clampText(text: string, maxChars: number): string {
@@ -173,6 +173,34 @@ function emptySectionResult(
 		question: null,
 		summary: null,
 		error: null,
+		unavailable: null,
+	};
+}
+
+function providerSectionLimit(
+	provider: FirstRecallCueProviderRuntime
+): number | null {
+	const configuredLimit = provider.maxGeneratedSections;
+	return typeof configuredLimit === "number" &&
+		Number.isFinite(configuredLimit) &&
+		configuredLimit > 0
+			? Math.floor(configuredLimit)
+			: null;
+}
+
+function providerLimitResult(
+	section: GenerateSectionParams["section"],
+	provider: FirstRecallCueProviderRuntime,
+	maxSections: number
+): SectionResult {
+	return {
+		...emptySectionResult(section),
+		unavailable: {
+			reason: "provider-limit",
+			providerId: provider.id,
+			providerLabel: provider.label,
+			maxSections,
+		},
 	};
 }
 
@@ -184,12 +212,12 @@ function applyCueResult(
 		result.error = "Provider returned no section study card for this section.";
 		return;
 	}
-	if (item.error) {
+	if ("error" in item) {
 		result.error = item.error;
 		return;
 	}
-	if (!item.cue) {
-		result.error = "Provider returned no section study card for this section.";
+	if ("unavailable" in item) {
+		result.unavailable = item.unavailable;
 		return;
 	}
 	result.keywords = item.cue.keywords;
@@ -267,22 +295,34 @@ export async function generateNoteBundleForSections(
 	}
 
 	const emptyResults = sections.map(emptySectionResult);
-	if (sections.length > BUNDLE_MAX_SECTIONS) {
-		emptyResults.forEach((result) => {
-			result.error = BUNDLE_SECTION_LIMIT_ERROR;
-		});
-		completeProgress(sections.length, total, onProgress);
-		return {
-			sections: emptyResults,
-			noteBrief: null,
-			noteBriefOutcome: {
-				status: "failed",
-				error: BUNDLE_SECTION_LIMIT_ERROR,
-			},
-			canceled: false,
-		};
+	const maxGeneratedSections = providerSectionLimit(params.provider);
+	const allEligible = cueEligibleSections(parseSections(markdown));
+	const supportedIds = maxGeneratedSections === null
+		? null
+		: new Set(
+				allEligible
+					.slice(0, maxGeneratedSections)
+					.map((section) => section.id)
+			);
+	const submittedSections = sections.filter(
+		(section) => !supportedIds || supportedIds.has(section.id)
+	);
+	for (let index = 0; index < sections.length; index++) {
+		if (
+			supportedIds &&
+			maxGeneratedSections !== null &&
+			!supportedIds.has(sections[index].id)
+		) {
+			emptyResults[index] = providerLimitResult(
+				sections[index],
+				params.provider,
+				maxGeneratedSections
+			);
+		}
 	}
-
+	if (submittedSections.length === 0 && allEligible.length > 0) {
+		submittedSections.push(allEligible[0]);
+	}
 	const contextLimit = boundedLength(
 		params.maxContextChars,
 		DEFAULT_MAX_CONTEXT_CHARS,
@@ -301,7 +341,7 @@ export async function generateNoteBundleForSections(
 				contextLimit
 			),
 		},
-		sections: sections.map((section) => ({
+		sections: submittedSections.map((section) => ({
 			sectionId: section.id,
 			contentHash: section.contentHash,
 			heading: clampTextWithinLimit(section.heading, BUNDLE_MAX_TITLE_CHARS),
@@ -322,12 +362,17 @@ export async function generateNoteBundleForSections(
 				canceled: true,
 			};
 		}
-		if (bundle.sections.length !== sections.length) {
+		if (bundle.sections.length !== submittedSections.length) {
 			throw new Error("Provider returned a different section count.");
 		}
 
-		bundle.sections.forEach((item, index) => {
-			applyCueResult(emptyResults[index], item);
+		const resultsById = new Map(
+			submittedSections.map((section, index) => [section.id, bundle.sections[index]])
+		);
+		sections.forEach((section, index) => {
+			if (!emptyResults[index].unavailable) {
+				applyCueResult(emptyResults[index], resultsById.get(section.id));
+			}
 		});
 		completeProgress(sections.length, total, onProgress);
 		return {
@@ -347,7 +392,7 @@ export async function generateNoteBundleForSections(
 		}
 		const message = error instanceof Error ? error.message : String(error);
 		emptyResults.forEach((result) => {
-			result.error = message;
+			if (!result.unavailable) result.error = message;
 		});
 		completeProgress(sections.length, total, onProgress);
 		return {
@@ -475,16 +520,33 @@ export async function generateNote(
 	const includesNoteBrief = sections.length > 0 && Boolean(provider.generateNoteBrief);
 	const total = sections.length + (includesNoteBrief ? 1 : 0);
 	const results: SectionResult[] = new Array(sections.length);
-	let done = 0;
+	const maxGeneratedSections = providerSectionLimit(provider);
+	const generatedSectionCount = maxGeneratedSections === null
+		? sections.length
+		: Math.min(sections.length, maxGeneratedSections);
+	if (maxGeneratedSections !== null) {
+		for (let index = generatedSectionCount; index < sections.length; index++) {
+			results[index] = providerLimitResult(
+				sections[index],
+				provider,
+				maxGeneratedSections
+			);
+		}
+	}
+	let done = sections.length - generatedSectionCount;
 	let canceled = false;
-	onProgress?.(done, total);
+	onProgress?.(0, total);
+	if (done) onProgress?.(done, total);
 
-	for (let start = 0; start < sections.length; start += sectionConcurrency) {
+	for (let start = 0; start < generatedSectionCount; start += sectionConcurrency) {
 		if (signal?.aborted) {
 			canceled = true;
 			break;
 		}
-		const batch = sections.slice(start, start + sectionConcurrency);
+		const batch = sections.slice(
+			start,
+			Math.min(start + sectionConcurrency, generatedSectionCount)
+		);
 		if (provider.generateCues) {
 			const batchResults = await generateSectionCueBatch({
 				sections: batch,

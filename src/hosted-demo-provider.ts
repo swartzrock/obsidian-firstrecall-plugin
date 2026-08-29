@@ -8,6 +8,7 @@ import {
 
 export const HOSTED_DEMO_ENDPOINT =
 	"https://api.firstrecall.ai/v1/demo-bundles";
+export const HOSTED_DEMO_MAX_SECTIONS = 5;
 
 const uuidSchema = z.string().regex(
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
@@ -63,7 +64,7 @@ const hostedDemoRequestSchema = z
 				contextMarkdown: z.string().min(1).max(12_000),
 			})
 			.strict(),
-		sections: z.array(hostedDemoSectionInputSchema).min(1).max(5),
+		sections: z.array(hostedDemoSectionInputSchema).min(1).max(HOSTED_DEMO_MAX_SECTIONS),
 	})
 	.strict();
 
@@ -116,7 +117,7 @@ const successResponseSchema = z
 				sections: z
 					.array(z.union([completeSectionSchema, insufficientSectionSchema]))
 					.min(1)
-					.max(5),
+					.max(HOSTED_DEMO_MAX_SECTIONS),
 				noteBrief: hostedDemoNoteBriefSchema,
 			})
 			.strict(),

@@ -461,6 +461,41 @@ describe("study area generation planning", () => {
 		]);
 	});
 
+	it("queues provider-limited sections after the selected provider changes", () => {
+		const markdown = Array.from(
+			{ length: 6 },
+			(_, index) => `# Section ${index + 1}\ncontent ${index + 1}`
+		).join("\n");
+		const cache = buildCache(markdown);
+		cache.sections[5] = {
+			...cache.sections[5],
+			question: null,
+			keywords: null,
+			summary: null,
+			unavailable: {
+				reason: "provider-limit",
+				providerId: "hosted-demo",
+				providerLabel: "FirstRecall trial",
+				maxSections: 5,
+			},
+		};
+
+		const plan = planStudyAreaGeneration(area(), [{
+			path: "Courses/Biology/Limited.md",
+			cache,
+			currentSections: parseSections(markdown),
+			provider: "anthropic",
+		}]);
+
+		expect(plan.items).toEqual([{
+			path: "Courses/Biology/Limited.md",
+			action: "refresh-stale-sections",
+			sectionIds: [cache.sections[5].id],
+			readiness: "stale",
+			sectionCount: 1,
+		}]);
+	});
+
 	it("queues Note Brief-only catch-up and Retry work without section calls", () => {
 		const cache = buildCache();
 		const missingBrief = { ...cache, noteBrief: null };

@@ -1878,6 +1878,18 @@ html.firstrecall-editor-cue-width-resizing * {
 	font-style: italic;
 }
 
+.firstrecall-cue-unavailable,
+.firstrecall-cornell-cue-unavailable {
+	border-left-color: var(--text-muted);
+	opacity: 0.8;
+}
+
+.firstrecall-cue-unavailable .firstrecall-cue-question,
+.firstrecall-cornell-cue-unavailable .firstrecall-cornell-q {
+	color: var(--text-muted);
+	font-style: italic;
+}
+
 .firstrecall-cornell-cue {
 	position: relative;
 	border: 1px solid var(--cc-border);

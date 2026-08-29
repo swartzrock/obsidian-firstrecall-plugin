@@ -153,7 +153,8 @@ function createHarness(initial: Record<string, string> = { "notes/note.md": ORIG
 		},
 		makeProvider,
 		providerMetadata: () => ({
-			provider: "test",
+			provider: providerOverride?.id ?? "test",
+			maxGeneratedSections: providerOverride?.maxGeneratedSections,
 			model: "test",
 			preset: "exam-practice",
 			generationMode: "whole-note-context" as const,
@@ -245,6 +246,51 @@ describe("study material maintenance planning", () => {
 			}).components
 		).toEqual({ noteBrief: true, sectionIds: [cache.sections[0].id] });
 	});
+
+	it("regenerates provider-limited sections after the selected provider changes", () => {
+		const markdown = Array.from(
+			{ length: 6 },
+			(_, index) => `# Section ${index + 1}\ncontent ${index + 1}`
+		).join("\n");
+		const cache = cacheFor(markdown);
+		cache.provider = "hosted-demo";
+		cache.sections[5] = {
+			...cache.sections[5],
+			question: null,
+			keywords: null,
+			summary: null,
+			unavailable: {
+				reason: "provider-limit",
+				providerId: "hosted-demo",
+				providerLabel: "FirstRecall trial",
+				maxSections: 5,
+			},
+		};
+		const state = createCurrentMaintenanceState("Note", markdown, cache);
+
+		expect(
+			planStudyMaterialMaintenance({
+				source: source("note.md", markdown),
+				cache,
+				state,
+				kind: "catch-up",
+				provider: "hosted-demo",
+				maxGeneratedSections: 5,
+			}).components
+		).toEqual({ noteBrief: false, sectionIds: [] });
+		expect(
+			planStudyMaterialMaintenance({
+				source: source("note.md", markdown),
+				cache,
+				state,
+				kind: "catch-up",
+				provider: "anthropic",
+			}).components
+		).toEqual({
+			noteBrief: true,
+			sectionIds: [cache.sections[5].id],
+		});
+	});
 });
 
 describe("study material maintenance execution", () => {
@@ -267,6 +313,7 @@ describe("study material maintenance execution", () => {
 			label: "FirstRecall trial",
 			requiresNetwork: true,
 			requiresDownload: false,
+			maxGeneratedSections: 5,
 			testConnection: async () => ({ ok: true, message: "ok" }),
 			listModels: async () => [],
 			generateBundle,
@@ -302,20 +349,30 @@ describe("study material maintenance execution", () => {
 		});
 	});
 
-	it("rejects more than five hosted maintenance targets before transport", async () => {
+	it("commits five trial cards and a provider-limited placeholder without failing", async () => {
 		const markdown = Array.from(
 			{ length: 6 },
 			(_, index) => `# Section ${index + 1}\ncontent ${index + 1}`
 		).join("\n");
 		const harness = createHarness({ "notes/note.md": markdown });
-		const generateBundle = vi.fn<
-			(input: FirstRecallBundleInput) => Promise<FirstRecallBundleResult>
-		>();
+		const generateBundle = vi.fn(async (
+			input: FirstRecallBundleInput
+		): Promise<FirstRecallBundleResult> => ({
+			sections: input.sections.map((section) => ({
+				cue: {
+					question: `Hosted:${section.heading}`,
+					keywords: [section.heading],
+					summary: null,
+				},
+			})),
+			noteBrief: { ...BRIEF, overview: "Hosted brief" },
+		}));
 		harness.setProvider({
 			id: "hosted-demo",
 			label: "FirstRecall trial",
 			requiresNetwork: true,
 			requiresDownload: false,
+			maxGeneratedSections: 5,
 			testConnection: async () => ({ ok: true, message: "ok" }),
 			listModels: async () => [],
 			generateBundle,
@@ -326,12 +383,68 @@ describe("study material maintenance execution", () => {
 			kind: "catch-up",
 		});
 
-		expect(result.status).toBe("failed");
-		expect(result).toMatchObject({
-			errors: [expect.stringContaining("at most 5")],
+		expect(result.status).toBe("completed");
+		expect(generateBundle).toHaveBeenCalledTimes(1);
+		expect(generateBundle.mock.calls[0][0].sections).toHaveLength(5);
+		expect(harness.caches["notes/note.md"].sections).toHaveLength(6);
+		expect(harness.caches["notes/note.md"].sections.slice(0, 5).every(
+			(section) => Boolean(section.question)
+		)).toBe(true);
+		expect(harness.caches["notes/note.md"].sections[5]).toMatchObject({
+			question: null,
+			error: null,
+			unavailable: {
+				reason: "provider-limit",
+				providerId: "hosted-demo",
+				providerLabel: "FirstRecall trial",
+				maxSections: 5,
+			},
 		});
-		expect(generateBundle).not.toHaveBeenCalled();
-		expect(harness.caches).toEqual({});
+		expect(harness.caches["notes/note.md"].noteBrief?.overview).toBe(
+			"Hosted brief"
+		);
+		expect(harness.states["notes/note.md"].failure).toBeNull();
+
+		const retry = await harness.maintenance.request({
+			path: "notes/note.md",
+			kind: "retry",
+		});
+		expect(retry).toEqual({
+			status: "skipped",
+			path: "notes/note.md",
+			reason: "no-work",
+		});
+		expect(generateBundle).toHaveBeenCalledTimes(1);
+
+		const reordered = [
+			"# Section 6\ncontent 6",
+			...Array.from(
+				{ length: 5 },
+				(_, index) => `# Section ${index + 1}\ncontent ${index + 1}`
+			),
+		].join("\n");
+		harness.sources.set(
+			"notes/note.md",
+			source("notes/note.md", reordered)
+		);
+		const reorderedResult = await harness.maintenance.request({
+			path: "notes/note.md",
+			kind: "catch-up",
+		});
+		expect(reorderedResult.status).toBe("completed");
+		expect(generateBundle).toHaveBeenCalledTimes(2);
+		expect(generateBundle.mock.calls[1][0].sections.map(
+			(section) => section.heading
+		)).toEqual(["Section 6"]);
+		expect(harness.caches["notes/note.md"].sections[0].question).toBe(
+			"Hosted:Section 6"
+		);
+		expect(harness.caches["notes/note.md"].sections[5]).toMatchObject({
+			heading: "Section 5",
+			question: null,
+			error: null,
+			unavailable: { reason: "provider-limit", maxSections: 5 },
+		});
 	});
 
 	it("preserves the existing Note Brief during a section-only hosted retry", async () => {

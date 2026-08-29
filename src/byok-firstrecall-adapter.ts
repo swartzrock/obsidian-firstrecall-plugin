@@ -43,6 +43,7 @@ import type {
 } from "./cue-provider";
 import {
 	createHostedDemoProvider,
+	HOSTED_DEMO_MAX_SECTIONS,
 	type HostedDemoProviderDeps,
 } from "./hosted-demo-provider";
 import {
@@ -77,6 +78,12 @@ export type FirstRecallProviderFactoryDeps = ByokProviderDeps;
 export type FirstRecallProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type { ByokProviderConfig, ByokProviderDeps } from "@swartzrock/byok-runtime";
 
+export function firstRecallProviderMaxGeneratedSections(
+	providerId: FirstRecallProviderId | undefined
+): number | undefined {
+	return providerId === "hosted-demo" ? HOSTED_DEMO_MAX_SECTIONS : undefined;
+}
+
 export function makeFirstRecallHostedDemoProvider(
 	deps: HostedDemoProviderDeps
 ): FirstRecallCueProviderRuntime {
@@ -86,6 +93,7 @@ export function makeFirstRecallHostedDemoProvider(
 		label: "FirstRecall trial",
 		requiresNetwork: true,
 		requiresDownload: false,
+		maxGeneratedSections: HOSTED_DEMO_MAX_SECTIONS,
 		testConnection: async () => ({
 			ok: true,
 			message: "FirstRecall trial is ready.",
@@ -408,7 +416,7 @@ async function generateCueBatchFromTextProvider(
 	let result = parseCueBatch(raw.text, inputs.length);
 	const itemErrors = (batch: Exclude<typeof result, string>) =>
 		batch.results.flatMap((item, index) =>
-			item.error && item.error !== INSUFFICIENT_SOURCE_ERROR
+			"error" in item && item.error !== INSUFFICIENT_SOURCE_ERROR
 				? [`section ${index + 1}: ${item.error}`]
 				: []
 		);

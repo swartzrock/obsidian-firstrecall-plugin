@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import {
 	generateNote,
+	generateNoteBundleForSections,
 	generateNoteBriefForSections,
 	generateSectionCue,
 	generateSectionCueBatch,
@@ -11,6 +12,7 @@ import {
 	resolveGenerationOptions,
 	resolveSectionConcurrency,
 } from "../src/generator";
+import { parseSections } from "../src/parser";
 import type { ByokProviderStatus } from "@swartzrock/byok-runtime";
 import type {
 	FirstRecallBundleInput,
@@ -133,13 +135,15 @@ function mockBundleProvider(
 	generateBundle: (
 		input: FirstRecallBundleInput,
 		signal?: AbortSignal
-	) => Promise<FirstRecallBundleResult>
+	) => Promise<FirstRecallBundleResult>,
+	maxGeneratedSections?: number
 ): FirstRecallCueProviderRuntime {
 	return {
 		id: "hosted-demo",
 		label: "Hosted demo",
 		requiresNetwork: true,
 		requiresDownload: false,
+		maxGeneratedSections,
 		async testConnection() {
 			return { ok: true, message: "ok" };
 		},
@@ -240,25 +244,99 @@ describe("generateNote", () => {
 		expect(result.noteBriefOutcome?.status).toBe("success");
 	});
 
-	it("rejects more than five hosted sections without consuming a request", async () => {
-		const generateBundle = vi.fn<
-			(input: FirstRecallBundleInput) => Promise<FirstRecallBundleResult>
-		>();
+	it("applies a provider section limit in canonical document order", async () => {
+		const generateBundle = vi.fn(async (
+			input: FirstRecallBundleInput
+		): Promise<FirstRecallBundleResult> => ({
+			sections: input.sections.map((section) => ({
+				cue: {
+					question: `Q:${section.heading}`,
+					keywords: [section.heading],
+					summary: null,
+				},
+			})),
+			noteBrief: noteBrief(),
+		}));
 		const progress: Array<[number, number]> = [];
 		const result = await generateNote({
 			noteTitle: "T",
 			markdown: SIX_SECTION_NOTE,
-			provider: mockBundleProvider(generateBundle),
+			provider: mockBundleProvider(generateBundle, 5),
 			onProgress: (done, total) => progress.push([done, total]),
 		});
 
-		expect(generateBundle).not.toHaveBeenCalled();
+		expect(generateBundle).toHaveBeenCalledTimes(1);
+		expect(generateBundle.mock.calls[0][0].sections).toHaveLength(5);
 		expect(result.sections).toHaveLength(6);
-		expect(new Set(result.sections.map((section) => section.error)).size).toBe(1);
-		expect(result.sections.every((section) => section.question === null)).toBe(true);
-		expect(result.noteBrief).toBeNull();
-		expect(result.noteBriefOutcome).toMatchObject({ status: "failed" });
+		expect(result.sections.slice(0, 5).every((section) => section.question)).toBe(true);
+		expect(result.sections[5]).toMatchObject({
+			question: null,
+			error: null,
+			unavailable: {
+				reason: "provider-limit",
+				providerId: "hosted-demo",
+				providerLabel: "Hosted demo",
+				maxSections: 5,
+			},
+		});
+		expect(result.noteBrief?.overview).toBe("the atomic note brief");
+		expect(result.noteBriefOutcome).toMatchObject({ status: "success" });
 		expect(progress.at(-1)).toEqual([7, 7]);
+	});
+
+	it("applies a provider section limit without atomic bundle generation", async () => {
+		const provider = mockProvider();
+		provider.maxGeneratedSections = 5;
+
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: SIX_SECTION_NOTE,
+			provider,
+		});
+
+		expect(provider.cueInputs).toHaveLength(5);
+		expect(result.sections.slice(0, 5).every((section) => section.question)).toBe(true);
+		expect(result.sections[5]).toMatchObject({
+			heading: "F",
+			question: null,
+			error: null,
+			unavailable: { reason: "provider-limit", maxSections: 5 },
+		});
+	});
+
+	it("keeps a capped section unavailable when it is regenerated alone", async () => {
+		const generateBundle = vi.fn(async (
+			input: FirstRecallBundleInput
+		): Promise<FirstRecallBundleResult> => ({
+			sections: input.sections.map((section) => ({
+				cue: {
+					question: `Q:${section.heading}`,
+					keywords: [section.heading],
+					summary: null,
+				},
+			})),
+			noteBrief: noteBrief(),
+		}));
+		const sections = parseSections(SIX_SECTION_NOTE);
+
+		const result = await generateNoteBundleForSections(
+			{
+				noteTitle: "T",
+				markdown: SIX_SECTION_NOTE,
+				provider: mockBundleProvider(generateBundle, 5),
+			},
+			[sections[5]]
+		);
+
+		expect(generateBundle.mock.calls[0][0].sections.map((section) => section.heading))
+			.toEqual(["A"]);
+		expect(result.sections[0]).toMatchObject({
+			heading: "F",
+			question: null,
+			error: null,
+			unavailable: { reason: "provider-limit", maxSections: 5 },
+		});
+		expect(result.noteBriefOutcome?.status).toBe("success");
 	});
 
 	it("accepts no partial artifacts when atomic bundle generation fails", async () => {

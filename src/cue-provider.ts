@@ -17,10 +17,17 @@ export interface FirstRecallCueInput {
 	options: CueGenerationOptions;
 }
 
-export interface FirstRecallCueBatchResult {
-	cue?: CueOutput;
-	error?: string;
+export interface FirstRecallSectionUnavailable {
+	reason: "provider-limit";
+	providerId: FirstRecallProviderId;
+	providerLabel: string;
+	maxSections: number;
 }
+
+export type FirstRecallCueBatchResult =
+	| { cue: CueOutput }
+	| { error: string }
+	| { unavailable: FirstRecallSectionUnavailable };
 
 export interface FirstRecallBundleSectionInput {
 	sectionId: string;
@@ -60,6 +67,8 @@ export interface FirstRecallCueProviderRuntime {
 	requiresNetwork: boolean;
 	requiresDownload: boolean;
 	sectionConcurrencyLimit?: number;
+	/** Maximum cards this provider can generate for one note, in document order. */
+	maxGeneratedSections?: number;
 	testConnection(): Promise<ByokProviderStatus>;
 	listModels(): Promise<ByokModelOption[]>;
 	generateCue?(

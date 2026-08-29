@@ -1,6 +1,8 @@
 import {
 	buildNoteCache,
 	reconcileCacheSections,
+	sectionIdsNeedingGenerationForProvider,
+	sectionIdsNeedingProviderLimitReconciliation,
 	type NoteCache,
 } from "./cache";
 import type { CueGenerationOptions } from "./cue-generation";
@@ -74,6 +76,7 @@ export type MaintenanceOutcome =
 
 export interface MaintenanceProviderMetadata {
 	provider: string;
+	maxGeneratedSections?: number;
 	model: string;
 	preset: string;
 	generationMode: "per-section" | "whole-note-context";
@@ -162,18 +165,22 @@ function sourceComponents(
 	revision: string,
 	cache: NoteCache | null,
 	state: NoteMaintenanceState | null,
+	provider?: string,
+	maxGeneratedSections?: number,
 	forcedSectionIds?: readonly string[]
 ): ComponentSet {
 	const currentIds = new Set(eligible.map((section) => section.id));
-	const cachedById = new Map(
-		(cache?.sections ?? []).map((section) => [section.id, section])
-	);
-	const changedIds = eligible
-		.filter((section) => {
-			const cached = cachedById.get(section.id);
-			return !cached || cached.error || cached.contentHash !== section.contentHash;
-		})
-		.map((section) => section.id);
+	const changedIds = cache
+		? unique([
+				...sectionIdsNeedingGenerationForProvider(cache, eligible, provider),
+				...(provider
+					? sectionIdsNeedingProviderLimitReconciliation(cache, eligible, {
+							id: provider,
+							maxGeneratedSections,
+						})
+					: []),
+			])
+		: eligible.map((section) => section.id);
 	const sectionIds = forcedSectionIds
 		? unique(forcedSectionIds.filter((id) => currentIds.has(id)))
 		: changedIds;
@@ -197,6 +204,8 @@ export function planStudyMaterialMaintenance(params: {
 	cache: NoteCache | null;
 	state: NoteMaintenanceState | null;
 	kind: MaintenanceOperationKind;
+	provider?: string;
+	maxGeneratedSections?: number;
 	sectionIds?: readonly string[];
 }): StudyMaterialMaintenancePlan {
 	const sections = parseSections(params.source.markdown);
@@ -227,6 +236,8 @@ export function planStudyMaterialMaintenance(params: {
 		revision,
 		params.cache,
 		params.state,
+		params.provider,
+		params.maxGeneratedSections,
 		forced
 	);
 	if (
@@ -264,11 +275,14 @@ export class StudyMaterialMaintenance {
 		const cache = this.deps.getCache(path);
 		const existing = this.deps.getState(path);
 		if (!cache && !existing && !this.deps.isAutomaticAllowed(path)) return;
+		const providerMetadata = this.deps.providerMetadata();
 		const plan = planStudyMaterialMaintenance({
 			source,
 			cache,
 			state: existing,
 			kind: "automatic",
+			provider: providerMetadata.provider,
+			maxGeneratedSections: providerMetadata.maxGeneratedSections,
 		});
 		if (plan.terminal) return;
 		const base = existing ?? (cache
@@ -432,11 +446,14 @@ export class StudyMaterialMaintenance {
 		request: MaintenanceRequest,
 		source: MaintenanceSource
 	): ComponentSet {
+		const providerMetadata = this.deps.providerMetadata();
 		return planStudyMaterialMaintenance({
 			source,
 			cache: this.deps.getCache(request.path),
 			state: this.deps.getState(request.path),
 			kind: request.kind,
+			provider: providerMetadata.provider,
+			maxGeneratedSections: providerMetadata.maxGeneratedSections,
 			sectionIds: request.sectionIds,
 		}).components;
 	}
@@ -531,11 +548,14 @@ export class StudyMaterialMaintenance {
 
 		const cache = this.deps.getCache(request.path);
 		const existingState = this.deps.getState(request.path);
+		const providerMetadata = this.deps.providerMetadata();
 		const plan = planStudyMaterialMaintenance({
 			source,
 			cache,
 			state: existingState,
 			kind: request.kind,
+			provider: providerMetadata.provider,
+			maxGeneratedSections: providerMetadata.maxGeneratedSections,
 			sectionIds: request.sectionIds,
 		});
 		if (plan.terminal) {
@@ -621,11 +641,33 @@ export class StudyMaterialMaintenance {
 				"Provider is unavailable."
 			);
 		}
+		const providerLimitIds = cache
+			? sectionIdsNeedingProviderLimitReconciliation(
+					cache,
+					plan.sections,
+					provider
+				)
+			: [];
+		const effectiveComponents: ComponentSet = {
+			noteBrief: plan.components.noteBrief,
+			sectionIds: unique([
+				...plan.components.sectionIds,
+				...providerLimitIds,
+			]),
+		};
+		if (effectiveComponents.sectionIds.length !== plan.components.sectionIds.length) {
+			state = reduceMaintenanceState(state, {
+				type: "update-started",
+				revision: plan.revision,
+				components: effectiveComponents,
+			});
+			await this.deps.commit(request.path, cache, state);
+		}
 
 		const eligibleById = new Map(
 			cueEligibleSections(plan.sections).map((section) => [section.id, section])
 		);
-		const targets = plan.components.sectionIds
+		const targets = effectiveComponents.sectionIds
 			.map((id) => eligibleById.get(id))
 			.filter((section): section is Section => Boolean(section));
 		let generated: SectionResult[] = [];
@@ -644,18 +686,18 @@ export class StudyMaterialMaintenance {
 				},
 				bundleTargets
 			);
-			const requestedIds = new Set(plan.components.sectionIds);
+			const requestedIds = new Set(effectiveComponents.sectionIds);
 			generated = bundleResult.sections.filter((section) =>
 				requestedIds.has(section.id)
 			);
 			canceled = bundleResult.canceled;
 			if (
-				plan.components.noteBrief &&
+				effectiveComponents.noteBrief &&
 				bundleResult.noteBriefOutcome?.status === "success"
 			) {
 				bundledBrief = bundleResult.noteBrief;
 			} else if (
-				plan.components.noteBrief &&
+				effectiveComponents.noteBrief &&
 				bundleResult.noteBriefOutcome?.status === "failed"
 			) {
 				bundledBriefError = bundleResult.noteBriefOutcome.error;
@@ -705,7 +747,7 @@ export class StudyMaterialMaintenance {
 		if (bundledBrief && nextCache) {
 			nextCache = { ...nextCache, noteBrief: bundledBrief };
 			briefSucceeded = true;
-		} else if (plan.components.noteBrief && !provider.generateBundle) {
+		} else if (effectiveComponents.noteBrief && !provider.generateBundle) {
 			const briefOutcome = await generateNoteBriefForSections({
 				noteTitle: source.noteTitle,
 				markdown: source.markdown,
@@ -732,10 +774,10 @@ export class StudyMaterialMaintenance {
 		};
 		const unresolvedComponents: ComponentSet = {
 			noteBrief:
-				plan.components.noteBrief &&
+				effectiveComponents.noteBrief &&
 				!successfulComponents.noteBrief &&
 				!failedComponents.noteBrief,
-			sectionIds: plan.components.sectionIds.filter(
+			sectionIds: effectiveComponents.sectionIds.filter(
 				(id) =>
 					!successfulComponents.sectionIds.includes(id) &&
 					!failedComponents.sectionIds.includes(id)
@@ -754,7 +796,7 @@ export class StudyMaterialMaintenance {
 			};
 		}
 		if (request.kind === "automatic" && !this.deps.isAutomaticAllowed(request.path)) {
-			await this.cancelStartedUpdate(item, plan.revision, plan.components);
+			await this.cancelStartedUpdate(item, plan.revision, effectiveComponents);
 			return {
 				public: {
 					status: "skipped",
@@ -798,7 +840,7 @@ export class StudyMaterialMaintenance {
 				status: errors.length ? "failed" : "completed",
 				path: request.path,
 				revision: plan.revision,
-				components: plan.components,
+				components: effectiveComponents,
 				errors,
 			},
 		};

@@ -30,6 +30,7 @@ import {
 	firstRecallProviderCredentialSaved,
 	firstRecallProviderModel,
 	firstRecallSelectedProvider,
+	firstRecallProviderMaxGeneratedSections,
 	clearFirstRecallStoredCloudCredential,
 	markFirstRecallCloudCredentialSaved,
 	secureFirstRecallCloudCredentials,
@@ -290,12 +291,17 @@ export default class FirstRecallPlugin extends Plugin {
 			renamePath: (from, to) => this.cacheStore.rename(from, to),
 			deletePath: (path) => this.cacheStore.delete(path),
 			makeProvider: (automatic) => this.makeProviderForRun({ automatic }),
-			providerMetadata: () => ({
-				provider: firstRecallSelectedProvider(this.settings) ?? "",
-				model: this.selectedModelName(),
-				preset: this.settings.questionType,
-				generationMode: "whole-note-context",
-			}),
+			providerMetadata: () => {
+				const provider = firstRecallSelectedProvider(this.settings);
+				return {
+					provider: provider ?? "",
+					maxGeneratedSections:
+						firstRecallProviderMaxGeneratedSections(provider ?? undefined),
+					model: this.selectedModelName(),
+					preset: this.settings.questionType,
+					generationMode: "whole-note-context",
+				};
+			},
 			generationOptions: () => this.generationOptions(),
 			sectionConcurrency: () => this.settings.sectionConcurrency,
 			timerApi: window,
@@ -2206,6 +2212,7 @@ export default class FirstRecallPlugin extends Plugin {
 					path: file.path,
 					cache,
 					currentSections,
+					provider: firstRecallSelectedProvider(this.settings) ?? undefined,
 					noteBriefNeedsRefresh: classification.noteBrief !== "current",
 					failedComponents: state?.failure?.components,
 				};
