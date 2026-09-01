@@ -139,6 +139,121 @@ function providerWithResponse(body: unknown, operationIds = [OPERATION_ID]) {
 }
 
 describe("hosted demo provider", () => {
+	it("retries one HTTP 429 after Retry-After with a fresh operation id", async () => {
+		const sleep = vi.fn(async () => {});
+		const operationIds = [OPERATION_ID, NEXT_OPERATION_ID];
+		const transport = vi.fn(async () => {
+			if (transport.mock.calls.length === 1) {
+				return new Response("rate limited", {
+					status: 429,
+					headers: { "retry-after": "2" },
+				});
+			}
+			return new Response(JSON.stringify(successResponse(undefined, NEXT_OPERATION_ID)), {
+				status: 200,
+				headers: { "content-type": "application/json" },
+			});
+		});
+		const provider = createHostedDemoProvider({
+			transport,
+			clientVersion: "0.5.0",
+			installationId: INSTALLATION_ID,
+			sessionId: SESSION_ID,
+			createOperationId: () => operationIds.shift() ?? NEXT_OPERATION_ID,
+			sleep,
+		});
+
+		await expect(provider.generateBundle(input())).resolves.toMatchObject({
+			operationId: NEXT_OPERATION_ID,
+		});
+		expect(sleep).toHaveBeenCalledWith(2_000, undefined);
+		expect(transport).toHaveBeenCalledTimes(2);
+		const requestBodies = await Promise.all(
+			transport.mock.calls.map(async ([request]) =>
+				(await request.clone().json()) as {
+					identity: { operationId: string };
+				}
+			)
+		);
+		expect(
+			requestBodies.map((body) => body.identity.operationId)
+		).toEqual([OPERATION_ID, NEXT_OPERATION_ID]);
+	});
+
+	it("honors an HTTP-date Retry-After value", async () => {
+		const now = Date.parse("Mon, 31 Aug 2026 12:00:00 GMT");
+		const sleep = vi.fn(async () => {});
+		const transport = vi.fn(async () =>
+			transport.mock.calls.length === 1
+				? new Response("rate limited", {
+						status: 429,
+						headers: { "retry-after": "Mon, 31 Aug 2026 12:00:03 GMT" },
+					})
+				: new Response(JSON.stringify(successResponse()), {
+						status: 200,
+						headers: { "content-type": "application/json" },
+					})
+		);
+		const provider = createHostedDemoProvider({
+			transport,
+			clientVersion: "0.5.0",
+			installationId: INSTALLATION_ID,
+			sessionId: SESSION_ID,
+			createOperationId: () => OPERATION_ID,
+			now: () => now,
+			sleep,
+		});
+
+		await expect(provider.generateBundle(input())).resolves.toBeDefined();
+		expect(sleep).toHaveBeenCalledWith(3_000, undefined);
+	});
+
+	it("uses the fallback delay for a malformed Retry-After value", async () => {
+		const sleep = vi.fn(async () => {});
+		const transport = vi.fn(async () =>
+			transport.mock.calls.length === 1
+				? new Response("rate limited", {
+						status: 429,
+						headers: { "retry-after": "-1" },
+					})
+				: new Response(JSON.stringify(successResponse()), {
+						status: 200,
+						headers: { "content-type": "application/json" },
+					})
+		);
+		const provider = createHostedDemoProvider({
+			transport,
+			clientVersion: "0.5.0",
+			installationId: INSTALLATION_ID,
+			sessionId: SESSION_ID,
+			createOperationId: () => OPERATION_ID,
+			sleep,
+		});
+
+		await expect(provider.generateBundle(input())).resolves.toBeDefined();
+		expect(sleep).toHaveBeenCalledWith(10_000, undefined);
+	});
+
+	it("uses a ten-second fallback and stops after one 429 retry", async () => {
+		const sleep = vi.fn(async () => {});
+		const transport = vi.fn(async () => new Response("rate limited", { status: 429 }));
+		const provider = createHostedDemoProvider({
+			transport,
+			clientVersion: "0.5.0",
+			installationId: INSTALLATION_ID,
+			sessionId: SESSION_ID,
+			createOperationId: () => OPERATION_ID,
+			sleep,
+		});
+
+		await expect(provider.generateBundle(input())).rejects.toThrow(
+			"rate limit persisted after retry"
+		);
+		expect(sleep).toHaveBeenCalledOnce();
+		expect(sleep).toHaveBeenCalledWith(10_000, undefined);
+		expect(transport).toHaveBeenCalledTimes(2);
+	});
+
 	it("posts one bounded bundle and maps a complete success", async () => {
 		const { provider, transport } = providerWithResponse(successResponse());
 

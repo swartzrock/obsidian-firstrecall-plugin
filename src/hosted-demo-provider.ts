@@ -6,6 +6,7 @@ import {
 	INSUFFICIENT_SOURCE_ERROR,
 	type NoteBriefOutput,
 } from "./schemas";
+import { abortableDelay } from "./provider-request-rate";
 
 export const HOSTED_DEMO_ENDPOINT =
 	"https://api.firstrecall.ai/v1/demo-bundles";
@@ -345,6 +346,8 @@ export interface HostedDemoProviderDeps {
 	installationId: string;
 	sessionId: string;
 	createOperationId(): string;
+	now?(): number;
+	sleep?(milliseconds: number, signal?: AbortSignal): Promise<void>;
 }
 
 export interface HostedDemoProvider {
@@ -385,6 +388,22 @@ export class HostedDemoApiError extends Error {
 
 function protocolError(message: string): HostedDemoProtocolError {
 	return new HostedDemoProtocolError(`Hosted demo API ${message}`);
+}
+
+function logResponse(response: Response, body: unknown): void {
+	// eslint-disable-next-line obsidianmd/rule-custom-message -- Trial API diagnostics are intentionally visible in Obsidian's developer console.
+	console.log("[FirstRecall trial] Response", {
+		status: response.status,
+		headers: Object.fromEntries(response.headers.entries()),
+		body,
+	});
+}
+
+function retryAfterMilliseconds(value: string | null, now: number): number {
+	if (value === null) return 10_000;
+	if (/^\d+$/.test(value.trim())) return Number(value) * 1_000;
+	const retryAt = Date.parse(value);
+	return Number.isNaN(retryAt) || retryAt <= now ? 10_000 : retryAt - now;
 }
 
 function mapSuccessResponse(
@@ -449,73 +468,86 @@ export function createHostedDemoProvider(
 ): HostedDemoProvider {
 	return {
 		async generateBundle(input, signal) {
-			const operationId = deps.createOperationId();
-			const requestBody = hostedDemoRequestSchema.safeParse({
-				contractVersion: "v1",
-				client: {
-					name: "first-recall-obsidian",
-					version: deps.clientVersion,
-				},
-				identity: {
-					installationId: deps.installationId,
-					sessionId: deps.sessionId,
-					operationId,
-				},
-				note: input.note,
-				sections: input.sections,
-			});
-			if (!requestBody.success) {
-				throw protocolError(`request is invalid: ${formatZodError(requestBody.error)}`);
-			}
-
-			const request = new Request(HOSTED_DEMO_ENDPOINT, {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify(requestBody.data),
-				signal,
-			});
-			// eslint-disable-next-line obsidianmd/rule-custom-message -- Trial API diagnostics are intentionally visible in Obsidian's developer console.
-			console.log("[FirstRecall trial] Request", {
-				url: request.url,
-				method: request.method,
-				headers: Object.fromEntries(request.headers.entries()),
-				body: requestBody.data,
-			});
-			const response = await deps.transport(request);
-
-			let responseText = await response.text();
-			let rawResponse: unknown;
-			try {
-				rawResponse = JSON.parse(responseText) as unknown;
-			} catch {
-				// eslint-disable-next-line obsidianmd/rule-custom-message -- Trial API diagnostics are intentionally visible in Obsidian's developer console.
-				console.log("[FirstRecall trial] Response", {
-					status: response.status,
-					headers: Object.fromEntries(response.headers.entries()),
-					body: responseText,
+			for (let attempt = 0; attempt < 2; attempt++) {
+				const operationId = deps.createOperationId();
+				const requestBody = hostedDemoRequestSchema.safeParse({
+					contractVersion: "v1",
+					client: {
+						name: "first-recall-obsidian",
+						version: deps.clientVersion,
+					},
+					identity: {
+						installationId: deps.installationId,
+						sessionId: deps.sessionId,
+						operationId,
+					},
+					note: input.note,
+					sections: input.sections,
 				});
-				throw protocolError("returned a response that was not valid JSON");
+				if (!requestBody.success) {
+					throw protocolError(
+						`request is invalid: ${formatZodError(requestBody.error)}`
+					);
+				}
+
+				const request = new Request(HOSTED_DEMO_ENDPOINT, {
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify(requestBody.data),
+					signal,
+				});
+				// eslint-disable-next-line obsidianmd/rule-custom-message -- Trial API diagnostics are intentionally visible in Obsidian's developer console.
+				console.log("[FirstRecall trial] Request", {
+					url: request.url,
+					method: request.method,
+					headers: Object.fromEntries(request.headers.entries()),
+					body: requestBody.data,
+				});
+				const response = await deps.transport(request);
+
+				let responseText = await response.text();
+				if (response.status === 429) {
+					logResponse(response, responseText);
+					if (attempt === 1) {
+						throw protocolError("rate limit persisted after retry");
+					}
+					await (deps.sleep ?? abortableDelay)(
+						retryAfterMilliseconds(
+							response.headers.get("retry-after"),
+							(deps.now ?? Date.now)()
+						),
+						signal
+					);
+					continue;
+				}
+
+				let rawResponse: unknown;
+				try {
+					rawResponse = JSON.parse(responseText) as unknown;
+				} catch {
+					logResponse(response, responseText);
+					throw protocolError("returned a response that was not valid JSON");
+				}
+				responseText = "";
+				logResponse(response, rawResponse);
+				const parsed = hostedDemoResponseSchema.safeParse(rawResponse);
+				if (!parsed.success) {
+					throw protocolError(
+						`response could not be validated: ${formatZodError(parsed.error)}`
+					);
+				}
+				if (
+					parsed.data.operationId !== null &&
+					parsed.data.operationId !== operationId
+				) {
+					throw protocolError("returned a mismatched operation id");
+				}
+				if (parsed.data.status === "error") {
+					throw new HostedDemoApiError(parsed.data);
+				}
+				return mapSuccessResponse(parsed.data, input);
 			}
-			responseText = "";
-			// eslint-disable-next-line obsidianmd/rule-custom-message -- Trial API diagnostics are intentionally visible in Obsidian's developer console.
-			console.log("[FirstRecall trial] Response", {
-				status: response.status,
-				headers: Object.fromEntries(response.headers.entries()),
-				body: rawResponse,
-			});
-			const parsed = hostedDemoResponseSchema.safeParse(rawResponse);
-			if (!parsed.success) {
-				throw protocolError(
-					`response could not be validated: ${formatZodError(parsed.error)}`
-				);
-			}
-			if (parsed.data.operationId !== null && parsed.data.operationId !== operationId) {
-				throw protocolError("returned a mismatched operation id");
-			}
-			if (parsed.data.status === "error") {
-				throw new HostedDemoApiError(parsed.data);
-			}
-			return mapSuccessResponse(parsed.data, input);
+			throw protocolError("rate limit persisted after retry");
 		},
 	};
 }

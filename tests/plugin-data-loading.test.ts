@@ -231,6 +231,7 @@ describe("plugin data loading", () => {
 					cueFontSize: "huge",
 					questionType: "quiz",
 					sectionConcurrency: 99,
+					requestsPerTenSeconds: 7,
 					showQuestion: "no",
 				},
 			})),
@@ -246,6 +247,7 @@ describe("plugin data loading", () => {
 			cueFontSize: "medium",
 			questionType: "exam-practice",
 			sectionConcurrency: 5,
+			requestsPerTenSeconds: 5,
 			showQuestion: true,
 		});
 		expect(saveData).toHaveBeenCalledTimes(1);
@@ -263,6 +265,7 @@ describe("plugin data loading", () => {
 					questionType: "exam-practice",
 					studyHideMode: "collapse",
 					sectionConcurrency: 3,
+					requestsPerTenSeconds: 10,
 					showSummary: false,
 					showQuestion: false,
 					showTerms: false,
@@ -281,6 +284,7 @@ describe("plugin data loading", () => {
 			questionType: "exam-practice",
 			studyHideMode: "collapse",
 			sectionConcurrency: 3,
+			requestsPerTenSeconds: 10,
 			showSummary: false,
 			showQuestion: false,
 			showTerms: false,

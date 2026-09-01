@@ -125,6 +125,10 @@ import {
 import { formatFirstRecallNotice } from "./notice";
 import { parsePersistedFirstRecallSettings } from "./persisted-settings";
 import {
+	effectiveProviderRequestRate,
+	RollingWindowRequestLimiter,
+} from "./provider-request-rate";
+import {
 	EditorHookLayoutController,
 	leftDockIsOpen,
 } from "./editor-hook-layout";
@@ -235,6 +239,10 @@ export default class FirstRecallPlugin extends Plugin {
 	private credentialStore!: SecureCredentialStore;
 	private credentialStorageWarnings: string[] = [];
 	private readonly hostedDemoSessionId = crypto.randomUUID();
+	private readonly providerRequestLimiters = new Map<
+		FirstRecallCueProviderRuntime["id"],
+		RollingWindowRequestLimiter
+	>();
 	private readonly editorCueWidthController: EditorCueWidthController = {
 		getCommittedWidthPx: () => this.settings.editorCueCustomWidthPx,
 		previewWidthPx: (widthPx) => this.previewEditorCueWidth(widthPx),
@@ -1802,17 +1810,45 @@ export default class FirstRecallPlugin extends Plugin {
 	async makeProvider(): Promise<FirstRecallCueProviderRuntime> {
 		if (firstRecallSelectedProvider(this.settings) === "hosted-demo") {
 			const installationId = await this.hostedDemoInstallationId();
+			const limiter = this.providerRequestLimiter("hosted-demo");
+			const transport = this.makeTransport();
 			return makeFirstRecallHostedDemoProvider({
-				transport: this.makeTransport(),
+				transport: async (request) => {
+					await limiter.acquire(request.signal);
+					return transport(request);
+				},
 				clientVersion: this.manifest.version,
 				installationId,
 				sessionId: this.hostedDemoSessionId,
 				createOperationId: () => crypto.randomUUID(),
 			});
 		}
-		return makeFirstRecallByokProviderFromStore(this.settings, {
-			transport: this.makeTransport(),
-		}, this.credentialStore);
+		const providerId = firstRecallSelectedProvider(this.settings);
+		return makeFirstRecallByokProviderFromStore(
+			this.settings,
+			{
+				transport: this.makeTransport(),
+				requestGate: providerId
+					? this.providerRequestLimiter(providerId)
+					: undefined,
+			},
+			this.credentialStore
+		);
+	}
+
+	private providerRequestLimiter(
+		providerId: FirstRecallCueProviderRuntime["id"]
+	): RollingWindowRequestLimiter {
+		const existing = this.providerRequestLimiters.get(providerId);
+		if (existing) return existing;
+		const limiter = new RollingWindowRequestLimiter(() =>
+			effectiveProviderRequestRate(
+				providerId,
+				this.settings.requestsPerTenSeconds
+			)
+		);
+		this.providerRequestLimiters.set(providerId, limiter);
+		return limiter;
 	}
 
 	private async hostedDemoInstallationId(): Promise<string> {

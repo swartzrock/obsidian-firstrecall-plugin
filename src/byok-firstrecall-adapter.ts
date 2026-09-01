@@ -6,6 +6,7 @@ import {
 	normalizeProviderId,
 	parseByokStoredSettings,
 	type ByokModelOption,
+	type ByokObjectGenerationInput,
 	type ByokProviderConfig,
 	type ByokProviderDeps,
 	type ByokProviderId,
@@ -65,6 +66,7 @@ import {
 	type NoteBriefOutput,
 } from "./schemas";
 import type { FirstRecallSettings } from "./settings";
+import type { ProviderRequestRateGate } from "./provider-request-rate";
 import {
 	isFirstRecallCloudCredentialProvider,
 	type FirstRecallCloudCredentialProvider,
@@ -73,7 +75,9 @@ import {
 
 export type FirstRecallByokRuntime = FirstRecallCueProviderRuntime;
 export type FirstRecallTransport = ByokTransport;
-export type FirstRecallProviderFactoryDeps = ByokProviderDeps;
+export type FirstRecallProviderFactoryDeps = ByokProviderDeps & {
+	requestGate?: ProviderRequestRateGate;
+};
 export type FirstRecallProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type { ByokProviderConfig, ByokProviderDeps } from "@swartzrock/byok-runtime";
 
@@ -253,6 +257,36 @@ function firstRecallProviderDeps(
 			return normalizeOllamaJsonResponse(response);
 		},
 	};
+}
+
+function withGenerationRequestGate(
+	runtime: ByokProviderRuntime,
+	gate?: ProviderRequestRateGate
+): ByokProviderRuntime {
+	if (!gate) return runtime;
+	const limited: ByokProviderRuntime = {
+		id: runtime.id,
+		label: runtime.label,
+		requiresNetwork: runtime.requiresNetwork,
+		requiresDownload: runtime.requiresDownload,
+		sectionConcurrencyLimit: runtime.sectionConcurrencyLimit,
+		testConnection: () => runtime.testConnection(),
+		listModels: () => runtime.listModels(),
+		generateText: async (input, signal) => {
+			await gate.acquire(signal);
+			return runtime.generateText(input, signal);
+		},
+	};
+	if (runtime.generateObject) {
+		limited.generateObject = async <T>(
+			input: ByokObjectGenerationInput<T>,
+			signal?: AbortSignal
+		): Promise<T> => {
+			await gate.acquire(signal);
+			return runtime.generateObject!(input, signal);
+		};
+	}
+	return limited;
 }
 
 async function generateCueFromObjectProvider(
@@ -444,8 +478,10 @@ async function generateCueBatchFromTextProvider(
 }
 
 export function wrapFirstRecallByokRuntime(
-	runtime: ByokProviderRuntime
+	runtime: ByokProviderRuntime,
+	requestGate?: ProviderRequestRateGate
 ): FirstRecallByokRuntime {
+	runtime = withGenerationRequestGate(runtime, requestGate);
 	const generateFromObject = Boolean(runtime.generateObject);
 	const cueRuntime: FirstRecallByokRuntime = {
 		id: runtime.id,
@@ -741,7 +777,8 @@ export function makeFirstRecallByokProvider(
 ): FirstRecallByokRuntime {
 	const config = firstRecallProviderConfigFromSettings(settings);
 	return wrapFirstRecallByokRuntime(
-		createByokNodeProvider(config, firstRecallProviderDeps(config, deps))
+		createByokNodeProvider(config, firstRecallProviderDeps(config, deps)),
+		deps.requestGate
 	);
 }
 
@@ -823,7 +860,8 @@ export async function makeFirstRecallByokProviderFromStore(
 		createByokNodeProvider(
 			config,
 			firstRecallProviderDeps(config, deps)
-		)
+		),
+		deps.requestGate
 	);
 }
 

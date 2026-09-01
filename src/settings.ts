@@ -65,6 +65,11 @@ import {
 } from "./byok-model-options";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
 import {
+	isRequestsPerTenSeconds,
+	REQUEST_RATE_OPTIONS,
+	type RequestsPerTenSeconds,
+} from "./provider-request-rate";
+import {
 	applyFirstRecallListedModels,
 	applyFirstRecallModelRefreshFailure,
 	firstRecallFetchedModelCount,
@@ -184,6 +189,7 @@ export interface FirstRecallSettings {
 	studyAreas: StudyArea[];
 	disabledStudyAreas: DisabledStudyArea[];
 	sectionConcurrency: number;
+	requestsPerTenSeconds: RequestsPerTenSeconds;
 	showNoteBrief: boolean;
 	showSummary: boolean;
 	showQuestion: boolean;
@@ -243,6 +249,7 @@ export const DEFAULT_SETTINGS: FirstRecallSettings = {
 	studyAreas: DEFAULT_STUDY_AREAS,
 	disabledStudyAreas: [],
 	sectionConcurrency: 5,
+	requestsPerTenSeconds: 5,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
 	showSummary: true,
 	showQuestion: true,
@@ -540,6 +547,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			"Tune how quickly FirstRecall generates section cards."
 		);
 		this.renderParallelRequestsSetting(performanceFlowEl);
+		this.renderRequestRateSetting(performanceFlowEl);
 	}
 
 	private renderParallelRequestsSetting(containerEl: HTMLElement): void {
@@ -559,6 +567,33 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					})
 			);
 		concurrencySetting.setDesc(concurrencyDesc());
+	}
+
+	private renderRequestRateSetting(containerEl: HTMLElement): void {
+		const labels: Record<RequestsPerTenSeconds, string> = {
+			1: "6 per minute (1 per 10 seconds)",
+			5: "30 per minute (5 per 10 seconds) — Recommended",
+			10: "60 per minute (10 per 10 seconds)",
+			20: "120 per minute (20 per 10 seconds)",
+		};
+		new Setting(containerEl)
+			.setName("Request rate")
+			.setDesc(
+				"Limit how many generation requests can start in each rolling 10-second window. This is separate from parallel requests. The included trial is capped at 5 requests per 10 seconds."
+			)
+			.addDropdown((dropdown) => {
+				for (const option of REQUEST_RATE_OPTIONS) {
+					dropdown.addOption(String(option), labels[option]);
+				}
+				dropdown
+					.setValue(String(this.plugin.settings.requestsPerTenSeconds))
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						if (!isRequestsPerTenSeconds(parsed)) return;
+						this.plugin.settings.requestsPerTenSeconds = parsed;
+						await this.plugin.saveSettings();
+					});
+			});
 	}
 
 	private renderProviderSetupPanel(containerEl: HTMLElement): void {

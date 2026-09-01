@@ -676,7 +676,12 @@ export class StudyMaterialMaintenance {
 		let canceled = false;
 		if (provider.generateBundle) {
 			const eligible = [...eligibleById.values()];
-			const bundleTargets = providerLimitIds.length
+			const hasServerOwnedProviderLimit =
+				provider.maxGeneratedSections === undefined &&
+				Boolean(cache?.sections.some(
+					(section) => section.unavailable?.providerId === provider.id
+				));
+			const bundleTargets = providerLimitIds.length || hasServerOwnedProviderLimit
 				? eligible
 				: targets.length
 					? targets

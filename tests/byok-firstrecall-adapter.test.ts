@@ -406,6 +406,38 @@ describe("firstRecallProviderConfigFromSettings", () => {
 		expect(body.prompt).not.toContain("intervals");
 	});
 
+	it("rate limits both the initial text request and its repair", async () => {
+		let attempt = 0;
+		const acquire = vi.fn(async () => {});
+		const provider = makeFirstRecallByokProvider(
+			settings({ selectedProvider: "ollama" }),
+			{
+				requestGate: { acquire },
+				transport: async () => {
+					attempt++;
+					return new Response(
+						JSON.stringify({
+							response: attempt === 1
+								? "not json"
+								: JSON.stringify({
+									question: "What is an agent?",
+									keywords: ["plan", "tools"],
+								}),
+						}),
+						{ status: 200, headers: { "content-type": "application/json" } }
+					);
+				},
+			}
+		);
+
+		await expect(provider.generateCue({
+			heading: "Agents",
+			content: "Agents can plan and use tools.",
+			options: { questionType: "conceptual" },
+		})).resolves.toMatchObject({ question: "What is an agent?" });
+		expect(acquire).toHaveBeenCalledTimes(2);
+	});
+
 	it("accepts a text provider abstention without asking it to fabricate a repair", async () => {
 		const calls: Array<{ body?: string }> = [];
 		const provider = makeFirstRecallByokProvider(

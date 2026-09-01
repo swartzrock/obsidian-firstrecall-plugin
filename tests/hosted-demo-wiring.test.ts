@@ -54,6 +54,21 @@ async function captureIdentity(plugin: FirstRecallPlugin) {
 }
 
 describe("hosted trial plugin wiring", () => {
+	it("gates each hosted transport attempt through the shared request limiter", async () => {
+		const { plugin } = pluginHarness(VALID_INSTALLATION_ID);
+		const acquire = vi.fn(async (_signal?: AbortSignal) => {});
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			providerRequestLimiters: new Map([
+				["hosted-demo", { acquire }],
+			]),
+		});
+
+		await captureIdentity(plugin);
+
+		expect(acquire).toHaveBeenCalledTimes(1);
+		expect(acquire.mock.calls[0][0]).toBeInstanceOf(AbortSignal);
+	});
+
 	it("creates a hosted runtime and lazily persists one stable installation id", async () => {
 		const { plugin, requests, saveData } = pluginHarness();
 

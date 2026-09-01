@@ -617,6 +617,7 @@ describe("settings defaults", () => {
 		expect(DEFAULT_SETTINGS).toMatchObject({
 			byok: { selectedProvider: null },
 			questionType: "exam-practice",
+			requestsPerTenSeconds: 5,
 			showNoteBrief: true,
 			showSummary: true,
 			showQuestion: true,
@@ -810,6 +811,26 @@ describe("settings defaults", () => {
 			)?.textContent
 		).toBe("Codex (terminal)");
 		expect(settingText(tab.containerEl)).toContain("Performance");
+		const requestRate = tab.containerEl.querySelector<HTMLSelectElement>(
+			'[data-setting-name="Request rate"] select'
+		);
+		expect(requestRate?.value).toBe("5");
+		expect(
+			[...(requestRate?.options ?? [])].map((option) => [
+				option.value,
+				option.textContent,
+			])
+		).toEqual([
+			["1", "6 per minute (1 per 10 seconds)"],
+			["5", "30 per minute (5 per 10 seconds) — Recommended"],
+			["10", "60 per minute (10 per 10 seconds)"],
+			["20", "120 per minute (20 per 10 seconds)"],
+		]);
+		expect(
+			tab.containerEl.querySelector(
+				'[data-setting-name="Request rate"] .setting-item-description'
+			)?.textContent
+		).toContain("included trial is capped at 5");
 	});
 
 	it("hides mismatched setup without losing provider input or focus", async () => {

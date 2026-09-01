@@ -426,8 +426,29 @@ describe("study material maintenance execution", () => {
 		});
 		expect(generateBundle).toHaveBeenCalledTimes(1);
 
-		const reordered = [
+		const editedPlaceholder = markdown.replace(
 			"# Section 6\ncontent 6",
+			"# Section 6\nupdated content 6"
+		);
+		harness.sources.set(
+			"notes/note.md",
+			source("notes/note.md", editedPlaceholder)
+		);
+		const editedResult = await harness.maintenance.request({
+			path: "notes/note.md",
+			kind: "catch-up",
+		});
+		expect(editedResult.status).toBe("completed");
+		expect(generateBundle).toHaveBeenCalledTimes(2);
+		expect(generateBundle.mock.calls[1][0].sections).toHaveLength(6);
+		expect(harness.caches["notes/note.md"].sections[5]).toMatchObject({
+			heading: "Section 6",
+			question: null,
+			unavailable: { reason: "provider-limit", maxSections: 5 },
+		});
+
+		const reordered = [
+			"# Section 6\nupdated content 6",
 			...Array.from(
 				{ length: 5 },
 				(_, index) => `# Section ${index + 1}\ncontent ${index + 1}`
@@ -442,8 +463,8 @@ describe("study material maintenance execution", () => {
 			kind: "catch-up",
 		});
 		expect(reorderedResult.status).toBe("completed");
-		expect(generateBundle).toHaveBeenCalledTimes(2);
-		expect(generateBundle.mock.calls[1][0].sections.map(
+		expect(generateBundle).toHaveBeenCalledTimes(3);
+		expect(generateBundle.mock.calls[2][0].sections.map(
 			(section) => section.heading
 		)).toEqual([
 			"Section 6",
