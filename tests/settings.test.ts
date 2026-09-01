@@ -812,7 +812,7 @@ describe("settings defaults", () => {
 		).toBe("Codex (terminal)");
 		expect(settingText(tab.containerEl)).toContain("Performance");
 		const requestRate = tab.containerEl.querySelector<HTMLSelectElement>(
-			'[data-setting-name="Request rate"] select'
+			'[data-setting-name="Rate limit"] select'
 		);
 		expect(requestRate?.value).toBe("5");
 		expect(
@@ -821,16 +821,16 @@ describe("settings defaults", () => {
 				option.textContent,
 			])
 		).toEqual([
-			["1", "6 per minute (1 per 10 seconds)"],
-			["5", "30 per minute (5 per 10 seconds) — Recommended"],
-			["10", "60 per minute (10 per 10 seconds)"],
-			["20", "120 per minute (20 per 10 seconds)"],
+			["1", "6/min"],
+			["5", "30/min (recommended)"],
+			["10", "60/min"],
+			["20", "120/min"],
 		]);
 		expect(
 			tab.containerEl.querySelector(
-				'[data-setting-name="Request rate"] .setting-item-description'
+				'[data-setting-name="Rate limit"] .setting-item-description'
 			)?.textContent
-		).toContain("included trial is capped at 5");
+		).toBe("Trial max: 30/min.");
 	});
 
 	it("hides mismatched setup without losing provider input or focus", async () => {

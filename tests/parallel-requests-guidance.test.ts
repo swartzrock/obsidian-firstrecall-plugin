@@ -18,10 +18,10 @@ function baseSettings(
 describe("parallelRequestsGuidance", () => {
 	it("uses the same provider-agnostic guidance", () => {
 		expect(parallelRequestsGuidance(baseSettings())).toBe(
-			"Controls simultaneous generation work. Use Request rate to limit how quickly new requests start."
+			"Controls simultaneous generation work. Use Rate limit to pace new requests."
 		);
 		expect(parallelRequestsGuidance(baseSettings({ sectionConcurrency: 2 }))).toBe(
-			"Controls simultaneous generation work. Use Request rate to limit how quickly new requests start."
+			"Controls simultaneous generation work. Use Rate limit to pace new requests."
 		);
 	});
 
@@ -46,7 +46,7 @@ describe("parallelRequestsGuidance", () => {
 		expect(
 			formatParallelRequestsDescription(baseSettings({ sectionConcurrency: 3 }))
 		).toBe(
-			"Run up to 3 section requests at once. Controls simultaneous generation work. Use Request rate to limit how quickly new requests start."
+			"Run up to 3 section requests at once. Controls simultaneous generation work. Use Rate limit to pace new requests."
 		);
 	});
 });

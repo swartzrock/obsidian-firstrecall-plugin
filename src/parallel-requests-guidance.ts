@@ -7,7 +7,7 @@ export interface ParallelRequestsGuidanceSettings {
 }
 
 const PARALLEL_REQUESTS_HINT =
-	"Controls simultaneous generation work. Use Request rate to limit how quickly new requests start.";
+	"Controls simultaneous generation work. Use Rate limit to pace new requests.";
 const CLI_REQUESTS_HINT =
 	"Local CLI providers run one CLI process at a time to avoid multiple agent processes and interactive prompts.";
 

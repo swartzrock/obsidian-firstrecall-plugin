@@ -571,16 +571,14 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private renderRequestRateSetting(containerEl: HTMLElement): void {
 		const labels: Record<RequestsPerTenSeconds, string> = {
-			1: "6 per minute (1 per 10 seconds)",
-			5: "30 per minute (5 per 10 seconds) — Recommended",
-			10: "60 per minute (10 per 10 seconds)",
-			20: "120 per minute (20 per 10 seconds)",
+			1: "6/min",
+			5: "30/min (recommended)",
+			10: "60/min",
+			20: "120/min",
 		};
 		new Setting(containerEl)
-			.setName("Request rate")
-			.setDesc(
-				"Limit how many generation requests can start in each rolling 10-second window. This is separate from parallel requests. The included trial is capped at 5 requests per 10 seconds."
-			)
+			.setName("Rate limit")
+			.setDesc("Trial max: 30/min.")
 			.addDropdown((dropdown) => {
 				for (const option of REQUEST_RATE_OPTIONS) {
 					dropdown.addOption(String(option), labels[option]);
