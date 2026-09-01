@@ -544,7 +544,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			performanceFlowEl,
 			"Performance",
-			"Tune how quickly FirstRecall generates section cards."
+			"Tune how quickly FirstRecall generates study material."
 		);
 		this.renderParallelRequestsSetting(performanceFlowEl);
 		this.renderRequestRateSetting(performanceFlowEl);
@@ -571,14 +571,14 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private renderRequestRateSetting(containerEl: HTMLElement): void {
 		const labels: Record<RequestsPerTenSeconds, string> = {
-			1: "6/min",
-			5: "30/min (recommended)",
-			10: "60/min",
-			20: "120/min",
+			1: "6/minute",
+			5: "30/minute (recommended)",
+			10: "60/minute",
+			20: "120/minute",
 		};
 		new Setting(containerEl)
-			.setName("Rate limit")
-			.setDesc("Trial max: 30/min.")
+			.setName("API Rate limit")
+			.setDesc("Maximum API request rate.")
 			.addDropdown((dropdown) => {
 				for (const option of REQUEST_RATE_OPTIONS) {
 					dropdown.addOption(String(option), labels[option]);
