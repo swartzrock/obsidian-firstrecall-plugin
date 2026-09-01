@@ -43,7 +43,6 @@ import type {
 } from "./cue-provider";
 import {
 	createHostedDemoProvider,
-	HOSTED_DEMO_MAX_SECTIONS,
 	type HostedDemoProviderDeps,
 } from "./hosted-demo-provider";
 import {
@@ -78,22 +77,16 @@ export type FirstRecallProviderFactoryDeps = ByokProviderDeps;
 export type FirstRecallProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type { ByokProviderConfig, ByokProviderDeps } from "@swartzrock/byok-runtime";
 
-export function firstRecallProviderMaxGeneratedSections(
-	providerId: FirstRecallProviderId | undefined
-): number | undefined {
-	return providerId === "hosted-demo" ? HOSTED_DEMO_MAX_SECTIONS : undefined;
-}
-
 export function makeFirstRecallHostedDemoProvider(
 	deps: HostedDemoProviderDeps
 ): FirstRecallCueProviderRuntime {
 	const hosted = createHostedDemoProvider(deps);
+	const definition = firstRecallProviderDefinition("hosted-demo");
 	return {
-		id: "hosted-demo",
-		label: "FirstRecall trial",
+		id: definition.id,
+		label: definition.label,
 		requiresNetwork: true,
 		requiresDownload: false,
-		maxGeneratedSections: HOSTED_DEMO_MAX_SECTIONS,
 		testConnection: async () => ({
 			ok: true,
 			message: "FirstRecall trial is ready.",

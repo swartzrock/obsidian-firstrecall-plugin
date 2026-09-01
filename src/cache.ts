@@ -191,11 +191,15 @@ export function sectionIdsNeedingProviderLimitReconciliation(
 	provider: { id: string; maxGeneratedSections?: number }
 ): string[] {
 	const configuredLimit = provider.maxGeneratedSections;
+	const cachedLimit = cache.sections.find(
+		(section) => section.unavailable?.providerId === provider.id
+	)?.unavailable?.maxSections;
+	const candidateLimit = configuredLimit ?? cachedLimit;
 	const limit =
-		typeof configuredLimit === "number" &&
-		Number.isFinite(configuredLimit) &&
-		configuredLimit > 0
-			? Math.floor(configuredLimit)
+		typeof candidateLimit === "number" &&
+		Number.isFinite(candidateLimit) &&
+		candidateLimit > 0
+			? Math.floor(candidateLimit)
 			: null;
 	const cachedById = new Map(cache.sections.map((section) => [section.id, section]));
 	return cueEligibleSections(currentSections).flatMap((section, index) => {

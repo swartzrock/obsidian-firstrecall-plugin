@@ -35,6 +35,7 @@ import type {
 } from "../src/secure-credential-store";
 import { buildSectionCuePrompt } from "../src/cue-instructions";
 import { buildNoteBriefPrompt } from "../src/study-material-instructions";
+import { generateNote } from "../src/generator";
 
 function settings(
 	overrides: Partial<FirstRecallSettings> & {
@@ -285,9 +286,38 @@ describe("firstRecallProviderConfigFromSettings", () => {
 		).toBe(provider);
 	});
 
-	it("wraps the hosted trial as a configured FirstRecall runtime", async () => {
+	it("submits every section and maps the server-owned trial limit", async () => {
+		let submittedSections = 0;
 		const provider = makeFirstRecallHostedDemoProvider({
-			transport,
+			transport: async (request) => {
+				const body = (await request.json()) as {
+					identity: { operationId: string };
+					sections: Array<{ sectionId: string; contentHash: string }>;
+				};
+				submittedSections = body.sections.length;
+				return new Response(JSON.stringify({
+					contractVersion: "v1",
+					status: "success",
+					operationId: body.identity.operationId,
+					attemptConsumed: true,
+					bundle: {
+						sections: body.sections.map((section, index) => ({
+							sectionId: section.sectionId,
+							contentHash: section.contentHash,
+							question: "What idea does this section explain?",
+							keywords: ["idea", "section"],
+							summary: "This section explains one idea.",
+							...(index >= 5 ? { placeholderReason: "trial_limit" } : {}),
+						})),
+						noteBrief: {
+							overview: "Seven sections explain seven ideas.",
+							whatMatters: { title: "Seven ideas", detail: "Review every section." },
+							reviewFirst: { title: "First idea", detail: "Begin with section one." },
+							sayItBack: { title: "How do the seven ideas connect?", detail: "Explain their relationship." },
+						},
+					},
+				}), { status: 200, headers: { "content-type": "application/json" } });
+			},
 			clientVersion: "0.5.0",
 			installationId: "7f4b9f2c-2f2c-4e90-a8b7-5ac2e40dc40a",
 			sessionId: "c1f63499-1afd-4462-bb71-c816679b0e22",
@@ -299,14 +329,42 @@ describe("firstRecallProviderConfigFromSettings", () => {
 			label: "FirstRecall trial",
 			requiresNetwork: true,
 			requiresDownload: false,
-			maxGeneratedSections: 5,
 		});
+		expect(provider.maxGeneratedSections).toBeUndefined();
 		expect(await provider.testConnection()).toMatchObject({ ok: true });
 		expect(await provider.listModels()).toEqual([
 			{ id: "included-trial", label: "Included trial model" },
 		]);
 		expect(typeof provider.generateBundle).toBe("function");
 		expect(provider.generateCue).toBeUndefined();
+
+		const result = await generateNote({
+			noteTitle: "Seven ideas",
+			markdown: Array.from(
+				{ length: 7 },
+				(_, index) => `# Section ${index + 1}\nBody ${index + 1}.`
+			).join("\n\n"),
+			provider,
+		});
+
+		expect(submittedSections).toBe(7);
+		expect(result.sections).toHaveLength(7);
+		expect(result.sections.map((section) => section.error)).toEqual(
+			Array(7).fill(null)
+		);
+		expect(result.sections.map((section) => section.question)).toEqual([
+			...Array(5).fill("What idea does this section explain?"),
+			null,
+			null,
+		]);
+		expect(result.sections.slice(5).map((section) => section.unavailable)).toEqual(
+			Array(2).fill({
+				reason: "provider-limit",
+				providerId: "hosted-demo",
+				providerLabel: "FirstRecall trial",
+				maxSections: 5,
+			})
+		);
 	});
 
 	it("wraps generic text providers with FirstRecall cue generation", async () => {

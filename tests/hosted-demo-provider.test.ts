@@ -62,6 +62,13 @@ function completeSection(
 	};
 }
 
+function trialLimitSection(sectionId: string, contentHash: string) {
+	return {
+		...completeSection(sectionId, contentHash),
+		placeholderReason: "trial_limit",
+	};
+}
+
 function successResponse(
 	sections: unknown[] = [completeSection()],
 	operationId = OPERATION_ID
@@ -167,6 +174,27 @@ describe("hosted demo provider", () => {
 		});
 	});
 
+	it("accepts and correlates a seven-section bundle", async () => {
+		const sections = Array.from({ length: 7 }, (_, index) => ({
+			...input().sections[0],
+			sectionId: `section-${index + 1}`,
+			contentHash: index.toString(16).padStart(8, "0"),
+		}));
+		const responseSections = sections.map((section) =>
+			completeSection(section.sectionId, section.contentHash)
+		);
+		const { provider, transport } = providerWithResponse(
+			successResponse(responseSections)
+		);
+
+		const result = await provider.generateBundle(input({ sections }));
+
+		expect(result.sections).toHaveLength(7);
+		expect(transport).toHaveBeenCalledTimes(1);
+		const request = transport.mock.calls[0][0];
+		expect((await request.json()).sections).toEqual(sections);
+	});
+
 	it("maps insufficientSource to FirstRecall's standard item error", async () => {
 		const { provider } = providerWithResponse(
 			successResponse([
@@ -182,6 +210,71 @@ describe("hosted demo provider", () => {
 
 		expect(result.sections).toEqual([{ error: INSUFFICIENT_SOURCE_ERROR }]);
 		expect(result.noteBrief).toEqual(noteBrief());
+	});
+
+	it("maps trial-limit placeholders to provider-limit unavailable results", async () => {
+		const sections = Array.from({ length: 7 }, (_, index) => ({
+			...input().sections[0],
+			sectionId: `section-${index + 1}`,
+			contentHash: index.toString(16).padStart(8, "0"),
+		}));
+		const responseSections = sections.map((section, index) =>
+			index < 5
+				? completeSection(section.sectionId, section.contentHash)
+				: trialLimitSection(section.sectionId, section.contentHash)
+		);
+		const { provider } = providerWithResponse(successResponse(responseSections));
+
+		const result = await provider.generateBundle(input({ sections }));
+
+		expect(result.sections.slice(0, 5)).toEqual(
+			responseSections.slice(0, 5).map((section) => ({
+				cue: {
+					question: section.question,
+					keywords: section.keywords,
+					summary: section.summary,
+				},
+			}))
+		);
+		expect(result.sections.slice(5)).toEqual([
+			{
+				unavailable: {
+					reason: "provider-limit",
+					providerId: "hosted-demo",
+					providerLabel: "FirstRecall trial",
+					maxSections: 5,
+				},
+			},
+			{
+				unavailable: {
+					reason: "provider-limit",
+					providerId: "hosted-demo",
+					providerLabel: "FirstRecall trial",
+					maxSections: 5,
+				},
+			},
+		]);
+	});
+
+	it.each([
+		["start at the first section", [0, 1, 2]],
+		["do not form a suffix", [1]],
+	])("rejects trial-limit placeholders that %s", async (_label, placeholderIndexes) => {
+		const sections = Array.from({ length: 3 }, (_, index) => ({
+			...input().sections[0],
+			sectionId: `section-${index + 1}`,
+			contentHash: index.toString(16).padStart(8, "0"),
+		}));
+		const responseSections = sections.map((section, index) =>
+			placeholderIndexes.includes(index)
+				? trialLimitSection(section.sectionId, section.contentHash)
+				: completeSection(section.sectionId, section.contentHash)
+		);
+		const { provider } = providerWithResponse(successResponse(responseSections));
+
+		await expect(provider.generateBundle(input({ sections }))).rejects.toBeInstanceOf(
+			HostedDemoProtocolError
+		);
 	});
 
 	it.each([
@@ -430,10 +523,6 @@ describe("hosted demo provider", () => {
 
 	it.each([
 		["no sections", { sections: [] }],
-		[
-			"more than five sections",
-			{ sections: Array.from({ length: 6 }, (_, index) => ({ ...input().sections[0], sectionId: `s-${index}` })) },
-		],
 		["invalid section id", { sections: [{ ...input().sections[0], sectionId: "Not Valid" }] }],
 		["invalid content hash", { sections: [{ ...input().sections[0], contentHash: "too-long-1" }] }],
 		["heading containing Markdown heading syntax", { sections: [{ ...input().sections[0], heading: "## Hidden heading" }] }],

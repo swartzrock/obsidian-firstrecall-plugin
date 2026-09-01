@@ -30,7 +30,6 @@ import {
 	firstRecallProviderCredentialSaved,
 	firstRecallProviderModel,
 	firstRecallSelectedProvider,
-	firstRecallProviderMaxGeneratedSections,
 	clearFirstRecallStoredCloudCredential,
 	markFirstRecallCloudCredentialSaved,
 	secureFirstRecallCloudCredentials,
@@ -295,8 +294,6 @@ export default class FirstRecallPlugin extends Plugin {
 				const provider = firstRecallSelectedProvider(this.settings);
 				return {
 					provider: provider ?? "",
-					maxGeneratedSections:
-						firstRecallProviderMaxGeneratedSections(provider ?? undefined),
 					model: this.selectedModelName(),
 					preset: this.settings.questionType,
 					generationMode: "whole-note-context",

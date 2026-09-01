@@ -676,7 +676,11 @@ export class StudyMaterialMaintenance {
 		let canceled = false;
 		if (provider.generateBundle) {
 			const eligible = [...eligibleById.values()];
-			const bundleTargets = targets.length ? targets : eligible.slice(0, 1);
+			const bundleTargets = providerLimitIds.length
+				? eligible
+				: targets.length
+					? targets
+					: eligible.slice(0, 1);
 			const bundleResult = await generateNoteBundleForSections(
 				{
 					noteTitle: source.noteTitle,

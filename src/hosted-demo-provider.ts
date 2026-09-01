@@ -1,5 +1,6 @@
 import { z } from "zod/v3";
 import type { FirstRecallCueBatchResult } from "./cue-provider";
+import { firstRecallProviderDefinition } from "./byok-provider-metadata";
 import {
 	formatZodError,
 	INSUFFICIENT_SOURCE_ERROR,
@@ -8,7 +9,8 @@ import {
 
 export const HOSTED_DEMO_ENDPOINT =
 	"https://api.firstrecall.ai/v1/demo-bundles";
-export const HOSTED_DEMO_MAX_SECTIONS = 5;
+
+const hostedDemoDefinition = firstRecallProviderDefinition("hosted-demo");
 
 const uuidSchema = z.string().regex(
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
@@ -64,7 +66,7 @@ const hostedDemoRequestSchema = z
 				contextMarkdown: z.string().min(1).max(12_000),
 			})
 			.strict(),
-		sections: z.array(hostedDemoSectionInputSchema).min(1).max(HOSTED_DEMO_MAX_SECTIONS),
+		sections: z.array(hostedDemoSectionInputSchema).min(1),
 	})
 	.strict();
 
@@ -77,6 +79,10 @@ const completeSectionSchema = z
 		summary: z.string().min(1).max(500),
 	})
 	.strict();
+
+const trialLimitSectionSchema = completeSectionSchema.extend({
+	placeholderReason: z.literal("trial_limit"),
+});
 
 const insufficientSectionSchema = z
 	.object({
@@ -115,9 +121,14 @@ const successResponseSchema = z
 		bundle: z
 			.object({
 				sections: z
-					.array(z.union([completeSectionSchema, insufficientSectionSchema]))
-					.min(1)
-					.max(HOSTED_DEMO_MAX_SECTIONS),
+					.array(
+						z.union([
+							completeSectionSchema,
+							trialLimitSectionSchema,
+							insufficientSectionSchema,
+						])
+					)
+					.min(1),
 				noteBrief: hostedDemoNoteBriefSchema,
 			})
 			.strict(),
@@ -393,19 +404,42 @@ function mapSuccessResponse(
 			throw protocolError(`returned mismatched correlation for section ${index + 1}`);
 		}
 	}
+	const trialLimitStart = response.bundle.sections.findIndex(
+		(section) => "placeholderReason" in section
+	);
+	if (
+		trialLimitStart === 0 ||
+		(trialLimitStart > 0 &&
+			response.bundle.sections
+				.slice(trialLimitStart)
+				.some((section) => !("placeholderReason" in section)))
+	) {
+		throw protocolError("returned invalid trial-limit placeholder ordering");
+	}
 	return {
 		operationId: response.operationId,
-		sections: response.bundle.sections.map((section) =>
-			"insufficientSource" in section
-				? { error: INSUFFICIENT_SOURCE_ERROR }
-				: {
-					cue: {
-						question: section.question,
-						keywords: section.keywords,
-						summary: section.summary,
+		sections: response.bundle.sections.map((section) => {
+			if ("placeholderReason" in section) {
+				return {
+					unavailable: {
+						reason: "provider-limit",
+						providerId: hostedDemoDefinition.id,
+						providerLabel: hostedDemoDefinition.label,
+						maxSections: trialLimitStart,
 					},
-				}
-		),
+				};
+			}
+			if ("insufficientSource" in section) {
+				return { error: INSUFFICIENT_SOURCE_ERROR };
+			}
+			return {
+				cue: {
+					question: section.question,
+					keywords: section.keywords,
+					summary: section.summary,
+				},
+			};
+		}),
 		noteBrief: response.bundle.noteBrief,
 	};
 }

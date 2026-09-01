@@ -358,13 +358,24 @@ describe("study material maintenance execution", () => {
 		const generateBundle = vi.fn(async (
 			input: FirstRecallBundleInput
 		): Promise<FirstRecallBundleResult> => ({
-			sections: input.sections.map((section) => ({
-				cue: {
-					question: `Hosted:${section.heading}`,
-					keywords: [section.heading],
-					summary: null,
-				},
-			})),
+			sections: input.sections.map((section, index) =>
+				index < 5
+					? {
+							cue: {
+								question: `Hosted:${section.heading}`,
+								keywords: [section.heading],
+								summary: null,
+							},
+						}
+					: {
+							unavailable: {
+								reason: "provider-limit",
+								providerId: "hosted-demo",
+								providerLabel: "FirstRecall trial",
+								maxSections: 5,
+							},
+						}
+			),
 			noteBrief: { ...BRIEF, overview: "Hosted brief" },
 		}));
 		harness.setProvider({
@@ -372,7 +383,6 @@ describe("study material maintenance execution", () => {
 			label: "FirstRecall trial",
 			requiresNetwork: true,
 			requiresDownload: false,
-			maxGeneratedSections: 5,
 			testConnection: async () => ({ ok: true, message: "ok" }),
 			listModels: async () => [],
 			generateBundle,
@@ -385,7 +395,7 @@ describe("study material maintenance execution", () => {
 
 		expect(result.status).toBe("completed");
 		expect(generateBundle).toHaveBeenCalledTimes(1);
-		expect(generateBundle.mock.calls[0][0].sections).toHaveLength(5);
+		expect(generateBundle.mock.calls[0][0].sections).toHaveLength(6);
 		expect(harness.caches["notes/note.md"].sections).toHaveLength(6);
 		expect(harness.caches["notes/note.md"].sections.slice(0, 5).every(
 			(section) => Boolean(section.question)
@@ -435,7 +445,14 @@ describe("study material maintenance execution", () => {
 		expect(generateBundle).toHaveBeenCalledTimes(2);
 		expect(generateBundle.mock.calls[1][0].sections.map(
 			(section) => section.heading
-		)).toEqual(["Section 6"]);
+		)).toEqual([
+			"Section 6",
+			"Section 1",
+			"Section 2",
+			"Section 3",
+			"Section 4",
+			"Section 5",
+		]);
 		expect(harness.caches["notes/note.md"].sections[0].question).toBe(
 			"Hosted:Section 6"
 		);
