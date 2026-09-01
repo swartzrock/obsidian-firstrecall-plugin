@@ -390,15 +390,6 @@ function protocolError(message: string): HostedDemoProtocolError {
 	return new HostedDemoProtocolError(`Hosted demo API ${message}`);
 }
 
-function logResponse(response: Response, body: unknown): void {
-	// eslint-disable-next-line obsidianmd/rule-custom-message -- Trial API diagnostics are intentionally visible in Obsidian's developer console.
-	console.log("[FirstRecall trial] Response", {
-		status: response.status,
-		headers: Object.fromEntries(response.headers.entries()),
-		body,
-	});
-}
-
 function retryAfterMilliseconds(value: string | null, now: number): number {
 	if (value === null) return 10_000;
 	if (/^\d+$/.test(value.trim())) return Number(value) * 1_000;
@@ -496,18 +487,10 @@ export function createHostedDemoProvider(
 					body: JSON.stringify(requestBody.data),
 					signal,
 				});
-				// eslint-disable-next-line obsidianmd/rule-custom-message -- Trial API diagnostics are intentionally visible in Obsidian's developer console.
-				console.log("[FirstRecall trial] Request", {
-					url: request.url,
-					method: request.method,
-					headers: Object.fromEntries(request.headers.entries()),
-					body: requestBody.data,
-				});
 				const response = await deps.transport(request);
 
 				let responseText = await response.text();
 				if (response.status === 429) {
-					logResponse(response, responseText);
 					if (attempt === 1) {
 						throw protocolError("rate limit persisted after retry");
 					}
@@ -525,11 +508,9 @@ export function createHostedDemoProvider(
 				try {
 					rawResponse = JSON.parse(responseText) as unknown;
 				} catch {
-					logResponse(response, responseText);
 					throw protocolError("returned a response that was not valid JSON");
 				}
 				responseText = "";
-				logResponse(response, rawResponse);
 				const parsed = hostedDemoResponseSchema.safeParse(rawResponse);
 				if (!parsed.success) {
 					throw protocolError(
