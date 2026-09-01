@@ -274,10 +274,13 @@ export default class FirstRecallPlugin extends Plugin {
 			readSource: async (path) => {
 				const file = this.app.vault.getAbstractFileByPath(path);
 				if (!(file instanceof TFile) || file.extension !== "md") return null;
+				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 				return {
 					path: file.path,
 					noteTitle: file.basename,
-					markdown: await this.app.vault.cachedRead(file),
+					markdown: activeView?.file?.path === file.path
+						? activeView.editor.getValue()
+						: await this.app.vault.cachedRead(file),
 					modifiedAt: file.stat.mtime,
 				};
 			},

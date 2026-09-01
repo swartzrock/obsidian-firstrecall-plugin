@@ -481,6 +481,60 @@ describe("Study plugin orchestration", () => {
 		expect(harness.data.caches[harness.noteFile.path]).toBe(cache);
 	});
 
+	it("uses live editor text when an outdated banner starts maintenance", async () => {
+		const harness = createHarness();
+		const persistedMarkdown = NOTE;
+		const editorMarkdown = `${NOTE}\n\n## Planning\nAgents make plans.`;
+		const cache = harness.data.caches[harness.noteFile.path];
+		harness.data.maintenanceStates[harness.noteFile.path] =
+			createCurrentMaintenanceState(
+				harness.noteFile.basename,
+				persistedMarkdown,
+				cache
+			);
+		harness.setCachedRead(async () => persistedMarkdown);
+		harness.markdownByPath.set(harness.noteFile.path, editorMarkdown);
+		const generateCue = vi.fn(async (input: FirstRecallCueInput) => ({
+			question: `Q:${input.heading}`,
+			keywords: [input.heading],
+		}));
+		Object.assign(harness.plugin as unknown as Record<string, unknown>, {
+			isConfigured: () => true,
+			makeProvider: vi.fn(async () => ({
+				id: "test",
+				label: "Test",
+				requiresNetwork: false,
+				requiresDownload: false,
+				async testConnection() { return { ok: true, message: "ok" }; },
+				async listModels() { return []; },
+				generateCue,
+				async generateNoteBrief() {
+					return {
+						overview: "Brief",
+						whatMatters: { title: "Main", detail: "Main idea" },
+						reviewFirst: { title: "First", detail: "Start here" },
+						sayItBack: { title: "Explain", detail: "Explain it" },
+					};
+				},
+			})),
+		});
+		await harness.plugin.onload();
+
+		harness.plugin.refreshEditorCues();
+		const update = harness.firstView.contentEl.querySelector<HTMLButtonElement>(
+			"[data-banner-action='update']"
+		)!;
+		expect(update.textContent).toBe("Update study material");
+		update.click();
+
+		await vi.waitFor(() => expect(generateCue).toHaveBeenCalledTimes(1));
+		expect(generateCue.mock.calls[0][0].heading).toBe("Planning");
+		expect(notices).toContain("FirstRecall: study material is up to date.");
+		expect(notices).not.toContain(
+			"FirstRecall: study material is already up to date."
+		);
+	});
+
 	it("dismisses an outdated legacy cache after creating revision state", async () => {
 		const harness = createHarness();
 		Object.assign(harness.plugin as unknown as Record<string, unknown>, {
