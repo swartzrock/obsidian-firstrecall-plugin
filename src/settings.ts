@@ -616,7 +616,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		if (provider === "hosted-demo") {
 			fieldsEl.createDiv({
 				cls: "firstrecall-settings-flow-desc",
-				text: "Included trial model. No API key or model setup is required.",
+				text: "Free during the trial • Usage and capacity limits apply.",
 			});
 			return;
 		}
@@ -655,9 +655,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		}> = [
 			{
 				path: "trial",
-				title: "FirstRecall LLM trial",
+				title: "Try FirstRecall AI without the setup",
 				description:
-					"Use FirstRecall's trial LLM API (subject to usage rate limits)."
+					"Generate section study cards and note briefs from your Obsidian notes without configuring an API key."
 			},
 			{
 				path: "api-key",
@@ -667,15 +667,15 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			},
 			{
 				path: "command",
-				title: "Installed tool",
+				title: "Terminal apps",
 				description:
-					"Use Codex or Claude Code if one is already installed and signed in on this device.",
+					"Use Codex or Claude Code's terminal apps if they are already installed and configured with your account.",
 			},
 			{
 				path: "url",
 				title: "Local server",
 				description:
-					"Connect to Ollama or LM Studio running on a model server you control.",
+					"Use your own LLMs with Ollama or LM Studio.",
 			},
 		];
 		containerEl.createDiv({
