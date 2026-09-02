@@ -655,9 +655,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		}> = [
 			{
 				path: "trial",
-				title: "Try FirstRecall AI without the setup",
+				title: "FirstRecall hosted AI trial",
 				description:
-					"Generate section study cards and note briefs from your Obsidian notes without configuring an API key."
+					"Generate study materials with FirstRecall's hosted AI. No API key required. Free during the trial. Usage limits apply."
 			},
 			{
 				path: "api-key",
