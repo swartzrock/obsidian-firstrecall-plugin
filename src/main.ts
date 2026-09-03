@@ -12,7 +12,7 @@ import {
 	type RequestUrlParam,
 } from "obsidian";
 import type { EditorView } from "@codemirror/view";
-import firstRecallLogoSvg from "../logo-light.svg?raw";
+import firstRecallLogoSvg from "./assets/logo-light.svg?raw";
 import {
 	FirstRecallSettings,
 	FirstRecallSettingTab,

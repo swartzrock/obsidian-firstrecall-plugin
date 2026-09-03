@@ -14,7 +14,7 @@ import ollamaSvg from "@lobehub/icons-static-svg/icons/ollama.svg?raw";
 import lmStudioSvg from "@lobehub/icons-static-svg/icons/lmstudio.svg?raw";
 import codexCliSvg from "@lobehub/icons-static-svg/icons/codex-color.svg?raw";
 import claudeCliSvg from "@lobehub/icons-static-svg/icons/claudecode-color.svg?raw";
-import firstRecallHostedSvg from "../logo-light.svg?raw";
+import firstRecallHostedSvg from "./assets/logo-light.svg?raw";
 
 // Third-party icons come from the @lobehub/icons-static-svg package
 // (https://github.com/lobehub/lobe-icons) as full raw <svg> markup. Consumers parse the
@@ -32,7 +32,7 @@ const LOBEHUB_ICONS_LIBRARY =
 
 export const HOSTED_DEMO_PROVIDER_ICON = {
 	source: "firstrecall",
-	sourceUrl: "logo-light.svg",
+	sourceUrl: "src/assets/logo-light.svg",
 	svg: firstRecallHostedSvg,
 } as const satisfies FirstRecallProviderIconDefinition;
 
