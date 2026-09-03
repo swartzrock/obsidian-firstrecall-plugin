@@ -1024,7 +1024,7 @@ export default class FirstRecallPlugin extends Plugin {
 			"aria-label",
 			needsMaterial ? STUDY_MENU_HINT : "FirstRecall"
 		);
-		menuAction.title = needsMaterial ? STUDY_MENU_HINT : "FirstRecall";
+		menuAction.removeAttribute("title");
 		menuAction.setAttribute("aria-pressed", String(active));
 		menuAction.classList.toggle("is-active", active);
 		menuAction.removeAttribute("aria-disabled");
