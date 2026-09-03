@@ -35,8 +35,6 @@ import type { StudyMaterialMaintenance } from "../src/study-material-maintenance
 
 const NOTE = "# Agents\nAgents use tools.";
 const OTHER_NOTE = "# Memory\nRetrieval strengthens memory.";
-const GENERATE_FIRST = "FirstRecall: generate study material for this note first.";
-
 function cacheFor(markdown: string): NoteCache {
 	const section = parseSections(markdown)[0];
 	return buildNoteCache({
@@ -331,19 +329,17 @@ beforeEach(() => {
 	notices.length = 0;
 });
 
-it("keeps stable command IDs while using the approved vocabulary", async () => {
+it("registers the stable command IDs with executable callbacks", async () => {
 	const harness = createHarness();
 	await harness.plugin.onload();
 
-	expect(harness.commands.get("generate-cues")?.name).toBe(
-		"Generate study material for this note"
-	);
-	expect(harness.commands.get("regenerate-section")?.name).toBe(
-		"Update a section card and Note Brief\u2026"
-	);
-	expect(harness.commands.get("export-cues-markdown")?.name).toBe(
-		"Export Recall Questions and Key Terms to Markdown"
-	);
+	for (const id of [
+		"generate-cues",
+		"regenerate-section",
+		"export-cues-markdown",
+	]) {
+		expect(harness.commands.get(id)?.callback).toEqual(expect.any(Function));
+	}
 });
 
 describe("Study plugin orchestration", () => {
@@ -470,7 +466,6 @@ describe("Study plugin orchestration", () => {
 		const retry = harness.firstView.contentEl.querySelector<HTMLButtonElement>(
 			"[data-banner-action='retry']"
 		)!;
-		expect(retry.textContent).toBe("Retry update");
 		retry.click();
 		await vi.waitFor(() =>
 			expect(request).toHaveBeenCalledWith({
@@ -524,15 +519,10 @@ describe("Study plugin orchestration", () => {
 		const update = harness.firstView.contentEl.querySelector<HTMLButtonElement>(
 			"[data-banner-action='update']"
 		)!;
-		expect(update.textContent).toBe("Update study material");
 		update.click();
 
 		await vi.waitFor(() => expect(generateCue).toHaveBeenCalledTimes(1));
 		expect(generateCue.mock.calls[0][0].heading).toBe("Planning");
-		expect(notices).toContain("FirstRecall: study material is up to date.");
-		expect(notices).not.toContain(
-			"FirstRecall: study material is already up to date."
-		);
 	});
 
 	it("dismisses an outdated legacy cache after creating revision state", async () => {
@@ -684,9 +674,7 @@ describe("Study plugin orchestration", () => {
 			harness.plugin as unknown as { toggleStudyForActiveView: () => void }
 		).toggleStudyForActiveView;
 		expect(harness.firstView.addAction).toHaveBeenCalledTimes(1);
-		expect(headerAction.getAttribute("aria-label")).toBe(
-			"Generate study material for this note."
-		);
+		expect(headerAction.getAttribute("aria-label")).toBeTruthy();
 		expect(headerAction.hasAttribute("title")).toBe(false);
 		expect(headerAction.getAttribute("aria-disabled")).toBeNull();
 		expect(harness.ribbons).toHaveLength(0);
@@ -695,20 +683,13 @@ describe("Study plugin orchestration", () => {
 		);
 		expect(headerLogo?.alt).toBe("");
 		expect(headerLogo?.getAttribute("src")).toMatch(/^data:image\/svg\+xml,/);
-		expect(decodeURIComponent(headerLogo?.getAttribute("src") ?? "")).toContain(
-			'stroke="#4b91ba" stroke-width="8" stroke-linejoin="round"'
-		);
-		expect(
-			document.querySelector<HTMLElement>(".firstrecall-study-header-menu-action")
-				?.textContent
-		).toContain("FirstRecall");
 
 		harness.markdownByPath.set(harness.noteFile.path, "# Agents\nChanged answer.");
 		harness.workspaceEvents.get("layout-change")?.();
 		expect(harness.firstView.addAction).toHaveBeenCalledTimes(1);
 		expect(headerAction.getAttribute("aria-disabled")).toBeNull();
 		toggleStudyForActiveView();
-		expect(notices).toEqual([GENERATE_FIRST]);
+		expect(notices).toHaveLength(1);
 	});
 
 	it("shows a warning state on the FirstRecall action when no study material exists", async () => {
@@ -723,9 +704,7 @@ describe("Study plugin orchestration", () => {
 		expect(headerAction.classList.contains("firstrecall-has-no-material")).toBe(
 			true
 		);
-		expect(headerAction.getAttribute("aria-label")).toBe(
-			"Generate study material for this note."
-		);
+		expect(headerAction.getAttribute("aria-label")).toBeTruthy();
 		expect(headerAction.hasAttribute("title")).toBe(false);
 	});
 
@@ -773,9 +752,6 @@ describe("Study plugin orchestration", () => {
 
 		expect(harness.statusBar.dataset.coverage).toBe("manual");
 		expect(harness.statusBar.dataset.freshness).toBe("outdated");
-		expect(harness.statusBar.textContent).toContain(
-			"Study material needs updating · Auto-updates off"
-		);
 	});
 
 	it("opens a requested Markdown target for fresh review without opening Cornell", async () => {

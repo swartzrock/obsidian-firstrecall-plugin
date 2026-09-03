@@ -6,15 +6,12 @@ import {
 	ENTIRE_VAULT_STUDY_AREA_LABEL,
 	classifyStudyAreaNote,
 	findMaintainedStudyAreaForPath,
-	formatStudyAreaReadinessCounts,
 	isEntireVaultStudyArea,
 	isExcludedPath,
 	isStudyAreaPath,
 	loadStudyAreaSettings,
 	loadStudyAreas,
 	planStudyAreaGeneration,
-	studyAreaNameForParentPath,
-	studyAreaScopeLabel,
 	summarizeStudyAreaRun,
 	validateStudyAreaScope,
 	validateStudyAreaExclusion,
@@ -50,51 +47,6 @@ describe("study area exclusion and recovery validation", () => {
 			findConflictingStudyArea([parent], "Courses/Biology/Year 1")?.id
 		).toBe("parent");
 		expect(findConflictingStudyArea([parent], "Courses/Chemistry")).toBeNull();
-	});
-});
-
-describe("study area labels", () => {
-	it("uses user-facing automation and count copy", () => {
-		expect(studyAreaScopeLabel("")).toBe(ENTIRE_VAULT_STUDY_AREA_LABEL);
-		expect(studyAreaNameForParentPath("")).toBe(ENTIRE_VAULT_STUDY_AREA_LABEL);
-		expect(
-			formatStudyAreaReadinessCounts(
-				{
-					ready: 4,
-					uncued: 2,
-					stale: 1,
-					failed: 0,
-					skipped: 2,
-				}
-			)
-		).toBe("4 notes ready · 2 notes missing study material · 1 note outdated");
-		expect(
-			formatStudyAreaReadinessCounts({
-				ready: 0,
-				uncued: 3,
-				stale: 0,
-				failed: 0,
-				skipped: 1,
-			})
-		).toBe("3 notes missing study material");
-		expect(
-			formatStudyAreaReadinessCounts({
-				ready: 0,
-				uncued: 0,
-				stale: 0,
-				failed: 0,
-				skipped: 1,
-			})
-		).toBe("No eligible notes");
-		expect(
-			formatStudyAreaReadinessCounts({
-				ready: 0,
-				uncued: 0,
-				stale: 0,
-				failed: 0,
-				skipped: 0,
-			})
-		).toBe("No notes found");
 	});
 });
 

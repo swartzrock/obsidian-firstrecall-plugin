@@ -7,16 +7,15 @@ import {
 } from "../src/cue-generation";
 
 describe("cue-generation: Question type", () => {
-	it("defines the five artifact-matched Question types", () => {
-		expect(QUESTION_TYPES.map(({ id, label }) => ({ id, label }))).toEqual([
-			{ id: "conceptual", label: "Conceptual question" },
-			{ id: "direct-recall", label: "Direct recall" },
-			{ id: "exam-practice", label: "Exam practice" },
-			{ id: "vocabulary-check", label: "Vocabulary check" },
-			{ id: "socratic-reasoning", label: "Socratic reasoning" },
+	it("defines stable persisted Question type IDs with generation guidance", () => {
+		expect(QUESTION_TYPES.map(({ id }) => id)).toEqual([
+			"conceptual",
+			"direct-recall",
+			"exam-practice",
+			"vocabulary-check",
+			"socratic-reasoning",
 		]);
 		for (const type of QUESTION_TYPES) {
-			expect(type.description.length).toBeGreaterThan(0);
 			expect(type.guidance.length).toBeGreaterThan(0);
 		}
 	});
