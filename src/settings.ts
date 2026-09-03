@@ -616,7 +616,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		if (provider === "hosted-demo") {
 			fieldsEl.createDiv({
 				cls: "firstrecall-settings-flow-desc",
-				text: "Free during the trial • Usage and capacity limits apply.",
+				text: "Free trial • Usage and capacity limits apply.",
 			});
 			return;
 		}
@@ -657,7 +657,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				path: "trial",
 				title: "FirstRecall hosted AI trial",
 				description:
-					"Generate study materials with FirstRecall's hosted AI. No API key required. Free during the trial. Usage limits apply."
+					"Generate study materials with FirstRecall's free, secure hosted AI. Usage limits apply."
 			},
 			{
 				path: "api-key",
