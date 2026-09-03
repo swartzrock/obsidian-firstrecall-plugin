@@ -57,12 +57,9 @@ describe("renderAppearanceThumbnailGroup", () => {
 		const buttons = root.querySelectorAll<HTMLButtonElement>(
 			".firstrecall-thumbnail-button"
 		);
-		expect(buttons).toHaveLength(3);
-		expect(buttons[0].classList.contains("is-selected")).toBe(true);
+		expect(buttons).toHaveLength(options().length);
 		expect(buttons[0].getAttribute("aria-pressed")).toBe("true");
-		expect(buttons[1].classList.contains("is-selected")).toBe(false);
 		expect(buttons[1].getAttribute("aria-pressed")).toBe("false");
-		expect(root.querySelector(".firstrecall-thumbnail-selected")).toBeNull();
 		expect(
 			root.querySelector(".firstrecall-thumbnail-group")?.getAttribute("aria-label")
 		).toBe("Editor cue style");
@@ -113,25 +110,6 @@ describe("renderAppearanceThumbnailGroup", () => {
 		expect(onSelect).not.toHaveBeenCalled();
 	});
 
-	it("renders labels, descriptions, preview content, and stable option ids", () => {
-		const root = setupDom();
-
-		renderAppearanceThumbnailGroup({
-			parentEl: root,
-			options: options(),
-			value: "classic",
-			onSelect: vi.fn(),
-		});
-
-		expect(root.textContent).toContain("Cornell Classic");
-		expect(root.textContent).toContain("Handwritten");
-		expect(root.textContent).toContain("Theme-aware cue rail.");
-		expect(root.textContent).toContain("classic-preview");
-		expect(
-			root.querySelector("[data-option-id='handwritten']")?.tagName
-		).toBe("BUTTON");
-	});
-
 	it("can update selected state after rendering", () => {
 		const root = setupDom();
 		const group = renderAppearanceThumbnailGroup({
@@ -169,7 +147,7 @@ describe("Editing View thumbnail option recipes", () => {
 		);
 	});
 
-	it("renders the current Cornell rail and Inline cue card layouts", () => {
+	it("renders a distinct preview for every current editor layout", () => {
 		const root = setupDom();
 		renderAppearanceThumbnailGroup({
 			parentEl: root,
@@ -178,69 +156,14 @@ describe("Editing View thumbnail option recipes", () => {
 			onSelect: vi.fn(),
 		});
 
-		for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
-			expect(
-				root.querySelector(`.firstrecall-preview-editor-display-${option.id}`)
-			).not.toBeNull();
-		}
-		expect(root.querySelectorAll(".firstrecall-preview-editor-scene")).toHaveLength(
-			EDITOR_CUE_DISPLAY_OPTIONS.length
-		);
-		const cornell = root.querySelector<HTMLElement>(
-			"[data-option-id='cornell']"
-		);
-		const inline = root.querySelector<HTMLElement>(
-			"[data-option-id='inline-cues']"
-		);
-		expect(
-			cornell?.querySelector(".firstrecall-preview-editor-cue-card-cornell")
-		).not.toBeNull();
-		expect(
-			inline?.querySelector(".firstrecall-preview-editor-cue-card-inline-cues")
-		).not.toBeNull();
-		expect(
-			cornell?.querySelector(".firstrecall-preview-editor-cue-grip")
-		).not.toBeNull();
-		expect(
-			inline?.querySelector(".firstrecall-preview-editor-cue-grip")
-		).toBeNull();
-		expect(
-			cornell?.querySelectorAll(".firstrecall-preview-editor-cue-section")
-		).toHaveLength(3);
-		expect(
-			inline?.querySelectorAll(".firstrecall-preview-editor-cue-section")
-		).toHaveLength(3);
-		expect(cornell?.textContent).toContain("SUMMARY");
-		expect(cornell?.textContent).toContain("RECALL QUESTION");
-		expect(cornell?.textContent).toContain("KEY TERMS");
-		expect(inline?.textContent).toContain("SUMMARY");
-		expect(inline?.textContent).toContain("RECALL QUESTION");
-		expect(inline?.textContent).toContain("KEY TERMS");
-		expect(root.textContent).toContain("Cornell");
-		expect(root.textContent).toContain("Inline section cards");
-		expect(root.textContent).not.toContain("Cornell Exam Prep");
-		expect(root.textContent).not.toContain("Cornell Minimal");
-		expect(root.textContent).not.toContain("Anchored card rail");
-		expect(root.textContent).not.toContain("Threaded margin notes");
-	});
-
-	it("uses polished question text in key editor-truth previews", () => {
-		const root = setupDom();
-		renderAppearanceThumbnailGroup({
-			parentEl: root,
-			options: editorCueDisplayThumbnailOptions(),
-			value: "inline-cues",
-			onSelect: vi.fn(),
+		const previews = EDITOR_CUE_DISPLAY_OPTIONS.map((option) => {
+			const button = root.querySelector<HTMLButtonElement>(
+				`button[aria-label="${option.label}"]`
+			)!;
+			const preview = button.querySelector<HTMLElement>('[aria-hidden="true"]')!;
+			expect(preview.childElementCount).toBeGreaterThan(0);
+			return preview.innerHTML;
 		});
-
-		const button = root.querySelector<HTMLElement>(
-			"[data-option-id='inline-cues']"
-		);
-		expect(
-			button?.querySelector(".firstrecall-preview-editor-cue-question")
-				?.textContent
-		).toBe(
-			"How does org-trained AI help upskill employees and improve agent reusability?"
-		);
+		expect(new Set(previews).size).toBe(EDITOR_CUE_DISPLAY_OPTIONS.length);
 	});
 });

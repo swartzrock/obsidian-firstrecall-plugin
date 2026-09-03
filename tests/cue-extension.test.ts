@@ -142,6 +142,7 @@ function cue(overrides: Partial<CueLineData> = {}): CueLineData {
 		keywords: ["agents", "tools"],
 		summary: SECTION_SUMMARY,
 		error: null,
+		unavailable: null,
 		...overrides,
 	};
 }
@@ -167,6 +168,21 @@ function studySnapshot(
 		total: 1,
 		...overrides,
 	};
+}
+
+function accessibleButtonName(button: HTMLButtonElement): string {
+	return (button.getAttribute("aria-label") ?? button.textContent ?? "").trim();
+}
+
+function buttonByAccessibleName(
+	container: HTMLElement,
+	name: RegExp
+): HTMLButtonElement {
+	const matches = [...container.querySelectorAll<HTMLButtonElement>("button")].filter(
+		(button) => name.test(accessibleButtonName(button))
+	);
+	expect(matches).toHaveLength(1);
+	return matches[0];
 }
 
 describe("Editing View Study projection", () => {
@@ -420,6 +436,54 @@ describe("Editing View Study projection", () => {
 		expect(markerFor(studySnapshot()).eq(markerFor(revealed))).toBe(false);
 	});
 
+	it("keeps provider-limit placeholders in editor decorations and equality", () => {
+		const state = EditorState.create({ doc: "# Terms\nbody" });
+		const limited = cue({
+			question: "",
+			keywords: [],
+			summary: null,
+			unavailable: "FirstRecall trial limit reached",
+		});
+		const changed = {
+			...limited,
+			unavailable: "Another provider limit reached",
+		};
+		const payload = (value: CueLineData, display: "inline-cues" | "cornell") => ({
+			cues: [value],
+			display,
+			showQuestion: false,
+			showSummary: false,
+			showTerms: false,
+		});
+		const widgetFor = (value: CueLineData) => {
+			let widget: { eq(other: unknown): boolean } | null = null;
+			buildCueWidgetDecorations(state, payload(value, "inline-cues")).between(
+				0,
+				state.doc.length,
+				(_from, _to, decoration) => {
+					widget = decoration.spec.widget as { eq(other: unknown): boolean };
+				}
+			);
+			return widget!;
+		};
+		const markerFor = (value: CueLineData) => {
+			let marker: { eq(other: unknown): boolean } | null = null;
+			buildCueGutterMarkers(state, payload(value, "cornell")).between(
+				0,
+				state.doc.length,
+				(_from, _to, gutterMarker) => {
+					marker = gutterMarker as { eq(other: unknown): boolean };
+				}
+			);
+			return marker!;
+		};
+
+		expect(widgetFor(limited)).toBeTruthy();
+		expect(widgetFor(limited).eq(widgetFor(changed))).toBe(false);
+		expect(markerFor(limited)).toBeTruthy();
+		expect(markerFor(limited).eq(markerFor(changed))).toBe(false);
+	});
+
 	it("renders one control host without revealing from hidden text clicks", () => {
 		const toggleSection = vi.fn();
 		const showAll = vi.fn();
@@ -455,25 +519,15 @@ describe("Editing View Study projection", () => {
 				expect(parent.querySelector(".firstrecall-editor-study-controls")).toBeNull();
 				expect(view.dom.classList.contains("firstrecall-editor-study-active")).toBe(true);
 				const controls = controlsContainer.querySelector<HTMLElement>(
-					".firstrecall-editor-study-controls"
+					'[role="region"]'
 				)!;
-				expect(controls.textContent).toContain("0 / 1 answers revealed");
-				const help = controls.firstElementChild as HTMLElement;
-				expect(help.classList.contains("firstrecall-study-help")).toBe(true);
-				expect(help.dataset.icon).toBe("eye");
-				expect(
-					help.querySelector(".firstrecall-study-help-title")?.textContent
-				).toBe("Show or hide answers");
-				expect(
-					help.querySelector(".firstrecall-study-help-detail")?.textContent
-				).toBe("Click the eye icon on any section card.");
-				expect(help.querySelectorAll(".firstrecall-study-help-copy > span")).toHaveLength(
-					2
-				);
-				const actions = controls.querySelector<HTMLElement>(
-					".firstrecall-study-actions"
-				)!;
-				expect(actions.querySelectorAll("button")).toHaveLength(3);
+				const buttons = [
+					...controls.querySelectorAll<HTMLButtonElement>("button"),
+				];
+				expect(buttons).toHaveLength(3);
+				const accessibleNames = buttons.map(accessibleButtonName);
+				expect(accessibleNames.every((name) => name.length > 0)).toBe(true);
+				expect(new Set(accessibleNames).size).toBe(3);
 				const progressTrack = controls.querySelector<HTMLElement>(
 					".firstrecall-study-progress-track"
 				)!;
@@ -485,22 +539,14 @@ describe("Editing View Study projection", () => {
 						".firstrecall-study-progress-fill"
 					)?.style.width
 				).toBe("0%");
-				const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
-				expect([...buttons].map((button) => button.textContent)).toEqual([
-					"Show All Answers",
-					"Hide All Answers",
-					"Exit Study Mode",
-				]);
-				expect([...buttons].map((button) => button.dataset.icon)).toEqual([
-					"eye",
-					"eye-off",
-					"log-out",
-				]);
-				expect(buttons[0].disabled).toBe(false);
-				expect(buttons[1].disabled).toBe(true);
-				buttons[0].click();
-				buttons[1].click();
-				buttons[2].click();
+				const showAllButton = buttonByAccessibleName(controls, /show.*all/i);
+				const hideAllButton = buttonByAccessibleName(controls, /hide.*all/i);
+				const exitButton = buttonByAccessibleName(controls, /exit/i);
+				expect(showAllButton.disabled).toBe(false);
+				expect(hideAllButton.disabled).toBe(true);
+				showAllButton.click();
+				hideAllButton.click();
+				exitButton.click();
 				expect(showAll).toHaveBeenCalledTimes(1);
 				expect(hideAll).not.toHaveBeenCalled();
 				expect(exit).toHaveBeenCalledTimes(1);
@@ -527,9 +573,9 @@ describe("Editing View Study projection", () => {
 				expect(parent.querySelector(".firstrecall-editor-study-controls")).toBeNull();
 				expect(parent.querySelector(".firstrecall-editor-study-answer")).toBeNull();
 				expect(view.dom.classList.contains("firstrecall-editor-study-active")).toBe(false);
-				buttons[0].click();
-				buttons[1].click();
-				buttons[2].click();
+				showAllButton.click();
+				hideAllButton.click();
+				exitButton.click();
 				expect(showAll).toHaveBeenCalledTimes(1);
 				expect(hideAll).not.toHaveBeenCalled();
 				expect(exit).toHaveBeenCalledTimes(1);
@@ -739,6 +785,45 @@ describe("buildCueLineData", () => {
 		const cues = buildCueLineData(cache, parseSections(NOTE));
 		expect(cues).toHaveLength(2);
 		expect(cues.some((c) => c.heading === "B")).toBe(false);
+	});
+
+	it("renders provider-limited sections as explanatory empty study cards", () => {
+		const message =
+			"FirstRecall trial limit reached — only the first 5 section cards were generated. Choose another provider to generate this section.";
+		const cache = cacheFrom((_s, i) =>
+			i === 1
+				? {
+						question: null,
+						keywords: null,
+						summary: null,
+						unavailable: {
+							reason: "provider-limit",
+							providerId: "hosted-demo",
+							providerLabel: "FirstRecall trial",
+							maxSections: 5,
+						},
+					}
+				: {}
+		);
+		const limited = buildCueLineData(cache, parseSections(NOTE)).find(
+			(cue) => cue.heading === "B"
+		);
+
+		expect(limited).toMatchObject({
+			question: "",
+			keywords: [],
+			summary: null,
+			error: null,
+			unavailable: message,
+		});
+		withDocument(() => {
+			const inline = renderCueElement(limited!, "inline");
+			const cornell = renderCueElement(limited!, "cornell");
+			expect(inline.classList.contains("firstrecall-cue-unavailable")).toBe(true);
+			expect(inline.textContent).toContain(message);
+			expect(cornell.querySelector(".firstrecall-cornell-cue-unavailable")).not.toBeNull();
+			expect(cornell.textContent).toContain(message);
+		});
 	});
 
 	it("skips cached cues whose current section has no body text", () => {

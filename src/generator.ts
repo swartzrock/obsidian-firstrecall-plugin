@@ -8,8 +8,10 @@ import {
 	type CueGenerationOptions,
 } from "./cue-generation";
 import type {
+	FirstRecallBundleInput,
 	FirstRecallCueBatchResult,
 	FirstRecallCueProviderRuntime,
+	FirstRecallSectionUnavailable,
 } from "./cue-provider";
 import type { NoteBriefOutput, SectionSummary } from "./schemas";
 
@@ -24,6 +26,8 @@ export interface SectionResult {
 	summary: SectionSummary | null;
 	/** Non-null when this section failed validation/generation (isolated). */
 	error: string | null;
+	/** Non-null when the selected provider intentionally cannot generate this section. */
+	unavailable?: FirstRecallSectionUnavailable | null;
 }
 
 export interface NoteGenerationResult {
@@ -98,11 +102,36 @@ export type NoteBriefGenerationOutcome =
 /** Default budget for note text injected into a single prompt. */
 export const DEFAULT_MAX_CONTEXT_CHARS = 8000;
 export const DEFAULT_SECTION_CONCURRENCY = 5;
+const BUNDLE_MAX_TITLE_CHARS = 200;
+const BUNDLE_MAX_CONTEXT_CHARS = 12_000;
+const BUNDLE_MAX_SECTION_CHARS = 4_000;
 
 /** Trim long text to a char budget, adding a marker so the model knows it was cut. */
 export function clampText(text: string, maxChars: number): string {
 	if (text.length <= maxChars) return text;
 	return text.slice(0, maxChars) + "\n...[truncated for length]...";
+}
+
+function clampTextWithinLimit(text: string, maxChars: number): string {
+	if (text.length <= maxChars) return text;
+	const marker = "\n...[truncated for length]...";
+	if (maxChars <= marker.length) return text.slice(0, maxChars);
+	return text.slice(0, maxChars - marker.length) + marker;
+}
+
+function boundedLength(
+	requested: number | undefined,
+	fallback: number,
+	maximum: number
+): number {
+	if (
+		typeof requested !== "number" ||
+		!Number.isFinite(requested) ||
+		requested <= 0
+	) {
+		return Math.min(fallback, maximum);
+	}
+	return Math.min(Math.floor(requested), maximum);
 }
 
 export function resolveGenerationOptions(
@@ -144,6 +173,34 @@ function emptySectionResult(
 		question: null,
 		summary: null,
 		error: null,
+		unavailable: null,
+	};
+}
+
+function providerSectionLimit(
+	provider: FirstRecallCueProviderRuntime
+): number | null {
+	const configuredLimit = provider.maxGeneratedSections;
+	return typeof configuredLimit === "number" &&
+		Number.isFinite(configuredLimit) &&
+		configuredLimit > 0
+			? Math.floor(configuredLimit)
+			: null;
+}
+
+function providerLimitResult(
+	section: GenerateSectionParams["section"],
+	provider: FirstRecallCueProviderRuntime,
+	maxSections: number
+): SectionResult {
+	return {
+		...emptySectionResult(section),
+		unavailable: {
+			reason: "provider-limit",
+			providerId: provider.id,
+			providerLabel: provider.label,
+			maxSections,
+		},
 	};
 }
 
@@ -155,12 +212,12 @@ function applyCueResult(
 		result.error = "Provider returned no section study card for this section.";
 		return;
 	}
-	if (item.error) {
+	if ("error" in item) {
 		result.error = item.error;
 		return;
 	}
-	if (!item.cue) {
-		result.error = "Provider returned no section study card for this section.";
+	if ("unavailable" in item) {
+		result.unavailable = item.unavailable;
 		return;
 	}
 	result.keywords = item.cue.keywords;
@@ -182,8 +239,13 @@ export async function generateSectionCue(
 	const result = emptySectionResult(section);
 	const content = extractStudyableText(section.content);
 	if (!content) return result;
+	const generateCue = provider.generateCue?.bind(provider);
+	if (!generateCue) {
+		result.error = "Provider does not support individual section generation.";
+		return result;
+	}
 	try {
-		const cue = await provider.generateCue(
+		const cue = await generateCue(
 			{
 				heading: section.heading,
 				content: clampText(content, maxCtx),
@@ -199,6 +261,147 @@ export async function generateSectionCue(
 		result.error = e instanceof Error ? e.message : String(e);
 	}
 	return result;
+}
+
+function completeProgress(
+	sectionCount: number,
+	total: number,
+	onProgress?: (done: number, total: number) => void
+): void {
+	for (let done = 1; done <= sectionCount + 1; done++) {
+		onProgress?.(done, total);
+	}
+}
+
+export async function generateNoteBundleForSections(
+	params: GenerateNoteParams,
+	sections: GenerateSectionParams["section"][]
+): Promise<NoteGenerationResult> {
+	const { noteTitle, markdown, signal, onProgress } = params;
+	const generateBundle = params.provider.generateBundle?.bind(params.provider);
+	if (!generateBundle) {
+		throw new Error("Provider does not support atomic bundle generation.");
+	}
+	const total = sections.length + 1;
+	onProgress?.(0, total);
+
+	if (signal?.aborted) {
+		return {
+			sections: [],
+			noteBrief: null,
+			noteBriefOutcome: { status: "canceled" },
+			canceled: true,
+		};
+	}
+
+	const emptyResults = sections.map(emptySectionResult);
+	const maxGeneratedSections = providerSectionLimit(params.provider);
+	const allEligible = cueEligibleSections(parseSections(markdown));
+	const supportedIds = maxGeneratedSections === null
+		? null
+		: new Set(
+				allEligible
+					.slice(0, maxGeneratedSections)
+					.map((section) => section.id)
+			);
+	const submittedSections = sections.filter(
+		(section) => !supportedIds || supportedIds.has(section.id)
+	);
+	for (let index = 0; index < sections.length; index++) {
+		if (
+			supportedIds &&
+			maxGeneratedSections !== null &&
+			!supportedIds.has(sections[index].id)
+		) {
+			emptyResults[index] = providerLimitResult(
+				sections[index],
+				params.provider,
+				maxGeneratedSections
+			);
+		}
+	}
+	if (submittedSections.length === 0 && allEligible.length > 0) {
+		submittedSections.push(allEligible[0]);
+	}
+	const contextLimit = boundedLength(
+		params.maxContextChars,
+		DEFAULT_MAX_CONTEXT_CHARS,
+		BUNDLE_MAX_CONTEXT_CHARS
+	);
+	const sectionLimit = boundedLength(
+		params.maxContextChars,
+		BUNDLE_MAX_SECTION_CHARS,
+		BUNDLE_MAX_SECTION_CHARS
+	);
+	const input: FirstRecallBundleInput = {
+		note: {
+			title: clampTextWithinLimit(noteTitle, BUNDLE_MAX_TITLE_CHARS),
+			contextMarkdown: clampTextWithinLimit(
+				extractStudyableText(markdown),
+				contextLimit
+			),
+		},
+		sections: submittedSections.map((section) => ({
+			sectionId: section.id,
+			contentHash: section.contentHash,
+			heading: clampTextWithinLimit(section.heading, BUNDLE_MAX_TITLE_CHARS),
+			content: clampTextWithinLimit(
+				extractStudyableText(section.content),
+				sectionLimit
+			),
+		})),
+	};
+
+	try {
+		const bundle = await generateBundle(input, signal);
+		if (signal?.aborted) {
+			return {
+				sections: [],
+				noteBrief: null,
+				noteBriefOutcome: { status: "canceled" },
+				canceled: true,
+			};
+		}
+		if (bundle.sections.length !== submittedSections.length) {
+			throw new Error("Provider returned a different section count.");
+		}
+
+		const resultsById = new Map(
+			submittedSections.map((section, index) => [section.id, bundle.sections[index]])
+		);
+		sections.forEach((section, index) => {
+			if (!emptyResults[index].unavailable) {
+				applyCueResult(emptyResults[index], resultsById.get(section.id));
+			}
+		});
+		completeProgress(sections.length, total, onProgress);
+		return {
+			sections: emptyResults,
+			noteBrief: bundle.noteBrief,
+			noteBriefOutcome: { status: "success", noteBrief: bundle.noteBrief },
+			canceled: false,
+		};
+	} catch (error) {
+		if (signal?.aborted) {
+			return {
+				sections: [],
+				noteBrief: null,
+				noteBriefOutcome: { status: "canceled" },
+				canceled: true,
+			};
+		}
+		const message = error instanceof Error ? error.message : String(error);
+		emptyResults.forEach((result) => {
+			if (!result.unavailable) result.error = message;
+		});
+		completeProgress(sections.length, total, onProgress);
+		return {
+			sections: emptyResults,
+			noteBrief: null,
+			noteBriefOutcome: { status: "failed", error: message },
+			canceled: false,
+		};
+	}
 }
 
 export async function generateSectionCueBatch(
@@ -301,6 +504,10 @@ export async function generateNote(
 	params: GenerateNoteParams
 ): Promise<NoteGenerationResult> {
 	const { provider, markdown, noteTitle, signal, onProgress } = params;
+	const sections = cueEligibleSections(parseSections(markdown));
+	if (provider.generateBundle && sections.length > 0) {
+		return generateNoteBundleForSections(params, sections);
+	}
 	const options = resolveGenerationOptions(params.options);
 	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	const sectionConcurrency = resolveEffectiveSectionConcurrency(
@@ -310,20 +517,36 @@ export async function generateNote(
 	const wholeNoteContext = params.useWholeNoteContext
 		? clampText(extractStudyableText(markdown), maxContextChars)
 		: undefined;
-	const sections = cueEligibleSections(parseSections(markdown));
 	const includesNoteBrief = sections.length > 0 && Boolean(provider.generateNoteBrief);
 	const total = sections.length + (includesNoteBrief ? 1 : 0);
 	const results: SectionResult[] = new Array(sections.length);
-	let done = 0;
+	const maxGeneratedSections = providerSectionLimit(provider);
+	const generatedSectionCount = maxGeneratedSections === null
+		? sections.length
+		: Math.min(sections.length, maxGeneratedSections);
+	if (maxGeneratedSections !== null) {
+		for (let index = generatedSectionCount; index < sections.length; index++) {
+			results[index] = providerLimitResult(
+				sections[index],
+				provider,
+				maxGeneratedSections
+			);
+		}
+	}
+	let done = sections.length - generatedSectionCount;
 	let canceled = false;
-	onProgress?.(done, total);
+	onProgress?.(0, total);
+	if (done) onProgress?.(done, total);
 
-	for (let start = 0; start < sections.length; start += sectionConcurrency) {
+	for (let start = 0; start < generatedSectionCount; start += sectionConcurrency) {
 		if (signal?.aborted) {
 			canceled = true;
 			break;
 		}
-		const batch = sections.slice(start, start + sectionConcurrency);
+		const batch = sections.slice(
+			start,
+			Math.min(start + sectionConcurrency, generatedSectionCount)
+		);
 		if (provider.generateCues) {
 			const batchResults = await generateSectionCueBatch({
 				sections: batch,

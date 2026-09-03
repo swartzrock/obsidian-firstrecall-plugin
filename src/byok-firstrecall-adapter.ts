@@ -6,6 +6,7 @@ import {
 	normalizeProviderId,
 	parseByokStoredSettings,
 	type ByokModelOption,
+	type ByokObjectGenerationInput,
 	type ByokProviderConfig,
 	type ByokProviderDeps,
 	type ByokProviderId,
@@ -17,7 +18,10 @@ import {
 	type ByokVerificationSnapshotMap,
 } from "@swartzrock/byok-runtime";
 import { createByokNodeProvider } from "@swartzrock/byok-runtime/node";
-import { byokProviderDefinition } from "./byok-provider-metadata";
+import {
+	byokProviderDefinition,
+	firstRecallProviderDefinition,
+} from "./byok-provider-metadata";
 import {
 	deriveProviderSetupStatus,
 	recordProviderConnectionSuccess,
@@ -36,7 +40,12 @@ import type {
 	FirstRecallCueInput,
 	FirstRecallNoteBriefInput,
 	FirstRecallCueProviderRuntime,
+	FirstRecallProviderId,
 } from "./cue-provider";
+import {
+	createHostedDemoProvider,
+	type HostedDemoProviderDeps,
+} from "./hosted-demo-provider";
 import {
 	buildNoteBriefPrompt,
 	
@@ -57,6 +66,7 @@ import {
 	type NoteBriefOutput,
 } from "./schemas";
 import type { FirstRecallSettings } from "./settings";
+import type { ProviderRequestRateGate } from "./provider-request-rate";
 import {
 	isFirstRecallCloudCredentialProvider,
 	type FirstRecallCloudCredentialProvider,
@@ -65,9 +75,38 @@ import {
 
 export type FirstRecallByokRuntime = FirstRecallCueProviderRuntime;
 export type FirstRecallTransport = ByokTransport;
-export type FirstRecallProviderFactoryDeps = ByokProviderDeps;
+export type FirstRecallProviderFactoryDeps = ByokProviderDeps & {
+	requestGate?: ProviderRequestRateGate;
+};
 export type FirstRecallProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type { ByokProviderConfig, ByokProviderDeps } from "@swartzrock/byok-runtime";
+
+export function makeFirstRecallHostedDemoProvider(
+	deps: HostedDemoProviderDeps
+): FirstRecallCueProviderRuntime {
+	const hosted = createHostedDemoProvider(deps);
+	const definition = firstRecallProviderDefinition("hosted-demo");
+	return {
+		id: definition.id,
+		label: definition.label,
+		requiresNetwork: true,
+		requiresDownload: false,
+		testConnection: async () => ({
+			ok: true,
+			message: "FirstRecall trial is ready.",
+		}),
+		listModels: async () => [
+			{ id: "included-trial", label: "Included trial model" },
+		],
+		generateBundle: async (input, signal) => {
+			const result = await hosted.generateBundle(input, signal);
+			return {
+				sections: result.sections,
+				noteBrief: result.noteBrief,
+			};
+		},
+	};
+}
 
 type FirstRecallApiKeyProvider = Extract<
 	ByokProviderConfig,
@@ -218,6 +257,36 @@ function firstRecallProviderDeps(
 			return normalizeOllamaJsonResponse(response);
 		},
 	};
+}
+
+function withGenerationRequestGate(
+	runtime: ByokProviderRuntime,
+	gate?: ProviderRequestRateGate
+): ByokProviderRuntime {
+	if (!gate) return runtime;
+	const limited: ByokProviderRuntime = {
+		id: runtime.id,
+		label: runtime.label,
+		requiresNetwork: runtime.requiresNetwork,
+		requiresDownload: runtime.requiresDownload,
+		sectionConcurrencyLimit: runtime.sectionConcurrencyLimit,
+		testConnection: () => runtime.testConnection(),
+		listModels: () => runtime.listModels(),
+		generateText: async (input, signal) => {
+			await gate.acquire(signal);
+			return runtime.generateText(input, signal);
+		},
+	};
+	if (runtime.generateObject) {
+		limited.generateObject = async <T>(
+			input: ByokObjectGenerationInput<T>,
+			signal?: AbortSignal
+		): Promise<T> => {
+			await gate.acquire(signal);
+			return runtime.generateObject!(input, signal);
+		};
+	}
+	return limited;
 }
 
 async function generateCueFromObjectProvider(
@@ -374,7 +443,7 @@ async function generateCueBatchFromTextProvider(
 	let result = parseCueBatch(raw.text, inputs.length);
 	const itemErrors = (batch: Exclude<typeof result, string>) =>
 		batch.results.flatMap((item, index) =>
-			item.error && item.error !== INSUFFICIENT_SOURCE_ERROR
+			"error" in item && item.error !== INSUFFICIENT_SOURCE_ERROR
 				? [`section ${index + 1}: ${item.error}`]
 				: []
 		);
@@ -409,8 +478,10 @@ async function generateCueBatchFromTextProvider(
 }
 
 export function wrapFirstRecallByokRuntime(
-	runtime: ByokProviderRuntime
+	runtime: ByokProviderRuntime,
+	requestGate?: ProviderRequestRateGate
 ): FirstRecallByokRuntime {
+	runtime = withGenerationRequestGate(runtime, requestGate);
 	const generateFromObject = Boolean(runtime.generateObject);
 	const cueRuntime: FirstRecallByokRuntime = {
 		id: runtime.id,
@@ -514,7 +585,10 @@ function normalizeFirstRecallByokSettings(
 	};
 }
 
-function normalizeFirstRecallSelectedProvider(value: unknown): ByokProviderId | null {
+function normalizeFirstRecallSelectedProvider(
+	value: unknown
+): FirstRecallProviderId | null {
+	if (value === "hosted-demo") return value;
 	if (isByokProviderId(value)) return value;
 	if (value === "codex" || value === "claude") return normalizeProviderId(value);
 	return null;
@@ -522,24 +596,27 @@ function normalizeFirstRecallSelectedProvider(value: unknown): ByokProviderId | 
 
 export function firstRecallSelectedProvider(
 	settings: FirstRecallSettings
-): ByokProviderId | null {
+): FirstRecallProviderId | null {
 	return normalizeFirstRecallSelectedProvider(
 		(settings.byok as { selectedProvider?: unknown } | undefined)
 			?.selectedProvider
 	);
 }
 
-function requireFirstRecallSelectedProvider(
+function requireFirstRecallSelectedByokProvider(
 	settings: FirstRecallSettings
 ): ByokProviderId {
 	const provider = firstRecallSelectedProvider(settings);
 	if (!provider) throw firstRecallProviderError("Choose an AI provider in Settings.");
+	if (!isByokProviderId(provider)) {
+		throw firstRecallProviderError("The selected provider is not a BYOK provider.");
+	}
 	return provider;
 }
 
 export function setFirstRecallSelectedProvider(
 	settings: FirstRecallSettings,
-	provider: ByokProviderId
+	provider: FirstRecallProviderId
 ): void {
 	ensureFirstRecallByokSettings(settings).selectedProvider = provider;
 }
@@ -568,7 +645,7 @@ export function firstRecallProviderSettings(
 	settings: FirstRecallSettings,
 	provider?: ByokProviderId
 ): ByokProviderStoredSettings {
-	provider ??= requireFirstRecallSelectedProvider(settings);
+	provider ??= requireFirstRecallSelectedByokProvider(settings);
 	const providers = ensureFirstRecallByokSettings(settings).providers;
 	const stored = {
 		...emptyStoredProviderSettings(),
@@ -669,7 +746,7 @@ export function firstRecallProviderConfigFromSettings(
 		cloudCredentials?: Partial<Record<FirstRecallCloudCredentialProvider, string>>;
 	} = {}
 ): ByokProviderConfig {
-	const provider = requireFirstRecallSelectedProvider(settings);
+	const provider = requireFirstRecallSelectedByokProvider(settings);
 	const stored = firstRecallProviderSettings(settings, provider);
 	const credentialKind = byokProviderDefinition(provider).credentialKind;
 	if (credentialKind === "api-key") {
@@ -700,7 +777,8 @@ export function makeFirstRecallByokProvider(
 ): FirstRecallByokRuntime {
 	const config = firstRecallProviderConfigFromSettings(settings);
 	return wrapFirstRecallByokRuntime(
-		createByokNodeProvider(config, firstRecallProviderDeps(config, deps))
+		createByokNodeProvider(config, firstRecallProviderDeps(config, deps)),
+		deps.requestGate
 	);
 }
 
@@ -708,7 +786,7 @@ export async function resolveFirstRecallProviderConfigFromStore(
 	settings: FirstRecallSettings,
 	credentialStore: SecureCredentialStore
 ): Promise<ByokProviderConfig> {
-	const provider = requireFirstRecallSelectedProvider(settings);
+	const provider = requireFirstRecallSelectedByokProvider(settings);
 	if (!isFirstRecallCloudCredentialProvider(provider)) {
 		return firstRecallProviderConfigFromSettings(settings);
 	}
@@ -782,23 +860,27 @@ export async function makeFirstRecallByokProviderFromStore(
 		createByokNodeProvider(
 			config,
 			firstRecallProviderDeps(config, deps)
-		)
+		),
+		deps.requestGate
 	);
 }
 
-export function isFirstRecallLocalCliProvider(provider: ByokProviderId): boolean {
-	return byokProviderDefinition(provider).credentialKind === "command";
+export function isFirstRecallLocalCliProvider(
+	provider: FirstRecallProviderId
+): boolean {
+	return isByokProviderId(provider) &&
+		byokProviderDefinition(provider).credentialKind === "command";
 }
 
-export function firstRecallProviderLabel(provider: ByokProviderId): string {
-	return byokProviderDefinition(provider).label;
+export function firstRecallProviderLabel(provider: FirstRecallProviderId): string {
+	return firstRecallProviderDefinition(provider).label;
 }
 
 export function firstRecallProviderCredential(
 	settings: FirstRecallSettings,
 	provider?: ByokProviderId
 ): string {
-	provider ??= requireFirstRecallSelectedProvider(settings);
+	provider ??= requireFirstRecallSelectedByokProvider(settings);
 	return firstRecallProviderSettings(settings, provider).credential;
 }
 
@@ -806,7 +888,7 @@ export function firstRecallProviderCredentialSaved(
 	settings: FirstRecallSettings,
 	provider?: ByokProviderId
 ): boolean {
-	provider ??= requireFirstRecallSelectedProvider(settings);
+	provider ??= requireFirstRecallSelectedByokProvider(settings);
 	const stored = firstRecallProviderSettings(settings, provider);
 	return isFirstRecallCloudCredentialProvider(provider)
 		? Boolean(stored.credentialSaved) || stored.credential.trim().length > 0
@@ -817,7 +899,7 @@ export function firstRecallProviderCredentialLength(
 	settings: FirstRecallSettings,
 	provider?: ByokProviderId
 ): number {
-	provider ??= requireFirstRecallSelectedProvider(settings);
+	provider ??= requireFirstRecallSelectedByokProvider(settings);
 	const stored = firstRecallProviderSettings(settings, provider);
 	if (isFirstRecallCloudCredentialProvider(provider)) {
 		return stored.credentialSaved
@@ -890,7 +972,7 @@ export function firstRecallProviderModel(
 	settings: FirstRecallSettings,
 	provider?: ByokProviderId
 ): string {
-	provider ??= requireFirstRecallSelectedProvider(settings);
+	provider ??= requireFirstRecallSelectedByokProvider(settings);
 	return firstRecallProviderSettings(settings, provider).model;
 }
 

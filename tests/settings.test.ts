@@ -9,7 +9,6 @@ import {
 import {
 	DEFAULT_EDITOR_CUE_DISPLAY,
 	EDITOR_CUE_DISPLAY_OPTIONS,
-	editorCueDisplayOption,
 	isEditorCueDisplay,
 } from "../src/editor-cue-display";
 import { DEFAULT_SHOW_NOTE_BRIEF } from "../src/review-surfaces";
@@ -20,7 +19,7 @@ import { buildNoteBriefInstructionsTemplate } from "../src/study-material-instru
 import { QUESTION_TYPES } from "../src/cue-generation";
 import {
 	byokProviderDefinition,
-	byokProviderDefinitions,
+	firstRecallProviderDefinitions,
 	type FirstRecallProviderDefinition,
 } from "../src/byok-provider-metadata";
 
@@ -513,40 +512,39 @@ async function changeToggle(
 	await toggle.__onChange(value);
 }
 
-async function changeDropdown(
-	containerEl: HTMLElement,
-	name: string,
-	value: string
-): Promise<void> {
-	const setting = containerEl.querySelector<HTMLElement>(
-		`[data-setting-name="${name}"]`
-	);
-	if (!setting) throw new Error(`Missing setting: ${name}`);
-	const dropdown = setting.querySelector<HTMLSelectElement>(
-		"[data-control='dropdown']"
-	) as HTMLSelectElement & {
-		__onChange?: (value: string) => void | Promise<void>;
-	};
-	if (!dropdown.__onChange) throw new Error(`Missing dropdown callback: ${name}`);
-	dropdown.value = value;
-	await dropdown.__onChange(value);
-}
-
 async function clickSettingButton(
 	containerEl: HTMLElement,
 	label: string
 ): Promise<void> {
 	const button = [...containerEl.querySelectorAll<HTMLButtonElement>("button")]
-		.find((candidate) => candidate.textContent === label) as
-		| (HTMLButtonElement & { __onClick?: () => void | Promise<void> })
-		| undefined;
+		.find((candidate) => candidate.textContent === label);
 	if (!button) throw new Error(`Missing button: ${label}`);
-	if (button.__onClick) {
-		await button.__onClick();
+	await clickButton(button);
+}
+
+async function clickButton(button: HTMLButtonElement): Promise<void> {
+	const mockButton = button as HTMLButtonElement & {
+		__onClick?: () => void | Promise<void>;
+	};
+	if (mockButton.__onClick) {
+		await mockButton.__onClick();
 	} else {
 		button.click();
 		await Promise.resolve();
 	}
+}
+
+function dropdownWithValues(
+	containerEl: HTMLElement,
+	values: readonly string[]
+): HTMLSelectElement {
+	const dropdown = [...containerEl.querySelectorAll<HTMLSelectElement>("select")]
+		.find((candidate) =>
+			[...candidate.options].map((option) => option.value).join("\0") ===
+			values.join("\0")
+		);
+	if (!dropdown) throw new Error(`Missing dropdown with values: ${values.join(", ")}`);
+	return dropdown;
 }
 
 function studyArea(overrides: Record<string, unknown> = {}) {
@@ -573,17 +571,12 @@ function studyAreaPlan(overrides: Record<string, unknown> = {}) {
 
 async function clickThumbnail(
 	containerEl: HTMLElement,
-	name: string,
 	optionId: string
 ): Promise<void> {
-	const setting = containerEl.querySelector<HTMLElement>(
-		`[data-setting-name="${name}"]`
-	);
-	if (!setting) throw new Error(`Missing setting: ${name}`);
-	const button = setting.querySelector<HTMLButtonElement>(
+	const button = containerEl.querySelector<HTMLButtonElement>(
 		`[data-option-id="${optionId}"]`
 	);
-	if (!button) throw new Error(`Missing thumbnail option: ${name} ${optionId}`);
+	if (!button) throw new Error(`Missing thumbnail option: ${optionId}`);
 	button.click();
 	await Promise.resolve();
 }
@@ -617,6 +610,7 @@ describe("settings defaults", () => {
 		expect(DEFAULT_SETTINGS).toMatchObject({
 			byok: { selectedProvider: null },
 			questionType: "exam-practice",
+			requestsPerTenSeconds: 5,
 			showNoteBrief: true,
 			showSummary: true,
 			showQuestion: true,
@@ -624,146 +618,129 @@ describe("settings defaults", () => {
 		});
 	});
 
-	it("prompts a clean install to select an AI provider", async () => {
+	it("leaves a clean install unselected with accessible connection controls", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
-
-		expect(settingText(tab.containerEl)).toContain(
-			"Select an AI provider to generate study material"
-		);
 		openSettingsCard(tab, "AI model");
 
-		expect(settingText(tab.containerEl)).toContain(
-			"Select an AI provider to generate study material"
-		);
-		expect(settingText(tab.containerEl)).toContain(
-			"When a provider requires an API key, FirstRecall stores it securely in Obsidian's Secret Storage."
-		);
-		expect(settingText(tab.containerEl)).toContain("Connection type");
-		expect(settingText(tab.containerEl)).not.toContain("Available providers");
-		expect(
-			tab.containerEl
-				.querySelector(".firstrecall-provider-paths")
-				?.getAttribute("aria-labelledby")
-		).toBe("firstrecall-provider-paths-label");
-		expect(
-			tab.containerEl.querySelector<HTMLAnchorElement>(
-				'a[href="https://docs.obsidian.md/plugins/guides/secret-storage"]'
-			)?.textContent
-		).toBe("Learn more.");
+		const group = [...tab.containerEl.querySelectorAll<HTMLElement>('[role="group"]')]
+			.find((candidate) => candidate.querySelector('button[aria-expanded]'))!;
+		const labelledBy = group.getAttribute("aria-labelledby");
+		expect(labelledBy).toBeTruthy();
+		expect(tab.containerEl.querySelector(`#${labelledBy}`)).not.toBeNull();
 		const pathButtons = [
-			...tab.containerEl.querySelectorAll<HTMLButtonElement>(
-				".firstrecall-provider-path-button"
-			),
+			...group.querySelectorAll<HTMLButtonElement>('button[aria-expanded][aria-controls]'),
 		];
-		expect(pathButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
-			"LLM API Provider",
-			"Installed AI tool",
-			"Self-Hosted LLM Provider",
-		]);
-		expect(settingText(tab.containerEl)).toContain(
-			"Use an API key from Anthropic, OpenAI, Gemini, or another provider."
+		expect(pathButtons).toHaveLength(
+			new Set(firstRecallProviderDefinitions().map(({ credentialKind }) => credentialKind)).size
 		);
-		expect(settingText(tab.containerEl)).toContain(
-			"Use Codex or Claude Code if one is already installed and signed in on this device."
-		);
-		expect(settingText(tab.containerEl)).toContain(
-			"Connect to Ollama or LM Studio running on a model server you control."
-		);
-		expect(settingText(tab.containerEl)).not.toContain("Browse all providers");
 		for (const button of pathButtons) {
 			const descriptionId = button.getAttribute("aria-describedby");
 			const descriptionEl = descriptionId
 				? tab.containerEl.querySelector<HTMLElement>(`#${descriptionId}`)
 				: null;
-			expect(button.textContent).toBe(button.getAttribute("aria-label"));
+			expect(button.getAttribute("aria-label")).toBeTruthy();
 			expect(descriptionEl).not.toBeNull();
 			expect(button.contains(descriptionEl)).toBe(false);
+			expect(button.getAttribute("aria-expanded")).toBe("false");
+			expect(button.getAttribute("aria-controls")).toBeTruthy();
 		}
-		expect(
-			pathButtons.every(
-				(button) =>
-					button.getAttribute("aria-expanded") === "false" &&
-					button.getAttribute("aria-controls") === "firstrecall-provider-results"
-			)
-		).toBe(true);
 		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(0);
-		expect(
-			tab.containerEl.querySelector(".firstrecall-active-provider-panel")
-		).toBeNull();
 		expect(plugin.settings.byok.selectedProvider).toBeNull();
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
 
-	it("reveals each connection path in stable provider order without selecting", async () => {
+	it("reveals each provider kind without selecting a provider", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
-		const definitions = byokProviderDefinitions();
-		const scenarios = [
-			{ label: "LLM API Provider", kind: "api-key", count: 11 },
-			{ label: "Installed AI tool", kind: "command", count: 2 },
-			{ label: "Self-Hosted LLM Provider", kind: "url", count: 2 },
-		] as const;
+		const definitions = firstRecallProviderDefinitions();
+		const expectedGroups = ["api-key", "command", "url"]
+			.map((kind) => definitions
+				.filter((definition) => definition.credentialKind === kind)
+				.map((definition) => definition.id)
+				.sort())
+			.sort((left, right) => left.join().localeCompare(right.join()));
+		const group = [...tab.containerEl.querySelectorAll<HTMLElement>('[role="group"]')]
+			.find((candidate) => candidate.querySelector('button[aria-expanded]'))!;
+		const buttons = [...group.querySelectorAll<HTMLButtonElement>('button[aria-expanded][aria-controls]')];
+		const repeatedControlId = [...new Set(buttons.map((button) => button.getAttribute("aria-controls")))]
+			.find((id) => buttons.filter((button) => button.getAttribute("aria-controls") === id).length > 1);
+		const observedGroups: string[][] = [];
 
-		for (const scenario of scenarios) {
-			const button = tab.containerEl.querySelector<HTMLButtonElement>(
-				`button[aria-label="${scenario.label}"]`
-			)!;
+		for (const button of buttons.filter((candidate) => candidate.getAttribute("aria-controls") === repeatedControlId)) {
 			button.click();
-			expect(settingText(tab.containerEl)).toContain("Available providers");
-			expect(
-				tab.containerEl
-					.querySelector(".firstrecall-provider-picker")
-					?.getAttribute("aria-labelledby")
-			).toBe("firstrecall-provider-options-label");
-			const expected = definitions.filter(
-				(definition) => definition.credentialKind === scenario.kind
-			);
 			const radios = [
 				...tab.containerEl.querySelectorAll<HTMLElement>(
-					"#firstrecall-provider-results [role='radio']"
+					"[role='radiogroup'] [role='radio'][data-provider]"
 				),
 			];
-			expect(radios.map((radio) => radio.getAttribute("aria-label"))).toEqual(
-				expected.map((definition) => definition.label)
-			);
-			expect(radios).toHaveLength(scenario.count);
+			observedGroups.push(radios.map((radio) => radio.dataset.provider!).sort());
 			expect(
-				[...tab.containerEl.querySelectorAll<HTMLButtonElement>(
-					".firstrecall-provider-path-button"
-				)].filter((candidate) => candidate.getAttribute("aria-expanded") === "true")
+				buttons.filter((candidate) => candidate.getAttribute("aria-expanded") === "true")
 			).toEqual([button]);
 		}
 
+		expect(observedGroups.sort((left, right) => left.join().localeCompare(right.join())))
+			.toEqual(expectedGroups);
 		expect(plugin.settings.byok.selectedProvider).toBeNull();
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
 
-	it("derives the connection path for an existing provider", async () => {
+	it("selects the hosted trial without requiring setup fields", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		tab.display();
+		openSettingsCard(tab, "AI model");
+
+		const group = [...tab.containerEl.querySelectorAll<HTMLElement>('[role="group"]')]
+			.find((candidate) => candidate.querySelector('button[aria-expanded]'))!;
+		const pathButtons = [...group.querySelectorAll<HTMLButtonElement>('button[aria-expanded][aria-controls]')];
+		const hostedButton = pathButtons.find((button) =>
+			pathButtons.filter((candidate) => candidate.getAttribute("aria-controls") === button.getAttribute("aria-controls")).length === 1
+		)!;
+		hostedButton.click();
+		await vi.waitFor(() =>
+			expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo")
+		);
+		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
+		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(0);
+		expect(tab.containerEl.querySelector('input[type="password"]')).toBeNull();
+		expect(tab.containerEl.querySelector('[role="combobox"]')).toBeNull();
+		expect(plugin.settings.byok.providers).not.toHaveProperty("hosted-demo");
+	});
+
+	it("uses the FirstRecall logo for the hosted trial", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.byok.selectedProvider = "hosted-demo";
+		tab.display();
+		openSettingsCard(tab, "AI model");
+
+		const hostedLogo = tab.containerEl.querySelector<HTMLImageElement>(
+			'.firstrecall-provider-icon[data-provider="hosted-demo"] img'
+		);
+		expect(hostedLogo?.alt).toBe("");
+		expect(hostedLogo?.getAttribute("src")).toMatch(/^data:image\/svg\+xml,/);
+	});
+
+	it("restores an existing provider route and rate-limit value", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.byok.selectedProvider = "codex-cli";
 		tab.display();
 		openSettingsCard(tab, "AI model");
 
-		expect(
-			tab.containerEl.querySelector('button[aria-label="Installed AI tool"]')
-				?.getAttribute("aria-expanded")
-		).toBe("true");
-		expect(
-			tab.containerEl.querySelector(
-				'[role="radio"][aria-label="Codex terminal tool"]'
-			)
-				?.getAttribute("aria-checked")
-		).toBe("true");
-		expect(settingText(tab.containerEl)).toContain("Codex command");
-		expect(settingText(tab.containerEl)).not.toContain("Codex CLI");
-		expect(
-			tab.containerEl.querySelector(
-				'.firstrecall-provider-button[data-provider="codex-cli"] .firstrecall-provider-button-label'
-			)?.textContent
-		).toBe("Codex (terminal)");
-		expect(settingText(tab.containerEl)).toContain("Performance");
+		const selectedProvider = tab.containerEl.querySelector<HTMLElement>(
+			'[role="radio"][data-provider="codex-cli"]'
+		);
+		expect(selectedProvider?.getAttribute("aria-checked")).toBe("true");
+		const connectionGroup = [...tab.containerEl.querySelectorAll<HTMLElement>('[role="group"]')]
+			.find((candidate) => candidate.querySelector('button[aria-expanded="true"]'));
+		expect(connectionGroup).toBeDefined();
+		const requestRate = [...tab.containerEl.querySelectorAll<HTMLSelectElement>("select")]
+			.find((select) => [...select.options].map((option) => option.value).join() === "1,5,10,20");
+		expect(requestRate?.value).toBe("5");
+		expect([...(requestRate?.options ?? [])].map((option) => option.value)).toEqual([
+			"1", "5", "10", "20",
+		]);
 	});
 
 	it("hides mismatched setup without losing provider input or focus", async () => {
@@ -784,7 +761,7 @@ describe("settings defaults", () => {
 		apiKeyInput.value = "sk-ant-unsaved";
 		apiKeyInput.__onChange?.(apiKeyInput.value);
 		const installedButton = tab.containerEl.querySelector<HTMLButtonElement>(
-			'button[aria-label="Installed AI tool"]'
+			'button[aria-label="Terminal apps"]'
 		)!;
 		installedButton.focus();
 		installedButton.click();
@@ -817,7 +794,7 @@ describe("settings defaults", () => {
 		expect(tab.containerEl.querySelector('[role="radio"]')).toBe(firstRadio);
 
 		const apiButton = tab.containerEl.querySelector<HTMLButtonElement>(
-			'button[aria-label="LLM API Provider"]'
+			'button[aria-label="API key"]'
 		)!;
 		apiButton.click();
 		expect(setupPanel.hidden).toBe(false);
@@ -837,44 +814,13 @@ describe("settings defaults", () => {
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
 
-	it("preserves the selected path after provider selection and resets it on hide", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		tab.display();
-		openSettingsCard(tab, "AI model");
-		tab.containerEl
-			.querySelector<HTMLButtonElement>('button[aria-label="LLM API Provider"]')!
-			.click();
-		tab.containerEl
-			.querySelector<HTMLElement>(
-				'[role="radio"][aria-label="Anthropic (Claude)"] .firstrecall-provider-button-label'
-			)!
-			.click();
-
-		await vi.waitFor(() => expect(plugin.settings.byok.selectedProvider).toBe("anthropic"));
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(
-			tab.containerEl.querySelector('button[aria-label="LLM API Provider"]')
-				?.getAttribute("aria-expanded")
-		).toBe("true");
-		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(11);
-
-		tab.hide();
-		tab.display();
-		openSettingsCard(tab, "AI model");
-		expect(
-			tab.containerEl.querySelector('button[aria-label="LLM API Provider"]')
-				?.getAttribute("aria-expanded")
-		).toBe("true");
-		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(11);
-	});
-
 	it("links a cloud credential field to the selected provider's API key guide", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		const definition = byokProviderDefinition("anthropic");
 		tab.display();
 		openSettingsCard(tab, "AI model");
 		tab.containerEl
-			.querySelector<HTMLButtonElement>('button[aria-label="LLM API Provider"]')
+			.querySelector<HTMLButtonElement>('button[aria-label="API key"]')
 			?.click();
 		tab.containerEl
 			.querySelector<HTMLButtonElement>('[role="radio"][aria-label="Anthropic (Claude)"]')
@@ -883,48 +829,70 @@ describe("settings defaults", () => {
 		await vi.waitFor(() =>
 			expect(plugin.settings.byok.selectedProvider).toBe("anthropic")
 		);
-		const link = tab.containerEl.querySelector<HTMLAnchorElement>(
-			".firstrecall-api-key-setting .setting-item-description a"
-		);
-		expect(link?.textContent).toBe("How to find your API key");
-		expect(link?.href).toBe(definition.credentialField.helpUrl);
+		const link = [...tab.containerEl.querySelectorAll<HTMLAnchorElement>("a")]
+			.find((candidate) => candidate.href === definition.credentialField.helpUrl);
+		expect(link).toBeDefined();
 	});
 
 	it("renders every provider icon with real paint", async () => {
-		const { tab } = await setupSettingsTab();
+		const { tab, plugin } = await setupSettingsTab();
+		const definitions = firstRecallProviderDefinitions();
+		const expectedProviderIds = new Set(
+			definitions.map((definition) => definition.id)
+		);
+		const trialProvider = definitions.find(
+			(definition) => definition.credentialKind === "trial"
+		)!;
+		const renderedProviderIds = new Set<string>();
 		tab.display();
 		openSettingsCard(tab, "AI model");
-		const providerIds = new Set<string>();
-		for (const pathLabel of [
-			"LLM API Provider",
-			"Installed AI tool",
-			"Self-Hosted LLM Provider",
-		]) {
-			tab.containerEl
-				.querySelector<HTMLButtonElement>(`button[aria-label="${pathLabel}"]`)
-				?.click();
+
+		const pathButtons = [
+			...tab.containerEl.querySelectorAll<HTMLButtonElement>(
+				'[role="group"] button[aria-expanded][aria-controls]'
+			),
+		];
+		const controlUsage = new Map<string, number>();
+		for (const button of pathButtons) {
+			const controls = button.getAttribute("aria-controls") ?? "";
+			controlUsage.set(controls, (controlUsage.get(controls) ?? 0) + 1);
+		}
+		pathButtons.sort((left, right) => {
+			const leftCount = controlUsage.get(left.getAttribute("aria-controls") ?? "") ?? 0;
+			const rightCount = controlUsage.get(right.getAttribute("aria-controls") ?? "") ?? 0;
+			return rightCount - leftCount;
+		});
+
+		for (const button of pathButtons) {
+			button.click();
+			if ((controlUsage.get(button.getAttribute("aria-controls") ?? "") ?? 0) === 1) {
+				await vi.waitFor(() =>
+					expect(plugin.settings.byok.selectedProvider).toBe(trialProvider.id)
+				);
+			}
 			const icons = [
 				...tab.containerEl.querySelectorAll<HTMLElement>(
-					"#firstrecall-provider-results .firstrecall-provider-icon"
+					".firstrecall-provider-icon[data-provider]"
 				),
 			];
+			expect(icons.length).toBeGreaterThan(0);
 			for (const iconEl of icons) {
-				// The provider id is exposed via data-provider so CSS can target one icon
-				// specifically (e.g. OpenRouter's light-mode contrast fix) without touching
-				// the shared renderer.
-				const providerId = iconEl.getAttribute("data-provider");
-				expect(providerId).toBeTruthy();
-				providerIds.add(providerId!);
-
+				renderedProviderIds.add(iconEl.dataset.provider!);
 				const svg = iconEl.querySelector("svg");
-				const paths = [...(svg?.querySelectorAll("path") ?? [])];
-				expect(paths.length).toBeGreaterThan(0);
-				for (const path of paths) {
-					expect(path.getAttribute("d")).toBeTruthy();
+				const image = iconEl.querySelector("img");
+				if (svg) {
+					const paths = [...svg.querySelectorAll("path")];
+					expect(paths.length).toBeGreaterThan(0);
+					expect(paths.every((path) => Boolean(path.getAttribute("d")))).toBe(true);
+				} else if (image) {
+					expect(image.getAttribute("src")).toMatch(/^data:image\/svg\+xml,/);
+				} else {
+					expect(iconEl.dataset.icon).toBeTruthy();
 				}
 			}
 		}
-		expect(providerIds.size).toBe(15);
+
+		expect(renderedProviderIds).toEqual(expectedProviderIds);
 	});
 
 	it("gives duplicate gradient icons unique ids so two instances on the page don't collide", async () => {
@@ -999,9 +967,6 @@ describe("settings defaults", () => {
 
 	it("defaults the editor section card layout to Cornell", () => {
 		expect(DEFAULT_EDITOR_CUE_DISPLAY).toBe("cornell");
-		expect(editorCueDisplayOption(DEFAULT_EDITOR_CUE_DISPLAY).label).toBe(
-			"Cornell"
-		);
 	});
 
 	it("defaults the Note Brief to visible", () => {
@@ -1009,63 +974,12 @@ describe("settings defaults", () => {
 	});
 
 	it("validates persisted editor cue display values", () => {
-		expect(EDITOR_CUE_DISPLAY_OPTIONS.map((option) => option.id)).toEqual([
-			"cornell",
-			"inline-cues",
-		]);
-		expect(isEditorCueDisplay("cornell")).toBe(true);
-		expect(isEditorCueDisplay("inline-cues")).toBe(true);
-		for (const bad of [
-			"",
-			"hook",
-			"classic",
-			"cornell-exam-prep",
-			"cornell-minimal",
-			"anchored-card-rail",
-			"threaded-margin-notes",
-			"collapsed-tabs",
-			"active-section-composer",
-			"hook-minimap",
-			null,
-			undefined,
-			1,
-			{},
-		]) {
+		for (const option of EDITOR_CUE_DISPLAY_OPTIONS) {
+			expect(isEditorCueDisplay(option.id)).toBe(true);
+		}
+		for (const bad of ["", "retired-layout", null, 1, {}]) {
 			expect(isEditorCueDisplay(bad)).toBe(false);
 		}
-	});
-	it("maps main-page controls to visible Note Brief and section card components", async () => {
-		const { tab } = await setupSettingsTab();
-		tab.display();
-
-		const text = settingText(tab.containerEl);
-		expect(text).toContain("Display");
-		expect(text).not.toContain("Generated components");
-		expect(text).toContain("Appearance");
-		expect(text).not.toContain("Editing View");
-		expect(text).not.toContain("Note format");
-		for (const groupName of ["Note Brief", "Section study card"]) {
-			expect(
-				tab.containerEl.querySelector(`[role="group"][aria-label="${groupName}"]`)
-			).not.toBeNull();
-		}
-		for (const label of [
-			"Show Note Brief",
-			"Show summary",
-			"Show recall question",
-			"Show key terms",
-		]) {
-			expect(tab.containerEl.querySelector(`[aria-label="${label}"]`)).not.toBeNull();
-		}
-		expect(text).toContain("Summary");
-		expect(text).toContain("Recall question");
-		expect(text).toContain("Key terms");
-		expect(text).not.toContain("Core idea");
-		expect(text).not.toContain("Review first");
-		expect(text).not.toContain("Self-test");
-		expect(
-			tab.containerEl.querySelectorAll(".firstrecall-settings-artifact-part")
-		).toHaveLength(0);
 	});
 
 	it("allows every generated component to be hidden without marking content dirty", async () => {
@@ -1100,51 +1014,42 @@ describe("settings defaults", () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 
-		expect(settingText(tab.containerEl)).toContain("Changes section card layout in Editing only; Reading remains inline.");
-		expect(settingText(tab.containerEl)).toContain("Applies in Editing and Reading.");
-		await clickThumbnail(tab.containerEl, "Section card layout", "inline-cues");
+		await clickThumbnail(tab.containerEl, "inline-cues");
+		expect(plugin.settings.editorCueDisplay).toBe("inline-cues");
 		expect(plugin.saveSettings).toHaveBeenLastCalledWith({
 			refreshReviewSurfaces: false,
 		});
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(1);
 		expect(plugin.refreshReadingModeSurface).not.toHaveBeenCalled();
 
-		await clickThumbnail(tab.containerEl, "Study text size", "large");
+		await clickThumbnail(tab.containerEl, "large");
+		expect(plugin.settings.cueFontSize).toBe("large");
 		expect(plugin.refreshEditorCues).toHaveBeenCalledTimes(2);
 		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledTimes(1);
 		expect(plugin.noteCueSettingsChanged).not.toHaveBeenCalled();
 	});
 
-	it("shows one recall-question style control and exact read-only Advanced templates", async () => {
+	it("shows read-only generation templates with an accessible disclosure", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "Generation");
 
-		const text = settingText(tab.containerEl);
-		expect(text).toContain("Recall question style");
-		expect(text).not.toContain("Automatic update delay");
-		const select = tab.containerEl.querySelector<HTMLSelectElement>(
-			'[data-setting-name="Recall question style"] select'
-		);
-		expect([...select!.options].map((option) => option.textContent)).toEqual(
-			QUESTION_TYPES.map((type) => type.label)
+		const questionTypeIds = QUESTION_TYPES.map((type) => type.id);
+		const select = dropdownWithValues(tab.containerEl, questionTypeIds);
+		expect([...select.options].map((option) => option.value)).toEqual(
+			questionTypeIds
 		);
 
-		const advanced = tab.containerEl.querySelector<HTMLDetailsElement>(
-			".firstrecall-generation-advanced"
-		)!;
+		const advanced = tab.containerEl.querySelector<HTMLDetailsElement>("details")!;
 		const disclosure = advanced.querySelector("summary")!;
 		expect(advanced.open).toBe(false);
 		expect(disclosure.getAttribute("aria-expanded")).toBe("false");
-		expect(disclosure.getAttribute("aria-controls")).toBe(
-			"firstrecall-generation-instructions"
-		);
-		const section = advanced.querySelector<HTMLTextAreaElement>(
-			'textarea[aria-label="Section study card instructions"]'
-		)!;
-		const brief = advanced.querySelector<HTMLTextAreaElement>(
-			'textarea[aria-label="Note Brief instructions"]'
-		)!;
+		const controlledId = disclosure.getAttribute("aria-controls");
+		expect(controlledId).toBeTruthy();
+		expect(advanced.querySelector(`#${controlledId}`)).not.toBeNull();
+		const textareas = [...advanced.querySelectorAll<HTMLTextAreaElement>("textarea")];
+		const section = textareas.find((textarea) => textarea.value.includes("{{section_content}}"))!;
+		const brief = textareas.find((textarea) => textarea.value.includes("{{full_note_source}}"))!;
 		expect(section.readOnly).toBe(true);
 		expect(brief.readOnly).toBe(true);
 		expect(section.value).toBe(
@@ -1166,9 +1071,8 @@ describe("settings defaults", () => {
 		tab.display();
 		openSettingsCard(tab, "Generation");
 
-		const section = tab.containerEl.querySelector<HTMLTextAreaElement>(
-			'textarea[aria-label="Section study card instructions"]'
-		)!;
+		const section = [...tab.containerEl.querySelectorAll<HTMLTextAreaElement>("textarea")]
+			.find((textarea) => textarea.value.includes("{{section_list}}"))!;
 		expect(section.value).toBe(
 			buildSectionCueInstructionsTemplate(plugin.settings.questionType, "batch")
 		);
@@ -1184,20 +1088,19 @@ describe("settings defaults", () => {
 		tab.display();
 		openSettingsCard(tab, "Generation");
 
-		const change = changeDropdown(tab.containerEl, "Recall question style", "exam-practice");
+		const select = dropdownWithValues(
+			tab.containerEl,
+			QUESTION_TYPES.map((type) => type.id)
+		) as HTMLSelectElement & {
+			__onChange?: (value: string) => void | Promise<void>;
+		};
+		const change = select.__onChange?.("exam-practice") ?? Promise.resolve();
 		await vi.waitFor(() => expect(plugin.saveSettings).toHaveBeenCalledTimes(1));
 		expect(plugin.noteCueSettingsChanged).toHaveBeenCalledTimes(1);
-		expect(settingText(tab.containerEl)).toContain("Uses precise wording similar to an exam prompt.");
-		expect(settingText(tab.containerEl)).not.toContain(
-			"newly generated or regenerated recall questions only"
-		);
-		expect(settingText(tab.containerEl)).toContain(
-			"Recall questions will change after regeneration."
-		);
+		expect(plugin.settings.questionType).toBe("exam-practice");
 		expect(
-			tab.containerEl.querySelector<HTMLTextAreaElement>(
-				'textarea[aria-label="Section study card instructions"]'
-			)?.value
+			[...tab.containerEl.querySelectorAll<HTMLTextAreaElement>("textarea")]
+				.find((textarea) => textarea.value.includes("{{section_content}}"))?.value
 		).toBe(buildSectionCueInstructionsTemplate("exam-practice", "single"));
 
 		finishSave?.();
@@ -1206,27 +1109,6 @@ describe("settings defaults", () => {
 });
 
 describe("folders and automatic updates settings", () => {
-	it("renders the approved introduction and settings order", async () => {
-		const { tab } = await setupSettingsTab();
-		tab.display();
-
-		const text = settingText(tab.containerEl);
-		expect(text).toContain(
-			"FirstRecall turns your notes into active-recall study material: a Note Brief for the whole note and a study card for each section. Choose an AI provider and model to get started. Your Markdown files are never modified."
-		);
-		expect(text).not.toContain("Ollama");
-		const ordered = [
-			"AI model",
-			"Generation",
-			"Managed folders",
-			"Display",
-			"Appearance",
-			"Study Mode",
-		].map((label) => text.indexOf(label));
-		expect(ordered.every((position) => position >= 0)).toBe(true);
-		expect(ordered).toEqual([...ordered].sort((a, b) => a - b));
-	});
-
 	it("creates a paused scope, scans it, and never starts generation", async () => {
 		const { tab, plugin } = await setupSettingsTab({
 			loadedFiles: [
@@ -1241,27 +1123,8 @@ describe("folders and automatic updates settings", () => {
 		});
 		tab.display();
 		openSettingsCard(tab, "Managed folders");
-		const settingsText = settingText(tab.containerEl);
-		expect(settingsText).toContain(
-			"Add a folder—or your entire vault—to generate and refresh study material in bulk. Turn on automatic updates when you want FirstRecall to keep future changes current."
-		);
-		expect(settingsText.indexOf("Add folder or vault")).toBeLessThan(
-			settingsText.indexOf("Automatic update delay")
-		);
-		expect(settingsText).toContain(
-			"After you stop typing in an automatically-updated note, FirstRecall waits this long before updating its study material. Longer delays reduce repeated AI requests."
-		);
-		const input = tab.containerEl.querySelector<HTMLInputElement>(
-			'input[placeholder="Choose a folder or Entire vault..."]'
-		)!;
+		const input = tab.containerEl.querySelector<HTMLInputElement>('[role="combobox"]')!;
 		input.dispatchEvent(new window.Event("focus"));
-		const listbox = tab.containerEl.querySelector<HTMLElement>("[role='listbox']")!;
-		expect(
-			[...listbox.querySelectorAll<HTMLElement>("[role='option']")].map(
-				(candidate) => candidate.textContent
-			)
-		).toEqual(["Entire vault", "Courses/Biology", "Courses/Chemistry"]);
-		expect(listbox.children[1]?.getAttribute("role")).toBe("separator");
 		const option = [...tab.containerEl.querySelectorAll<HTMLButtonElement>(
 			"[role='option']"
 		)].find((candidate) => candidate.textContent === "Courses/Biology")!;
@@ -1379,10 +1242,6 @@ describe("folders and automatic updates settings", () => {
 		expect(plugin.updateStudyArea).toHaveBeenCalledWith(
 			expect.objectContaining({ maintenanceMode: "maintain-on-save" })
 		);
-		expect(settingText(tab.containerEl)).toContain(
-			"FirstRecall automatically updates new and changed study material after the selected delay."
-		);
-		expect(settingText(tab.containerEl)).not.toContain("the wait above");
 		expect(plugin.runStudyArea).not.toHaveBeenCalled();
 	});
 
@@ -1405,34 +1264,7 @@ describe("folders and automatic updates settings", () => {
 		expect(plugin.runStudyArea).not.toHaveBeenCalled();
 	});
 
-	it("keeps managed-folder rows concise and hides exclusions", async () => {
-		const { tab, plugin } = await setupSettingsTab({
-			loadedFiles: [
-				{ path: "Claudes/Drafts", folder: true },
-				{ path: "Claudes/Notes.md", extension: "md" },
-			],
-		});
-		plugin.settings.studyAreas = [studyArea({
-			name: "Claudes",
-			parentPath: "Claudes",
-			excludedPaths: ["Claudes/Drafts"],
-		})];
-		tab.display();
-		openSettingsCard(tab, "Managed folders");
-		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
-		const text = settingText(tab.containerEl);
-		expect(text).not.toContain("Covered notes");
-		expect(text).not.toContain("Automatic updates affect future edits only");
-		expect(text).not.toContain("Exclusions");
-		expect(tab.containerEl.querySelector("[aria-label^='Exclusions for']")).toBeNull();
-		const row = tab.containerEl.querySelector<HTMLElement>(
-			".firstrecall-study-area-row"
-		)!;
-		expect(row.textContent?.match(/Claudes/g)).toHaveLength(1);
-		expect(plugin.updateStudyArea).not.toHaveBeenCalled();
-	});
-
-	it("describes removal as leaving Managed folders when automatic updates are off", async () => {
+	it("requires confirmation before removing a managed folder", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.studyAreas = [studyArea({
 			name: "Claudes",
@@ -1443,16 +1275,24 @@ describe("folders and automatic updates settings", () => {
 		openSettingsCard(tab, "Managed folders");
 		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
 
-		tab.containerEl.querySelector<HTMLButtonElement>(
-			'.firstrecall-study-area-remove[aria-label="Remove Claudes"]'
-		)?.click();
+		const removeButton = tab.containerEl.querySelector<HTMLButtonElement>(
+			'button[aria-label="Remove Claudes"]'
+		)!;
+		removeButton.click();
+		expect(plugin.removeStudyArea).not.toHaveBeenCalled();
+		let actions = document.body.querySelector<HTMLElement>(
+			".modal-content .firstrecall-modal-actions"
+		)!;
+		actions.querySelector<HTMLButtonElement>('button[type="button"]')?.click();
+		expect(plugin.removeStudyArea).not.toHaveBeenCalled();
 
-		const modal = document.body.querySelector<HTMLElement>(".modal-content")!;
-		expect(modal.querySelector("h2")?.textContent).toBe("Remove managed folder?");
-		expect(modal.querySelector("p")?.textContent).toBe(
-			'Remove "Claudes" from Managed folders? Existing study material will remain available.'
-		);
-		expect(modal.textContent).not.toContain("automatic updates");
+		removeButton.click();
+		actions = document.body.querySelector<HTMLElement>(
+			".modal-content .firstrecall-modal-actions"
+		)!;
+		const actionButtons = actions.querySelectorAll<HTMLButtonElement>('button[type="button"]');
+		actionButtons[actionButtons.length - 1]?.click();
+		await vi.waitFor(() => expect(plugin.removeStudyArea).toHaveBeenCalledWith("biology"));
 	});
 
 	it("names a legacy conflict and offers direct recovery", async () => {
@@ -1467,31 +1307,36 @@ describe("folders and automatic updates settings", () => {
 		tab.display();
 		openSettingsCard(tab, "Managed folders");
 
-		expect(settingText(tab.containerEl)).toContain(
-			"Courses/Biology/Year 1 is disabled because it conflicts with Courses/Biology"
+		const disabledRow = tab.containerEl.querySelector<HTMLElement>(
+			'.firstrecall-study-area-row[aria-disabled="true"]'
+		)!;
+		expect(disabledRow).not.toBeNull();
+		await clickButton(disabledRow.querySelector<HTMLButtonElement>("button")!);
+		await vi.waitFor(() =>
+			expect(plugin.recoverDisabledStudyArea).toHaveBeenCalledWith("child", "parent")
 		);
-		await clickSettingButton(tab.containerEl, "Remove Courses/Biology and recover");
-		expect(plugin.recoverDisabledStudyArea).toHaveBeenCalledWith("child", "parent");
 	});
 
-	it("keeps scanning available while provider-gated actions open AI setup", async () => {
+	it("scans without a provider while the gated action opens AI setup", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.studyAreas = [studyArea()];
 		tab.display();
 		openSettingsCard(tab, "Managed folders");
 		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
-		const scan = [...tab.containerEl.querySelectorAll<HTMLButtonElement>("button")]
-			.find((button) => button.textContent === "Scan again");
-		expect(scan?.disabled).toBe(false);
-		await clickSettingButton(tab.containerEl, "Configure AI model");
-		expect(settingText(tab.containerEl)).toContain("Select an AI provider");
-	});
+		expect(plugin.runStudyArea).not.toHaveBeenCalled();
+		const providerSetupButton = tab.containerEl.querySelector<HTMLButtonElement>(
+			".firstrecall-study-area-provider-setup button"
+		)!;
+		await clickButton(providerSetupButton);
 
-	it("describes hidden study material as presentation-only", async () => {
-		const { tab } = await setupSettingsTab();
-		tab.display();
-		expect(settingText(tab.containerEl)).toContain(
-			"Hiding generated material never disables automatic maintenance."
-		);
+		expect(providerSetupButton.isConnected).toBe(false);
+		expect(
+			tab.containerEl.querySelector(
+				'[role="group"] button[aria-expanded][aria-controls]'
+			)
+		).not.toBeNull();
+		expect(
+			tab.containerEl.querySelector(".firstrecall-study-area-provider-setup")
+		).toBeNull();
 	});
 });

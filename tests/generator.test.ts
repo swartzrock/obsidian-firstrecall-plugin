@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import {
 	generateNote,
+	generateNoteBundleForSections,
 	generateNoteBriefForSections,
 	generateSectionCue,
 	generateSectionCueBatch,
@@ -11,8 +12,11 @@ import {
 	resolveGenerationOptions,
 	resolveSectionConcurrency,
 } from "../src/generator";
+import { parseSections } from "../src/parser";
 import type { ByokProviderStatus } from "@swartzrock/byok-runtime";
 import type {
+	FirstRecallBundleInput,
+	FirstRecallBundleResult,
 	FirstRecallCueBatchResult,
 	FirstRecallCueInput,
 	FirstRecallCueOutput,
@@ -20,6 +24,7 @@ import type {
 	FirstRecallNoteBriefInput,
 	FirstRecallNoteBriefOutput,
 } from "../src/cue-provider";
+import { INSUFFICIENT_SOURCE_ERROR } from "../src/schemas";
 
 interface MockOptions {
 	failOnHeading?: string;
@@ -117,7 +122,300 @@ function mockProvider(opts: MockOptions = {}): FirstRecallCueProviderRuntime & {
 const NOTE = "# A\na\n## B\nb\n### C\nc";
 const SIX_SECTION_NOTE = "# A\na\n# B\nb\n# C\nc\n# D\nd\n# E\ne\n# F\nf";
 
+function noteBrief(): FirstRecallNoteBriefOutput {
+	return {
+		overview: "the atomic note brief",
+		whatMatters: { title: "Main idea", detail: "Review the main idea." },
+		reviewFirst: { title: "A", detail: "Start with the first section." },
+		sayItBack: { title: "Say it back", detail: "Explain the note aloud." },
+	};
+}
+
+function mockBundleProvider(
+	generateBundle: (
+		input: FirstRecallBundleInput,
+		signal?: AbortSignal
+	) => Promise<FirstRecallBundleResult>,
+	maxGeneratedSections?: number
+): FirstRecallCueProviderRuntime {
+	return {
+		id: "hosted-demo",
+		label: "Hosted demo",
+		requiresNetwork: true,
+		requiresDownload: false,
+		maxGeneratedSections,
+		async testConnection() {
+			return { ok: true, message: "ok" };
+		},
+		async listModels() {
+			return [];
+		},
+		generateBundle,
+	};
+}
+
 describe("generateNote", () => {
+	it("generates all section cards and one Note Brief through one atomic bundle call", async () => {
+		const progress: Array<[number, number]> = [];
+		const calls: FirstRecallBundleInput[] = [];
+		const provider = mockBundleProvider(async (input) => {
+			calls.push(input);
+			return {
+				sections: input.sections.map((section) => ({
+					cue: {
+						question: `Q:${section.heading}`,
+						keywords: ["one", "two"],
+						summary: {
+							takeaway: "Takeaway",
+							keyPhrase: section.heading,
+							explanation: "Explanation",
+						},
+					},
+				})),
+				noteBrief: noteBrief(),
+			};
+		});
+		const longTitle = "T".repeat(250);
+		const markdown = `# A\n${"a".repeat(5_000)}\n# B\n${"b".repeat(5_000)}`;
+
+		const result = await generateNote({
+			noteTitle: longTitle,
+			markdown,
+			provider,
+			useWholeNoteContext: false,
+			maxContextChars: 50_000,
+			onProgress: (done, total) => progress.push([done, total]),
+		});
+
+		expect(calls).toHaveLength(1);
+		expect(calls[0].note.title).toHaveLength(200);
+		expect(calls[0].note.contextMarkdown.length).toBeLessThanOrEqual(12_000);
+		expect(calls[0].sections).toHaveLength(2);
+		expect(calls[0].sections[0]).toMatchObject({
+			sectionId: "a",
+			contentHash: expect.stringMatching(/^[0-9a-f]{8}$/),
+			heading: "A",
+		});
+		expect(calls[0].sections.every((section) => section.content.length <= 4_000)).toBe(
+			true
+		);
+		expect(result.sections.map((section) => section.question)).toEqual(["Q:A", "Q:B"]);
+		expect(result.noteBrief?.overview).toBe("the atomic note brief");
+		expect(result.noteBriefOutcome?.status).toBe("success");
+		expect(progress).toEqual([
+			[0, 3],
+			[1, 3],
+			[2, 3],
+			[3, 3],
+		]);
+	});
+
+	it("maps an atomic bundle insufficientSource result without dropping its Note Brief", async () => {
+		const provider = mockBundleProvider(async () => ({
+			sections: [
+				{ error: INSUFFICIENT_SOURCE_ERROR },
+				{
+					cue: {
+						question: "Q:B",
+						keywords: ["one", "two"],
+						summary: {
+							takeaway: "Takeaway",
+							keyPhrase: "B",
+							explanation: "Explanation",
+						},
+					},
+				},
+			],
+			noteBrief: noteBrief(),
+		}));
+
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: "# A\na\n# B\nb",
+			provider,
+		});
+
+		expect(result.sections[0]).toMatchObject({
+			question: null,
+			error: INSUFFICIENT_SOURCE_ERROR,
+		});
+		expect(result.sections[1].question).toBe("Q:B");
+		expect(result.noteBrief?.overview).toBe("the atomic note brief");
+		expect(result.noteBriefOutcome?.status).toBe("success");
+	});
+
+	it("applies a provider section limit in canonical document order", async () => {
+		const generateBundle = vi.fn(async (
+			input: FirstRecallBundleInput
+		): Promise<FirstRecallBundleResult> => ({
+			sections: input.sections.map((section) => ({
+				cue: {
+					question: `Q:${section.heading}`,
+					keywords: [section.heading],
+					summary: null,
+				},
+			})),
+			noteBrief: noteBrief(),
+		}));
+		const progress: Array<[number, number]> = [];
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: SIX_SECTION_NOTE,
+			provider: mockBundleProvider(generateBundle, 5),
+			onProgress: (done, total) => progress.push([done, total]),
+		});
+
+		expect(generateBundle).toHaveBeenCalledTimes(1);
+		expect(generateBundle.mock.calls[0][0].sections).toHaveLength(5);
+		expect(result.sections).toHaveLength(6);
+		expect(result.sections.slice(0, 5).every((section) => section.question)).toBe(true);
+		expect(result.sections[5]).toMatchObject({
+			question: null,
+			error: null,
+			unavailable: {
+				reason: "provider-limit",
+				providerId: "hosted-demo",
+				providerLabel: "Hosted demo",
+				maxSections: 5,
+			},
+		});
+		expect(result.noteBrief?.overview).toBe("the atomic note brief");
+		expect(result.noteBriefOutcome).toMatchObject({ status: "success" });
+		expect(progress.at(-1)).toEqual([7, 7]);
+	});
+
+	it("applies a provider section limit without atomic bundle generation", async () => {
+		const provider = mockProvider();
+		provider.maxGeneratedSections = 5;
+
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: SIX_SECTION_NOTE,
+			provider,
+		});
+
+		expect(provider.cueInputs).toHaveLength(5);
+		expect(result.sections.slice(0, 5).every((section) => section.question)).toBe(true);
+		expect(result.sections[5]).toMatchObject({
+			heading: "F",
+			question: null,
+			error: null,
+			unavailable: { reason: "provider-limit", maxSections: 5 },
+		});
+	});
+
+	it("keeps a capped section unavailable when it is regenerated alone", async () => {
+		const generateBundle = vi.fn(async (
+			input: FirstRecallBundleInput
+		): Promise<FirstRecallBundleResult> => ({
+			sections: input.sections.map((section) => ({
+				cue: {
+					question: `Q:${section.heading}`,
+					keywords: [section.heading],
+					summary: null,
+				},
+			})),
+			noteBrief: noteBrief(),
+		}));
+		const sections = parseSections(SIX_SECTION_NOTE);
+
+		const result = await generateNoteBundleForSections(
+			{
+				noteTitle: "T",
+				markdown: SIX_SECTION_NOTE,
+				provider: mockBundleProvider(generateBundle, 5),
+			},
+			[sections[5]]
+		);
+
+		expect(generateBundle.mock.calls[0][0].sections.map((section) => section.heading))
+			.toEqual(["A"]);
+		expect(result.sections[0]).toMatchObject({
+			heading: "F",
+			question: null,
+			error: null,
+			unavailable: { reason: "provider-limit", maxSections: 5 },
+		});
+		expect(result.noteBriefOutcome?.status).toBe("success");
+	});
+
+	it("accepts no partial artifacts when atomic bundle generation fails", async () => {
+		const provider = mockBundleProvider(async () => {
+			throw new Error("hosted inference failed");
+		});
+
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: NOTE,
+			provider,
+		});
+
+		expect(result.sections).toHaveLength(3);
+		expect(result.sections.every((section) => section.question === null)).toBe(true);
+		expect(result.sections.map((section) => section.error)).toEqual([
+			"hosted inference failed",
+			"hosted inference failed",
+			"hosted inference failed",
+		]);
+		expect(result.noteBrief).toBeNull();
+		expect(result.noteBriefOutcome).toEqual({
+			status: "failed",
+			error: "hosted inference failed",
+		});
+	});
+
+	it("discards an atomic response when the request is aborted", async () => {
+		const controller = new AbortController();
+		const progress: Array<[number, number]> = [];
+		const provider = mockBundleProvider(async (input) => {
+			controller.abort();
+			return {
+				sections: input.sections.map(() => ({
+					cue: {
+						question: "discard me",
+						keywords: ["one", "two"],
+					},
+				})),
+				noteBrief: noteBrief(),
+			};
+		});
+
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: NOTE,
+			provider,
+			signal: controller.signal,
+			onProgress: (done, total) => progress.push([done, total]),
+		});
+
+		expect(result).toMatchObject({
+			sections: [],
+			noteBrief: null,
+			noteBriefOutcome: { status: "canceled" },
+			canceled: true,
+		});
+		expect(progress).toEqual([[0, 4]]);
+	});
+
+	it("does not invoke atomic bundle generation without an eligible section", async () => {
+		const generateBundle = vi.fn<
+			(input: FirstRecallBundleInput) => Promise<FirstRecallBundleResult>
+		>();
+		const progress: Array<[number, number]> = [];
+
+		const result = await generateNote({
+			noteTitle: "T",
+			markdown: "plain note text",
+			provider: mockBundleProvider(generateBundle),
+			onProgress: (done, total) => progress.push([done, total]),
+		});
+
+		expect(generateBundle).not.toHaveBeenCalled();
+		expect(result.sections).toEqual([]);
+		expect(result.noteBriefOutcome).toEqual({ status: "skipped" });
+		expect(progress).toEqual([[0, 0]]);
+	});
+
 	it("counts the note brief after section progress", async () => {
 		const provider = mockProvider();
 		const progress: Array<[number, number]> = [];

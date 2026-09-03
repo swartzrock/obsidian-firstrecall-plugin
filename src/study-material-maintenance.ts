@@ -1,14 +1,18 @@
 import {
 	buildNoteCache,
 	reconcileCacheSections,
+	sectionIdsNeedingGenerationForProvider,
+	sectionIdsNeedingProviderLimitReconciliation,
 	type NoteCache,
 } from "./cache";
 import type { CueGenerationOptions } from "./cue-generation";
 import type { FirstRecallCueProviderRuntime } from "./cue-provider";
 import {
+	generateNoteBundleForSections,
 	generateNoteBriefForSections,
 	generateSectionCueBatch,
 	resolveEffectiveSectionConcurrency,
+	type NoteGenerationResult,
 	type SectionResult,
 } from "./generator";
 import { cueEligibleSections, parseSections, type Section } from "./parser";
@@ -72,6 +76,7 @@ export type MaintenanceOutcome =
 
 export interface MaintenanceProviderMetadata {
 	provider: string;
+	maxGeneratedSections?: number;
 	model: string;
 	preset: string;
 	generationMode: "per-section" | "whole-note-context";
@@ -160,18 +165,22 @@ function sourceComponents(
 	revision: string,
 	cache: NoteCache | null,
 	state: NoteMaintenanceState | null,
+	provider?: string,
+	maxGeneratedSections?: number,
 	forcedSectionIds?: readonly string[]
 ): ComponentSet {
 	const currentIds = new Set(eligible.map((section) => section.id));
-	const cachedById = new Map(
-		(cache?.sections ?? []).map((section) => [section.id, section])
-	);
-	const changedIds = eligible
-		.filter((section) => {
-			const cached = cachedById.get(section.id);
-			return !cached || cached.error || cached.contentHash !== section.contentHash;
-		})
-		.map((section) => section.id);
+	const changedIds = cache
+		? unique([
+				...sectionIdsNeedingGenerationForProvider(cache, eligible, provider),
+				...(provider
+					? sectionIdsNeedingProviderLimitReconciliation(cache, eligible, {
+							id: provider,
+							maxGeneratedSections,
+						})
+					: []),
+			])
+		: eligible.map((section) => section.id);
 	const sectionIds = forcedSectionIds
 		? unique(forcedSectionIds.filter((id) => currentIds.has(id)))
 		: changedIds;
@@ -195,6 +204,8 @@ export function planStudyMaterialMaintenance(params: {
 	cache: NoteCache | null;
 	state: NoteMaintenanceState | null;
 	kind: MaintenanceOperationKind;
+	provider?: string;
+	maxGeneratedSections?: number;
 	sectionIds?: readonly string[];
 }): StudyMaterialMaintenancePlan {
 	const sections = parseSections(params.source.markdown);
@@ -225,6 +236,8 @@ export function planStudyMaterialMaintenance(params: {
 		revision,
 		params.cache,
 		params.state,
+		params.provider,
+		params.maxGeneratedSections,
 		forced
 	);
 	if (
@@ -262,11 +275,14 @@ export class StudyMaterialMaintenance {
 		const cache = this.deps.getCache(path);
 		const existing = this.deps.getState(path);
 		if (!cache && !existing && !this.deps.isAutomaticAllowed(path)) return;
+		const providerMetadata = this.deps.providerMetadata();
 		const plan = planStudyMaterialMaintenance({
 			source,
 			cache,
 			state: existing,
 			kind: "automatic",
+			provider: providerMetadata.provider,
+			maxGeneratedSections: providerMetadata.maxGeneratedSections,
 		});
 		if (plan.terminal) return;
 		const base = existing ?? (cache
@@ -430,11 +446,14 @@ export class StudyMaterialMaintenance {
 		request: MaintenanceRequest,
 		source: MaintenanceSource
 	): ComponentSet {
+		const providerMetadata = this.deps.providerMetadata();
 		return planStudyMaterialMaintenance({
 			source,
 			cache: this.deps.getCache(request.path),
 			state: this.deps.getState(request.path),
 			kind: request.kind,
+			provider: providerMetadata.provider,
+			maxGeneratedSections: providerMetadata.maxGeneratedSections,
 			sectionIds: request.sectionIds,
 		}).components;
 	}
@@ -529,11 +548,14 @@ export class StudyMaterialMaintenance {
 
 		const cache = this.deps.getCache(request.path);
 		const existingState = this.deps.getState(request.path);
+		const providerMetadata = this.deps.providerMetadata();
 		const plan = planStudyMaterialMaintenance({
 			source,
 			cache,
 			state: existingState,
 			kind: request.kind,
+			provider: providerMetadata.provider,
+			maxGeneratedSections: providerMetadata.maxGeneratedSections,
 			sectionIds: request.sectionIds,
 		});
 		if (plan.terminal) {
@@ -619,26 +641,90 @@ export class StudyMaterialMaintenance {
 				"Provider is unavailable."
 			);
 		}
+		const providerLimitIds = cache
+			? sectionIdsNeedingProviderLimitReconciliation(
+					cache,
+					plan.sections,
+					provider
+				)
+			: [];
+		const effectiveComponents: ComponentSet = {
+			noteBrief: plan.components.noteBrief,
+			sectionIds: unique([
+				...plan.components.sectionIds,
+				...providerLimitIds,
+			]),
+		};
+		if (effectiveComponents.sectionIds.length !== plan.components.sectionIds.length) {
+			state = reduceMaintenanceState(state, {
+				type: "update-started",
+				revision: plan.revision,
+				components: effectiveComponents,
+			});
+			await this.deps.commit(request.path, cache, state);
+		}
 
 		const eligibleById = new Map(
 			cueEligibleSections(plan.sections).map((section) => [section.id, section])
 		);
-		const targets = plan.components.sectionIds
+		const targets = effectiveComponents.sectionIds
 			.map((id) => eligibleById.get(id))
 			.filter((section): section is Section => Boolean(section));
-		const generated: SectionResult[] = [];
-		const concurrency = resolveEffectiveSectionConcurrency(
-			this.deps.sectionConcurrency(),
-			provider
-		);
-		for (let start = 0; start < targets.length; start += concurrency) {
-			const results = await generateSectionCueBatch({
-				sections: targets.slice(start, start + concurrency),
-				provider,
-				options: this.deps.generationOptions(),
-				noteContext: source.markdown,
-			});
-			generated.push(...results);
+		let generated: SectionResult[] = [];
+		let bundledBrief: NoteGenerationResult["noteBrief"] = null;
+		let bundledBriefError: string | null = null;
+		let canceled = false;
+		if (provider.generateBundle) {
+			const eligible = [...eligibleById.values()];
+			const hasServerOwnedProviderLimit =
+				provider.maxGeneratedSections === undefined &&
+				Boolean(cache?.sections.some(
+					(section) => section.unavailable?.providerId === provider.id
+				));
+			const bundleTargets = providerLimitIds.length || hasServerOwnedProviderLimit
+				? eligible
+				: targets.length
+					? targets
+					: eligible.slice(0, 1);
+			const bundleResult = await generateNoteBundleForSections(
+				{
+					noteTitle: source.noteTitle,
+					markdown: source.markdown,
+					provider,
+					options: this.deps.generationOptions(),
+				},
+				bundleTargets
+			);
+			const requestedIds = new Set(effectiveComponents.sectionIds);
+			generated = bundleResult.sections.filter((section) =>
+				requestedIds.has(section.id)
+			);
+			canceled = bundleResult.canceled;
+			if (
+				effectiveComponents.noteBrief &&
+				bundleResult.noteBriefOutcome?.status === "success"
+			) {
+				bundledBrief = bundleResult.noteBrief;
+			} else if (
+				effectiveComponents.noteBrief &&
+				bundleResult.noteBriefOutcome?.status === "failed"
+			) {
+				bundledBriefError = bundleResult.noteBriefOutcome.error;
+			}
+		} else {
+			const concurrency = resolveEffectiveSectionConcurrency(
+				this.deps.sectionConcurrency(),
+				provider
+			);
+			for (let start = 0; start < targets.length; start += concurrency) {
+				const results = await generateSectionCueBatch({
+					sections: targets.slice(start, start + concurrency),
+					provider,
+					options: this.deps.generationOptions(),
+					noteContext: source.markdown,
+				});
+				generated.push(...results);
+			}
 		}
 
 		const successful = generated.filter((result) => !result.error);
@@ -665,10 +751,12 @@ export class StudyMaterialMaintenance {
 			);
 		}
 
-		let briefError: string | null = null;
+		let briefError = bundledBriefError;
 		let briefSucceeded = false;
-		let canceled = false;
-		if (plan.components.noteBrief) {
+		if (bundledBrief && nextCache) {
+			nextCache = { ...nextCache, noteBrief: bundledBrief };
+			briefSucceeded = true;
+		} else if (effectiveComponents.noteBrief && !provider.generateBundle) {
 			const briefOutcome = await generateNoteBriefForSections({
 				noteTitle: source.noteTitle,
 				markdown: source.markdown,
@@ -695,19 +783,19 @@ export class StudyMaterialMaintenance {
 		};
 		const unresolvedComponents: ComponentSet = {
 			noteBrief:
-				plan.components.noteBrief &&
+				effectiveComponents.noteBrief &&
 				!successfulComponents.noteBrief &&
 				!failedComponents.noteBrief,
-			sectionIds: plan.components.sectionIds.filter(
+			sectionIds: effectiveComponents.sectionIds.filter(
 				(id) =>
 					!successfulComponents.sectionIds.includes(id) &&
 					!failedComponents.sectionIds.includes(id)
 			),
 		};
-		const errors = [
+		const errors = unique([
 			...componentErrorMessages(failed),
 			...(briefError ? [briefError] : []),
-		];
+		]);
 
 		if (!await this.canCommitSource(item, plan.revision)) {
 			const latestSource = await this.deps.readSource(request.path);
@@ -717,7 +805,7 @@ export class StudyMaterialMaintenance {
 			};
 		}
 		if (request.kind === "automatic" && !this.deps.isAutomaticAllowed(request.path)) {
-			await this.cancelStartedUpdate(item, plan.revision, plan.components);
+			await this.cancelStartedUpdate(item, plan.revision, effectiveComponents);
 			return {
 				public: {
 					status: "skipped",
@@ -761,7 +849,7 @@ export class StudyMaterialMaintenance {
 				status: errors.length ? "failed" : "completed",
 				path: request.path,
 				revision: plan.revision,
-				components: plan.components,
+				components: effectiveComponents,
 				errors,
 			},
 		};

@@ -39,10 +39,13 @@ import {
 } from "@swartzrock/byok-runtime";
 import {
 	byokProviderDefinition,
-	byokProviderDefinitions,
+	firstRecallProviderDefinition,
+	firstRecallProviderDefinitions,
+	isFirstRecallProviderId,
 	type FirstRecallCredentialKind,
 	type FirstRecallProviderDefinition,
 } from "./byok-provider-metadata";
+import type { FirstRecallProviderId } from "./cue-provider";
 import {
 	parseProviderIconGradients,
 	parseProviderIconViewBox,
@@ -61,6 +64,11 @@ import {
 	type ModelOption,
 } from "./byok-model-options";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
+import {
+	isRequestsPerTenSeconds,
+	REQUEST_RATE_OPTIONS,
+	type RequestsPerTenSeconds,
+} from "./provider-request-rate";
 import {
 	applyFirstRecallListedModels,
 	applyFirstRecallModelRefreshFailure,
@@ -170,7 +178,7 @@ interface StudyAreaUiState {
 
 export interface FirstRecallSettings {
 	byok: Omit<ByokStoredSettings, "selectedProvider"> & {
-		selectedProvider: ByokProviderId | null;
+		selectedProvider: FirstRecallProviderId | null;
 	};
 	questionType: QuestionType;
 	studyHideMode: StudyHideMode;
@@ -181,6 +189,7 @@ export interface FirstRecallSettings {
 	studyAreas: StudyArea[];
 	disabledStudyAreas: DisabledStudyArea[];
 	sectionConcurrency: number;
+	requestsPerTenSeconds: RequestsPerTenSeconds;
 	showNoteBrief: boolean;
 	showSummary: boolean;
 	showQuestion: boolean;
@@ -240,6 +249,7 @@ export const DEFAULT_SETTINGS: FirstRecallSettings = {
 	studyAreas: DEFAULT_STUDY_AREAS,
 	disabledStudyAreas: [],
 	sectionConcurrency: 5,
+	requestsPerTenSeconds: 5,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
 	showSummary: true,
 	showQuestion: true,
@@ -422,6 +432,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private aiModelSummary(): string {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return "Select an AI provider to generate study material";
+		if (provider === "hosted-demo") {
+			return "FirstRecall trial · Included trial model · Ready";
+		}
 		const setup = deriveFirstRecallProviderSetupStatus(this.plugin.settings);
 		const providerLabel = this.providerDisplayName(provider);
 		const modelLabel = this.selectedModelLabel() || "No model selected";
@@ -456,14 +469,15 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		return `${count} folder${count === 1 ? "" : "s"} · ${enabled} update automatically`;
 	}
 
-	private providerDisplayName(provider: ByokProviderId): string {
-		return byokProviderDefinition(provider).shortLabel;
+	private providerDisplayName(provider: FirstRecallProviderId): string {
+		return firstRecallProviderDefinition(provider).shortLabel;
 	}
 
 	private selectedModelLabel(): string {
 		const settings = this.plugin.settings;
 		const provider = firstRecallSelectedProvider(settings);
 		if (!provider) return "";
+		if (provider === "hosted-demo") return "Included trial model";
 		const modelId = firstRecallProviderModel(settings, provider).trim();
 		if (provider === "anthropic") {
 			if (!modelId) return "";
@@ -530,9 +544,10 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			performanceFlowEl,
 			"Performance",
-			"Tune how quickly FirstRecall generates section cards."
+			"Tune how quickly FirstRecall generates study material."
 		);
 		this.renderParallelRequestsSetting(performanceFlowEl);
+		this.renderRequestRateSetting(performanceFlowEl);
 	}
 
 	private renderParallelRequestsSetting(containerEl: HTMLElement): void {
@@ -554,12 +569,38 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		concurrencySetting.setDesc(concurrencyDesc());
 	}
 
+	private renderRequestRateSetting(containerEl: HTMLElement): void {
+		const labels: Record<RequestsPerTenSeconds, string> = {
+			1: "6/minute",
+			5: "30/minute (recommended)",
+			10: "60/minute",
+			20: "120/minute",
+		};
+		new Setting(containerEl)
+			.setName("API Rate limit")
+			.setDesc("Maximum API request rate.")
+			.addDropdown((dropdown) => {
+				for (const option of REQUEST_RATE_OPTIONS) {
+					dropdown.addOption(String(option), labels[option]);
+				}
+				dropdown
+					.setValue(String(this.plugin.settings.requestsPerTenSeconds))
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						if (!isRequestsPerTenSeconds(parsed)) return;
+						this.plugin.settings.requestsPerTenSeconds = parsed;
+						await this.plugin.saveSettings();
+					});
+			});
+	}
+
 	private renderProviderSetupPanel(containerEl: HTMLElement): void {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return;
-		const definition = byokProviderDefinition(provider);
+		const definition = firstRecallProviderDefinition(provider);
 		const panelEl = containerEl.createDiv({
 			cls: "firstrecall-active-provider-panel",
+			attr: { id: "firstrecall-active-provider-panel" },
 		});
 		const headerEl = panelEl.createDiv({
 			cls: "firstrecall-active-provider-header",
@@ -572,6 +613,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		const fieldsEl = panelEl.createDiv({
 			cls: "firstrecall-active-provider-fields",
 		});
+		if (provider === "hosted-demo") {
+			fieldsEl.createDiv({
+				cls: "firstrecall-settings-flow-desc",
+				text: "Free trial • Usage and capacity limits apply.",
+			});
+			return;
+		}
 		this.renderProviderCredentialSettings(fieldsEl);
 		this.renderProviderModelSettings(fieldsEl);
 		this.renderProviderSetupStatus(fieldsEl);
@@ -586,13 +634,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		);
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!panelEl || !provider) return;
-		panelEl.hidden = byokProviderDefinition(provider).credentialKind !== path;
+		panelEl.hidden = firstRecallProviderDefinition(provider).credentialKind !== path;
 	}
 
 	private renderProviderPicker(containerEl: HTMLElement): void {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
 		if (this.providerPickerPath === null && selectedProvider) {
-			this.providerPickerPath = byokProviderDefinition(selectedProvider).credentialKind;
+			this.providerPickerPath = firstRecallProviderDefinition(selectedProvider).credentialKind;
 		}
 
 		const resultsId = "firstrecall-provider-results";
@@ -606,22 +654,28 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			description: string;
 		}> = [
 			{
+				path: "trial",
+				title: "FirstRecall hosted AI trial",
+				description:
+					"Generate study materials with FirstRecall's free, secure hosted AI. Usage limits apply."
+			},
+			{
 				path: "api-key",
-				title: "LLM API Provider",
+				title: "API key",
 				description:
 					"Use an API key from Anthropic, OpenAI, Gemini, or another provider.",
 			},
 			{
 				path: "command",
-				title: "Installed AI tool",
+				title: "Terminal apps",
 				description:
-					"Use Codex or Claude Code if one is already installed and signed in on this device.",
+					"Use Codex or Claude Code's terminal apps if they are already installed and configured with your account.",
 			},
 			{
 				path: "url",
-				title: "Self-Hosted LLM Provider",
+				title: "Local server",
 				description:
-					"Connect to Ollama or LM Studio running on a model server you control.",
+					"Use your own LLMs with Ollama or LM Studio.",
 			},
 		];
 		containerEl.createDiv({
@@ -649,7 +703,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					"aria-label": definition.title,
 					"aria-describedby": descriptionId,
 					"aria-expanded": String(this.providerPickerPath === definition.path),
-					"aria-controls": resultsId,
+					"aria-controls": definition.path === "trial"
+						? "firstrecall-active-provider-panel"
+						: resultsId,
 				},
 			}) as HTMLButtonElement;
 			optionEl.createDiv({
@@ -668,7 +724,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			const buttonEl = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
 				".firstrecall-provider-button"
 			);
-			const definition = byokProviderDefinitions().find(
+			const definition = firstRecallProviderDefinitions().find(
 				(candidate) => candidate.id === buttonEl?.dataset.provider
 			);
 			if (definition) void this.selectProvider(definition.id);
@@ -688,6 +744,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				resultsEl.empty();
 				this.renderProviderOptions(resultsEl, control.path);
 				this.syncProviderSetupPanelVisibility(containerEl, control.path);
+				if (control.path === "trial") {
+					void this.selectProvider("hosted-demo");
+				}
 			});
 		}
 	}
@@ -696,6 +755,12 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		containerEl: HTMLElement,
 		path: FirstRecallCredentialKind
 	): void {
+		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
+		const definitions = firstRecallProviderDefinitions().filter(
+			(definition) => definition.credentialKind === path
+		);
+		if (path === "trial") return;
+
 		containerEl.createDiv({
 			cls: "firstrecall-provider-step-label",
 			text: "Available providers",
@@ -708,10 +773,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				"aria-labelledby": "firstrecall-provider-options-label",
 			},
 		});
-		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		const definitions = byokProviderDefinitions().filter(
-			(definition) => definition.credentialKind === path
-		);
 		for (const definition of definitions) {
 			const isSelected = definition.id === selectedProvider;
 			const buttonEl = pickerEl.createEl("button", {
@@ -746,6 +807,14 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			return;
 		}
 		const iconSvg = definition.icon.svg;
+		if (definition.icon.source === "firstrecall") {
+			const imageEl = activeDocument.createElement("img");
+			imageEl.alt = "";
+			imageEl.draggable = false;
+			imageEl.src = `data:image/svg+xml,${encodeURIComponent(iconSvg)}`;
+			iconEl.appendChild(imageEl);
+			return;
+		}
 		const svgEl = activeDocument.createElementNS(SVG_NS, "svg");
 		svgEl.setAttribute("viewBox", parseProviderIconViewBox(iconSvg));
 		svgEl.setAttribute("fill", "currentColor");
@@ -796,7 +865,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	}
 
 	private async selectProvider(provider: string): Promise<void> {
-		if (!isByokProviderId(provider)) return;
+		if (!isFirstRecallProviderId(provider)) return;
 		if (provider === firstRecallSelectedProvider(this.plugin.settings)) return;
 		setFirstRecallSelectedProvider(this.plugin.settings, provider);
 		await this.plugin.saveSettings();
@@ -805,7 +874,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private renderProviderSetupStatus(containerEl: HTMLElement): void {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!provider) return;
+		if (!provider || !isByokProviderId(provider)) return;
 		const status = deriveFirstRecallProviderSetupStatus(this.plugin.settings);
 		const isCli = isFirstRecallLocalCliProvider(provider);
 		const cliModelLabel = this.selectedModelLabel() === "CLI default"
@@ -1924,7 +1993,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private renderProviderCredentialSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		const provider = firstRecallSelectedProvider(s);
-		if (!provider) return;
+		if (!provider || !isByokProviderId(provider)) return;
 		const definition = byokProviderDefinition(provider);
 		if (provider === "anthropic") {
 			this.renderAnthropicCredentialSettings(containerEl);
@@ -1969,7 +2038,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private renderProviderModelSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		const provider = firstRecallSelectedProvider(s);
-		if (!provider) return;
+		if (!provider || !isByokProviderId(provider)) return;
 		if (provider === "anthropic") {
 			this.renderAnthropicModelSettings(containerEl);
 			return;
@@ -2283,7 +2352,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	/** Verify the selected provider is reachable and reports a readable result. */
 	private async testConnection(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		const definition = byokProviderDefinition(selectedProvider);
 		if (definition.credentialKind === "command") {
 			await this.testLocalCliProvider();
@@ -2298,7 +2367,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private async testLocalCliProvider(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		const command = firstRecallProviderCredential(
 			this.plugin.settings,
 			selectedProvider
@@ -2320,7 +2389,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private async testUrlProvider(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		const definition = byokProviderDefinition(selectedProvider);
 		const url = firstRecallProviderCredential(this.plugin.settings, selectedProvider);
 		if (!url.trim()) {
@@ -2345,7 +2414,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private async testCloudProvider(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		if (!this.plugin.isProviderCredentialSaved(selectedProvider)) {
 			const providerName = firstRecallProviderLabel(selectedProvider);
 			new Notice(`FirstRecall: enter your ${providerName} API key first.`);

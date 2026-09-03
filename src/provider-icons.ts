@@ -14,19 +14,27 @@ import ollamaSvg from "@lobehub/icons-static-svg/icons/ollama.svg?raw";
 import lmStudioSvg from "@lobehub/icons-static-svg/icons/lmstudio.svg?raw";
 import codexCliSvg from "@lobehub/icons-static-svg/icons/codex-color.svg?raw";
 import claudeCliSvg from "@lobehub/icons-static-svg/icons/claudecode-color.svg?raw";
+import firstRecallHostedSvg from "./assets/logo-light.svg?raw";
 
-// Icons come from the @lobehub/icons-static-svg package (https://github.com/lobehub/lobe-icons)
-// as full raw <svg> markup. `svg` below is that markup as-is; consumers parse the viewBox,
-// <path> elements, and any gradient <defs> out of it (see parseProviderIconViewBox /
-// parseProviderIconGradients) rather than us hand-copying path data into this file.
+// Third-party icons come from the @lobehub/icons-static-svg package
+// (https://github.com/lobehub/lobe-icons) as full raw <svg> markup. Consumers parse the
+// viewBox, <path> elements, and any gradient <defs> out of it (see
+// parseProviderIconViewBox / parseProviderIconGradients) rather than us hand-copying path
+// data into this file.
 export interface FirstRecallProviderIconDefinition {
-	source: "lobehub";
+	source: "firstrecall" | "lobehub";
 	sourceUrl: string;
 	svg: string;
 }
 
 const LOBEHUB_ICONS_LIBRARY =
 	"https://github.com/lobehub/lobe-icons/blob/master/packages/static-svg/icons";
+
+export const HOSTED_DEMO_PROVIDER_ICON = {
+	source: "firstrecall",
+	sourceUrl: "src/assets/logo-light.svg",
+	svg: firstRecallHostedSvg,
+} as const satisfies FirstRecallProviderIconDefinition;
 
 function lobehubIcon(fileName: string, svg: string): FirstRecallProviderIconDefinition {
 	return {

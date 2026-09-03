@@ -12,6 +12,7 @@ import {
 	type RequestUrlParam,
 } from "obsidian";
 import type { EditorView } from "@codemirror/view";
+import firstRecallLogoSvg from "./assets/logo-light.svg?raw";
 import {
 	FirstRecallSettings,
 	FirstRecallSettingTab,
@@ -22,6 +23,7 @@ import { EditorCueWidthPreviewScheduler } from "./editor-cue-width-preview";
 import {
 	type ByokProviderId,
 	type ByokTransport,
+	isByokProviderId,
 } from "@swartzrock/byok-runtime";
 import { byokProviderDefinition } from "./byok-provider-metadata";
 import {
@@ -34,9 +36,10 @@ import {
 	secureFirstRecallCloudCredentials,
 	listFirstRecallProviderModelsFromStore,
 	makeFirstRecallByokProviderFromStore,
-	type FirstRecallByokRuntime,
+	makeFirstRecallHostedDemoProvider,
 	type FirstRecallFetchedModelProvider,
 } from "./byok-firstrecall-adapter";
+import type { FirstRecallCueProviderRuntime } from "./cue-provider";
 import {
 	createSecureCredentialStore,
 	type FirstRecallCloudCredentialProvider,
@@ -123,6 +126,10 @@ import {
 import { formatFirstRecallNotice } from "./notice";
 import { parsePersistedFirstRecallSettings } from "./persisted-settings";
 import {
+	effectiveProviderRequestRate,
+	RollingWindowRequestLimiter,
+} from "./provider-request-rate";
+import {
 	EditorHookLayoutController,
 	leftDockIsOpen,
 } from "./editor-hook-layout";
@@ -146,10 +153,18 @@ interface PluginData {
 	maintenanceStates: MaintenanceStateMap;
 	hidden: Record<string, true>;
 	cueSectionCollapse: CueSectionCollapseMap;
+	installationId?: unknown;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isUuid(value: unknown): value is string {
+	return typeof value === "string" &&
+		/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+			value
+		);
 }
 
 function abortReason(signal: AbortSignal): Error {
@@ -224,6 +239,11 @@ export default class FirstRecallPlugin extends Plugin {
 	private cueSectionCollapse!: CueSectionCollapseStore;
 	private credentialStore!: SecureCredentialStore;
 	private credentialStorageWarnings: string[] = [];
+	private readonly hostedDemoSessionId = crypto.randomUUID();
+	private readonly providerRequestLimiters = new Map<
+		FirstRecallCueProviderRuntime["id"],
+		RollingWindowRequestLimiter
+	>();
 	private readonly editorCueWidthController: EditorCueWidthController = {
 		getCommittedWidthPx: () => this.settings.editorCueCustomWidthPx,
 		previewWidthPx: (widthPx) => this.previewEditorCueWidth(widthPx),
@@ -263,10 +283,13 @@ export default class FirstRecallPlugin extends Plugin {
 			readSource: async (path) => {
 				const file = this.app.vault.getAbstractFileByPath(path);
 				if (!(file instanceof TFile) || file.extension !== "md") return null;
+				const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 				return {
 					path: file.path,
 					noteTitle: file.basename,
-					markdown: await this.app.vault.cachedRead(file),
+					markdown: activeView?.file?.path === file.path
+						? activeView.editor.getValue()
+						: await this.app.vault.cachedRead(file),
 					modifiedAt: file.stat.mtime,
 				};
 			},
@@ -279,12 +302,15 @@ export default class FirstRecallPlugin extends Plugin {
 			renamePath: (from, to) => this.cacheStore.rename(from, to),
 			deletePath: (path) => this.cacheStore.delete(path),
 			makeProvider: (automatic) => this.makeProviderForRun({ automatic }),
-			providerMetadata: () => ({
-				provider: firstRecallSelectedProvider(this.settings) ?? "",
-				model: this.selectedModelName(),
-				preset: this.settings.questionType,
-				generationMode: "whole-note-context",
-			}),
+			providerMetadata: () => {
+				const provider = firstRecallSelectedProvider(this.settings);
+				return {
+					provider: provider ?? "",
+					model: this.selectedModelName(),
+					preset: this.settings.questionType,
+					generationMode: "whole-note-context",
+				};
+			},
 			generationOptions: () => this.generationOptions(),
 			sectionConcurrency: () => this.settings.sectionConcurrency,
 			timerApi: window,
@@ -442,6 +468,9 @@ export default class FirstRecallPlugin extends Plugin {
 			maintenanceStates,
 			hidden,
 			cueSectionCollapse,
+			...(Object.prototype.hasOwnProperty.call(loadedRecord, "installationId")
+				? { installationId: loadedRecord.installationId }
+				: {}),
 		};
 		this.settings = this.data.settings;
 		if (
@@ -879,6 +908,17 @@ export default class FirstRecallPlugin extends Plugin {
 		);
 		action.classList.add("firstrecall-study-header-action");
 		action.classList.add("firstrecall-study-header-menu-action");
+		action.querySelector("svg")?.remove();
+		const logo = action.ownerDocument.createElement("img");
+		logo.className = "firstrecall-study-header-logo";
+		logo.alt = "";
+		logo.draggable = false;
+		const headerLogoSvg = firstRecallLogoSvg.replace(
+			/<path /g,
+			'<path stroke="#4b91ba" stroke-width="8" stroke-linejoin="round" '
+		);
+		logo.src = `data:image/svg+xml,${encodeURIComponent(headerLogoSvg)}`;
+		action.prepend(logo);
 		const label = action.ownerDocument.createElement("span");
 		label.className = "firstrecall-study-header-label";
 		label.textContent = "FirstRecall";
@@ -980,11 +1020,8 @@ export default class FirstRecallPlugin extends Plugin {
 			!file || !this.hasUsableCueCache(file.path);
 		if (!menuAction) return;
 		menuAction.classList.toggle("firstrecall-has-no-material", needsMaterial);
-		menuAction.setAttribute(
-			"aria-label",
-			needsMaterial ? STUDY_MENU_HINT : "FirstRecall"
-		);
-		menuAction.title = needsMaterial ? STUDY_MENU_HINT : "FirstRecall";
+		menuAction.setAttribute("aria-label", STUDY_MENU_HINT);
+		menuAction.removeAttribute("title");
 		menuAction.setAttribute("aria-pressed", String(active));
 		menuAction.classList.toggle("is-active", active);
 		menuAction.removeAttribute("aria-disabled");
@@ -1152,6 +1189,7 @@ export default class FirstRecallPlugin extends Plugin {
 	private isConfigured(): boolean {
 		const provider = firstRecallSelectedProvider(this.settings);
 		if (!provider) return false;
+		if (provider === "hosted-demo") return true;
 		const definition = byokProviderDefinition(provider);
 		const hasCredential =
 			definition.credentialKind === "api-key"
@@ -1178,7 +1216,10 @@ export default class FirstRecallPlugin extends Plugin {
 	}
 
 	isProviderCredentialSaved(provider?: ByokProviderId): boolean {
-		provider ??= firstRecallSelectedProvider(this.settings) ?? undefined;
+		const selectedProvider = firstRecallSelectedProvider(this.settings);
+		provider ??= selectedProvider && isByokProviderId(selectedProvider)
+			? selectedProvider
+			: undefined;
 		if (!provider) return false;
 		return firstRecallProviderCredentialSaved(this.settings, provider);
 	}
@@ -1775,10 +1816,63 @@ export default class FirstRecallPlugin extends Plugin {
 	}
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
-	async makeProvider(): Promise<FirstRecallByokRuntime> {
-		return makeFirstRecallByokProviderFromStore(this.settings, {
-			transport: this.makeTransport(),
-		}, this.credentialStore);
+	async makeProvider(): Promise<FirstRecallCueProviderRuntime> {
+		if (firstRecallSelectedProvider(this.settings) === "hosted-demo") {
+			const installationId = await this.hostedDemoInstallationId();
+			const limiter = this.providerRequestLimiter("hosted-demo");
+			const transport = this.makeTransport();
+			return makeFirstRecallHostedDemoProvider({
+				transport: async (request) => {
+					await limiter.acquire(request.signal);
+					return transport(request);
+				},
+				clientVersion: this.manifest.version,
+				installationId,
+				sessionId: this.hostedDemoSessionId,
+				createOperationId: () => crypto.randomUUID(),
+			});
+		}
+		const providerId = firstRecallSelectedProvider(this.settings);
+		return makeFirstRecallByokProviderFromStore(
+			this.settings,
+			{
+				transport: this.makeTransport(),
+				requestGate: providerId
+					? this.providerRequestLimiter(providerId)
+					: undefined,
+			},
+			this.credentialStore
+		);
+	}
+
+	private providerRequestLimiter(
+		providerId: FirstRecallCueProviderRuntime["id"]
+	): RollingWindowRequestLimiter {
+		const existing = this.providerRequestLimiters.get(providerId);
+		if (existing) return existing;
+		const limiter = new RollingWindowRequestLimiter(() =>
+			effectiveProviderRequestRate(
+				providerId,
+				this.settings.requestsPerTenSeconds
+			)
+		);
+		this.providerRequestLimiters.set(providerId, limiter);
+		return limiter;
+	}
+
+	private async hostedDemoInstallationId(): Promise<string> {
+		if (isUuid(this.data.installationId)) {
+			const installationId = this.data.installationId.toLowerCase();
+			if (installationId !== this.data.installationId) {
+				this.data.installationId = installationId;
+				await this.persistPluginData();
+			}
+			return installationId;
+		}
+		const installationId = crypto.randomUUID();
+		this.data.installationId = installationId;
+		await this.persistPluginData();
+		return installationId;
 	}
 
 	async listProviderModels(
@@ -1791,7 +1885,7 @@ export default class FirstRecallPlugin extends Plugin {
 
 	private async makeProviderForRun(
 		opts: { automatic?: boolean } = {}
-	): Promise<FirstRecallByokRuntime | null> {
+	): Promise<FirstRecallCueProviderRuntime | null> {
 		try {
 			return await this.makeProvider();
 		} catch (error) {
@@ -1816,6 +1910,7 @@ export default class FirstRecallPlugin extends Plugin {
 	private selectedModelName(): string {
 		const provider = firstRecallSelectedProvider(this.settings);
 		if (!provider) return "";
+		if (provider === "hosted-demo") return "Included trial model";
 		const model = firstRecallProviderModel(this.settings, provider).trim();
 		return byokProviderDefinition(provider).modelBehavior === "optional"
 			? model || "CLI default"
@@ -2162,6 +2257,7 @@ export default class FirstRecallPlugin extends Plugin {
 					path: file.path,
 					cache,
 					currentSections,
+					provider: firstRecallSelectedProvider(this.settings) ?? undefined,
 					noteBriefNeedsRefresh: classification.noteBrief !== "current",
 					failedComponents: state?.failure?.components,
 				};
