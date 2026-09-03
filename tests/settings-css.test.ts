@@ -575,6 +575,13 @@ describe("settings CSS", () => {
 		expect(ruleFor(".firstrecall-study-header-action")).toContain(
 			"display: inline-flex"
 		);
+		const headerLogoRule = ruleFor(".firstrecall-study-header-logo");
+		expect(headerLogoRule).toContain("width: 22px");
+		expect(headerLogoRule).toContain("height: 22px");
+		expect(headerLogoRule).toContain("object-fit: contain");
+		expect(
+			ruleFor(".theme-light .firstrecall-study-header-logo")
+		).toContain("filter: saturate(1.6) brightness(0.68) contrast(1.15)");
 		expect(ruleFor(".firstrecall-study-header-label")).toContain("display: inline");
 		expect(styles).toContain(
 			'.firstrecall-study-header-action[aria-disabled="true"]'

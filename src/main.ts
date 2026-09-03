@@ -12,6 +12,7 @@ import {
 	type RequestUrlParam,
 } from "obsidian";
 import type { EditorView } from "@codemirror/view";
+import firstRecallLogoSvg from "../logo-light.svg?raw";
 import {
 	FirstRecallSettings,
 	FirstRecallSettingTab,
@@ -907,6 +908,17 @@ export default class FirstRecallPlugin extends Plugin {
 		);
 		action.classList.add("firstrecall-study-header-action");
 		action.classList.add("firstrecall-study-header-menu-action");
+		action.querySelector("svg")?.remove();
+		const logo = action.ownerDocument.createElement("img");
+		logo.className = "firstrecall-study-header-logo";
+		logo.alt = "";
+		logo.draggable = false;
+		const headerLogoSvg = firstRecallLogoSvg.replace(
+			/<path /g,
+			'<path stroke="#4b91ba" stroke-width="8" stroke-linejoin="round" '
+		);
+		logo.src = `data:image/svg+xml,${encodeURIComponent(headerLogoSvg)}`;
+		action.prepend(logo);
 		const label = action.ownerDocument.createElement("span");
 		label.className = "firstrecall-study-header-label";
 		label.textContent = "FirstRecall";

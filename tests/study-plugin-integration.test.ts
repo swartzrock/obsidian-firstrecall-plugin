@@ -687,6 +687,14 @@ describe("Study plugin orchestration", () => {
 		expect(headerAction.title).toBe("FirstRecall");
 		expect(headerAction.getAttribute("aria-disabled")).toBeNull();
 		expect(harness.ribbons).toHaveLength(0);
+		const headerLogo = headerAction.querySelector<HTMLImageElement>(
+			".firstrecall-study-header-logo"
+		);
+		expect(headerLogo?.alt).toBe("");
+		expect(headerLogo?.getAttribute("src")).toMatch(/^data:image\/svg\+xml,/);
+		expect(decodeURIComponent(headerLogo?.getAttribute("src") ?? "")).toContain(
+			'stroke="#4b91ba" stroke-width="8" stroke-linejoin="round"'
+		);
 		expect(
 			document.querySelector<HTMLElement>(".firstrecall-study-header-menu-action")
 				?.textContent
