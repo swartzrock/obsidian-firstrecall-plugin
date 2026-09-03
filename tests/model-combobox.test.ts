@@ -4,7 +4,6 @@ import {
 	buildModelComboboxOptions,
 	buildModelComboboxSuggestions,
 	filterModelOptions,
-	modelOptionSearchText,
 	renderModelCombobox,
 } from "../src/model-combobox";
 import { normalizeStringId, type ModelOption } from "../src/byok-model-options";
@@ -197,16 +196,6 @@ describe("buildModelComboboxSuggestions", () => {
 		expect(suggestions.map((option) => option.id)).toEqual([
 			"custom/private-model",
 		]);
-	});
-});
-
-describe("modelOptionSearchText", () => {
-	it("includes model ID and label", () => {
-		expect(
-			modelOptionSearchText(
-				opt("openai/gpt-4o", { label: "OpenAI: GPT-4o" })
-			)
-		).toBe("openai/gpt-4o openai: gpt-4o");
 	});
 });
 

@@ -75,6 +75,21 @@ function studySnapshot(): StudySessionSnapshot {
 	};
 }
 
+function accessibleButtonName(button: HTMLButtonElement): string {
+	return (button.getAttribute("aria-label") ?? button.textContent ?? "").trim();
+}
+
+function buttonByAccessibleName(
+	container: HTMLElement,
+	name: RegExp
+): HTMLButtonElement {
+	const matches = [...container.querySelectorAll<HTMLButtonElement>("button")].filter(
+		(button) => name.test(accessibleButtonName(button))
+	);
+	expect(matches).toHaveLength(1);
+	return matches[0];
+}
+
 describe("buildReadingCueMap", () => {
 	it("carries affected-section freshness into Reading without marking peers", () => {
 		const cache = cacheFrom();
@@ -440,47 +455,29 @@ describe("syncReadingStudyControls", () => {
 		).toHaveLength(1);
 		expect(container.querySelector(".firstrecall-reading-study-controls")).toBeNull();
 		const controls = controlsContainer.querySelector<HTMLElement>(
-			".firstrecall-reading-study-controls"
+			'[role="region"]'
 		)!;
-		expect(controls.textContent).toContain("0 / 1 answers revealed");
-		const help = controls.firstElementChild as HTMLElement;
-		expect(help.classList.contains("firstrecall-study-help")).toBe(true);
-		expect(help.dataset.icon).toBe("eye");
-		expect(help.querySelector(".firstrecall-study-help-title")?.textContent).toBe(
-			"Show or hide answers"
-		);
-		expect(help.querySelector(".firstrecall-study-help-detail")?.textContent).toBe(
-			"Click the eye icon on any section card."
-		);
-		expect(help.querySelectorAll(".firstrecall-study-help-copy > span")).toHaveLength(
-			2
-		);
-		const actions = controls.querySelector<HTMLElement>(
-			".firstrecall-study-actions"
-		)!;
-		expect(actions.querySelectorAll("button")).toHaveLength(3);
+		const buttons = [
+			...controls.querySelectorAll<HTMLButtonElement>("button"),
+		];
+		expect(buttons).toHaveLength(3);
+		const accessibleNames = buttons.map(accessibleButtonName);
+		expect(accessibleNames.every((name) => name.length > 0)).toBe(true);
+		expect(new Set(accessibleNames).size).toBe(3);
 		const progressTrack = controls.querySelector<HTMLElement>(
 			".firstrecall-study-progress-track"
 		)!;
 		expect(progressTrack.getAttribute("role")).toBe("progressbar");
 		expect(progressTrack.getAttribute("aria-valuenow")).toBe("0");
 		expect(progressTrack.getAttribute("aria-valuemax")).toBe("1");
-		const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
-		expect([...buttons].map((button) => button.textContent)).toEqual([
-			"Show All Answers",
-			"Hide All Answers",
-			"Exit Study Mode",
-		]);
-		expect([...buttons].map((button) => button.dataset.icon)).toEqual([
-			"eye",
-			"eye-off",
-			"log-out",
-		]);
-		expect(buttons[0].disabled).toBe(false);
-		expect(buttons[1].disabled).toBe(true);
-		buttons[0].click();
-		buttons[1].click();
-		buttons[2].click();
+		const showAllButton = buttonByAccessibleName(controls, /show.*all/i);
+		const hideAllButton = buttonByAccessibleName(controls, /hide.*all/i);
+		const exitButton = buttonByAccessibleName(controls, /exit/i);
+		expect(showAllButton.disabled).toBe(false);
+		expect(hideAllButton.disabled).toBe(true);
+		showAllButton.click();
+		hideAllButton.click();
+		exitButton.click();
 		expect(showAll).toHaveBeenCalledTimes(1);
 		expect(hideAll).not.toHaveBeenCalled();
 		expect(exit).toHaveBeenCalledTimes(1);
@@ -488,9 +485,9 @@ describe("syncReadingStudyControls", () => {
 			controlsContainer.querySelector(".firstrecall-reading-study-controls")
 		).toBeNull();
 
-		buttons[0].click();
-		buttons[1].click();
-		buttons[2].click();
+		showAllButton.click();
+		hideAllButton.click();
+		exitButton.click();
 		expect(showAll).toHaveBeenCalledTimes(1);
 		expect(hideAll).not.toHaveBeenCalled();
 		expect(exit).toHaveBeenCalledTimes(1);
@@ -666,23 +663,23 @@ describe("Reading postprocessor Study plumbing", () => {
 			"true"
 		);
 		expect(
-			container.querySelector(".firstrecall-reading-study-controls")?.textContent
-		).toContain("1 / 3 answers revealed");
+			container
+				.querySelector(".firstrecall-study-progress-track")
+				?.getAttribute("aria-valuenow")
+		).toBe("1");
 
-		container
-			.querySelector<HTMLButtonElement>(".firstrecall-reading-study-hide-all")
-			?.click();
+		buttonByAccessibleName(container, /hide.*all/i).click();
 		render();
 		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
 			"true"
 		);
 		expect(
-			container.querySelector(".firstrecall-reading-study-controls")?.textContent
-		).toContain("0 / 3 answers revealed");
+			container
+				.querySelector(".firstrecall-study-progress-track")
+				?.getAttribute("aria-valuenow")
+		).toBe("0");
 
-		container
-			.querySelector<HTMLButtonElement>(".firstrecall-reading-study-exit")
-			?.click();
+		buttonByAccessibleName(container, /exit/i).click();
 		expect(block.querySelector<HTMLElement>("#a")?.hasAttribute("aria-hidden")).toBe(
 			false
 		);

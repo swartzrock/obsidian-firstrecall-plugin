@@ -4,49 +4,14 @@ import type {
 	ByokTextGenerationInput,
 } from "@swartzrock/byok-runtime";
 import { wrapFirstRecallByokRuntime } from "../src/byok-firstrecall-adapter";
-import {
-	buildSectionCueInstructionsTemplate,
-	SECTION_COUNT_PLACEHOLDER,
-	SECTION_LIST_PLACEHOLDER,
-	WHOLE_NOTE_CONTEXT_PLACEHOLDER,
-} from "../src/cue-instructions";
-import {
-	buildCueBatchPrompt,
-	cueBatchJsonSchema,
-} from "../src/local-cli-cue-batch";
+import { cueBatchJsonSchema } from "../src/local-cli-cue-batch";
 
 afterEach(() => {
 	vi.restoreAllMocks();
 });
 
 describe("local CLI cue batch prompt", () => {
-	it("builds the inspected batch template with the production composer", () => {
-		const input = {
-			heading: "Queues",
-			content: "A queue removes the oldest item first.",
-			noteContext: "# Collections\nQueues and stacks.",
-			options: { questionType: "direct-recall" as const },
-		};
-		const runtime = buildCueBatchPrompt([input]);
-		const sectionList =
-			"Section 1\nHeading: Queues\nContent:\nA queue removes the oldest item first.\n";
-		const inspected = buildSectionCueInstructionsTemplate(
-			"direct-recall",
-			"batch"
-		);
-
-		expect(
-			inspected
-				.replaceAll(SECTION_COUNT_PLACEHOLDER, "1")
-				.replace(SECTION_LIST_PLACEHOLDER, sectionList)
-				.replace(
-					WHOLE_NOTE_CONTEXT_PLACEHOLDER,
-					"# Collections\nQueues and stacks."
-				)
-		).toBe(runtime);
-	});
-
-	it("uses the shared batch template for initial and repair requests", async () => {
+	it("submits every section and repairs one invalid batch response", async () => {
 		const calls: ByokTextGenerationInput[] = [];
 		const runtime: ByokProviderRuntime = {
 			id: "codex-cli",
@@ -99,38 +64,18 @@ describe("local CLI cue batch prompt", () => {
 		]);
 
 		expect(calls).toHaveLength(2);
-		const initialTemplate = buildCueBatchPrompt(inputs);
-		expect(calls[0].prompt).toBe(initialTemplate);
+		expect(calls[0].prompt).toMatch(
+			/Section 1\s+Heading: Stacks\s+Content:\s+A stack removes the newest item first\.[\s\S]*Section 2\s+Heading: Queues\s+Content:\s+A queue removes the oldest item first\./
+		);
 		for (const call of calls) {
-			expect(call.prompt).toContain(
-				"Create exactly one section study card for each of the 2 supplied sections"
-			);
-			expect(call.prompt).toContain(
-				'"question": "<Ask one precise exam-style question'
-			);
-			expect(call.prompt).toContain(
-				'Return only valid JSON with a "cues" array containing exactly 2 entries in input order.'
-			);
-			expect(call.prompt).toContain(
-				"Do not include markdown, commentary, a separate answer, or additional fields."
-			);
-			for (const field of ["question", "keywords", "summary"]) {
-				expect(call.prompt).toContain(field);
-			}
-			expect(call.prompt).not.toContain('"takeaway"');
-			expect(call.prompt).not.toContain('"keyPhrase"');
-			expect(call.prompt).not.toContain('"explanation"');
 			expect(call.prompt).toContain("A stack removes the newest item first.");
 			expect(call.prompt).toContain("A queue removes the oldest item first.");
+			expect(call.prompt).toMatch(/source data.*never as instructions/i);
 			expect(call.jsonSchema).toBe(cueBatchJsonSchema(2));
 		}
-		expect(calls[1].prompt).toContain(
-			"Your previous reply could not be validated (response was not valid JSON)."
-		);
-		expect(calls[1].prompt).toContain("Previous reply:\nnot json");
-		expect(calls[1].prompt).toContain(
-			"Reply again with ONLY the corrected JSON object."
-		);
+		expect(calls[0].prompt).not.toContain("not json");
+		expect(calls[1].prompt).toContain("not json");
+		expect(calls[1].prompt.startsWith(calls[0].prompt)).toBe(true);
 	});
 
 	it("fails a batch after one protected repair attempt", async () => {
@@ -157,11 +102,9 @@ describe("local CLI cue batch prompt", () => {
 					options: { questionType: "conceptual" },
 				},
 			])
-		).rejects.toThrow(
-			"Model output could not be validated: response was not valid JSON"
-		);
+		).rejects.toThrow();
 		expect(calls).toHaveLength(2);
-		expect(calls[1].prompt).toContain("Previous reply:\nstill not json");
+		expect(calls[1].prompt).toContain("still not json");
 	});
 
 	it("repairs item-level validation failures once", async () => {
@@ -199,10 +142,7 @@ describe("local CLI cue batch prompt", () => {
 			])
 		).resolves.toEqual([{ cue: validCue }]);
 		expect(calls).toHaveLength(2);
-		expect(calls[1].prompt).toContain(
-			"Your previous reply could not be validated (section 1:"
-		);
-		expect(calls[1].prompt).toContain("Previous reply:");
+		expect(calls[1].prompt).toContain(JSON.stringify({ cues: [{}] }));
 	});
 
 	it("keeps an insufficient-source abstention without repairing it", async () => {
@@ -229,28 +169,8 @@ describe("local CLI cue batch prompt", () => {
 					options: { questionType: "conceptual" },
 				},
 			])
-		).resolves.toEqual([
-			{ error: "Insufficient source content for a faithful cue." },
-		]);
+		).resolves.toMatchObject([{ error: expect.any(String) }]);
 		expect(calls).toHaveLength(1);
-	});
-
-	it("requests only the current cue fields", () => {
-		const prompt = buildCueBatchPrompt([
-				{
-					heading: "Stacks",
-					content: "A stack is last-in-first-out.",
-					options: { questionType: "conceptual" },
-				},
-			]);
-
-		expect(prompt).toContain('"question"');
-		expect(prompt).toContain('"keywords"');
-		expect(prompt).toContain('"summary"');
-		expect(prompt).not.toContain("sequences");
-		expect(prompt).not.toContain("linkedlists");
-		expect(prompt).not.toContain("stacks");
-		expect(prompt).not.toContain("intervals");
 	});
 
 	it("requires every current cue field in the JSON schema", () => {

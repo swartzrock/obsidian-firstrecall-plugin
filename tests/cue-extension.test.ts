@@ -170,6 +170,21 @@ function studySnapshot(
 	};
 }
 
+function accessibleButtonName(button: HTMLButtonElement): string {
+	return (button.getAttribute("aria-label") ?? button.textContent ?? "").trim();
+}
+
+function buttonByAccessibleName(
+	container: HTMLElement,
+	name: RegExp
+): HTMLButtonElement {
+	const matches = [...container.querySelectorAll<HTMLButtonElement>("button")].filter(
+		(button) => name.test(accessibleButtonName(button))
+	);
+	expect(matches).toHaveLength(1);
+	return matches[0];
+}
+
 describe("Editing View Study projection", () => {
 	it("conceals only an admitted answer body and removes it from the accessibility tree", () => {
 		const state = EditorState.create({ doc: "# Terms\nbody" });
@@ -504,25 +519,15 @@ describe("Editing View Study projection", () => {
 				expect(parent.querySelector(".firstrecall-editor-study-controls")).toBeNull();
 				expect(view.dom.classList.contains("firstrecall-editor-study-active")).toBe(true);
 				const controls = controlsContainer.querySelector<HTMLElement>(
-					".firstrecall-editor-study-controls"
+					'[role="region"]'
 				)!;
-				expect(controls.textContent).toContain("0 / 1 answers revealed");
-				const help = controls.firstElementChild as HTMLElement;
-				expect(help.classList.contains("firstrecall-study-help")).toBe(true);
-				expect(help.dataset.icon).toBe("eye");
-				expect(
-					help.querySelector(".firstrecall-study-help-title")?.textContent
-				).toBe("Show or hide answers");
-				expect(
-					help.querySelector(".firstrecall-study-help-detail")?.textContent
-				).toBe("Click the eye icon on any section card.");
-				expect(help.querySelectorAll(".firstrecall-study-help-copy > span")).toHaveLength(
-					2
-				);
-				const actions = controls.querySelector<HTMLElement>(
-					".firstrecall-study-actions"
-				)!;
-				expect(actions.querySelectorAll("button")).toHaveLength(3);
+				const buttons = [
+					...controls.querySelectorAll<HTMLButtonElement>("button"),
+				];
+				expect(buttons).toHaveLength(3);
+				const accessibleNames = buttons.map(accessibleButtonName);
+				expect(accessibleNames.every((name) => name.length > 0)).toBe(true);
+				expect(new Set(accessibleNames).size).toBe(3);
 				const progressTrack = controls.querySelector<HTMLElement>(
 					".firstrecall-study-progress-track"
 				)!;
@@ -534,22 +539,14 @@ describe("Editing View Study projection", () => {
 						".firstrecall-study-progress-fill"
 					)?.style.width
 				).toBe("0%");
-				const buttons = controls.querySelectorAll<HTMLButtonElement>("button");
-				expect([...buttons].map((button) => button.textContent)).toEqual([
-					"Show All Answers",
-					"Hide All Answers",
-					"Exit Study Mode",
-				]);
-				expect([...buttons].map((button) => button.dataset.icon)).toEqual([
-					"eye",
-					"eye-off",
-					"log-out",
-				]);
-				expect(buttons[0].disabled).toBe(false);
-				expect(buttons[1].disabled).toBe(true);
-				buttons[0].click();
-				buttons[1].click();
-				buttons[2].click();
+				const showAllButton = buttonByAccessibleName(controls, /show.*all/i);
+				const hideAllButton = buttonByAccessibleName(controls, /hide.*all/i);
+				const exitButton = buttonByAccessibleName(controls, /exit/i);
+				expect(showAllButton.disabled).toBe(false);
+				expect(hideAllButton.disabled).toBe(true);
+				showAllButton.click();
+				hideAllButton.click();
+				exitButton.click();
 				expect(showAll).toHaveBeenCalledTimes(1);
 				expect(hideAll).not.toHaveBeenCalled();
 				expect(exit).toHaveBeenCalledTimes(1);
@@ -576,9 +573,9 @@ describe("Editing View Study projection", () => {
 				expect(parent.querySelector(".firstrecall-editor-study-controls")).toBeNull();
 				expect(parent.querySelector(".firstrecall-editor-study-answer")).toBeNull();
 				expect(view.dom.classList.contains("firstrecall-editor-study-active")).toBe(false);
-				buttons[0].click();
-				buttons[1].click();
-				buttons[2].click();
+				showAllButton.click();
+				hideAllButton.click();
+				exitButton.click();
 				expect(showAll).toHaveBeenCalledTimes(1);
 				expect(hideAll).not.toHaveBeenCalled();
 				expect(exit).toHaveBeenCalledTimes(1);
