@@ -45,7 +45,10 @@ Your Markdown files are never touched. FirstRecall uses your selected AI / LLM p
 
 - **Syncs with your changes**  Avoid stale summaries by turning on automatic updates for your managed folder(s). FirstRecall will update any changed sections after you finish editing.
 
-- **Runs on Your LLM** Use your Anthropic, OpenAI, Gemini, xAI, or other LLM providers with your preferred model, or even your private LLM using Ollama and LMStudio for maximum privacy (the Codex and Claude Code terminal tools are also supported!)
+- **Start with the included trial or run on your LLM** Try FirstRecall without an
+  API key, use Anthropic, OpenAI, Gemini, xAI, or another cloud provider with your
+  preferred model, or keep generation private with Ollama or LM Studio. The Codex
+  and Claude Code terminal tools are also supported.
 
   <img src="docs/media/ai-providers.jpg" width="300">
 
@@ -70,7 +73,8 @@ BRAT is the easiest way to try pre-release Obsidian plugins and keep them update
 ## Quick start
 
 1. Open **Settings → FirstRecall → AI model**.
-2. Choose a provider, complete its setup, select a model, and run **Test connection**.
+2. Choose the included **FirstRecall hosted AI trial**, or select another provider,
+   complete its setup, choose a model, and run **Test connection**.
 3. Open a note with headings and select **Generate study material for this
    note** from the FirstRecall dropdown menu. 
 4. Select **Study this note** from the FirstRecall dropdown to practice recalling each section before revealing its answer.
@@ -80,7 +84,9 @@ BRAT is the easiest way to try pre-release Obsidian plugins and keep them update
 ## What FirstRecall Adds
 
 Every generated note carries a **Note Brief** — a whole-note overview and review
-guidance — plus one **section study card** per heading with a Summary, Recall Question, and Key Terms. 
+guidance — plus one **section study card** per eligible heading with a Summary,
+Recall Question, and Key Terms. Provider usage and capacity limits may restrict how
+many cards are generated in one operation.
 
 ### The Note Brief
 
@@ -133,24 +139,34 @@ Helpful if you're using another study tool. FirstRecall can export your generate
 
 FirstRecall supports:
 
+- **Included trial:** A FirstRecall-hosted model with no API key or model setup;
+  usage and capacity limits apply
 - **Local servers:** Ollama and LM Studio — fully offline generation, nothing leaves
   your machine
 - **Cloud APIs:** Anthropic, OpenAI, Google, xAI, OpenRouter, Groq, Mistral,
   DeepSeek, DeepInfra, Together AI, and Fireworks AI
 - **Terminal tools:** Codex and Claude Code
 
-Cloud API keys are stored with Obsidian's Secret Storage API. When using a cloud API
-or a terminal tool backed by an online account, the selected provider receives the note
-content needed for generation. Ollama and LM Studio can keep generation entirely
-local when connected to a local server.
+Cloud API keys are stored with Obsidian's Secret Storage API. When using the hosted
+trial, a cloud API, or a terminal tool backed by an online account, the selected
+service receives the note content needed for generation. Ollama and LM Studio can
+keep generation entirely local when connected to a local server.
 
 > 
 > **Data Privacy & Third-Party LLM Usage**
 >
-> When using features powered by external LLM providers (e.g., Anthropic Claude), **your note content and cues are sent directly to their API servers**. 
+> The included trial sends the note title, note context, and eligible section content
+> to `https://api.firstrecall.ai` for generation. Requests also include randomly
+> generated installation, session, and operation identifiers used to apply usage
+> limits and coordinate requests. The installation ID is saved in plugin data and
+> reused across sessions. The session ID lasts until the plugin reloads, and each
+> request attempt gets a new operation ID. The trial requires no API key, and usage
+> and capacity limits apply.
 >
-> * **API Key Required:** You must supply your own API key to enable these features.
-> * **Privacy Policy:** Please review your LLM provider's privacy policy regarding data retention and model training policies before enabling.
+> When using another online provider, your note content is sent to that provider's
+> API. You must supply any API key that provider requires. Review the provider's
+> privacy policy for its data-retention and model-training practices before enabling
+> it.
 
 ### Visibility Customization
 
