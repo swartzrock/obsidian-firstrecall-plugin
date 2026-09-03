@@ -390,6 +390,10 @@ button.firstrecall-provider-button.is-selected {
 	overflow: visible;
 }
 
+.theme-light .firstrecall-provider-icon[data-provider="hosted-demo"] img {
+	filter: saturate(1.5) brightness(0.72) contrast(1.1);
+}
+
 /* OpenRouter's brand color is a near-fluorescent yellow-green that washes out against
    light backgrounds; a faint outline keeps the mark legible in light themes without
    changing its look in dark themes. */

@@ -107,6 +107,18 @@ describe("settings CSS", () => {
 		expect(imageRule).toContain("object-fit: contain");
 	});
 
+	it("strengthens the hosted FirstRecall logo only in the light theme", () => {
+		const lightThemeRule = ruleFor(
+			'.theme-light .firstrecall-provider-icon[data-provider="hosted-demo"] img'
+		);
+		expect(lightThemeRule).toContain(
+			"filter: saturate(1.5) brightness(0.72) contrast(1.1)"
+		);
+		expect(styles).not.toContain(
+			'.theme-dark .firstrecall-provider-icon[data-provider="hosted-demo"] img'
+		);
+	});
+
 	it("keeps connection paths balanced and collapses both grids when narrow", () => {
 		const mediumMediaIndex = styles.indexOf("@media (max-width: 700px)");
 		const narrowMediaIndex = styles.indexOf("@media (max-width: 420px)");
