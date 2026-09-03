@@ -807,6 +807,14 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			return;
 		}
 		const iconSvg = definition.icon.svg;
+		if (definition.icon.source === "firstrecall") {
+			const imageEl = activeDocument.createElement("img");
+			imageEl.alt = "";
+			imageEl.draggable = false;
+			imageEl.src = `data:image/svg+xml,${encodeURIComponent(iconSvg)}`;
+			iconEl.appendChild(imageEl);
+			return;
+		}
 		const svgEl = activeDocument.createElementNS(SVG_NS, "svg");
 		svgEl.setAttribute("viewBox", parseProviderIconViewBox(iconSvg));
 		svgEl.setAttribute("fill", "currentColor");

@@ -93,6 +93,20 @@ describe("settings CSS", () => {
 		expect(labelRule).not.toContain("text-overflow: ellipsis");
 	});
 
+	it("gives the hosted FirstRecall logo enough room and preserves its proportions", () => {
+		const hostedLogoRule = ruleFor(
+			'.firstrecall-provider-icon[data-provider="hosted-demo"]'
+		);
+		expect(hostedLogoRule).toContain("width: 32px");
+		expect(hostedLogoRule).toContain("height: 32px");
+		expect(hostedLogoRule).toContain("flex: 0 0 32px");
+
+		const imageRule = ruleFor(".firstrecall-provider-icon img");
+		expect(imageRule).toContain("width: 100%");
+		expect(imageRule).toContain("height: 100%");
+		expect(imageRule).toContain("object-fit: contain");
+	});
+
 	it("keeps connection paths balanced and collapses both grids when narrow", () => {
 		const mediumMediaIndex = styles.indexOf("@media (max-width: 700px)");
 		const narrowMediaIndex = styles.indexOf("@media (max-width: 420px)");

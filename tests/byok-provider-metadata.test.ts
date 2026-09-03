@@ -10,7 +10,10 @@ import {
 	firstRecallProviderDefinition,
 	firstRecallProviderDefinitions,
 } from "../src/byok-provider-metadata";
-import { BYOK_PROVIDER_ICONS } from "../src/provider-icons";
+import {
+	BYOK_PROVIDER_ICONS,
+	HOSTED_DEMO_PROVIDER_ICON,
+} from "../src/provider-icons";
 
 describe("FirstRecall BYOK provider metadata", () => {
 	it("registers the plugin-owned trial separately from BYOK providers", () => {
@@ -24,6 +27,7 @@ describe("FirstRecall BYOK provider metadata", () => {
 		expect(firstRecallProviderDefinition("hosted-demo")).toMatchObject({
 			label: "FirstRecall trial",
 			shortLabel: "FirstRecall trial",
+			icon: HOSTED_DEMO_PROVIDER_ICON,
 			credentialKind: "trial",
 			modelBehavior: "included",
 		});

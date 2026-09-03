@@ -6,6 +6,7 @@ import {
 } from "@swartzrock/byok-runtime";
 import {
 	BYOK_PROVIDER_ICONS,
+	HOSTED_DEMO_PROVIDER_ICON,
 	type FirstRecallProviderIconDefinition,
 } from "./provider-icons";
 import type { FirstRecallProviderId } from "./cue-provider";
@@ -48,7 +49,7 @@ const HOSTED_DEMO_DEFINITION: FirstRecallProviderDefinition = {
 	id: "hosted-demo",
 	label: "FirstRecall trial",
 	shortLabel: "FirstRecall trial",
-	icon: "sparkles",
+	icon: HOSTED_DEMO_PROVIDER_ICON,
 	credentialKind: "trial",
 	credentialField: {
 		label: "",

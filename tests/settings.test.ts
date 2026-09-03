@@ -658,19 +658,19 @@ describe("settings defaults", () => {
 			),
 		];
 		expect(pathButtons.map((button) => button.getAttribute("aria-label"))).toEqual([
-			"FirstRecall LLM trial",
+			"FirstRecall hosted AI trial",
 			"API key",
-			"Installed tool",
+			"Terminal apps",
 			"Local server",
 		]);
 		expect(settingText(tab.containerEl)).toContain(
 			"Use an API key from Anthropic, OpenAI, Gemini, or another provider."
 		);
 		expect(settingText(tab.containerEl)).toContain(
-			"Use Codex or Claude Code if one is already installed and signed in on this device."
+			"Use Codex or Claude Code's terminal apps if they are already installed and configured with your account."
 		);
 		expect(settingText(tab.containerEl)).toContain(
-			"Connect to Ollama or LM Studio running on a model server you control."
+			"Use your own LLMs with Ollama or LM Studio."
 		);
 		expect(settingText(tab.containerEl)).not.toContain("Browse all providers");
 		for (const button of pathButtons) {
@@ -713,7 +713,7 @@ describe("settings defaults", () => {
 		const definitions = firstRecallProviderDefinitions();
 		const scenarios = [
 			{ label: "API key", kind: "api-key", count: 11 },
-			{ label: "Installed tool", kind: "command", count: 2 },
+			{ label: "Terminal apps", kind: "command", count: 2 },
 			{ label: "Local server", kind: "url", count: 2 },
 		] as const;
 
@@ -751,7 +751,7 @@ describe("settings defaults", () => {
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
 
-	it("offers the FirstRecall LLM trial first and selects it without setup fields", async () => {
+	it("offers the FirstRecall hosted AI trial first and selects it without setup fields", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
@@ -761,9 +761,11 @@ describe("settings defaults", () => {
 				".firstrecall-provider-path-button"
 			),
 		];
-		expect(pathButtons[0]?.getAttribute("aria-label")).toBe("FirstRecall LLM trial");
+		expect(pathButtons[0]?.getAttribute("aria-label")).toBe(
+			"FirstRecall hosted AI trial"
+		);
 		expect(settingText(tab.containerEl)).toContain(
-			"trial LLM API"
+			"Generate study materials with FirstRecall's hosted AI."
 		);
 		pathButtons[0]?.click();
 		await vi.waitFor(() =>
@@ -773,7 +775,9 @@ describe("settings defaults", () => {
 		expect(settingText(tab.containerEl)).not.toContain("Available providers");
 		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(0);
 		expect(settingText(tab.containerEl).match(/FirstRecall trial/g)).toHaveLength(1);
-		expect(settingText(tab.containerEl)).toContain("Included trial model");
+		expect(settingText(tab.containerEl)).toContain(
+			"Free during the trial • Usage and capacity limits apply."
+		);
 		expect(tab.containerEl.querySelector(".firstrecall-api-key-input")).toBeNull();
 		expect(tab.containerEl.querySelector(".firstrecall-model-setting")).toBeNull();
 		expect(settingText(tab.containerEl)).not.toContain("Test connection");
@@ -787,6 +791,19 @@ describe("settings defaults", () => {
 		);
 	});
 
+	it("uses the FirstRecall logo for the hosted trial", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.byok.selectedProvider = "hosted-demo";
+		tab.display();
+		openSettingsCard(tab, "AI model");
+
+		const hostedLogo = tab.containerEl.querySelector<HTMLImageElement>(
+			'.firstrecall-provider-icon[data-provider="hosted-demo"] img'
+		);
+		expect(hostedLogo?.alt).toBe("");
+		expect(hostedLogo?.getAttribute("src")).toMatch(/^data:image\/svg\+xml,/);
+	});
+
 	it("derives the connection path for an existing provider", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.byok.selectedProvider = "codex-cli";
@@ -794,7 +811,7 @@ describe("settings defaults", () => {
 		openSettingsCard(tab, "AI model");
 
 		expect(
-			tab.containerEl.querySelector('button[aria-label="Installed tool"]')
+			tab.containerEl.querySelector('button[aria-label="Terminal apps"]')
 				?.getAttribute("aria-expanded")
 		).toBe("true");
 		expect(
@@ -851,7 +868,7 @@ describe("settings defaults", () => {
 		apiKeyInput.value = "sk-ant-unsaved";
 		apiKeyInput.__onChange?.(apiKeyInput.value);
 		const installedButton = tab.containerEl.querySelector<HTMLButtonElement>(
-			'button[aria-label="Installed tool"]'
+			'button[aria-label="Terminal apps"]'
 		)!;
 		installedButton.focus();
 		installedButton.click();
@@ -963,15 +980,15 @@ describe("settings defaults", () => {
 		openSettingsCard(tab, "AI model");
 		const providerIds = new Set<string>();
 		for (const pathLabel of [
-			"FirstRecall LLM trial",
+			"FirstRecall hosted AI trial",
 			"API key",
-			"Installed tool",
+			"Terminal apps",
 			"Local server",
 		]) {
 			tab.containerEl
 				.querySelector<HTMLButtonElement>(`button[aria-label="${pathLabel}"]`)
 				?.click();
-			if (pathLabel === "FirstRecall LLM trial") {
+			if (pathLabel === "FirstRecall hosted AI trial") {
 				await vi.waitFor(() =>
 					expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo")
 				);
@@ -991,7 +1008,12 @@ describe("settings defaults", () => {
 
 				const svg = iconEl.querySelector("svg");
 				if (!svg) {
-					expect(iconEl.dataset.icon).toBeTruthy();
+					const image = iconEl.querySelector("img");
+					if (image) {
+						expect(image.getAttribute("src")).toMatch(/^data:image\/svg\+xml,/);
+					} else {
+						expect(iconEl.dataset.icon).toBeTruthy();
+					}
 					continue;
 				}
 				const paths = [...(svg?.querySelectorAll("path") ?? [])];
