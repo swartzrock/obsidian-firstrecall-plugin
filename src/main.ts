@@ -1020,10 +1020,7 @@ export default class FirstRecallPlugin extends Plugin {
 			!file || !this.hasUsableCueCache(file.path);
 		if (!menuAction) return;
 		menuAction.classList.toggle("firstrecall-has-no-material", needsMaterial);
-		menuAction.setAttribute(
-			"aria-label",
-			needsMaterial ? STUDY_MENU_HINT : "FirstRecall"
-		);
+		menuAction.setAttribute("aria-label", STUDY_MENU_HINT);
 		menuAction.removeAttribute("title");
 		menuAction.setAttribute("aria-pressed", String(active));
 		menuAction.classList.toggle("is-active", active);

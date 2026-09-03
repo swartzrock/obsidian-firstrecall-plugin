@@ -684,7 +684,9 @@ describe("Study plugin orchestration", () => {
 			harness.plugin as unknown as { toggleStudyForActiveView: () => void }
 		).toggleStudyForActiveView;
 		expect(harness.firstView.addAction).toHaveBeenCalledTimes(1);
-		expect(headerAction.getAttribute("aria-label")).toBe("FirstRecall");
+		expect(headerAction.getAttribute("aria-label")).toBe(
+			"Generate study material for this note."
+		);
 		expect(headerAction.hasAttribute("title")).toBe(false);
 		expect(headerAction.getAttribute("aria-disabled")).toBeNull();
 		expect(harness.ribbons).toHaveLength(0);
