@@ -326,7 +326,7 @@ describe("firstRecallProviderConfigFromSettings", () => {
 
 		expect(provider).toMatchObject({
 			id: "hosted-demo",
-			label: "FirstRecall trial",
+			label: "Simonides trial",
 			requiresNetwork: true,
 			requiresDownload: false,
 		});
@@ -361,7 +361,7 @@ describe("firstRecallProviderConfigFromSettings", () => {
 			Array(2).fill({
 				reason: "provider-limit",
 				providerId: "hosted-demo",
-				providerLabel: "FirstRecall trial",
+				providerLabel: "Simonides trial",
 				maxSections: 5,
 			})
 		);

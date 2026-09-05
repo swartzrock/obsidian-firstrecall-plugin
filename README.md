@@ -73,7 +73,7 @@ BRAT is the easiest way to try pre-release Obsidian plugins and keep them update
 ## Quick start
 
 1. Open **Settings → FirstRecall → AI model**.
-2. Choose the included **FirstRecall hosted AI trial**, or select another provider,
+2. Choose the included **Simonides hosted AI trial**, or select another provider,
    complete its setup, choose a model, and run **Test connection**.
 3. Open a note with headings and select **Generate study material for this
    note** from the FirstRecall dropdown menu. 
@@ -139,7 +139,7 @@ Helpful if you're using another study tool. FirstRecall can export your generate
 
 FirstRecall supports:
 
-- **Included trial:** A FirstRecall-hosted model with no API key or model setup;
+- **Included trial:** A Simonides-hosted model with no API key or model setup;
   usage and capacity limits apply
 - **Local servers:** Ollama and LM Studio — fully offline generation, nothing leaves
   your machine
@@ -156,7 +156,7 @@ keep generation entirely local when connected to a local server.
 > **Data Privacy & Third-Party LLM Usage**
 >
 > The included trial sends the note title, note context, and eligible section content
-> to `https://api.firstrecall.ai` for generation. Requests also include randomly
+> to `https://api.simonides.ai` for generation. Requests also include randomly
 > generated installation, session, and operation identifiers used to apply usage
 > limits and coordinate requests. The installation ID is saved in plugin data and
 > reused across sessions. The session ID lasts until the plugin reloads, and each

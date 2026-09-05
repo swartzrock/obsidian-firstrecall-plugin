@@ -427,7 +427,7 @@ describe("study area generation planning", () => {
 			unavailable: {
 				reason: "provider-limit",
 				providerId: "hosted-demo",
-				providerLabel: "FirstRecall trial",
+				providerLabel: "Simonides trial",
 				maxSections: 5,
 			},
 		};

@@ -262,7 +262,7 @@ describe("study material maintenance planning", () => {
 			unavailable: {
 				reason: "provider-limit",
 				providerId: "hosted-demo",
-				providerLabel: "FirstRecall trial",
+				providerLabel: "Simonides trial",
 				maxSections: 5,
 			},
 		};
@@ -310,7 +310,7 @@ describe("study material maintenance execution", () => {
 		}));
 		harness.setProvider({
 			id: "hosted-demo",
-			label: "FirstRecall trial",
+			label: "Simonides trial",
 			requiresNetwork: true,
 			requiresDownload: false,
 			maxGeneratedSections: 5,
@@ -371,7 +371,7 @@ describe("study material maintenance execution", () => {
 							unavailable: {
 								reason: "provider-limit",
 								providerId: "hosted-demo",
-								providerLabel: "FirstRecall trial",
+								providerLabel: "Simonides trial",
 								maxSections: 5,
 							},
 						}
@@ -380,7 +380,7 @@ describe("study material maintenance execution", () => {
 		}));
 		harness.setProvider({
 			id: "hosted-demo",
-			label: "FirstRecall trial",
+			label: "Simonides trial",
 			requiresNetwork: true,
 			requiresDownload: false,
 			testConnection: async () => ({ ok: true, message: "ok" }),
@@ -406,7 +406,7 @@ describe("study material maintenance execution", () => {
 			unavailable: {
 				reason: "provider-limit",
 				providerId: "hosted-demo",
-				providerLabel: "FirstRecall trial",
+				providerLabel: "Simonides trial",
 				maxSections: 5,
 			},
 		});
@@ -512,7 +512,7 @@ describe("study material maintenance execution", () => {
 		}));
 		harness.setProvider({
 			id: "hosted-demo",
-			label: "FirstRecall trial",
+			label: "Simonides trial",
 			requiresNetwork: true,
 			requiresDownload: false,
 			testConnection: async () => ({ ok: true, message: "ok" }),

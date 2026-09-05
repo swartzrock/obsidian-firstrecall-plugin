@@ -272,7 +272,7 @@ describe("hosted demo provider", () => {
 		});
 		expect(transport).toHaveBeenCalledTimes(1);
 		const request = transport.mock.calls[0][0];
-		expect(request.url).toBe("https://api.firstrecall.ai/v1/demo-bundles");
+		expect(request.url).toBe("https://api.simonides.ai/v1/demo-bundles");
 		expect(request.method).toBe("POST");
 		expect(request.headers.get("content-type")).toBe("application/json");
 		expect(request.headers.has("authorization")).toBe(false);
@@ -356,7 +356,7 @@ describe("hosted demo provider", () => {
 				unavailable: {
 					reason: "provider-limit",
 					providerId: "hosted-demo",
-					providerLabel: "FirstRecall trial",
+					providerLabel: "Simonides trial",
 					maxSections: 5,
 				},
 			},
@@ -364,7 +364,7 @@ describe("hosted demo provider", () => {
 				unavailable: {
 					reason: "provider-limit",
 					providerId: "hosted-demo",
-					providerLabel: "FirstRecall trial",
+					providerLabel: "Simonides trial",
 					maxSections: 5,
 				},
 			},

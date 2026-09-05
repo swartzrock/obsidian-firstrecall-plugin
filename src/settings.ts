@@ -433,7 +433,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return "Select an AI provider to generate study material";
 		if (provider === "hosted-demo") {
-			return "FirstRecall trial · Included trial model · Ready";
+			return "Simonides trial · Included trial model · Ready";
 		}
 		const setup = deriveFirstRecallProviderSetupStatus(this.plugin.settings);
 		const providerLabel = this.providerDisplayName(provider);
@@ -655,9 +655,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		}> = [
 			{
 				path: "trial",
-				title: "FirstRecall hosted AI trial",
+				title: "Simonides hosted AI trial",
 				description:
-					"Generate study materials with FirstRecall's free, secure hosted AI. Usage limits apply."
+					"Generate study materials with Simonides' free, secure hosted AI. Usage limits apply."
 			},
 			{
 				path: "api-key",

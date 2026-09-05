@@ -47,8 +47,8 @@ export interface FirstRecallProviderDefinition {
 
 const HOSTED_DEMO_DEFINITION: FirstRecallProviderDefinition = {
 	id: "hosted-demo",
-	label: "FirstRecall trial",
-	shortLabel: "FirstRecall trial",
+	label: "Simonides trial",
+	shortLabel: "Simonides trial",
 	icon: HOSTED_DEMO_PROVIDER_ICON,
 	credentialKind: "trial",
 	credentialField: {

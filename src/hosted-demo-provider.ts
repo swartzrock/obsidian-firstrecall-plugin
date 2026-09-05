@@ -9,7 +9,7 @@ import {
 import { abortableDelay } from "./provider-request-rate";
 
 export const HOSTED_DEMO_ENDPOINT =
-	"https://api.firstrecall.ai/v1/demo-bundles";
+	"https://api.simonides.ai/v1/demo-bundles";
 
 const hostedDemoDefinition = firstRecallProviderDefinition("hosted-demo");
 

@@ -93,7 +93,7 @@ export function makeFirstRecallHostedDemoProvider(
 		requiresDownload: false,
 		testConnection: async () => ({
 			ok: true,
-			message: "FirstRecall trial is ready.",
+			message: "Simonides trial is ready.",
 		}),
 		listModels: async () => [
 			{ id: "included-trial", label: "Included trial model" },
