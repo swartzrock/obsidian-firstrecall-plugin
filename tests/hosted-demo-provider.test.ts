@@ -636,6 +636,24 @@ describe("hosted demo provider", () => {
 		);
 	});
 
+	it.each([24_000, 24_001])("enforces the total section-content limit at %i characters", async (total) => {
+		const sections = Array.from({ length: 7 }, (_, index) => ({
+			...input().sections[0],
+			sectionId: `section-${index}`,
+			content: "x".repeat(index < 6 ? 3_500 : total - 21_000),
+		}));
+		const { provider, transport } = providerWithResponse(successResponse(
+			sections.map((section) => completeSection(section.sectionId, section.contentHash))
+		));
+		if (total === 24_000) {
+			await expect(provider.generateBundle(input({ sections }))).resolves.toBeDefined();
+			expect(transport).toHaveBeenCalledOnce();
+		} else {
+			await expect(provider.generateBundle(input({ sections }))).rejects.toThrow("24,000");
+			expect(transport).not.toHaveBeenCalled();
+		}
+	});
+
 	it.each([
 		["no sections", { sections: [] }],
 		["invalid section id", { sections: [{ ...input().sections[0], sectionId: "Not Valid" }] }],

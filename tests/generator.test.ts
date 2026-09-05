@@ -155,6 +155,44 @@ function mockBundleProvider(
 }
 
 describe("generateNote", () => {
+	it.each([
+		["50 sections totaling 32,884 characters", [...Array<number>(49).fill(658), 642]],
+		["short sections after long sections", [...Array<number>(7).fill(4_000), 10]],
+		["exactly 24,000 characters", Array<number>(6).fill(4_000)],
+		["under budget", [100, 200]],
+	])("keeps the shared section budget for %s", async (_label, lengths) => {
+		const contents = lengths.map((length) => "x".repeat(length));
+		const markdown = contents.map((content, index) => `# Section ${index + 1}\n${content}`).join("\n");
+		const generateBundle = vi.fn(async (input: FirstRecallBundleInput) => ({
+			sections: input.sections.map(() => ({ error: "insufficient source" })),
+			noteBrief: noteBrief(),
+		}));
+
+		await generateNote({
+			noteTitle: "Large note",
+			markdown,
+			provider: mockBundleProvider(generateBundle),
+			useWholeNoteContext: false,
+		});
+
+		expect(generateBundle).toHaveBeenCalledOnce();
+		const sections = generateBundle.mock.calls[0][0].sections;
+		expect(sections.map((section) => section.sectionId)).toEqual(parseSections(markdown).map((section) => section.id));
+		expect(sections.reduce((total, section) => total + section.content.length, 0)).toBe(
+			Math.min(24_000, lengths.reduce((total, length) => total + length, 0))
+		);
+		for (const [index, section] of sections.entries()) {
+			expect(section.content.length).toBeGreaterThan(0);
+			expect(section.content.length).toBeLessThanOrEqual(4_000);
+			if (section.content.length < lengths[index]) {
+				expect(section.content).toMatch(/truncated for length/);
+			} else {
+				expect(section.content).toBe(contents[index]);
+			}
+		}
+		if (lengths.at(-1) === 10) expect(sections.at(-1)?.content).toBe(contents.at(-1));
+	});
+
 	it("generates all section cards and one Note Brief through one atomic bundle call", async () => {
 		const progress: Array<[number, number]> = [];
 		const calls: FirstRecallBundleInput[] = [];

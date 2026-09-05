@@ -1,3 +1,4 @@
+import { HOSTED_DEMO_MAX_TOTAL_SECTION_CHARS } from "./hosted-demo-limits";
 import { z } from "zod/v3";
 import type { FirstRecallCueBatchResult } from "./cue-provider";
 import { firstRecallProviderDefinition } from "./byok-provider-metadata";
@@ -67,7 +68,11 @@ const hostedDemoRequestSchema = z
 				contextMarkdown: z.string().min(1).max(12_000),
 			})
 			.strict(),
-		sections: z.array(hostedDemoSectionInputSchema).min(1),
+		sections: z.array(hostedDemoSectionInputSchema).min(1).refine(
+			(sections) => sections.reduce((total, section) => total + section.content.length, 0)
+				<= HOSTED_DEMO_MAX_TOTAL_SECTION_CHARS,
+			"total section content must not exceed 24,000 characters"
+		),
 	})
 	.strict();
 

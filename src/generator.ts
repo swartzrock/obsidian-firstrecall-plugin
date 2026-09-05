@@ -1,3 +1,4 @@
+import { HOSTED_DEMO_MAX_TOTAL_SECTION_CHARS } from "./hosted-demo-limits";
 import {
 	cueEligibleSections,
 	extractStudyableText,
@@ -351,6 +352,15 @@ export async function generateNoteBundleForSections(
 			),
 		})),
 	};
+
+	// Allocate short sections first, preserving their content and original order.
+	const byLength = [...input.sections].sort((a, b) => a.content.length - b.content.length);
+	let remainingChars = HOSTED_DEMO_MAX_TOTAL_SECTION_CHARS;
+	for (const [index, section] of byLength.entries()) {
+		const budget = Math.floor(remainingChars / (byLength.length - index));
+		section.content = clampTextWithinLimit(section.content, budget);
+		remainingChars -= section.content.length;
+	}
 
 	try {
 		const bundle = await generateBundle(input, signal);
