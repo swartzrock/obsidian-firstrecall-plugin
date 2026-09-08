@@ -732,11 +732,16 @@ describe("settings defaults", () => {
 		)).toEqual([
 			"Simonides is FirstRecall's hosted AI service. It uses your note content to generate study materials.",
 			"Free during the trial. Usage and capacity limits apply.",
+			"Simonides processes your note content transiently without intentionally writing it to its application database, analytics dataset, request logs, or AI Gateway payload logs, and does not use it to train its own models. Privacy policy",
 		]);
 		const infoLink = tab.containerEl.querySelector<HTMLAnchorElement>(
 			'.firstrecall-hosted-trial-copy > a[href="https://simonides.ai/"]'
 		);
 		expect(infoLink?.textContent).toBe("Learn more about Simonides");
+		const privacyLink = tab.containerEl.querySelector<HTMLAnchorElement>(
+			'.firstrecall-hosted-trial-copy a[href="https://simonides.ai/privacy"]'
+		);
+		expect(privacyLink?.textContent).toBe("Privacy policy");
 	});
 
 	it("uses the Simonides logo for the hosted trial", async () => {

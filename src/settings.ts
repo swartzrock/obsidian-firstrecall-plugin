@@ -623,6 +623,14 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			descriptionEl.createEl("p", {
 				text: "Free during the trial. Usage and capacity limits apply.",
 			});
+			const privacyEl = descriptionEl.createEl("p");
+			privacyEl.createSpan({
+				text: "Simonides processes your note content transiently without intentionally writing it to its application database, analytics dataset, request logs, or AI Gateway payload logs, and does not use it to train its own models. ",
+			});
+			privacyEl.createEl("a", {
+				text: "Privacy policy",
+				attr: { href: "https://simonides.ai/privacy" },
+			});
 			descriptionEl.createEl("a", {
 				text: "Learn more about Simonides",
 				attr: { href: "https://simonides.ai/" },
