@@ -480,12 +480,6 @@ export function createHostedDemoProvider(
 					note: input.note,
 					sections: input.sections,
 				};
-				console.debug("[Simonides] Request (before validation)", {
-					url: HOSTED_DEMO_ENDPOINT,
-					method: "POST",
-					headers: { "content-type": "application/json" },
-					body: JSON.stringify(payload, null, 2),
-				});
 				const requestBody = hostedDemoRequestSchema.safeParse(payload);
 				if (!requestBody.success) {
 					console.error("[Simonides] Request validation failed; request not sent", {
@@ -506,14 +500,6 @@ export function createHostedDemoProvider(
 				const response = await deps.transport(request);
 
 				let responseText = await response.text();
-				console.debug("[Simonides] Response", {
-					operationId,
-					url: response.url || request.url,
-					status: response.status,
-					statusText: response.statusText,
-					headers: Object.fromEntries(response.headers.entries()),
-					body: responseText,
-				});
 				if (response.status === 429) {
 					if (attempt === 1) {
 						throw protocolError("rate limit persisted after retry");
