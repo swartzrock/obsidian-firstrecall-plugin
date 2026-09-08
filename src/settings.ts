@@ -615,10 +615,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		});
 		if (provider === "hosted-demo") {
 			const descriptionEl = fieldsEl.createDiv({
-				cls: "firstrecall-settings-flow-desc",
+				cls: "firstrecall-settings-flow-desc firstrecall-hosted-trial-copy",
 			});
-			descriptionEl.createSpan({
-				text: "Free during the trial • Usage and capacity limits apply. ",
+			descriptionEl.createEl("p", {
+				text: "Simonides is FirstRecall's hosted AI service. It uses your note content to generate study materials.",
+			});
+			descriptionEl.createEl("p", {
+				text: "Free during the trial. Usage and capacity limits apply.",
 			});
 			descriptionEl.createEl("a", {
 				text: "Learn more about Simonides",
@@ -662,8 +665,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			{
 				path: "trial",
 				title: "Simonides hosted AI trial",
-				description:
-					"Simonides is FirstRecall's hosted AI service. Generate study materials without setting up an API key. Usage limits apply."
+				description: "Generate study materials without an API key."
 			},
 			{
 				path: "api-key",

@@ -715,11 +715,26 @@ describe("settings defaults", () => {
 		tab.display();
 		openSettingsCard(tab, "AI model");
 
-		expect(tab.containerEl.textContent).toContain(
-			"Simonides is FirstRecall's hosted AI service."
+		const hostedOption = [...tab.containerEl.querySelectorAll<HTMLElement>(
+			".firstrecall-provider-path-option"
+		)].find((option) => option.querySelector("button")?.textContent ===
+			"Simonides hosted AI trial");
+		expect(
+			hostedOption?.querySelector(".firstrecall-provider-path-description")
+				?.textContent
+		).toBe("Generate study materials without an API key.");
+
+		const trialCopy = tab.containerEl.querySelector<HTMLElement>(
+			".firstrecall-hosted-trial-copy"
 		);
+		expect([...trialCopy!.querySelectorAll("p")].map((paragraph) =>
+			paragraph.textContent
+		)).toEqual([
+			"Simonides is FirstRecall's hosted AI service. It uses your note content to generate study materials.",
+			"Free during the trial. Usage and capacity limits apply.",
+		]);
 		const infoLink = tab.containerEl.querySelector<HTMLAnchorElement>(
-			'.firstrecall-active-provider-panel a[href="https://simonides.ai/"]'
+			'.firstrecall-hosted-trial-copy > a[href="https://simonides.ai/"]'
 		);
 		expect(infoLink?.textContent).toBe("Learn more about Simonides");
 	});

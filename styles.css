@@ -460,6 +460,14 @@ button.firstrecall-provider-button.is-selected {
 	margin-top: 14px;
 }
 
+.firstrecall-hosted-trial-copy p {
+	margin: 0 0 8px;
+}
+
+.firstrecall-hosted-trial-copy>a {
+	display: inline-block;
+}
+
 .firstrecall-active-provider-fields .firstrecall-api-key-setting .setting-item-control {
 	flex: 1 1 520px;
 }
