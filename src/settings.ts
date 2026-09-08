@@ -65,6 +65,7 @@ import {
 } from "./byok-model-options";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
 import {
+	effectiveProviderRequestRate,
 	isRequestsPerTenSeconds,
 	REQUEST_RATE_OPTIONS,
 	type RequestsPerTenSeconds,
@@ -599,6 +600,8 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	}
 
 	private renderRequestRateSetting(containerEl: HTMLElement): void {
+		const provider = firstRecallSelectedProvider(this.plugin.settings);
+		const configuredRate = this.plugin.settings.requestsPerTenSeconds;
 		const labels: Record<RequestsPerTenSeconds, string> = {
 			1: "6/minute",
 			5: "30/minute (recommended)",
@@ -613,7 +616,10 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					dropdown.addOption(String(option), labels[option]);
 				}
 				dropdown
-					.setValue(String(this.plugin.settings.requestsPerTenSeconds))
+					.setValue(String(provider
+						? effectiveProviderRequestRate(provider, configuredRate)
+						: configuredRate))
+					.setDisabled(provider === "hosted-demo")
 					.onChange(async (value) => {
 						const parsed = Number(value);
 						if (!isRequestsPerTenSeconds(parsed)) return;

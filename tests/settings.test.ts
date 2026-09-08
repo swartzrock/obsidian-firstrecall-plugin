@@ -788,6 +788,31 @@ describe("settings defaults", () => {
 		);
 	});
 
+	it("locks the trial rate and restores the editable rate when switching providers", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.requestsPerTenSeconds = 20;
+		tab.display();
+		openSettingsCard(tab, "AI model");
+		const requestRate = () => dropdownWithValues(tab.containerEl, ["1", "5", "10", "20"]);
+
+		expect(requestRate().value).toBe("1");
+		expect(requestRate().disabled).toBe(true);
+
+		providerPathButton(tab.containerEl, "API key").click();
+		tab.containerEl.querySelector<HTMLButtonElement>('[data-provider="openai"][role="radio"]')!.click();
+		await vi.waitFor(() => expect(requestRate().disabled).toBe(false));
+		expect(requestRate().value).toBe("20");
+		const editableRate = requestRate() as HTMLSelectElement & {
+			__onChange: (value: string) => Promise<void>;
+		};
+		await editableRate.__onChange("10");
+		expect(plugin.settings.requestsPerTenSeconds).toBe(10);
+
+		providerPathButton(tab.containerEl, "Simonides hosted AI trial").click();
+		await vi.waitFor(() => expect(requestRate().disabled).toBe(true));
+		expect(requestRate().value).toBe("1");
+	});
+
 	it("restores an existing provider route and rate-limit value", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.byok.selectedProvider = "codex-cli";
