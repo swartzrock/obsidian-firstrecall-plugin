@@ -32,6 +32,8 @@ export interface AppearanceThumbnailGroup<T extends string> {
 	setValue: (value: T) => void;
 }
 
+let nextAppearanceThumbnailGroupLabelId = 0;
+
 export function renderAppearanceThumbnailGroup<T extends string>(
 	config: AppearanceThumbnailGroupOptions<T>
 ): AppearanceThumbnailGroup<T> {
@@ -44,7 +46,13 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 		.filter(Boolean)
 		.join(" ");
 	if (config.groupLabel) {
-		root.setAttribute("aria-label", config.groupLabel);
+		const label = doc.createElement("span");
+		label.id = `firstrecall-thumbnail-group-label-${nextAppearanceThumbnailGroupLabelId++}`;
+		label.hidden = true;
+		label.textContent = config.groupLabel;
+		root.setAttribute("role", "group");
+		root.setAttribute("aria-labelledby", label.id);
+		root.appendChild(label);
 	}
 
 	const buttons = new Map<T, HTMLButtonElement>();
@@ -56,7 +64,6 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 		button.className = "firstrecall-thumbnail-button";
 		button.dataset.optionId = option.id;
 		button.disabled = Boolean(option.disabled);
-		button.setAttribute("aria-label", option.label);
 
 		const preview = doc.createElement("div");
 		preview.className = "firstrecall-thumbnail-preview";

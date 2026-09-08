@@ -101,11 +101,16 @@ export function renderModelCombobox(opts: {
 		cls: "firstrecall-model-combobox-toggle",
 		attr: {
 			type: "button",
-			"aria-label": `Show ${suggestionsLabel}`,
 			tabindex: "-1",
 		},
 	});
 	opts.renderToggleIcon?.(toggleEl);
+	const toggleLabelEl = toggleEl.ownerDocument.createElement("span");
+	toggleLabelEl.id = `${comboboxId}-toggle-label`;
+	toggleLabelEl.hidden = true;
+	toggleLabelEl.textContent = `Show ${suggestionsLabel}`;
+	toggleEl.appendChild(toggleLabelEl);
+	toggleEl.setAttribute("aria-labelledby", toggleLabelEl.id);
 
 	const listEl = rootEl.createDiv({
 		cls: "firstrecall-model-combobox-list firstrecall-model-combobox-list-hidden",
@@ -141,7 +146,7 @@ export function renderModelCombobox(opts: {
 		isOpen = false;
 		inputEl.setAttr("aria-expanded", "false");
 		inputEl.removeAttribute("aria-activedescendant");
-		toggleEl.setAttr("aria-label", `Show ${suggestionsLabel}`);
+		toggleLabelEl.textContent = `Show ${suggestionsLabel}`;
 		rootEl.removeClass("firstrecall-model-combobox-open");
 		listEl.addClass("firstrecall-model-combobox-list-hidden");
 	};
@@ -173,7 +178,7 @@ export function renderModelCombobox(opts: {
 		rootEl.addClass("firstrecall-model-combobox-open");
 		listEl.removeClass("firstrecall-model-combobox-list-hidden");
 		inputEl.setAttr("aria-expanded", "true");
-		toggleEl.setAttr("aria-label", `Hide ${suggestionsLabel}`);
+		toggleLabelEl.textContent = `Hide ${suggestionsLabel}`;
 		if (visibleOptions.length === 0) {
 			listEl.createDiv({
 				cls: "firstrecall-model-combobox-empty",

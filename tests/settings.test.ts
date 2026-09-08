@@ -487,11 +487,24 @@ function settingText(containerEl: HTMLElement): string {
 }
 
 function openSettingsCard(tab: FirstRecallSettingTab, label: string): void {
-	const card = tab.containerEl.querySelector<HTMLElement>(
-		`[aria-label="${label}"]`
+	const card = [...tab.containerEl.querySelectorAll<HTMLElement>(
+		".firstrecall-settings-nav-card"
+	)].find((candidate) =>
+		candidate.querySelector(".setting-item-name")?.textContent === label
 	);
 	if (!card) throw new Error(`Missing settings card: ${label}`);
 	card.click();
+}
+
+function providerPathButton(
+	containerEl: HTMLElement,
+	label: string
+): HTMLButtonElement {
+	const button = [...containerEl.querySelectorAll<HTMLButtonElement>(
+		".firstrecall-provider-path-button"
+	)].find((candidate) => candidate.textContent === label);
+	if (!button) throw new Error(`Missing provider path: ${label}`);
+	return button;
 }
 
 async function changeToggle(
@@ -510,16 +523,6 @@ async function changeToggle(
 	};
 	if (!toggle.__onChange) throw new Error(`Missing toggle callback: ${name}`);
 	await toggle.__onChange(value);
-}
-
-async function clickSettingButton(
-	containerEl: HTMLElement,
-	label: string
-): Promise<void> {
-	const button = [...containerEl.querySelectorAll<HTMLButtonElement>("button")]
-		.find((candidate) => candidate.textContent === label);
-	if (!button) throw new Error(`Missing button: ${label}`);
-	await clickButton(button);
 }
 
 async function clickButton(button: HTMLButtonElement): Promise<void> {
@@ -582,6 +585,17 @@ async function clickThumbnail(
 }
 
 describe("settings defaults", () => {
+	it("uses visible navigation text without redundant hover labels", async () => {
+		const { tab } = await setupSettingsTab();
+		tab.display();
+
+		const cards = [...tab.containerEl.querySelectorAll<HTMLElement>(
+			".firstrecall-settings-nav-card"
+		)];
+		expect(cards).toHaveLength(3);
+		expect(cards.every((card) => !card.hasAttribute("aria-label"))).toBe(true);
+	});
+
 	it("does not choose models for providers", async () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
@@ -639,7 +653,8 @@ describe("settings defaults", () => {
 			const descriptionEl = descriptionId
 				? tab.containerEl.querySelector<HTMLElement>(`#${descriptionId}`)
 				: null;
-			expect(button.getAttribute("aria-label")).toBeTruthy();
+			expect(button.hasAttribute("aria-label")).toBe(false);
+			expect(button.textContent?.trim()).toBeTruthy();
 			expect(descriptionEl).not.toBeNull();
 			expect(button.contains(descriptionEl)).toBe(false);
 			expect(button.getAttribute("aria-expanded")).toBe("false");
@@ -676,6 +691,16 @@ describe("settings defaults", () => {
 				),
 			];
 			observedGroups.push(radios.map((radio) => radio.dataset.provider!).sort());
+			expect(radios.every((radio) => !radio.hasAttribute("aria-label"))).toBe(true);
+			for (const radio of radios) {
+				const definition = firstRecallProviderDefinitions().find(
+					(candidate) => candidate.id === radio.dataset.provider
+				)!;
+				const labelledBy = radio.getAttribute("aria-labelledby")!;
+				expect(tab.containerEl.querySelector(`#${labelledBy}`)?.textContent).toBe(
+					definition.label
+				);
+			}
 			expect(
 				buttons.filter((candidate) => candidate.getAttribute("aria-expanded") === "true")
 			).toEqual([button]);
@@ -797,9 +822,7 @@ describe("settings defaults", () => {
 		) as HTMLInputElement & { __onChange?: (value: string) => void };
 		apiKeyInput.value = "sk-ant-unsaved";
 		apiKeyInput.__onChange?.(apiKeyInput.value);
-		const installedButton = tab.containerEl.querySelector<HTMLButtonElement>(
-			'button[aria-label="Terminal apps"]'
-		)!;
+		const installedButton = providerPathButton(tab.containerEl, "Terminal apps");
 		installedButton.focus();
 		installedButton.click();
 
@@ -830,9 +853,7 @@ describe("settings defaults", () => {
 		installedButton.click();
 		expect(tab.containerEl.querySelector('[role="radio"]')).toBe(firstRadio);
 
-		const apiButton = tab.containerEl.querySelector<HTMLButtonElement>(
-			'button[aria-label="API key"]'
-		)!;
+		const apiButton = providerPathButton(tab.containerEl, "API key");
 		apiButton.click();
 		expect(setupPanel.hidden).toBe(false);
 		expect(tab.containerEl.querySelector(".firstrecall-active-provider-panel")).toBe(
@@ -844,7 +865,7 @@ describe("settings defaults", () => {
 		expect(apiKeyInput.value).toBe("sk-ant-unsaved");
 		expect(
 			tab.containerEl.querySelector(
-				'[role="radio"][aria-label="Anthropic (Claude)"]'
+				'[role="radio"][data-provider="anthropic"]'
 			)?.getAttribute("aria-checked")
 		).toBe("true");
 		expect(plugin.settings.byok.selectedProvider).toBe("anthropic");
@@ -856,15 +877,31 @@ describe("settings defaults", () => {
 		const definition = byokProviderDefinition("anthropic");
 		tab.display();
 		openSettingsCard(tab, "AI model");
+		providerPathButton(tab.containerEl, "API key").click();
 		tab.containerEl
-			.querySelector<HTMLButtonElement>('button[aria-label="API key"]')
-			?.click();
-		tab.containerEl
-			.querySelector<HTMLButtonElement>('[role="radio"][aria-label="Anthropic (Claude)"]')
+			.querySelector<HTMLButtonElement>('[role="radio"][data-provider="anthropic"]')
 			?.click();
 
 		await vi.waitFor(() =>
 			expect(plugin.settings.byok.selectedProvider).toBe("anthropic")
+		);
+		const apiKeyInput = tab.containerEl.querySelector<HTMLInputElement>(
+			".firstrecall-api-key-input"
+		) as HTMLInputElement & { __onChange?: (value: string) => void };
+		const eye = tab.containerEl.querySelector<HTMLButtonElement>(
+			".firstrecall-key-eye"
+		)!;
+		expect(eye.hasAttribute("aria-label")).toBe(false);
+		const eyeLabelledBy = eye.getAttribute("aria-labelledby")!;
+		expect(tab.containerEl.querySelector(`#${eyeLabelledBy}`)?.textContent).toBe(
+			"Show typed API key"
+		);
+		apiKeyInput.value = "sk-ant-replacement";
+		apiKeyInput.__onChange?.(apiKeyInput.value);
+		eye.click();
+		expect(apiKeyInput.type).toBe("text");
+		expect(tab.containerEl.querySelector(`#${eyeLabelledBy}`)?.textContent).toBe(
+			"Hide typed API key"
 		);
 		const link = [...tab.containerEl.querySelectorAll<HTMLAnchorElement>("a")]
 			.find((candidate) => candidate.href === definition.credentialField.helpUrl);
@@ -1024,13 +1061,32 @@ describe("settings defaults", () => {
 	it("allows every generated component to be hidden without marking content dirty", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
-
-		for (const label of [
+		const labels = [
 			"Show Note Brief",
 			"Show summary",
 			"Show recall question",
 			"Show key terms",
-		]) {
+		];
+		const cards = [...tab.containerEl.querySelectorAll<HTMLElement>(
+			".firstrecall-settings-artifact-card"
+		)];
+		for (const card of cards) {
+			expect(card.hasAttribute("aria-label")).toBe(false);
+			const labelledBy = card.getAttribute("aria-labelledby");
+			expect(labelledBy).toBeTruthy();
+			expect(tab.containerEl.querySelector(`#${labelledBy}`)?.textContent).toBeTruthy();
+		}
+
+		for (const label of labels) {
+			const toggle = tab.containerEl.querySelector<HTMLInputElement>(
+				`[data-setting-name="${label}"] [data-control="toggle"]`
+			)!;
+			expect(toggle.hasAttribute("aria-label")).toBe(false);
+			const labelledBy = toggle.getAttribute("aria-labelledby");
+			expect(labelledBy).toBeTruthy();
+			expect(tab.containerEl.querySelector(`#${labelledBy}`)?.textContent).toBe(
+				label
+			);
 			await changeToggle(tab.containerEl, label, false);
 		}
 
@@ -1087,6 +1143,12 @@ describe("settings defaults", () => {
 		expect(controlledId).toBeTruthy();
 		expect(advanced.querySelector(`#${controlledId}`)).not.toBeNull();
 		const textareas = [...advanced.querySelectorAll<HTMLTextAreaElement>("textarea")];
+		for (const textarea of textareas) {
+			expect(textarea.hasAttribute("aria-label")).toBe(false);
+			const labelledBy = textarea.getAttribute("aria-labelledby");
+			expect(labelledBy).toBeTruthy();
+			expect(tab.containerEl.querySelector(`#${labelledBy}`)?.textContent).toBeTruthy();
+		}
 		const section = textareas.find((textarea) => textarea.value.includes("{{section_content}}"))!;
 		const brief = textareas.find((textarea) => textarea.value.includes("{{full_note_source}}"))!;
 		expect(section.readOnly).toBe(true);
@@ -1274,8 +1336,13 @@ describe("folders and automatic updates settings", () => {
 		tab.display();
 		openSettingsCard(tab, "Managed folders");
 		const toggle = tab.containerEl.querySelector<HTMLInputElement>(
-			'input[aria-label="Update automatically for Courses/Biology"]'
+			'[data-setting-name="Biology"] [data-control="toggle"]'
 		) as HTMLInputElement & { __onChange?: (value: boolean) => Promise<void> };
+		expect(toggle.hasAttribute("aria-label")).toBe(false);
+		const labelledBy = toggle.getAttribute("aria-labelledby")!;
+		expect(tab.containerEl.querySelector(`#${labelledBy}`)?.textContent).toBe(
+			"Update automatically for Courses/Biology"
+		);
 		await toggle.__onChange?.(true);
 
 		expect(plugin.updateStudyArea).toHaveBeenCalledWith(
@@ -1294,7 +1361,15 @@ describe("folders and automatic updates settings", () => {
 		tab.display();
 		openSettingsCard(tab, "Managed folders");
 		await vi.waitFor(() => expect(settingText(tab.containerEl)).toContain("Cancel scan"));
-		await clickSettingButton(tab.containerEl, "Cancel scan");
+		const cancelScan = tab.containerEl.querySelector<HTMLButtonElement>(
+			"button.firstrecall-study-area-scan"
+		)!;
+		expect(cancelScan.hasAttribute("aria-label")).toBe(false);
+		const cancelScanLabelledBy = cancelScan.getAttribute("aria-labelledby")!;
+		expect(tab.containerEl.querySelector(`#${cancelScanLabelledBy}`)?.textContent).toBe(
+			"Cancel scan for Courses/Biology"
+		);
+		await clickButton(cancelScan);
 		expect(settingText(tab.containerEl)).toContain("Scan canceled");
 		expect(settingText(tab.containerEl)).toContain("Scan again");
 		finishScan(studyAreaPlan({ counts: { ready: 9, uncued: 0, stale: 0, failed: 0, skipped: 0 } }));
@@ -1315,8 +1390,13 @@ describe("folders and automatic updates settings", () => {
 		await vi.waitFor(() => expect(plugin.previewStudyArea).toHaveBeenCalled());
 
 		const removeButton = tab.containerEl.querySelector<HTMLButtonElement>(
-			'button[aria-label="Remove Claudes"]'
+			"button.firstrecall-study-area-remove"
 		)!;
+		expect(removeButton.hasAttribute("aria-label")).toBe(false);
+		const removeLabelledBy = removeButton.getAttribute("aria-labelledby")!;
+		expect(tab.containerEl.querySelector(`#${removeLabelledBy}`)?.textContent).toBe(
+			"Remove Claudes"
+		);
 		removeButton.click();
 		expect(plugin.removeStudyArea).not.toHaveBeenCalled();
 		let actions = document.body.querySelector<HTMLElement>(

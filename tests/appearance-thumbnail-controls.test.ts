@@ -60,9 +60,19 @@ describe("renderAppearanceThumbnailGroup", () => {
 		expect(buttons).toHaveLength(options().length);
 		expect(buttons[0].getAttribute("aria-pressed")).toBe("true");
 		expect(buttons[1].getAttribute("aria-pressed")).toBe("false");
-		expect(
-			root.querySelector(".firstrecall-thumbnail-group")?.getAttribute("aria-label")
-		).toBe("Editor cue style");
+		expect([...buttons].every((button) => !button.hasAttribute("aria-label"))).toBe(
+			true
+		);
+		expect([...buttons].map((button) =>
+			button.querySelector(".firstrecall-thumbnail-label")?.textContent
+		)).toEqual(options().map((option) => option.label));
+		const group = root.querySelector<HTMLElement>(".firstrecall-thumbnail-group")!;
+		expect(group.hasAttribute("aria-label")).toBe(false);
+		const groupLabelId = group.getAttribute("aria-labelledby");
+		expect(groupLabelId).toBeTruthy();
+		expect(group.querySelector(`#${groupLabelId}`)?.textContent).toBe(
+			"Editor cue style"
+		);
 	});
 
 	it("selects a non-current option and invokes onSelect", () => {
@@ -158,7 +168,7 @@ describe("Editing View thumbnail option recipes", () => {
 
 		const previews = EDITOR_CUE_DISPLAY_OPTIONS.map((option) => {
 			const button = root.querySelector<HTMLButtonElement>(
-				`button[aria-label="${option.label}"]`
+				`button[data-option-id="${option.id}"]`
 			)!;
 			const preview = button.querySelector<HTMLElement>('[aria-hidden="true"]')!;
 			expect(preview.childElementCount).toBeGreaterThan(0);

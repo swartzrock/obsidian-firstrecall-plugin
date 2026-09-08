@@ -149,6 +149,35 @@ const CLI_DEFAULT_MODEL_OPTION: ModelOption = {
 };
 const SHOW_STUDY_AREA_EXCLUSIONS = false;
 const SVG_NS = "http://www.w3.org/2000/svg";
+let nextSettingsAccessibleLabelId = 0;
+
+function labelControlBy(
+	controlEl: HTMLElement,
+	...labelEls: HTMLElement[]
+): void {
+	for (const labelEl of labelEls) {
+		if (!labelEl.id) {
+			labelEl.id = `firstrecall-settings-label-${nextSettingsAccessibleLabelId++}`;
+		}
+	}
+	controlEl.setAttribute(
+		"aria-labelledby",
+		labelEls.map((labelEl) => labelEl.id).join(" ")
+	);
+}
+
+function labelControlWithText(
+	controlEl: HTMLElement,
+	label: string
+): HTMLElement {
+	const labelEl = controlEl.ownerDocument.createElement("span");
+	labelEl.hidden = true;
+	labelEl.textContent = label;
+	controlEl.appendChild(labelEl);
+	labelControlBy(controlEl, labelEl);
+	return labelEl;
+}
+
 const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 	"clip-rule",
 	"d",
@@ -356,9 +385,10 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 		const backBtn = titleSetting.nameEl.createEl("button", {
 			cls: "clickable-icon firstrecall-settings-back",
-			attr: { type: "button", "aria-label": "Back to settings" },
+			attr: { type: "button" },
 		});
 		setIcon(backBtn, "chevron-left");
+		labelControlWithText(backBtn, "Back to settings");
 		this.plugin.registerDomEvent(backBtn, "click", () =>
 			this.openSubpage("home")
 		);
@@ -399,7 +429,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		chevronEl.setAttr("aria-hidden", "true");
 		setting.settingEl.tabIndex = 0;
 		setting.settingEl.setAttr("role", "button");
-		setting.settingEl.setAttr("aria-label", opts.title);
 		this.plugin.registerDomEvent(setting.settingEl, "click", (event) => {
 			if (this.isSettingsNavInteractiveTarget(event.target)) return;
 			opts.onOpen();
@@ -716,7 +745,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				text: definition.title,
 				attr: {
 					type: "button",
-					"aria-label": definition.title,
 					"aria-describedby": descriptionId,
 					"aria-expanded": String(this.providerPickerPath === definition.path),
 					"aria-controls": definition.path === "trial"
@@ -797,7 +825,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					type: "button",
 					role: "radio",
 					"aria-checked": String(isSelected),
-					"aria-label": definition.label,
 					"data-provider": definition.id,
 				},
 			});
@@ -806,6 +833,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				cls: "firstrecall-provider-button-label",
 				text: definition.shortLabel,
 			});
+			labelControlWithText(buttonEl, definition.label);
 			buttonEl.createSpan({ cls: "firstrecall-provider-radio" });
 		}
 	}
@@ -1064,7 +1092,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			input.readOnly = true;
 			input.rows = 12;
 			input.addClass("firstrecall-instructions-input");
-			input.setAttr("aria-label", title);
+			labelControlBy(input, setting.nameEl);
 		});
 		return input;
 	}
@@ -1292,10 +1320,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			text: "Update automatically",
 		});
 		setting.addToggle((tg) => {
-			tg.toggleEl.setAttribute(
-				"aria-label",
-				`Update automatically for ${studyAreaScopeLabel(area.parentPath)}`
-			);
+			labelControlWithText(tg.toggleEl, `Update automatically for ${scopeLabel}`);
 			(tg.toggleEl as HTMLInputElement).disabled = busy || !providerReady;
 			return tg
 				.setValue(area.maintenanceMode === "maintain-on-save")
@@ -1326,20 +1351,23 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		retryBtn.hidden = !hasFailed;
 		retryBtn.classList.toggle("firstrecall-study-area-hidden", !hasFailed);
 		const scanBtn = setting.controlEl.createEl("button", {
+			cls: "firstrecall-study-area-scan",
 			text: state.phase === "scanning" ? "Cancel scan" : "Scan again",
-			attr: {
-				type: "button",
-				"aria-label": state.phase === "scanning"
-					? `Cancel scan for ${studyAreaScopeLabel(area.parentPath)}`
-					: `Scan ${studyAreaScopeLabel(area.parentPath)} again`,
-			},
+			attr: { type: "button" },
 		});
+		labelControlWithText(
+			scanBtn,
+			state.phase === "scanning"
+				? `Cancel scan for ${scopeLabel}`
+				: `Scan ${scopeLabel} again`
+		);
 		scanBtn.disabled = state.phase === "running";
 		const removeBtn = setting.controlEl.createEl("button", {
 			cls: "clickable-icon firstrecall-study-area-remove",
-			attr: { type: "button", "aria-label": `Remove ${area.name}` },
+			attr: { type: "button" },
 		});
 		setIcon(removeBtn, "trash-2");
+		labelControlWithText(removeBtn, `Remove ${area.name}`);
 
 		this.plugin.registerDomEvent(backfillBtn, "click", async () => {
 			await this.runStudyAreaAction(area.id, "backfill");
@@ -1496,12 +1524,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	): void {
 		const exclusions = containerEl.createDiv({
 			cls: "firstrecall-study-area-exclusions",
-			attr: { role: "group", "aria-label": `Exclusions for ${studyAreaScopeLabel(area.parentPath)}` },
+			attr: { role: "group" },
 		});
 		exclusions.createDiv({
 			cls: "firstrecall-study-area-exclusions-title",
 			text: "Exclusions",
 		});
+		labelControlWithText(exclusions, `Exclusions for ${studyAreaScopeLabel(area.parentPath)}`);
 		exclusions.createDiv({
 			cls: "firstrecall-study-area-help",
 			text: "Notes inherit coverage from this managed folder. Excluding a note or nested folder is the only per-note opt-out.",
@@ -1511,9 +1540,10 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			row.createSpan({ text: path });
 			const remove = row.createEl("button", {
 				cls: "clickable-icon",
-				attr: { type: "button", "aria-label": `Remove exclusion ${path}` },
+				attr: { type: "button" },
 			});
 			setIcon(remove, "x");
+			labelControlWithText(remove, `Remove exclusion ${path}`);
 			this.plugin.registerDomEvent(remove, "click", async () => {
 				await this.plugin.updateStudyArea({
 					...area,
@@ -1604,62 +1634,59 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			"A whole-note overview with Summary, Recall question, and Key terms."
 		);
 
-		new Setting(noteBriefCard)
+		const noteBriefSetting = new Setting(noteBriefCard)
 			.setName("Show Note Brief")
-			.setDesc("Show the whole-note Note Brief in Editing and Reading.")
-			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show Note Brief");
-				return tg
+			.setDesc("Show the whole-note Note Brief in Editing and Reading.");
+		noteBriefSetting.addToggle((tg) => {
+			labelControlBy(tg.toggleEl, noteBriefSetting.nameEl);
+			return tg
 					.setValue(this.plugin.settings.showNoteBrief)
 					.onChange(async (value) => {
 						this.plugin.settings.showNoteBrief = value;
 						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
 					});
-			});
+		});
 		const cueCard = this.createArtifactCard(
 			containerEl,
 			"Section study card",
 			"Choose which parts of each section card appear in Editing and Reading."
 		);
 
-		new Setting(cueCard)
-			.setName("Show summary")
-			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show summary");
-				return tg
+		const summarySetting = new Setting(cueCard).setName("Show summary");
+		summarySetting.addToggle((tg) => {
+			labelControlBy(tg.toggleEl, summarySetting.nameEl);
+			return tg
 					.setValue(this.plugin.settings.showSummary)
 					.onChange(async (value) => {
 						this.plugin.settings.showSummary = value;
 						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
 					});
-			});
+		});
 
-		new Setting(cueCard)
-			.setName("Show recall question")
-			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show recall question");
-				return tg
+		const questionSetting = new Setting(cueCard).setName("Show recall question");
+		questionSetting.addToggle((tg) => {
+			labelControlBy(tg.toggleEl, questionSetting.nameEl);
+			return tg
 					.setValue(this.plugin.settings.showQuestion)
 					.onChange(async (value) => {
 						this.plugin.settings.showQuestion = value;
 						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
 					});
-			});
-		new Setting(cueCard)
-			.setName("Show key terms")
-			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show key terms");
-				return tg
+		});
+		const termsSetting = new Setting(cueCard).setName("Show key terms");
+		termsSetting.addToggle((tg) => {
+			labelControlBy(tg.toggleEl, termsSetting.nameEl);
+			return tg
 					.setValue(this.plugin.settings.showTerms)
 					.onChange(async (value) => {
 						this.plugin.settings.showTerms = value;
 						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
 					});
-			});
+		});
 	}
 
 	private createArtifactCard(
@@ -1669,9 +1696,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	): HTMLElement {
 		const card = containerEl.createDiv({
 			cls: "firstrecall-settings-artifact-card",
-			attr: { role: "group", "aria-label": title },
+			attr: { role: "group" },
 		});
-		card.createDiv({ cls: "firstrecall-settings-artifact-title", text: title });
+		const titleEl = card.createDiv({
+			cls: "firstrecall-settings-artifact-title",
+			text: title,
+		});
+		labelControlBy(card, titleEl);
 		card.createDiv({ cls: "firstrecall-settings-artifact-preview", text: description });
 		return card;
 	}
@@ -2131,20 +2162,21 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					"afterend",
 					createEl("button", {
 						cls: "firstrecall-key-eye",
-						attr: { type: "button", "aria-label": "Show typed API key" },
+						attr: { type: "button" },
 					})
 				) as HTMLButtonElement;
 				setIcon(eye, "eye");
+				const eyeLabelEl = labelControlWithText(eye, "Show typed API key");
 				updateEyeVisibility(eye);
 				this.plugin.registerDomEvent(eye, "click", () => {
 					if (eye.disabled) return;
 					const masked = text.inputEl.type === "password";
 					text.inputEl.type = masked ? "text" : "password";
 					setIcon(eye, masked ? "eye-off" : "eye");
-					eye.setAttr(
-						"aria-label",
-						masked ? "Hide typed API key" : "Show typed API key"
-					);
+					eye.appendChild(eyeLabelEl);
+					eyeLabelEl.textContent = masked
+						? "Hide typed API key"
+						: "Show typed API key";
 				});
 			});
 		if (opts.field.helpUrl) {
