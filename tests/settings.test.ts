@@ -709,6 +709,21 @@ describe("settings defaults", () => {
 		expect(plugin.settings.byok.providers).not.toHaveProperty("hosted-demo");
 	});
 
+	it("introduces Simonides and links to more information", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.byok.selectedProvider = "hosted-demo";
+		tab.display();
+		openSettingsCard(tab, "AI model");
+
+		expect(tab.containerEl.textContent).toContain(
+			"Simonides is FirstRecall's hosted AI service."
+		);
+		const infoLink = tab.containerEl.querySelector<HTMLAnchorElement>(
+			'.firstrecall-active-provider-panel a[href="https://simonides.ai/"]'
+		);
+		expect(infoLink?.textContent).toBe("Learn more about Simonides");
+	});
+
 	it("uses the Simonides logo for the hosted trial", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.byok.selectedProvider = "hosted-demo";
