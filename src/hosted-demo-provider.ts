@@ -51,7 +51,7 @@ const hostedDemoRequestSchema = z
 		contractVersion: z.literal("v1"),
 		client: z
 			.object({
-				name: z.literal("first-recall-obsidian"),
+				name: z.literal("simonides-obsidian"),
 				version: z.string().min(1).max(64),
 			})
 			.strict(),
@@ -469,7 +469,7 @@ export function createHostedDemoProvider(
 				const payload = {
 					contractVersion: "v1",
 					client: {
-						name: "first-recall-obsidian",
+						name: "simonides-obsidian",
 						version: deps.clientVersion,
 					},
 					identity: {

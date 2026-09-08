@@ -278,7 +278,7 @@ describe("hosted demo provider", () => {
 		expect(request.headers.has("authorization")).toBe(false);
 		expect(await request.json()).toEqual({
 			contractVersion: "v1",
-			client: { name: "first-recall-obsidian", version: "0.5.0" },
+			client: { name: "simonides-obsidian", version: "0.5.0" },
 			identity: {
 				installationId: INSTALLATION_ID,
 				sessionId: SESSION_ID,
