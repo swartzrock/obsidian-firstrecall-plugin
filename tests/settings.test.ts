@@ -709,7 +709,7 @@ describe("settings defaults", () => {
 		expect(plugin.settings.byok.providers).not.toHaveProperty("hosted-demo");
 	});
 
-	it("uses the FirstRecall logo for the hosted trial", async () => {
+	it("uses the Simonides logo for the hosted trial", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.byok.selectedProvider = "hosted-demo";
 		tab.display();
@@ -719,7 +719,9 @@ describe("settings defaults", () => {
 			'.firstrecall-provider-icon[data-provider="hosted-demo"] img'
 		);
 		expect(hostedLogo?.alt).toBe("");
-		expect(hostedLogo?.getAttribute("src")).toMatch(/^data:image\/svg\+xml,/);
+		expect(hostedLogo?.getAttribute("src")).toMatch(
+			/^(?:data:image\/png;base64,|\/src\/assets\/simonides-logo\.png)$/
+		);
 	});
 
 	it("restores an existing provider route and rate-limit value", async () => {
@@ -885,7 +887,9 @@ describe("settings defaults", () => {
 					expect(paths.length).toBeGreaterThan(0);
 					expect(paths.every((path) => Boolean(path.getAttribute("d")))).toBe(true);
 				} else if (image) {
-					expect(image.getAttribute("src")).toMatch(/^data:image\/svg\+xml,/);
+					expect(image.getAttribute("src")).toMatch(
+						/^(?:data:image\/(?:svg\+xml|png;base64),|\/src\/assets\/simonides-logo\.png)$/
+					);
 				} else {
 					expect(iconEl.dataset.icon).toBeTruthy();
 				}

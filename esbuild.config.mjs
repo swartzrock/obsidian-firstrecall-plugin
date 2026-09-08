@@ -49,7 +49,7 @@ const context = await esbuild.context({
 	format: "cjs",
 	target: "es2018",
 	logLevel: "info",
-	loader: { ".svg": "text" },
+	loader: { ".png": "dataurl", ".svg": "text" },
 	plugins: [byokRuntimeAliasPlugin],
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
