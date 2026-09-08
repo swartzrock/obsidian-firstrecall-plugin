@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/media/logo-dark.svg">
-  <img src="docs/media/logo-light.svg" alt="FirstRecall" height="72">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/fr-logo-dark.png">
+  <img src="docs/media/fr-logo-light.png" alt="FirstRecall" height="72">
 </picture>
 
 
@@ -22,7 +22,9 @@ The FirstRecall plugin turns any Obsidian note into active-recall practice by ge
 
 Your Markdown files are never touched. FirstRecall uses your selected AI / LLM provider to generate the **Note Brief** and **section study cards** and caches them inside your Obsidian vault.
 
-![Generate study material, then practice it in Study Mode](docs/media/generate-and-study.gif)
+[![FirstRecall Study Mode with recall questions beside the blurred source text](docs/media/generate-and-study.jpg)](docs/media/generate-and-study.mp4)
+
+[Watch or download: Generate study material and enter Study Mode (MP4, 18 seconds)](docs/media/generate-and-study.mp4)
 
 ## Table of Contents
 
@@ -50,7 +52,21 @@ Your Markdown files are never touched. FirstRecall uses your selected AI / LLM p
   preferred model, or keep generation private with Ollama or LM Studio. The Codex
   and Claude Code terminal tools are also supported.
 
-  <img src="docs/media/ai-providers.jpg" width="300">
+  - **Simonides hosted AI trial** Generate study materials with Simonides' free, secure hosted AI. Usage limits apply.
+
+    <img src="docs/media/provider-trial.jpg" width="300">
+
+  - **API key** Use an API key from Anthropic, OpenAI, Gemini, xAI, OpenRouter, Groq, Mistral, DeepSeek, DeepInfra, Together AI, or Fireworks AI.
+
+    <img src="docs/media/provider-api.jpg" width="300">
+
+  - **Terminal apps** Use Codex or Claude Code's terminal apps if they are already installed and configured with your account.
+
+    <img src="docs/media/provider-terminal.jpg" width="300">
+
+  - **Local server** Use your own LLMs with Ollama or LM Studio.
+
+    <img src="docs/media/provider-local.jpg" width="300">
 
 
 
@@ -81,6 +97,8 @@ BRAT is the easiest way to try pre-release Obsidian plugins and keep them update
 
 <img src="docs/media/firstrecall-menu.jpg">
 
+
+
 ## What FirstRecall Adds
 
 Every generated note carries a **Note Brief** — a whole-note overview and review
@@ -102,7 +120,9 @@ many cards are generated in one operation.
 - **Key Terms** review this evidence and anchor them in your memory for better recall.
 
 
-![A note with its Note Brief and section study cards visible beside the source](docs/media/note-and-cards.gif)
+[![An Obsidian note with a section summary, recall question, and key terms beside the source](docs/media/notes-and-cards.jpg)](docs/media/notes-and-cards.mp4)
+
+[Watch or download: Notes and study cards (MP4, 19 seconds)](docs/media/notes-and-cards.mp4)
 
 ## More Features
 
@@ -111,6 +131,8 @@ many cards are generated in one operation.
 Study Mode hides each recall question's answer until you've attempted it yourself.
 It's a temporary practice view — using it never changes what's saved, hidden, or
 covered by automatic updates. Select **Study this note** from the FirstRecall dropdown and work through a note's cards revealing them one at a time when you are ready.
+
+![Study Mode keeps the recall question visible while blurring the source text and image; use the eye control to reveal the answer](docs/media/2-study-mode.png)
 
 ### Managed folders: Syncs with your Changes
 
@@ -129,7 +151,9 @@ Add a folder (or your **Entire vault**) as a **managed folder** to make FirstRec
   visible, marks it outdated, and offers **Retry update** — you're never left with a
   broken card mid-study-session.
 
-![Adding a managed folder, scanning it, and turning on automatic updates](docs/media/managed-folders.gif)
+[![Managed folders settings showing a folder with its study material up to date and automatic updates off](docs/media/managed-folders.jpg)](docs/media/managed-folders.mp4)
+
+[Watch or download: Add a managed folder and update its study material (MP4, 13 seconds)](docs/media/managed-folders.mp4)
 
 ### Note Brief & Section Study Card Exports
 
