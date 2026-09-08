@@ -4,7 +4,7 @@ export const REQUEST_RATE_OPTIONS = [1, 5, 10, 20] as const;
 export type RequestsPerTenSeconds = (typeof REQUEST_RATE_OPTIONS)[number];
 
 const WINDOW_MILLISECONDS = 10_000;
-const HOSTED_DEMO_MAX_REQUESTS: RequestsPerTenSeconds = 5;
+const HOSTED_DEMO_MAX_REQUESTS: RequestsPerTenSeconds = 1;
 
 export function isRequestsPerTenSeconds(
 	value: unknown

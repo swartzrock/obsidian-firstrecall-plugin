@@ -167,6 +167,11 @@ class MockToggle {
 class MockDropdown {
 	constructor(private select: HTMLSelectElement) {}
 
+	setDisabled(disabled: boolean): this {
+		this.select.disabled = disabled;
+		return this;
+	}
+
 	addOption(value: string, label: string): this {
 		const option = this.select.ownerDocument.createElement("option");
 		option.value = value;

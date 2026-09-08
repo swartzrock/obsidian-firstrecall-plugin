@@ -5,10 +5,30 @@ import {
 } from "../src/provider-request-rate";
 
 describe("provider request rate", () => {
-	it("caps the hosted trial at five requests while honoring other provider settings", () => {
-		expect(effectiveProviderRequestRate("hosted-demo", 20)).toBe(5);
+	it("locks the hosted trial to one request per ten seconds while honoring other provider settings", () => {
+		expect(effectiveProviderRequestRate("hosted-demo", 20)).toBe(1);
+		expect(effectiveProviderRequestRate("hosted-demo", 5)).toBe(1);
 		expect(effectiveProviderRequestRate("hosted-demo", 1)).toBe(1);
 		expect(effectiveProviderRequestRate("openai", 20)).toBe(20);
+	});
+
+	it("spaces hosted trial requests ten seconds apart even with a higher saved rate", async () => {
+		let now = 0;
+		const starts: number[] = [];
+		const limiter = new RollingWindowRequestLimiter(
+			() => effectiveProviderRequestRate("hosted-demo", 20),
+			{
+				now: () => now,
+				sleep: async (milliseconds) => { now += milliseconds; },
+			}
+		);
+
+		for (let request = 0; request < 7; request++) {
+			await limiter.acquire();
+			starts.push(now);
+		}
+
+		expect(starts).toEqual([0, 10_000, 20_000, 30_000, 40_000, 50_000, 60_000]);
 	});
 
 	it("admits only five starts in a rolling ten-second window", async () => {

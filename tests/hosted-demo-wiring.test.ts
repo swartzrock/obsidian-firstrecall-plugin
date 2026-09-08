@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FirstRecallPlugin from "../src/main";
 import { DEFAULT_SETTINGS } from "../src/settings";
 
@@ -47,13 +47,18 @@ function pluginHarness(installationId?: unknown) {
 
 async function captureIdentity(plugin: FirstRecallPlugin) {
 	const provider = await plugin.makeProvider();
-	await expect(provider.generateBundle?.(bundleInput())).rejects.toThrow(
+	const captured = expect(provider.generateBundle?.(bundleInput())).rejects.toThrow(
 		"stop after request capture"
 	);
+	await vi.runAllTimersAsync();
+	await captured;
 	return provider;
 }
 
 describe("hosted trial plugin wiring", () => {
+	beforeEach(() => vi.useFakeTimers());
+	afterEach(() => vi.useRealTimers());
+
 	it("gates each hosted transport attempt through the shared request limiter", async () => {
 		const { plugin } = pluginHarness(VALID_INSTALLATION_ID);
 		const acquire = vi.fn(async (_signal?: AbortSignal) => {});
