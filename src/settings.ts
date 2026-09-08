@@ -227,7 +227,7 @@ export interface FirstRecallSettings {
 
 export const DEFAULT_SETTINGS: FirstRecallSettings = {
 	byok: {
-		selectedProvider: null,
+		selectedProvider: "hosted-demo",
 		providers: {
 			ollama: {
 				credential: "http://localhost:11434",

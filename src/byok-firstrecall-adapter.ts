@@ -578,7 +578,11 @@ function normalizeFirstRecallByokSettings(
 	}
 	return {
 		selectedProvider: normalizeFirstRecallSelectedProvider(
-			existing.selectedProvider ?? defaults.selectedProvider
+			hasRawByok && Object.prototype.hasOwnProperty.call(existing, "selectedProvider")
+				? existing.selectedProvider
+				: rawSettings == null
+					? defaults.selectedProvider
+					: null
 		),
 		providers,
 		verification: parsed.verification,

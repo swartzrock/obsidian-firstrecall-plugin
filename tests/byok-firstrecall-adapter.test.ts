@@ -726,6 +726,26 @@ describe("firstRecallProviderConfigFromSettings", () => {
 });
 
 describe("FirstRecall provider settings normalization", () => {
+	it("keeps legacy provider settings without a selection unselected", () => {
+		const raw = settings({ selectedProvider: "openai" });
+		delete (raw.byok as { selectedProvider?: unknown }).selectedProvider;
+		const normalized = structuredClone(DEFAULT_SETTINGS);
+
+		normalizeFirstRecallProviderSettings(normalized, DEFAULT_SETTINGS, raw);
+
+		expect(normalized.byok.selectedProvider).toBeNull();
+	});
+
+	it("preserves an explicitly unselected provider for existing settings", () => {
+		const raw = settings({ selectedProvider: "openai" });
+		raw.byok.selectedProvider = null;
+		const normalized = structuredClone(DEFAULT_SETTINGS);
+
+		normalizeFirstRecallProviderSettings(normalized, DEFAULT_SETTINGS, raw);
+
+		expect(normalized.byok.selectedProvider).toBeNull();
+	});
+
 	it("preserves the explicit hosted trial selection without adding provider settings", () => {
 		const raw = settings({ selectedProvider: "openai" });
 		(raw.byok as { selectedProvider: unknown }).selectedProvider = "hosted-demo";

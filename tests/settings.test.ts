@@ -622,7 +622,7 @@ describe("settings defaults", () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
 		expect(DEFAULT_SETTINGS).toMatchObject({
-			byok: { selectedProvider: null },
+			byok: { selectedProvider: "hosted-demo" },
 			questionType: "exam-practice",
 			requestsPerTenSeconds: 5,
 			showNoteBrief: true,
@@ -632,7 +632,7 @@ describe("settings defaults", () => {
 		});
 	});
 
-	it("leaves a clean install unselected with accessible connection controls", async () => {
+	it("defaults a clean install to the hosted trial with accessible connection controls", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
@@ -657,16 +657,19 @@ describe("settings defaults", () => {
 			expect(button.textContent?.trim()).toBeTruthy();
 			expect(descriptionEl).not.toBeNull();
 			expect(button.contains(descriptionEl)).toBe(false);
-			expect(button.getAttribute("aria-expanded")).toBe("false");
+			expect(button.getAttribute("aria-expanded")).toBe(
+				button.textContent === "Simonides hosted AI trial" ? "true" : "false"
+			);
 			expect(button.getAttribute("aria-controls")).toBeTruthy();
 		}
 		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(0);
-		expect(plugin.settings.byok.selectedProvider).toBeNull();
+		expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo");
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
 
 	it("reveals each provider kind without selecting a provider", async () => {
 		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.byok.selectedProvider = null;
 		tab.display();
 		openSettingsCard(tab, "AI model");
 		const definitions = firstRecallProviderDefinitions();
@@ -714,6 +717,7 @@ describe("settings defaults", () => {
 
 	it("selects the hosted trial without requiring setup fields", async () => {
 		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.byok.selectedProvider = null;
 		tab.display();
 		openSettingsCard(tab, "AI model");
 

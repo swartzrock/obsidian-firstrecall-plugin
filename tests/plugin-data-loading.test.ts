@@ -43,6 +43,23 @@ function unavailableCredentialStore(): SecureCredentialStore {
 }
 
 describe("plugin data loading", () => {
+	it("defaults a new installation to the hosted trial", async () => {
+		const saveData = vi.fn(async () => {});
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => null),
+			saveData,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo");
+		expect(saveData).toHaveBeenCalledTimes(1);
+	});
+
 	it("does not rewrite a complete current data snapshot", async () => {
 		const currentSettings = structuredClone(DEFAULT_SETTINGS);
 		normalizeFirstRecallProviderSettings(
