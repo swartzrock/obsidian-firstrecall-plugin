@@ -1,5 +1,13 @@
 # firstrecall
 
+## 0.7.1
+
+### Patch Changes
+
+- 0f38b23: Add Clear Generated Study Material to the note dropdown menu and group related actions with separators.
+- 0f38b23: Generate and display a Note Brief and whole-note study card for notes without headings, including notes with Properties. Support hiding and revealing the whole note body in Study mode.
+- 0f38b23: Keep the Note Brief visible below Properties in Live Preview.
+
 ## 0.7.0
 
 ### Minor Changes
