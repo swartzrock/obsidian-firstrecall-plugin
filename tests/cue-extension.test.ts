@@ -2016,7 +2016,19 @@ describe("cue editor placement", () => {
 		expect(positions).toEqual([state.doc.line(1).to]);
 	});
 
-	it("keeps the Note Brief visible when Live Preview replaces a leading divider", () => {
+	it.each([
+		{ label: "a leading divider", doc: "****\n# Terms", lastReplacedLine: 1 },
+		{
+			label: "Properties before a heading",
+			doc: "---\nAuthor: Mike Schmitz\nTags: [notes, graph, productivity]\n---\n\n# How To Split Notes\nAtomic note taking.",
+			lastReplacedLine: 4,
+		},
+		{
+			label: "Properties before prose",
+			doc: "---\nAuthor: Mike Schmitz\n---\nAtomic note taking.",
+			lastReplacedLine: 3,
+		},
+	])("keeps the Note Brief visible when Live Preview replaces $label", ({ doc, lastReplacedLine }) => {
 		const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
 			pretendToBeVisual: true,
 		});
@@ -2045,7 +2057,6 @@ describe("cue editor placement", () => {
 		}
 		let view: EditorView | null = null;
 		try {
-			const doc = "****\n# Terms";
 			const placementState = EditorState.create({ doc });
 			const cueDecorations = buildCueWidgetDecorations(placementState, {
 				cues: [],
@@ -2063,15 +2074,17 @@ describe("cue editor placement", () => {
 			view = null;
 			parent.replaceChildren();
 
-			const firstLine = placementState.doc.line(1);
-			const dividerDecorations = Decoration.set([
-				Decoration.replace({ block: true }).range(firstLine.from, firstLine.to),
+			const replacementDecorations = Decoration.set([
+				Decoration.replace({ block: true }).range(
+					0,
+					placementState.doc.line(lastReplacedLine).to
+				),
 			]);
 			const unfocusedState = EditorState.create({
 				doc,
 				extensions: [
 					EditorView.decorations.of(cueDecorations),
-					EditorView.decorations.of(dividerDecorations),
+					EditorView.decorations.of(replacementDecorations),
 				],
 			});
 			view = new EditorView({ state: unfocusedState, parent });

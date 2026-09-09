@@ -1345,6 +1345,15 @@ const leadingAsteriskDividerPattern = /^[ ]{0,3}(?:\*[ \t]*){3,}$/;
 
 function noteBriefAnchor(state: EditorState): number {
 	const firstLine = state.doc.line(1);
+	if (firstLine.text.trimEnd() === "---") {
+		for (let line = 2; line <= state.doc.lines; line++) {
+			if (state.doc.line(line).text.trimEnd() !== "---") continue;
+			// Keep the widget outside Live Preview's Properties replacement.
+			return line < state.doc.lines
+				? state.doc.line(line + 1).from
+				: state.doc.line(line).to;
+		}
+	}
 	if (!leadingAsteriskDividerPattern.test(firstLine.text)) return firstLine.to;
 	return state.doc.lines > 1 ? state.doc.line(2).from : firstLine.from;
 }
