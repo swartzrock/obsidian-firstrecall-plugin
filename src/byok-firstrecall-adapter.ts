@@ -178,7 +178,6 @@ function debugModelTextFailure(kind: string, stage: "initial" | "repair", text: 
 		stage,
 		error,
 		textLength: text.length,
-		textPreview: text.slice(0, 500),
 	});
 }
 
@@ -230,7 +229,6 @@ async function normalizeOllamaJsonResponse(response: Response): Promise<Response
 			responseLength: generatedText.length,
 			thinkingLength: typeof thinkingText === "string" ? thinkingText.length : undefined,
 			textLength: text.length,
-			textPreview: text.slice(0, 500),
 		});
 	}
 	return response;

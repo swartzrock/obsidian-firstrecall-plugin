@@ -433,6 +433,32 @@ describe("firstRecallProviderConfigFromSettings", () => {
 		expect(acquire).toHaveBeenCalledTimes(2);
 	});
 
+	it.each(["malformed", "empty"])("keeps private content out of %s response diagnostics", async (kind) => {
+		const privateText = "CONFIDENTIAL_NOTE_CONTENT";
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		const provider = makeFirstRecallByokProvider(
+			settings({ selectedProvider: "ollama" }),
+			{
+				transport: async () => new Response(JSON.stringify({
+					response: kind === "malformed" ? privateText : "",
+					context: privateText,
+				}), { status: 200, headers: { "content-type": "application/json" } }),
+			}
+		);
+
+		await expect(provider.generateCue({
+			heading: "Private note",
+			content: privateText,
+			options: { questionType: "conceptual" },
+		})).rejects.toThrow();
+		expect(warn).toHaveBeenCalled();
+		expect(JSON.stringify(warn.mock.calls)).not.toContain(privateText);
+		expect(warn.mock.calls).toContainEqual([
+			"[FirstRecall BYOK] Model output validation failed",
+			expect.objectContaining({ kind: "cue", stage: "initial", textLength: expect.any(Number) }),
+		]);
+	});
+
 	it("accepts a text provider abstention without asking it to fabricate a repair", async () => {
 		const calls: Array<{ body?: string }> = [];
 		const provider = makeFirstRecallByokProvider(
