@@ -1,5 +1,12 @@
 # firstrecall
 
+## 0.7.2
+
+### Patch Changes
+
+- 76a59e0: Preserve existing Markdown and Anki exports by adding a number to the filename when a file already exists.
+- 76a59e0: Remove model response previews from diagnostic logs, clarify provider privacy and export documentation, and publish release tags that match the Obsidian manifest version.
+
 ## 0.7.1
 
 ### Patch Changes
