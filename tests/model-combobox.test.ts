@@ -4,7 +4,6 @@ import {
 	buildModelComboboxOptions,
 	buildModelComboboxSuggestions,
 	filterModelOptions,
-	modelOptionSearchText,
 	renderModelCombobox,
 } from "../src/model-combobox";
 import { normalizeStringId, type ModelOption } from "../src/byok-model-options";
@@ -200,17 +199,41 @@ describe("buildModelComboboxSuggestions", () => {
 	});
 });
 
-describe("modelOptionSearchText", () => {
-	it("includes model ID and label", () => {
-		expect(
-			modelOptionSearchText(
-				opt("openai/gpt-4o", { label: "OpenAI: GPT-4o" })
-			)
-		).toBe("openai/gpt-4o openai: gpt-4o");
-	});
-});
-
 describe("renderModelCombobox", () => {
+	it("names the icon toggle without tooltip-producing aria-labels", () => {
+		const dom = setupComboboxDom();
+		const container = dom.window.document.getElementById("root");
+		if (!container) throw new Error("Missing test root");
+
+		renderModelCombobox({
+			containerEl: container,
+			value: "",
+			options: [normalizeStringId("claude-sonnet-5")],
+			placeholder: "Choose a model",
+			emptyMessage: "No matching models.",
+			suggestionsLabel: "Anthropic model suggestions",
+			onCommit: () => {},
+		});
+
+		const toggle = container.querySelector<HTMLButtonElement>(
+			".firstrecall-model-combobox-toggle"
+		)!;
+		const labelledBy = toggle.getAttribute("aria-labelledby")!;
+		expect(toggle.hasAttribute("aria-label")).toBe(false);
+		expect(container.querySelector(`#${labelledBy}`)?.textContent).toBe(
+			"Show Anthropic model suggestions"
+		);
+
+		toggle.click();
+		expect(container.querySelector(`#${labelledBy}`)?.textContent).toBe(
+			"Hide Anthropic model suggestions"
+		);
+		toggle.click();
+		expect(container.querySelector(`#${labelledBy}`)?.textContent).toBe(
+			"Show Anthropic model suggestions"
+		);
+	});
+
 	it("renders a leading option above a divider", () => {
 		const dom = setupComboboxDom();
 		const container = dom.window.document.getElementById("root");

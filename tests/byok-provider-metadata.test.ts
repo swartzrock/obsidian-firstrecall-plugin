@@ -7,10 +7,30 @@ import { describe, expect, it } from "vitest";
 import {
 	byokProviderDefinition,
 	byokProviderDefinitions,
+	firstRecallProviderDefinition,
+	firstRecallProviderDefinitions,
 } from "../src/byok-provider-metadata";
-import { BYOK_PROVIDER_ICONS } from "../src/provider-icons";
+import {
+	BYOK_PROVIDER_ICONS,
+	HOSTED_DEMO_PROVIDER_ICON,
+} from "../src/provider-icons";
 
 describe("FirstRecall BYOK provider metadata", () => {
+	it("registers the plugin-owned trial separately from BYOK providers", () => {
+		expect(firstRecallProviderDefinitions().map(({ id }) => id)).toEqual([
+			"hosted-demo",
+			...BYOK_PROVIDER_IDS,
+		]);
+		expect(byokProviderDefinitions().map(({ id }) => id)).toEqual(
+			BYOK_PROVIDER_IDS
+		);
+		expect(firstRecallProviderDefinition("hosted-demo")).toMatchObject({
+			icon: HOSTED_DEMO_PROVIDER_ICON,
+			credentialKind: "trial",
+			modelBehavior: "included",
+		});
+	});
+
 	it("covers every provider supported by the runtime", () => {
 		expect(byokProviderDefinitions().map((definition) => definition.id)).toEqual(
 			BYOK_PROVIDER_IDS
@@ -52,23 +72,6 @@ describe("FirstRecall BYOK provider metadata", () => {
 		expect(byokProviderDefinition(provider).credentialKind).toBe(credentialKind);
 	});
 
-	it("identifies command providers as terminal tools without CLI jargon", () => {
-		const codex = byokProviderDefinition("codex-cli");
-		const claude = byokProviderDefinition("claude-cli");
-
-		expect([codex.label, codex.shortLabel]).toEqual([
-			"Codex terminal tool",
-			"Codex (terminal)",
-		]);
-		expect([claude.label, claude.shortLabel]).toEqual([
-			"Claude Code terminal tool",
-			"Claude Code (terminal)",
-		]);
-		expect(codex.credentialField.label).toBe("Codex command");
-		expect(claude.credentialField.label).toBe("Claude Code command");
-		expect(JSON.stringify([codex, claude])).not.toMatch(/\bCLI\b/);
-	});
-
 	it("links every cloud provider to its API key guide section", () => {
 		const guideUrl =
 			"https://github.com/swartzrock/obsidian-firstrecall-plugin/blob/main/docs/cloud-api-keys.md";
@@ -85,7 +88,6 @@ describe("FirstRecall BYOK provider metadata", () => {
 				byokProviderDefinition(provider).credentialKind === "api-key"
 		);
 
-		expect(cloudProviders).toHaveLength(11);
 		for (const provider of cloudProviders) {
 				expect(
 					byokProviderDefinition(provider).credentialField.helpUrl

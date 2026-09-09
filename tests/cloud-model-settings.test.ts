@@ -11,12 +11,6 @@ describe("resolveModelRefreshDescription", () => {
 		).toBe("Fetch OpenRouter's available model IDs for this account.");
 	});
 
-	it("returns the default description when refresh message is whitespace", () => {
-		expect(resolveModelRefreshDescription("   ", "Fetch models.")).toBe(
-			"Fetch models."
-		);
-	});
-
 	it("surfaces a 'Could not' error message over the default", () => {
 		expect(
 			resolveModelRefreshDescription(

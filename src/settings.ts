@@ -39,10 +39,13 @@ import {
 } from "@swartzrock/byok-runtime";
 import {
 	byokProviderDefinition,
-	byokProviderDefinitions,
+	firstRecallProviderDefinition,
+	firstRecallProviderDefinitions,
+	isFirstRecallProviderId,
 	type FirstRecallCredentialKind,
 	type FirstRecallProviderDefinition,
 } from "./byok-provider-metadata";
+import type { FirstRecallProviderId } from "./cue-provider";
 import {
 	parseProviderIconGradients,
 	parseProviderIconViewBox,
@@ -61,6 +64,12 @@ import {
 	type ModelOption,
 } from "./byok-model-options";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
+import {
+	effectiveProviderRequestRate,
+	isRequestsPerTenSeconds,
+	REQUEST_RATE_OPTIONS,
+	type RequestsPerTenSeconds,
+} from "./provider-request-rate";
 import {
 	applyFirstRecallListedModels,
 	applyFirstRecallModelRefreshFailure,
@@ -141,6 +150,35 @@ const CLI_DEFAULT_MODEL_OPTION: ModelOption = {
 };
 const SHOW_STUDY_AREA_EXCLUSIONS = false;
 const SVG_NS = "http://www.w3.org/2000/svg";
+let nextSettingsAccessibleLabelId = 0;
+
+function labelControlBy(
+	controlEl: HTMLElement,
+	...labelEls: HTMLElement[]
+): void {
+	for (const labelEl of labelEls) {
+		if (!labelEl.id) {
+			labelEl.id = `firstrecall-settings-label-${nextSettingsAccessibleLabelId++}`;
+		}
+	}
+	controlEl.setAttribute(
+		"aria-labelledby",
+		labelEls.map((labelEl) => labelEl.id).join(" ")
+	);
+}
+
+function labelControlWithText(
+	controlEl: HTMLElement,
+	label: string
+): HTMLElement {
+	const labelEl = controlEl.ownerDocument.createElement("span");
+	labelEl.hidden = true;
+	labelEl.textContent = label;
+	controlEl.appendChild(labelEl);
+	labelControlBy(controlEl, labelEl);
+	return labelEl;
+}
+
 const SVG_PATH_ATTRIBUTE_ALLOWLIST = new Set([
 	"clip-rule",
 	"d",
@@ -170,7 +208,7 @@ interface StudyAreaUiState {
 
 export interface FirstRecallSettings {
 	byok: Omit<ByokStoredSettings, "selectedProvider"> & {
-		selectedProvider: ByokProviderId | null;
+		selectedProvider: FirstRecallProviderId | null;
 	};
 	questionType: QuestionType;
 	studyHideMode: StudyHideMode;
@@ -181,6 +219,7 @@ export interface FirstRecallSettings {
 	studyAreas: StudyArea[];
 	disabledStudyAreas: DisabledStudyArea[];
 	sectionConcurrency: number;
+	requestsPerTenSeconds: RequestsPerTenSeconds;
 	showNoteBrief: boolean;
 	showSummary: boolean;
 	showQuestion: boolean;
@@ -189,7 +228,7 @@ export interface FirstRecallSettings {
 
 export const DEFAULT_SETTINGS: FirstRecallSettings = {
 	byok: {
-		selectedProvider: null,
+		selectedProvider: "hosted-demo",
 		providers: {
 			ollama: {
 				credential: "http://localhost:11434",
@@ -240,6 +279,7 @@ export const DEFAULT_SETTINGS: FirstRecallSettings = {
 	studyAreas: DEFAULT_STUDY_AREAS,
 	disabledStudyAreas: [],
 	sectionConcurrency: 5,
+	requestsPerTenSeconds: 5,
 	showNoteBrief: DEFAULT_SHOW_NOTE_BRIEF,
 	showSummary: true,
 	showQuestion: true,
@@ -346,9 +386,10 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 		const backBtn = titleSetting.nameEl.createEl("button", {
 			cls: "clickable-icon firstrecall-settings-back",
-			attr: { type: "button", "aria-label": "Back to settings" },
+			attr: { type: "button" },
 		});
 		setIcon(backBtn, "chevron-left");
+		labelControlWithText(backBtn, "Back to settings");
 		this.plugin.registerDomEvent(backBtn, "click", () =>
 			this.openSubpage("home")
 		);
@@ -389,7 +430,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		chevronEl.setAttr("aria-hidden", "true");
 		setting.settingEl.tabIndex = 0;
 		setting.settingEl.setAttr("role", "button");
-		setting.settingEl.setAttr("aria-label", opts.title);
 		this.plugin.registerDomEvent(setting.settingEl, "click", (event) => {
 			if (this.isSettingsNavInteractiveTarget(event.target)) return;
 			opts.onOpen();
@@ -422,6 +462,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private aiModelSummary(): string {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return "Select an AI provider to generate study material";
+		if (provider === "hosted-demo") {
+			return "Simonides trial · Included trial model · Ready";
+		}
 		const setup = deriveFirstRecallProviderSetupStatus(this.plugin.settings);
 		const providerLabel = this.providerDisplayName(provider);
 		const modelLabel = this.selectedModelLabel() || "No model selected";
@@ -456,14 +499,15 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		return `${count} folder${count === 1 ? "" : "s"} · ${enabled} update automatically`;
 	}
 
-	private providerDisplayName(provider: ByokProviderId): string {
-		return byokProviderDefinition(provider).shortLabel;
+	private providerDisplayName(provider: FirstRecallProviderId): string {
+		return firstRecallProviderDefinition(provider).shortLabel;
 	}
 
 	private selectedModelLabel(): string {
 		const settings = this.plugin.settings;
 		const provider = firstRecallSelectedProvider(settings);
 		if (!provider) return "";
+		if (provider === "hosted-demo") return "Included trial model";
 		const modelId = firstRecallProviderModel(settings, provider).trim();
 		if (provider === "anthropic") {
 			if (!modelId) return "";
@@ -530,9 +574,10 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		this.renderSettingsFlowHeading(
 			performanceFlowEl,
 			"Performance",
-			"Tune how quickly FirstRecall generates section cards."
+			"Tune how quickly FirstRecall generates study material."
 		);
 		this.renderParallelRequestsSetting(performanceFlowEl);
+		this.renderRequestRateSetting(performanceFlowEl);
 	}
 
 	private renderParallelRequestsSetting(containerEl: HTMLElement): void {
@@ -554,12 +599,43 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		concurrencySetting.setDesc(concurrencyDesc());
 	}
 
+	private renderRequestRateSetting(containerEl: HTMLElement): void {
+		const provider = firstRecallSelectedProvider(this.plugin.settings);
+		const configuredRate = this.plugin.settings.requestsPerTenSeconds;
+		const labels: Record<RequestsPerTenSeconds, string> = {
+			1: "6/minute",
+			5: "30/minute (recommended)",
+			10: "60/minute",
+			20: "120/minute",
+		};
+		new Setting(containerEl)
+			.setName("API Rate limit")
+			.setDesc("Maximum API request rate.")
+			.addDropdown((dropdown) => {
+				for (const option of REQUEST_RATE_OPTIONS) {
+					dropdown.addOption(String(option), labels[option]);
+				}
+				dropdown
+					.setValue(String(provider
+						? effectiveProviderRequestRate(provider, configuredRate)
+						: configuredRate))
+					.setDisabled(provider === "hosted-demo")
+					.onChange(async (value) => {
+						const parsed = Number(value);
+						if (!isRequestsPerTenSeconds(parsed)) return;
+						this.plugin.settings.requestsPerTenSeconds = parsed;
+						await this.plugin.saveSettings();
+					});
+			});
+	}
+
 	private renderProviderSetupPanel(containerEl: HTMLElement): void {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return;
-		const definition = byokProviderDefinition(provider);
+		const definition = firstRecallProviderDefinition(provider);
 		const panelEl = containerEl.createDiv({
 			cls: "firstrecall-active-provider-panel",
+			attr: { id: "firstrecall-active-provider-panel" },
 		});
 		const headerEl = panelEl.createDiv({
 			cls: "firstrecall-active-provider-header",
@@ -572,6 +648,30 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		const fieldsEl = panelEl.createDiv({
 			cls: "firstrecall-active-provider-fields",
 		});
+		if (provider === "hosted-demo") {
+			const descriptionEl = fieldsEl.createDiv({
+				cls: "firstrecall-settings-flow-desc firstrecall-hosted-trial-copy",
+			});
+			descriptionEl.createEl("p", {
+				text: "Simonides is FirstRecall's hosted AI service. It uses your note content to generate study materials.",
+			});
+			descriptionEl.createEl("p", {
+				text: "Free during the trial. Usage and capacity limits apply.",
+			});
+			const privacyEl = descriptionEl.createEl("p");
+			privacyEl.createSpan({
+				text: "Simonides processes your note content transiently without intentionally writing it to its application database, analytics dataset, request logs, or AI Gateway payload logs, and does not use it to train its own models. ",
+			});
+			privacyEl.createEl("a", {
+				text: "Privacy policy",
+				attr: { href: "https://simonides.ai/privacy" },
+			});
+			descriptionEl.createEl("a", {
+				text: "Learn more about Simonides",
+				attr: { href: "https://simonides.ai/" },
+			});
+			return;
+		}
 		this.renderProviderCredentialSettings(fieldsEl);
 		this.renderProviderModelSettings(fieldsEl);
 		this.renderProviderSetupStatus(fieldsEl);
@@ -586,13 +686,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		);
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!panelEl || !provider) return;
-		panelEl.hidden = byokProviderDefinition(provider).credentialKind !== path;
+		panelEl.hidden = firstRecallProviderDefinition(provider).credentialKind !== path;
 	}
 
 	private renderProviderPicker(containerEl: HTMLElement): void {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
 		if (this.providerPickerPath === null && selectedProvider) {
-			this.providerPickerPath = byokProviderDefinition(selectedProvider).credentialKind;
+			this.providerPickerPath = firstRecallProviderDefinition(selectedProvider).credentialKind;
 		}
 
 		const resultsId = "firstrecall-provider-results";
@@ -606,22 +706,27 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			description: string;
 		}> = [
 			{
+				path: "trial",
+				title: "Simonides hosted AI trial",
+				description: "Generate study materials without an API key."
+			},
+			{
 				path: "api-key",
-				title: "LLM API Provider",
+				title: "API key",
 				description:
 					"Use an API key from Anthropic, OpenAI, Gemini, or another provider.",
 			},
 			{
 				path: "command",
-				title: "Installed AI tool",
+				title: "Terminal apps",
 				description:
-					"Use Codex or Claude Code if one is already installed and signed in on this device.",
+					"Use Codex or Claude Code's terminal apps if they are already installed and configured with your account.",
 			},
 			{
 				path: "url",
-				title: "Self-Hosted LLM Provider",
+				title: "Local server",
 				description:
-					"Connect to Ollama or LM Studio running on a model server you control.",
+					"Use your own LLMs with Ollama or LM Studio.",
 			},
 		];
 		containerEl.createDiv({
@@ -646,10 +751,11 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				text: definition.title,
 				attr: {
 					type: "button",
-					"aria-label": definition.title,
 					"aria-describedby": descriptionId,
 					"aria-expanded": String(this.providerPickerPath === definition.path),
-					"aria-controls": resultsId,
+					"aria-controls": definition.path === "trial"
+						? "firstrecall-active-provider-panel"
+						: resultsId,
 				},
 			}) as HTMLButtonElement;
 			optionEl.createDiv({
@@ -668,7 +774,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			const buttonEl = (event.target as HTMLElement | null)?.closest<HTMLButtonElement>(
 				".firstrecall-provider-button"
 			);
-			const definition = byokProviderDefinitions().find(
+			const definition = firstRecallProviderDefinitions().find(
 				(candidate) => candidate.id === buttonEl?.dataset.provider
 			);
 			if (definition) void this.selectProvider(definition.id);
@@ -688,6 +794,9 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				resultsEl.empty();
 				this.renderProviderOptions(resultsEl, control.path);
 				this.syncProviderSetupPanelVisibility(containerEl, control.path);
+				if (control.path === "trial") {
+					void this.selectProvider("hosted-demo");
+				}
 			});
 		}
 	}
@@ -696,6 +805,12 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		containerEl: HTMLElement,
 		path: FirstRecallCredentialKind
 	): void {
+		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
+		const definitions = firstRecallProviderDefinitions().filter(
+			(definition) => definition.credentialKind === path
+		);
+		if (path === "trial") return;
+
 		containerEl.createDiv({
 			cls: "firstrecall-provider-step-label",
 			text: "Available providers",
@@ -708,10 +823,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				"aria-labelledby": "firstrecall-provider-options-label",
 			},
 		});
-		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		const definitions = byokProviderDefinitions().filter(
-			(definition) => definition.credentialKind === path
-		);
 		for (const definition of definitions) {
 			const isSelected = definition.id === selectedProvider;
 			const buttonEl = pickerEl.createEl("button", {
@@ -720,7 +831,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					type: "button",
 					role: "radio",
 					"aria-checked": String(isSelected),
-					"aria-label": definition.label,
 					"data-provider": definition.id,
 				},
 			});
@@ -729,6 +839,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				cls: "firstrecall-provider-button-label",
 				text: definition.shortLabel,
 			});
+			labelControlWithText(buttonEl, definition.label);
 			buttonEl.createSpan({ cls: "firstrecall-provider-radio" });
 		}
 	}
@@ -743,6 +854,14 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		});
 		if (typeof definition.icon === "string") {
 			setIcon(iconEl, definition.icon);
+			return;
+		}
+		if (definition.icon.source === "firstrecall") {
+			const imageEl = activeDocument.createElement("img");
+			imageEl.alt = "";
+			imageEl.draggable = false;
+			imageEl.src = definition.icon.imageUrl;
+			iconEl.appendChild(imageEl);
 			return;
 		}
 		const iconSvg = definition.icon.svg;
@@ -796,7 +915,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	}
 
 	private async selectProvider(provider: string): Promise<void> {
-		if (!isByokProviderId(provider)) return;
+		if (!isFirstRecallProviderId(provider)) return;
 		if (provider === firstRecallSelectedProvider(this.plugin.settings)) return;
 		setFirstRecallSelectedProvider(this.plugin.settings, provider);
 		await this.plugin.saveSettings();
@@ -805,7 +924,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private renderProviderSetupStatus(containerEl: HTMLElement): void {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!provider) return;
+		if (!provider || !isByokProviderId(provider)) return;
 		const status = deriveFirstRecallProviderSetupStatus(this.plugin.settings);
 		const isCli = isFirstRecallLocalCliProvider(provider);
 		const cliModelLabel = this.selectedModelLabel() === "CLI default"
@@ -979,7 +1098,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			input.readOnly = true;
 			input.rows = 12;
 			input.addClass("firstrecall-instructions-input");
-			input.setAttr("aria-label", title);
+			labelControlBy(input, setting.nameEl);
 		});
 		return input;
 	}
@@ -1207,10 +1326,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			text: "Update automatically",
 		});
 		setting.addToggle((tg) => {
-			tg.toggleEl.setAttribute(
-				"aria-label",
-				`Update automatically for ${studyAreaScopeLabel(area.parentPath)}`
-			);
+			labelControlWithText(tg.toggleEl, `Update automatically for ${scopeLabel}`);
 			(tg.toggleEl as HTMLInputElement).disabled = busy || !providerReady;
 			return tg
 				.setValue(area.maintenanceMode === "maintain-on-save")
@@ -1241,20 +1357,23 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		retryBtn.hidden = !hasFailed;
 		retryBtn.classList.toggle("firstrecall-study-area-hidden", !hasFailed);
 		const scanBtn = setting.controlEl.createEl("button", {
+			cls: "firstrecall-study-area-scan",
 			text: state.phase === "scanning" ? "Cancel scan" : "Scan again",
-			attr: {
-				type: "button",
-				"aria-label": state.phase === "scanning"
-					? `Cancel scan for ${studyAreaScopeLabel(area.parentPath)}`
-					: `Scan ${studyAreaScopeLabel(area.parentPath)} again`,
-			},
+			attr: { type: "button" },
 		});
+		labelControlWithText(
+			scanBtn,
+			state.phase === "scanning"
+				? `Cancel scan for ${scopeLabel}`
+				: `Scan ${scopeLabel} again`
+		);
 		scanBtn.disabled = state.phase === "running";
 		const removeBtn = setting.controlEl.createEl("button", {
 			cls: "clickable-icon firstrecall-study-area-remove",
-			attr: { type: "button", "aria-label": `Remove ${area.name}` },
+			attr: { type: "button" },
 		});
 		setIcon(removeBtn, "trash-2");
+		labelControlWithText(removeBtn, `Remove ${area.name}`);
 
 		this.plugin.registerDomEvent(backfillBtn, "click", async () => {
 			await this.runStudyAreaAction(area.id, "backfill");
@@ -1411,12 +1530,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	): void {
 		const exclusions = containerEl.createDiv({
 			cls: "firstrecall-study-area-exclusions",
-			attr: { role: "group", "aria-label": `Exclusions for ${studyAreaScopeLabel(area.parentPath)}` },
+			attr: { role: "group" },
 		});
 		exclusions.createDiv({
 			cls: "firstrecall-study-area-exclusions-title",
 			text: "Exclusions",
 		});
+		labelControlWithText(exclusions, `Exclusions for ${studyAreaScopeLabel(area.parentPath)}`);
 		exclusions.createDiv({
 			cls: "firstrecall-study-area-help",
 			text: "Notes inherit coverage from this managed folder. Excluding a note or nested folder is the only per-note opt-out.",
@@ -1426,9 +1546,10 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			row.createSpan({ text: path });
 			const remove = row.createEl("button", {
 				cls: "clickable-icon",
-				attr: { type: "button", "aria-label": `Remove exclusion ${path}` },
+				attr: { type: "button" },
 			});
 			setIcon(remove, "x");
+			labelControlWithText(remove, `Remove exclusion ${path}`);
 			this.plugin.registerDomEvent(remove, "click", async () => {
 				await this.plugin.updateStudyArea({
 					...area,
@@ -1519,62 +1640,59 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			"A whole-note overview with Summary, Recall question, and Key terms."
 		);
 
-		new Setting(noteBriefCard)
+		const noteBriefSetting = new Setting(noteBriefCard)
 			.setName("Show Note Brief")
-			.setDesc("Show the whole-note Note Brief in Editing and Reading.")
-			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show Note Brief");
-				return tg
+			.setDesc("Show the whole-note Note Brief in Editing and Reading.");
+		noteBriefSetting.addToggle((tg) => {
+			labelControlBy(tg.toggleEl, noteBriefSetting.nameEl);
+			return tg
 					.setValue(this.plugin.settings.showNoteBrief)
 					.onChange(async (value) => {
 						this.plugin.settings.showNoteBrief = value;
 						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
 					});
-			});
+		});
 		const cueCard = this.createArtifactCard(
 			containerEl,
 			"Section study card",
 			"Choose which parts of each section card appear in Editing and Reading."
 		);
 
-		new Setting(cueCard)
-			.setName("Show summary")
-			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show summary");
-				return tg
+		const summarySetting = new Setting(cueCard).setName("Show summary");
+		summarySetting.addToggle((tg) => {
+			labelControlBy(tg.toggleEl, summarySetting.nameEl);
+			return tg
 					.setValue(this.plugin.settings.showSummary)
 					.onChange(async (value) => {
 						this.plugin.settings.showSummary = value;
 						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
 					});
-			});
+		});
 
-		new Setting(cueCard)
-			.setName("Show recall question")
-			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show recall question");
-				return tg
+		const questionSetting = new Setting(cueCard).setName("Show recall question");
+		questionSetting.addToggle((tg) => {
+			labelControlBy(tg.toggleEl, questionSetting.nameEl);
+			return tg
 					.setValue(this.plugin.settings.showQuestion)
 					.onChange(async (value) => {
 						this.plugin.settings.showQuestion = value;
 						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
 					});
-			});
-		new Setting(cueCard)
-			.setName("Show key terms")
-			.addToggle((tg) => {
-				tg.toggleEl.setAttribute("aria-label", "Show key terms");
-				return tg
+		});
+		const termsSetting = new Setting(cueCard).setName("Show key terms");
+		termsSetting.addToggle((tg) => {
+			labelControlBy(tg.toggleEl, termsSetting.nameEl);
+			return tg
 					.setValue(this.plugin.settings.showTerms)
 					.onChange(async (value) => {
 						this.plugin.settings.showTerms = value;
 						await this.plugin.saveSettings({ refreshReviewSurfaces: false });
 						this.refreshReviewSurfaces();
 					});
-			});
+		});
 	}
 
 	private createArtifactCard(
@@ -1584,9 +1702,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	): HTMLElement {
 		const card = containerEl.createDiv({
 			cls: "firstrecall-settings-artifact-card",
-			attr: { role: "group", "aria-label": title },
+			attr: { role: "group" },
 		});
-		card.createDiv({ cls: "firstrecall-settings-artifact-title", text: title });
+		const titleEl = card.createDiv({
+			cls: "firstrecall-settings-artifact-title",
+			text: title,
+		});
+		labelControlBy(card, titleEl);
 		card.createDiv({ cls: "firstrecall-settings-artifact-preview", text: description });
 		return card;
 	}
@@ -1924,7 +2046,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private renderProviderCredentialSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		const provider = firstRecallSelectedProvider(s);
-		if (!provider) return;
+		if (!provider || !isByokProviderId(provider)) return;
 		const definition = byokProviderDefinition(provider);
 		if (provider === "anthropic") {
 			this.renderAnthropicCredentialSettings(containerEl);
@@ -1969,7 +2091,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private renderProviderModelSettings(containerEl: HTMLElement): void {
 		const s = this.plugin.settings;
 		const provider = firstRecallSelectedProvider(s);
-		if (!provider) return;
+		if (!provider || !isByokProviderId(provider)) return;
 		if (provider === "anthropic") {
 			this.renderAnthropicModelSettings(containerEl);
 			return;
@@ -2046,20 +2168,21 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					"afterend",
 					createEl("button", {
 						cls: "firstrecall-key-eye",
-						attr: { type: "button", "aria-label": "Show typed API key" },
+						attr: { type: "button" },
 					})
 				) as HTMLButtonElement;
 				setIcon(eye, "eye");
+				const eyeLabelEl = labelControlWithText(eye, "Show typed API key");
 				updateEyeVisibility(eye);
 				this.plugin.registerDomEvent(eye, "click", () => {
 					if (eye.disabled) return;
 					const masked = text.inputEl.type === "password";
 					text.inputEl.type = masked ? "text" : "password";
 					setIcon(eye, masked ? "eye-off" : "eye");
-					eye.setAttr(
-						"aria-label",
-						masked ? "Hide typed API key" : "Show typed API key"
-					);
+					eye.appendChild(eyeLabelEl);
+					eyeLabelEl.textContent = masked
+						? "Hide typed API key"
+						: "Show typed API key";
 				});
 			});
 		if (opts.field.helpUrl) {
@@ -2283,7 +2406,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	/** Verify the selected provider is reachable and reports a readable result. */
 	private async testConnection(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		const definition = byokProviderDefinition(selectedProvider);
 		if (definition.credentialKind === "command") {
 			await this.testLocalCliProvider();
@@ -2298,7 +2421,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private async testLocalCliProvider(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		const command = firstRecallProviderCredential(
 			this.plugin.settings,
 			selectedProvider
@@ -2320,7 +2443,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private async testUrlProvider(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		const definition = byokProviderDefinition(selectedProvider);
 		const url = firstRecallProviderCredential(this.plugin.settings, selectedProvider);
 		if (!url.trim()) {
@@ -2345,7 +2468,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private async testCloudProvider(): Promise<void> {
 		const selectedProvider = firstRecallSelectedProvider(this.plugin.settings);
-		if (!selectedProvider) return;
+		if (!selectedProvider || !isByokProviderId(selectedProvider)) return;
 		if (!this.plugin.isProviderCredentialSaved(selectedProvider)) {
 			const providerName = firstRecallProviderLabel(selectedProvider);
 			new Notice(`FirstRecall: enter your ${providerName} API key first.`);

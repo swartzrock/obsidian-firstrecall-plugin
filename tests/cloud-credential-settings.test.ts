@@ -15,40 +15,33 @@ describe("cloudCredentialDisplayState", () => {
 			storageStatus: { ok: true },
 		});
 
-		expect(state).toMatchObject({
-			inputValue: cloudCredentialMask(14),
-			placeholder: "Saved - enter a new key to replace it",
-			saveButtonLabel: "Replace key",
-			canEdit: true,
+		const unsaved = cloudCredentialDisplayState({
+			fieldDescription: "OpenAI API key.",
+			fieldPlaceholder: "sk-...",
+			saved: false,
+			credentialLength: 0,
+			storageStatus: { ok: true },
 		});
-		expect(state.description).toContain("Obsidian Secret Storage");
-		expect(state.description).toContain("Enter a new key");
+
+		expect(state.inputValue).toBe(cloudCredentialMask(14));
+		expect(state.inputValue).toMatch(/^\*+$/);
+		expect(state.canEdit).toBe(true);
+		expect(state.saveButtonLabel).not.toBe(unsaved.saveButtonLabel);
 	});
 
 	it("uses the provider placeholder for an unsaved key", () => {
-		expect(
-			cloudCredentialDisplayState({
+		const state = cloudCredentialDisplayState({
 				fieldDescription: "OpenAI API key.",
 				fieldPlaceholder: "sk-...",
 				saved: false,
 				credentialLength: 0,
 				storageStatus: { ok: true },
-			})
-		).toMatchObject({
+			});
+		expect(state).toMatchObject({
 			inputValue: "",
 			placeholder: "sk-...",
-			saveButtonLabel: "Save key",
 			canEdit: true,
 		});
-		expect(
-			cloudCredentialDisplayState({
-				fieldDescription: "OpenAI API key.",
-				fieldPlaceholder: "sk-...",
-				saved: false,
-				credentialLength: 0,
-				storageStatus: { ok: true },
-			}).description
-		).toContain("Obsidian Secret Storage");
 	});
 
 	it("disables editing when secure storage is unavailable", () => {

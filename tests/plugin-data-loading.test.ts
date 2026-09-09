@@ -43,6 +43,23 @@ function unavailableCredentialStore(): SecureCredentialStore {
 }
 
 describe("plugin data loading", () => {
+	it("defaults a new installation to the hosted trial", async () => {
+		const saveData = vi.fn(async () => {});
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => null),
+			saveData,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo");
+		expect(saveData).toHaveBeenCalledTimes(1);
+	});
+
 	it("does not rewrite a complete current data snapshot", async () => {
 		const currentSettings = structuredClone(DEFAULT_SETTINGS);
 		normalizeFirstRecallProviderSettings(
@@ -94,6 +111,33 @@ describe("plugin data loading", () => {
 		).loadPluginData();
 
 		expect(plugin.settings.byok.selectedProvider).toBe("openai");
+	});
+
+	it("preserves the hosted trial selection without creating an installation id", async () => {
+		const currentSettings = structuredClone(DEFAULT_SETTINGS);
+		currentSettings.byok.selectedProvider = "hosted-demo";
+		normalizeFirstRecallProviderSettings(
+			currentSettings,
+			DEFAULT_SETTINGS,
+			currentSettings
+		);
+		const saveData = vi.fn(async () => {});
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
+		Object.assign(plugin as unknown as Record<string, unknown>, {
+			credentialStore: unavailableCredentialStore(),
+			loadData: vi.fn(async () => ({ settings: currentSettings })),
+			saveData,
+		});
+
+		await (
+			plugin as unknown as { loadPluginData(): Promise<void> }
+		).loadPluginData();
+
+		expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo");
+		expect((plugin as unknown as { data: object }).data).not.toHaveProperty(
+			"installationId"
+		);
+		expect(saveData).not.toHaveBeenCalled();
 	});
 
 	it("persists only the current settings schema", async () => {
@@ -204,6 +248,7 @@ describe("plugin data loading", () => {
 					cueFontSize: "huge",
 					questionType: "quiz",
 					sectionConcurrency: 99,
+					requestsPerTenSeconds: 7,
 					showQuestion: "no",
 				},
 			})),
@@ -219,6 +264,7 @@ describe("plugin data loading", () => {
 			cueFontSize: "medium",
 			questionType: "exam-practice",
 			sectionConcurrency: 5,
+			requestsPerTenSeconds: 5,
 			showQuestion: true,
 		});
 		expect(saveData).toHaveBeenCalledTimes(1);
@@ -236,6 +282,7 @@ describe("plugin data loading", () => {
 					questionType: "exam-practice",
 					studyHideMode: "collapse",
 					sectionConcurrency: 3,
+					requestsPerTenSeconds: 10,
 					showSummary: false,
 					showQuestion: false,
 					showTerms: false,
@@ -254,6 +301,7 @@ describe("plugin data loading", () => {
 			questionType: "exam-practice",
 			studyHideMode: "collapse",
 			sectionConcurrency: 3,
+			requestsPerTenSeconds: 10,
 			showSummary: false,
 			showQuestion: false,
 			showTerms: false,

@@ -21,6 +21,12 @@ const cachedSectionSchema = z.object({
 	question: z.string().nullable(),
 	summary: sectionSummarySchema.nullable(),
 	error: z.string().nullable(),
+	unavailable: z.object({
+		reason: z.literal("provider-limit"),
+		providerId: z.string(),
+		providerLabel: z.string(),
+		maxSections: z.number().int().positive(),
+	}).nullable().optional(),
 });
 
 export const noteCacheSchema = z.object({
@@ -71,6 +77,7 @@ export function buildNoteCache(params: BuildCacheParams): NoteCache {
 			question: s.question,
 			summary: s.summary ?? null,
 			error: s.error,
+			unavailable: s.unavailable ?? null,
 		})),
 		noteBrief: params.result.noteBrief,
 	};
@@ -138,7 +145,7 @@ export function isStale(cache: NoteCache, currentSections: Section[]): boolean {
  */
 export function sectionIdsNeedingGeneration(
 	cache: NoteCache,
-	currentSections: Section[]
+	currentSections: readonly Section[]
 ): string[] {
 	const cached = new Map(cache.sections.map((s) => [s.id, s]));
 	const ids: string[] = [];
@@ -149,6 +156,62 @@ export function sectionIdsNeedingGeneration(
 		}
 	}
 	return ids;
+}
+
+/**
+ * Add cached provider-limit placeholders that a newly selected provider may be
+ * able to generate to the normal incremental work list.
+ */
+export function sectionIdsNeedingGenerationForProvider(
+	cache: NoteCache,
+	currentSections: readonly Section[],
+	providerId?: string
+): string[] {
+	const ids = new Set(sectionIdsNeedingGeneration(cache, currentSections));
+	if (!providerId) return [...ids];
+	const currentIds = new Set(
+		cueEligibleSections(currentSections).map((section) => section.id)
+	);
+	for (const section of cache.sections) {
+		if (
+			section.unavailable &&
+			section.unavailable.providerId !== providerId &&
+			currentIds.has(section.id)
+		) {
+			ids.add(section.id);
+		}
+	}
+	return [...ids];
+}
+
+/** Reconcile cached availability when the current provider's per-note cap changes position. */
+export function sectionIdsNeedingProviderLimitReconciliation(
+	cache: NoteCache,
+	currentSections: readonly Section[],
+	provider: { id: string; maxGeneratedSections?: number }
+): string[] {
+	const configuredLimit = provider.maxGeneratedSections;
+	const cachedLimit = cache.sections.find(
+		(section) => section.unavailable?.providerId === provider.id
+	)?.unavailable?.maxSections;
+	const candidateLimit = configuredLimit ?? cachedLimit;
+	const limit =
+		typeof candidateLimit === "number" &&
+		Number.isFinite(candidateLimit) &&
+		candidateLimit > 0
+			? Math.floor(candidateLimit)
+			: null;
+	const cachedById = new Map(cache.sections.map((section) => [section.id, section]));
+	return cueEligibleSections(currentSections).flatMap((section, index) => {
+		const unavailable = cachedById.get(section.id)?.unavailable;
+		if (limit === null) return unavailable ? [section.id] : [];
+		if (index < limit) return unavailable ? [section.id] : [];
+		return !unavailable ||
+			unavailable.providerId !== provider.id ||
+			unavailable.maxSections !== limit
+			? [section.id]
+			: [];
+	});
 }
 
 export interface ReconcileCacheSectionsOptions {

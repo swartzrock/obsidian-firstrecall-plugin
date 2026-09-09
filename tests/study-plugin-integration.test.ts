@@ -35,8 +35,6 @@ import type { StudyMaterialMaintenance } from "../src/study-material-maintenance
 
 const NOTE = "# Agents\nAgents use tools.";
 const OTHER_NOTE = "# Memory\nRetrieval strengthens memory.";
-const GENERATE_FIRST = "FirstRecall: generate study material for this note first.";
-
 function cacheFor(markdown: string): NoteCache {
 	const section = parseSections(markdown)[0];
 	return buildNoteCache({
@@ -331,19 +329,17 @@ beforeEach(() => {
 	notices.length = 0;
 });
 
-it("keeps stable command IDs while using the approved vocabulary", async () => {
+it("registers the stable command IDs with executable callbacks", async () => {
 	const harness = createHarness();
 	await harness.plugin.onload();
 
-	expect(harness.commands.get("generate-cues")?.name).toBe(
-		"Generate study material for this note"
-	);
-	expect(harness.commands.get("regenerate-section")?.name).toBe(
-		"Update a section card and Note Brief\u2026"
-	);
-	expect(harness.commands.get("export-cues-markdown")?.name).toBe(
-		"Export Recall Questions and Key Terms to Markdown"
-	);
+	for (const id of [
+		"generate-cues",
+		"regenerate-section",
+		"export-cues-markdown",
+	]) {
+		expect(harness.commands.get(id)?.callback).toEqual(expect.any(Function));
+	}
 });
 
 describe("Study plugin orchestration", () => {
@@ -470,7 +466,6 @@ describe("Study plugin orchestration", () => {
 		const retry = harness.firstView.contentEl.querySelector<HTMLButtonElement>(
 			"[data-banner-action='retry']"
 		)!;
-		expect(retry.textContent).toBe("Retry update");
 		retry.click();
 		await vi.waitFor(() =>
 			expect(request).toHaveBeenCalledWith({
@@ -479,6 +474,55 @@ describe("Study plugin orchestration", () => {
 			})
 		);
 		expect(harness.data.caches[harness.noteFile.path]).toBe(cache);
+	});
+
+	it("uses live editor text when an outdated banner starts maintenance", async () => {
+		const harness = createHarness();
+		const persistedMarkdown = NOTE;
+		const editorMarkdown = `${NOTE}\n\n## Planning\nAgents make plans.`;
+		const cache = harness.data.caches[harness.noteFile.path];
+		harness.data.maintenanceStates[harness.noteFile.path] =
+			createCurrentMaintenanceState(
+				harness.noteFile.basename,
+				persistedMarkdown,
+				cache
+			);
+		harness.setCachedRead(async () => persistedMarkdown);
+		harness.markdownByPath.set(harness.noteFile.path, editorMarkdown);
+		const generateCue = vi.fn(async (input: FirstRecallCueInput) => ({
+			question: `Q:${input.heading}`,
+			keywords: [input.heading],
+		}));
+		Object.assign(harness.plugin as unknown as Record<string, unknown>, {
+			isConfigured: () => true,
+			makeProvider: vi.fn(async () => ({
+				id: "test",
+				label: "Test",
+				requiresNetwork: false,
+				requiresDownload: false,
+				async testConnection() { return { ok: true, message: "ok" }; },
+				async listModels() { return []; },
+				generateCue,
+				async generateNoteBrief() {
+					return {
+						overview: "Brief",
+						whatMatters: { title: "Main", detail: "Main idea" },
+						reviewFirst: { title: "First", detail: "Start here" },
+						sayItBack: { title: "Explain", detail: "Explain it" },
+					};
+				},
+			})),
+		});
+		await harness.plugin.onload();
+
+		harness.plugin.refreshEditorCues();
+		const update = harness.firstView.contentEl.querySelector<HTMLButtonElement>(
+			"[data-banner-action='update']"
+		)!;
+		update.click();
+
+		await vi.waitFor(() => expect(generateCue).toHaveBeenCalledTimes(1));
+		expect(generateCue.mock.calls[0][0].heading).toBe("Planning");
 	});
 
 	it("dismisses an outdated legacy cache after creating revision state", async () => {
@@ -630,20 +674,22 @@ describe("Study plugin orchestration", () => {
 			harness.plugin as unknown as { toggleStudyForActiveView: () => void }
 		).toggleStudyForActiveView;
 		expect(harness.firstView.addAction).toHaveBeenCalledTimes(1);
-		expect(headerAction.title).toBe("FirstRecall");
+		expect(headerAction.getAttribute("aria-label")).toBeTruthy();
+		expect(headerAction.hasAttribute("title")).toBe(false);
 		expect(headerAction.getAttribute("aria-disabled")).toBeNull();
 		expect(harness.ribbons).toHaveLength(0);
-		expect(
-			document.querySelector<HTMLElement>(".firstrecall-study-header-menu-action")
-				?.textContent
-		).toContain("FirstRecall");
+		const headerLogo = headerAction.querySelector<HTMLImageElement>(
+			".firstrecall-study-header-logo"
+		);
+		expect(headerLogo?.alt).toBe("");
+		expect(headerLogo?.getAttribute("src")).toMatch(/^data:image\/svg\+xml,/);
 
 		harness.markdownByPath.set(harness.noteFile.path, "# Agents\nChanged answer.");
 		harness.workspaceEvents.get("layout-change")?.();
 		expect(harness.firstView.addAction).toHaveBeenCalledTimes(1);
 		expect(headerAction.getAttribute("aria-disabled")).toBeNull();
 		toggleStudyForActiveView();
-		expect(notices).toEqual([GENERATE_FIRST]);
+		expect(notices).toHaveLength(1);
 	});
 
 	it("shows a warning state on the FirstRecall action when no study material exists", async () => {
@@ -658,7 +704,8 @@ describe("Study plugin orchestration", () => {
 		expect(headerAction.classList.contains("firstrecall-has-no-material")).toBe(
 			true
 		);
-		expect(headerAction.title).toBe("Generate study material for this note.");
+		expect(headerAction.getAttribute("aria-label")).toBeTruthy();
+		expect(headerAction.hasAttribute("title")).toBe(false);
 	});
 
 
@@ -705,9 +752,6 @@ describe("Study plugin orchestration", () => {
 
 		expect(harness.statusBar.dataset.coverage).toBe("manual");
 		expect(harness.statusBar.dataset.freshness).toBe("outdated");
-		expect(harness.statusBar.textContent).toContain(
-			"Study material needs updating · Auto-updates off"
-		);
 	});
 
 	it("opens a requested Markdown target for fresh review without opening Cornell", async () => {

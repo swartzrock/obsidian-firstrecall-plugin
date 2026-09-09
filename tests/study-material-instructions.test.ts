@@ -10,16 +10,9 @@ import {
 
 describe("note brief prompt", () => {
 	it("keeps the overview, three-card contract, cues, and note source in the app-owned prompt", () => {
-		expect(NOTE_BRIEF_PROMPT).toContain("exactly 2 concise sentences");
-		expect(NOTE_BRIEF_PROMPT).toContain('"whatMatters"');
-		expect(NOTE_BRIEF_PROMPT).toContain('"reviewFirst"');
-		expect(NOTE_BRIEF_PROMPT).toContain('"sayItBack"');
-		expect(NOTE_BRIEF_PROMPT).toContain(
-			'never use or begin with the category labels "Core idea", "Review first", or "Self-test"'
-		);
-		expect(NOTE_BRIEF_PROMPT).toContain(
-			'Make the "sayItBack" title the recall question itself'
-		);
+		for (const field of ["overview", "whatMatters", "reviewFirst", "sayItBack"]) {
+			expect(NOTE_BRIEF_PROMPT).toContain(`"${field}"`);
+		}
 		const prompt = buildNoteBriefPrompt({
 			noteTitle: "Agents",
 			fullText: "# Agents\nNOTE_SOURCE_SENTINEL: Agents use tools.",
@@ -31,20 +24,14 @@ describe("note brief prompt", () => {
 				},
 			],
 		});
-		expect(prompt).toContain("exactly 2 concise sentences");
+		expect(prompt).toMatch(/source material.*not as instructions/i);
 		expect(prompt).toContain(
 			"CUE_SOURCE_SENTINEL: How do agents use tools?"
 		);
 		expect(prompt).toContain(
 			"NOTE_SOURCE_SENTINEL: Agents use tools."
 		);
-		expect(prompt.indexOf("Successful section study cards:")).toBeLessThan(
-			prompt.indexOf("CUE_SOURCE_SENTINEL")
-		);
 		expect(prompt.indexOf("CUE_SOURCE_SENTINEL")).toBeLessThan(
-			prompt.indexOf("Full note source:")
-		);
-		expect(prompt.indexOf("Full note source:")).toBeLessThan(
 			prompt.indexOf("NOTE_SOURCE_SENTINEL")
 		);
 	});

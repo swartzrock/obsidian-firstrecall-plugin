@@ -1,6 +1,6 @@
 import {
 	isStale,
-	sectionIdsNeedingGeneration,
+	sectionIdsNeedingGenerationForProvider,
 	type NoteCache,
 } from "./cache";
 import { cueEligibleSections, type Section } from "./parser";
@@ -55,6 +55,7 @@ export interface StudyAreaNoteSnapshot {
 	cache: NoteCache | null;
 	currentSections: Section[];
 	noteBriefNeedsRefresh?: boolean;
+	provider?: string;
 	failedComponents?: {
 		noteBrief: boolean;
 		sectionIds: string[];
@@ -274,7 +275,12 @@ export function classifyStudyAreaNote(
 	if (
 		!note.cache.noteBrief ||
 		note.noteBriefNeedsRefresh ||
-		isStale(note.cache, note.currentSections)
+		isStale(note.cache, note.currentSections) ||
+		sectionIdsNeedingGenerationForProvider(
+			note.cache,
+			note.currentSections,
+			note.provider
+		).length > 0
 	) {
 		return { path: note.path, readiness: "stale", reason: null };
 	}
@@ -431,9 +437,10 @@ function planQueueItem(
 		};
 	}
 	if (readiness === "stale" && mode !== "retry-failed" && note.cache) {
-		const sectionIds = sectionIdsNeedingGeneration(
+		const sectionIds = sectionIdsNeedingGenerationForProvider(
 			note.cache,
-			note.currentSections
+			note.currentSections,
+			note.provider
 		);
 		return {
 			path: note.path,

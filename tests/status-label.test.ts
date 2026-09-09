@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	projectStudyMaterialStatus,
-	statusLabel,
-} from "../src/status";
+import { projectStudyMaterialStatus } from "../src/status";
 import type { StudyMaterialClassification } from "../src/study-material-state";
 
 function classification(
@@ -20,36 +17,60 @@ function classification(
 	};
 }
 
-describe("statusLabel", () => {
-	it("uses user-facing status-bar copy", () => {
-		expect(statusLabel("ready")).toBe("up to date");
-		expect(statusLabel("stale")).toBe("study material is outdated");
-		expect(statusLabel("setup")).toBe("setup needed");
-	});
-});
-
 describe("projectStudyMaterialStatus", () => {
 	it.each([
-		["automatic", "current", "Study material up to date · Auto-updates on"],
-		["automatic", "outdated", "Study material needs updating · Auto-updates on"],
-		["automatic", "updating", "Updating study material · Auto-updates on"],
-		["automatic", "failed", "Study material update failed · Auto-updates on"],
-		["manual", "current", "Study material up to date · Auto-updates off"],
-		["manual", "outdated", "Study material needs updating · Auto-updates off"],
-		["manual", "updating", "Updating study material · Auto-updates off"],
-		["manual", "failed", "Study material update failed · Auto-updates off"],
+		["automatic", "current"],
+		["automatic", "outdated"],
+		["automatic", "updating"],
+		["automatic", "failed"],
+		["manual", "current"],
+		["manual", "outdated"],
+		["manual", "updating"],
+		["manual", "failed"],
 	] as const)(
 		"projects %s coverage crossed with %s freshness",
-		(coverage, freshness, label) => {
+		(coverage, freshness) => {
 			const result = projectStudyMaterialStatus({
 				coverage,
 				classification: classification({ freshness }),
 				providerConfigured: true,
 			});
 
-			expect(result).toMatchObject({ coverage, freshness, statusLabel: label });
+			expect(result).toMatchObject({ coverage, freshness });
 		}
 	);
+
+	it("keeps status labels meaningful across freshness and coverage", () => {
+		const freshnessStates = ["current", "outdated", "updating", "failed"] as const;
+		const coverages = ["automatic", "manual"] as const;
+		const labels = new Map<string, string>();
+
+		for (const coverage of coverages) {
+			for (const freshness of freshnessStates) {
+				const { statusLabel } = projectStudyMaterialStatus({
+					coverage,
+					classification: classification({ freshness }),
+					providerConfigured: true,
+				});
+
+				expect(statusLabel.trim()).not.toBe("");
+				labels.set(`${coverage}:${freshness}`, statusLabel);
+			}
+		}
+
+		for (const coverage of coverages) {
+			const freshnessLabels = freshnessStates.map((freshness) =>
+				labels.get(`${coverage}:${freshness}`)
+			);
+			expect(new Set(freshnessLabels)).toHaveLength(freshnessStates.length);
+		}
+
+		for (const freshness of freshnessStates) {
+			expect(labels.get(`automatic:${freshness}`)).not.toBe(
+				labels.get(`manual:${freshness}`)
+			);
+		}
+	});
 
 	it("keeps a manual note without generated material neutral", () => {
 		const result = projectStudyMaterialStatus({
@@ -66,7 +87,6 @@ describe("projectStudyMaterialStatus", () => {
 		expect(result).toMatchObject({
 			coverage: "manual",
 			freshness: null,
-			statusLabel: "Auto-updates off",
 			providerSetupRequired: true,
 			noteBriefOutdated: false,
 			outdatedSectionIds: [],
@@ -113,7 +133,6 @@ describe("projectStudyMaterialStatus", () => {
 		).toMatchObject({
 			coverage: "automatic",
 			freshness: null,
-			statusLabel: "Auto-updates on",
 			banner: null,
 		});
 	});
@@ -152,7 +171,6 @@ describe("projectStudyMaterialStatus", () => {
 		).toMatchObject({
 			coverage: "manual",
 			freshness: "outdated",
-			statusLabel: "Study material needs updating · Auto-updates off",
 			providerSetupRequired: true,
 		});
 	});

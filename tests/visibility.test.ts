@@ -3,7 +3,6 @@ import {
 	VisibilityStore,
 	loadHiddenMap,
 	pillAction,
-	visibilityMenuLabel,
 } from "../src/visibility";
 
 describe("pillAction", () => {
@@ -20,17 +19,6 @@ describe("pillAction", () => {
 		expect(pillAction("ready")).toBe("toggle-visibility");
 		expect(pillAction("stale")).toBe("toggle-visibility");
 		expect(pillAction("hidden")).toBe("toggle-visibility");
-	});
-});
-
-describe("visibilityMenuLabel", () => {
-	it("offers to show when hidden and hide when shown", () => {
-		expect(visibilityMenuLabel(true)).toBe(
-			"FirstRecall: Show generated content for this note"
-		);
-		expect(visibilityMenuLabel(false)).toBe(
-			"FirstRecall: Hide generated content for this note"
-		);
 	});
 });
 

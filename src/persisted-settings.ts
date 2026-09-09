@@ -8,6 +8,7 @@ import { isQuestionType } from "./cue-generation";
 import { isEditorCueDisplay } from "./editor-cue-display";
 import { normalizeEditorCueCustomWidthPx } from "./editor-cue-width";
 import { DEFAULT_SETTINGS, type FirstRecallSettings } from "./settings";
+import { isRequestsPerTenSeconds } from "./provider-request-rate";
 import { loadStudyAreaSettings } from "./study-area";
 
 export interface ParsedFirstRecallSettings {
@@ -127,6 +128,17 @@ export function parsePersistedFirstRecallSettings(
 		changed = true;
 	}
 
+	const rawRequestsPerTenSeconds = record.requestsPerTenSeconds;
+	const requestsPerTenSeconds = isRequestsPerTenSeconds(rawRequestsPerTenSeconds)
+		? rawRequestsPerTenSeconds
+		: DEFAULT_SETTINGS.requestsPerTenSeconds;
+	if (
+		hasOwn(record, "requestsPerTenSeconds") &&
+		requestsPerTenSeconds !== rawRequestsPerTenSeconds
+	) {
+		changed = true;
+	}
+
 	for (const key of [
 		"showSummary",
 		"showQuestion",
@@ -162,6 +174,7 @@ export function parsePersistedFirstRecallSettings(
 		studyAreas,
 		disabledStudyAreas,
 		sectionConcurrency,
+		requestsPerTenSeconds,
 		showNoteBrief: firstBoolean(
 			record,
 			["showNoteBrief"],

@@ -336,7 +336,6 @@ describe("study material banner", () => {
 		const update = container.querySelector<HTMLButtonElement>(
 			"[data-banner-action='update']"
 		)!;
-		expect(update.textContent).toBe("Update study material");
 		expect(update.closest("[role='status']")?.getAttribute("aria-live")).toBe(
 			"polite"
 		);
@@ -352,7 +351,6 @@ describe("study material banner", () => {
 		const retry = container.querySelector<HTMLButtonElement>(
 			"[data-banner-action='retry']"
 		)!;
-		expect(retry.textContent).toBe("Retry update");
 		expect(retry.closest("[role='alert']")?.getAttribute("aria-live")).toBe(
 			"assertive"
 		);

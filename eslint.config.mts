@@ -43,7 +43,16 @@ const jsonMetadataRules = {
 
 export default defineConfig([
   {
-    ignores: [".agents/", ".tmp/", "**/.tmp/", "main.js", "node_modules/", "coverage/", "v0-prototype/"],
+    ignores: [
+      ".agents/",
+      ".tmp/",
+      ".tmp-vitest/",
+      "**/.tmp/",
+      "main.js",
+      "node_modules/",
+      "coverage/",
+      "v0-prototype/",
+    ],
   },
   ...obsidianmd.configs.recommended,
   {

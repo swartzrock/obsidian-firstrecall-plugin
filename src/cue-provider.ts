@@ -8,6 +8,7 @@ import type { CueOutput, NoteBriefOutput } from "./schemas";
 
 export type FirstRecallCueOutput = CueOutput;
 export type FirstRecallNoteBriefOutput = NoteBriefOutput;
+export type FirstRecallProviderId = ByokProviderId | "hosted-demo";
 
 export interface FirstRecallCueInput {
 	heading: string;
@@ -16,9 +17,36 @@ export interface FirstRecallCueInput {
 	options: CueGenerationOptions;
 }
 
-export interface FirstRecallCueBatchResult {
-	cue?: CueOutput;
-	error?: string;
+export interface FirstRecallSectionUnavailable {
+	reason: "provider-limit";
+	providerId: FirstRecallProviderId;
+	providerLabel: string;
+	maxSections: number;
+}
+
+export type FirstRecallCueBatchResult =
+	| { cue: CueOutput }
+	| { error: string }
+	| { unavailable: FirstRecallSectionUnavailable };
+
+export interface FirstRecallBundleSectionInput {
+	sectionId: string;
+	contentHash: string;
+	heading: string;
+	content: string;
+}
+
+export interface FirstRecallBundleInput {
+	note: {
+		title: string;
+		contextMarkdown: string;
+	};
+	sections: FirstRecallBundleSectionInput[];
+}
+
+export interface FirstRecallBundleResult {
+	sections: FirstRecallCueBatchResult[];
+	noteBrief: NoteBriefOutput;
 }
 
 export interface FirstRecallNoteBriefSectionInput {
@@ -34,14 +62,16 @@ export interface FirstRecallNoteBriefInput {
 }
 
 export interface FirstRecallCueProviderRuntime {
-	id: ByokProviderId;
+	id: FirstRecallProviderId;
 	label: string;
 	requiresNetwork: boolean;
 	requiresDownload: boolean;
 	sectionConcurrencyLimit?: number;
+	/** Maximum cards this provider can generate for one note, in document order. */
+	maxGeneratedSections?: number;
 	testConnection(): Promise<ByokProviderStatus>;
 	listModels(): Promise<ByokModelOption[]>;
-	generateCue(
+	generateCue?(
 		input: FirstRecallCueInput,
 		signal?: AbortSignal
 	): Promise<CueOutput>;
@@ -53,4 +83,8 @@ export interface FirstRecallCueProviderRuntime {
 		input: FirstRecallNoteBriefInput,
 		signal?: AbortSignal
 	): Promise<NoteBriefOutput>;
+	generateBundle?(
+		input: FirstRecallBundleInput,
+		signal?: AbortSignal
+	): Promise<FirstRecallBundleResult>;
 }
