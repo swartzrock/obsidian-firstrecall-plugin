@@ -353,6 +353,7 @@ export interface HostedDemoProviderDeps {
 	createOperationId(): string;
 	now?(): number;
 	sleep?(milliseconds: number, signal?: AbortSignal): Promise<void>;
+	onRetryWait?(milliseconds: number | null): void;
 }
 
 export interface HostedDemoProvider {
@@ -504,13 +505,16 @@ export function createHostedDemoProvider(
 					if (attempt === 1) {
 						throw protocolError("rate limit persisted after retry");
 					}
-					await (deps.sleep ?? abortableDelay)(
-						retryAfterMilliseconds(
-							response.headers.get("retry-after"),
-							(deps.now ?? Date.now)()
-						),
-						signal
+					const delay = retryAfterMilliseconds(
+						response.headers.get("retry-after"),
+						(deps.now ?? Date.now)()
 					);
+					deps.onRetryWait?.(delay);
+					try {
+						await (deps.sleep ?? abortableDelay)(delay, signal);
+					} finally {
+						deps.onRetryWait?.(null);
+					}
 					continue;
 				}
 

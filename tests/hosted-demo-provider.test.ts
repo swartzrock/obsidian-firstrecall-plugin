@@ -139,6 +139,32 @@ function providerWithResponse(body: unknown, operationIds = [OPERATION_ID]) {
 }
 
 describe("hosted demo provider", () => {
+	it("clears the visible retry wait when generation is canceled", async () => {
+		const controller = new AbortController();
+		const onRetryWait = vi.fn();
+		const transport = vi.fn(async () => new Response("rate limited", {
+			status: 429,
+			headers: { "retry-after": "60" },
+		}));
+		const provider = createHostedDemoProvider({
+			transport,
+			clientVersion: "0.6.1",
+			installationId: INSTALLATION_ID,
+			sessionId: SESSION_ID,
+			createOperationId: () => OPERATION_ID,
+			onRetryWait,
+			sleep: async () => {
+				expect(onRetryWait).toHaveBeenLastCalledWith(60_000);
+				controller.abort();
+				throw controller.signal.reason;
+			},
+		});
+
+		await expect(provider.generateBundle(input(), controller.signal)).rejects.toThrow();
+		expect(onRetryWait.mock.calls).toEqual([[60_000], [null]]);
+		expect(transport).toHaveBeenCalledOnce();
+	});
+
 	it("retries one HTTP 429 after Retry-After with a fresh operation id", async () => {
 		const sleep = vi.fn(async () => {});
 		const operationIds = [OPERATION_ID, NEXT_OPERATION_ID];

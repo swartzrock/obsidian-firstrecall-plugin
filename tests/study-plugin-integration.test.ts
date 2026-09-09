@@ -343,6 +343,95 @@ it("registers the stable command IDs with executable callbacks", async () => {
 });
 
 describe("Study plugin orchestration", () => {
+	it.each([false, true])("advances vault progress and exposes hosted retry waits (429: %s)", async (rateLimited) => {
+		vi.useFakeTimers();
+		const harness = createHarness();
+		harness.data.settings.byok.selectedProvider = "hosted-demo";
+		harness.data.settings.studyAreas = [{
+			id: "vault",
+			name: "Entire vault",
+			parentPath: "",
+			excludedPaths: [],
+			maintenanceMode: "paused",
+			createdAt: "2026-09-08T00:00:00.000Z",
+		}];
+		harness.data.caches = {};
+		harness.setActiveView(null, null);
+		let releaseSecond = () => {};
+		const secondResponse = new Promise<void>((resolve) => { releaseSecond = resolve; });
+		let firstAttempt = true;
+		const transport = vi.fn(async (request: Request) => {
+			if (rateLimited && firstAttempt) {
+				firstAttempt = false;
+				return new Response("rate limited", { status: 429, headers: { "retry-after": "60" } });
+			}
+			const payload = await request.json() as {
+				identity: { operationId: string };
+				note: { title: string };
+				sections: Array<{ sectionId: string; contentHash: string }>;
+			};
+			if (payload.note.title === harness.otherFile.basename) {
+				await secondResponse;
+				throw new Error("Provider unavailable");
+			}
+			return new Response(JSON.stringify({
+				contractVersion: "v1",
+				status: "success",
+				operationId: payload.identity.operationId,
+				attemptConsumed: true,
+				bundle: {
+					sections: payload.sections.map((section) => ({
+						sectionId: section.sectionId,
+						contentHash: section.contentHash,
+						question: "What matters?",
+						keywords: ["recall", "memory"],
+						summary: "Recall matters.",
+					})),
+					noteBrief: {
+						overview: "Brief",
+						whatMatters: { title: "Main", detail: "Main idea" },
+						reviewFirst: { title: "First", detail: "Start here" },
+						sayItBack: { title: "Can you explain it?", detail: "Explain it" },
+					},
+				},
+			}));
+		});
+		Object.assign(harness.plugin, {
+			manifest: { version: "0.6.1" },
+			makeTransport: () => transport,
+		});
+		try {
+			await harness.plugin.onload();
+			const labels = vi.spyOn(harness.statusBar, "setText");
+			const run = harness.plugin.runStudyArea("vault");
+			await vi.advanceTimersByTimeAsync(0);
+			if (rateLimited) {
+				expect(harness.statusBar.textContent).toContain("Simonides rate limited");
+				expect(harness.statusBar.textContent).toContain("retrying at");
+				expect(harness.statusBar.textContent).toContain("0/2 sections");
+				await vi.advanceTimersByTimeAsync(60_000);
+			}
+			await vi.advanceTimersByTimeAsync(10_000);
+			expect(harness.statusBar.textContent).toContain("1/2 sections");
+			// An active-note refresh must not erase the vault's progress.
+			harness.setActiveView(harness.firstView, harness.noteFile);
+			await (harness.plugin as unknown as {
+				updateStatusForFile(file: TFile): Promise<void>;
+			}).updateStatusForFile(harness.noteFile);
+			expect(harness.statusBar.textContent).toContain("1/2 sections");
+			releaseSecond();
+			expect(await run).toMatchObject({ failed: 1 });
+			expect(labels.mock.calls.map(([label]) => label)).toEqual(expect.arrayContaining([
+				"FirstRecall: generating 2/2 sections · 1 note failed",
+			]));
+			expect(harness.statusBar.textContent).not.toContain("generating");
+			expect(harness.statusBar.textContent).not.toContain("rate limited");
+		} finally {
+			releaseSecond();
+			vi.useRealTimers();
+		}
+	});
+
 	it("clears cached material and refreshes Reading View", async () => {
 		const harness = createHarness();
 		await harness.plugin.onload();
