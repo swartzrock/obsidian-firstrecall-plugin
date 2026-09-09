@@ -966,6 +966,7 @@ export default class FirstRecallPlugin extends Plugin {
 				.setDisabled(!canStudy)
 				.onClick(this.toggleStudyForActiveView)
 		);
+		menu.addSeparator();
 		menu.addItem((item) =>
 			item
 				.setTitle(visibilityMenuLabel(hidden))
@@ -980,6 +981,7 @@ export default class FirstRecallPlugin extends Plugin {
 				.setDisabled(!this.cacheStore.has(file.path))
 				.onClick(() => this.clearCues(file))
 		);
+		menu.addSeparator();
 		menu.addItem((item) =>
 			item
 				.setTitle("Export Recall Questions and Key Terms to Markdown")
