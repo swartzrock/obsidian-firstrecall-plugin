@@ -1,5 +1,11 @@
 # firstrecall
 
+## 0.7.0
+
+### Minor Changes
+
+- ef470ca: Add the included FirstRecall hosted AI trial, connection-based provider setup, provider-wide request pacing, and hosted-trial limit handling.
+
 ## 0.6.1
 
 ### Patch Changes
