@@ -11,7 +11,7 @@ import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
 import type { NoteGenerationResult } from "../src/generator";
 import type { StudySessionSnapshot } from "../src/study-session";
-import { resolveStudySections, type StudySessionController } from "../src/study-session";
+import { resolveStudySections, StudySessionController } from "../src/study-session";
 import FirstRecallPlugin from "../src/main";
 import { DEFAULT_SETTINGS } from "../src/settings";
 import { CueSectionCollapseStore } from "../src/cue-section-collapse";
@@ -495,6 +495,85 @@ describe("syncReadingStudyControls", () => {
 });
 
 describe("Reading postprocessor Study plumbing", () => {
+	it("renders one Note Brief and whole-note card before a headingless body", () => {
+		const markdown = "---\nAuthor: Mike\n---\n\nAtomic notes connect ideas.\n\nLinks aid retrieval.";
+		const dom = new JSDOM('<main><div class="metadata-container">Properties</div><div id="first"><p data-line="4">Atomic notes connect ideas.</p></div><div id="second"><p data-line="6">Links aid retrieval.</p></div></main>');
+		globalThis.document = dom.window.document;
+		globalThis.HTMLElement = dom.window.HTMLElement;
+		Object.assign(dom.window.HTMLElement.prototype, {
+			addClass(this: HTMLElement, name: string) { this.classList.add(name); },
+			hasClass(this: HTMLElement, name: string) { return this.classList.contains(name); },
+		});
+		const cache = cacheFrom();
+		cache.sections = parseSections(markdown).map((section) => ({
+			...section, question: "Why connect atomic notes?", keywords: ["links"], summary: "Connect ideas.", error: null,
+		}));
+		cache.noteBrief = {
+			overview: "Connected atomic notes improve recall.",
+			whatMatters: { title: "Ideas", detail: "Connect ideas." },
+			reviewFirst: { title: "Links", detail: "Review connections." },
+			sayItBack: { title: "Recall", detail: "Explain the connections." },
+		};
+		const plugin = new FirstRecallPlugin({} as never, {} as never);
+		Object.assign(plugin, {
+			settings: { ...DEFAULT_SETTINGS },
+			app: { workspace: { getActiveViewOfType: () => null } },
+			cacheStore: { get: () => cache },
+			visibility: { isHidden: () => false },
+			cueSectionCollapse: new CueSectionCollapseStore({}, async () => undefined),
+		});
+		const context = {
+			sourcePath: "note.md",
+			getSectionInfo: (element: HTMLElement) => {
+				const line = element.dataset.line ?? element.querySelector<HTMLElement>("[data-line]")?.dataset.line;
+				return line === undefined ? null : { text: markdown, lineStart: Number(line), lineEnd: Number(line) };
+			},
+		};
+		const render = () => {
+			for (const id of ["first", "second"]) {
+				(plugin as unknown as { renderReadingCues(el: HTMLElement, ctx: typeof context): void })
+					.renderReadingCues(document.getElementById(id)!, context);
+			}
+		};
+		render();
+		render();
+		expect(document.querySelectorAll(".firstrecall-note-brief")).toHaveLength(1);
+		expect(document.querySelectorAll(".firstrecall-cue-reading")).toHaveLength(1);
+		const first = document.getElementById("first")!;
+		expect(first.children[0].classList.contains("firstrecall-note-brief")).toBe(true);
+		expect(first.children[1].classList.contains("firstrecall-cue-reading")).toBe(true);
+		expect(first.children[2].textContent).toBe("Atomic notes connect ideas.");
+		expect(document.querySelector(".metadata-container")?.textContent).toBe("Properties");
+		const controller = new StudySessionController();
+		controller.start("note.md", resolveStudySections(markdown, cache.sections, parseSections(markdown)));
+		const project = () => {
+			for (const id of ["first", "second"]) {
+				projectReadingStudyBlock(document.getElementById(id)!, context.getSectionInfo, {
+					snapshot: controller.snapshot(),
+					toggleSection: (id) => { controller.toggleReveal("note.md", id); project(); },
+					showAll: () => controller.showAll("note.md"),
+					hideAll: () => controller.hideAll("note.md"),
+					exit: () => controller.exit(),
+				});
+			}
+		};
+		project();
+		expect(Array.from(document.querySelectorAll("p[data-line]")).every((p) => p.getAttribute("aria-hidden") === "true")).toBe(true);
+		expect(document.querySelector(".firstrecall-note-brief")?.getAttribute("aria-hidden")).toBeNull();
+		document.querySelector<HTMLButtonElement>(".firstrecall-study-section-toggle")!.click();
+		expect(Array.from(document.querySelectorAll("p[data-line]")).every((p) => !p.hasAttribute("aria-hidden"))).toBe(true);
+		controller.exit();
+		project();
+		plugin.settings.showSummary = false;
+		plugin.settings.showQuestion = false;
+		plugin.settings.showTerms = false;
+		render();
+		expect(document.querySelectorAll(".firstrecall-cue-reading")).toHaveLength(0);
+		expect(document.querySelectorAll(".firstrecall-note-brief")).toHaveLength(1);
+
+
+	});
+
 	it("temporarily forces strict inline cues without mutating saved visibility", () => {
 		const dom = new JSDOM(`
 			<div class="markdown-preview-view" id="container">

@@ -2002,6 +2002,30 @@ describe("cue editor placement", () => {
 		expect(positions).toEqual([]);
 	});
 
+	it.each(["Atomic notes connect ideas.\n\nLinks aid retrieval.", "---\nAuthor: Mike\n---\n\nAtomic notes connect ideas."])("places headingless study material before the body: %s", (markdown) => {
+		const section = parseSections(markdown)[0];
+		const cache = buildNoteCache({
+			result: { sections: [{ ...section, question: "Why link notes?", keywords: ["links"], summary: "Connect ideas.", error: null }], noteBrief: NOTE_BRIEF, canceled: false },
+			provider: "test", model: "test", preset: "conceptual", generationMode: "whole-note-context", noteModifiedAt: 1,
+		});
+		const state = EditorState.create({ doc: markdown });
+		const noteCues = buildCueLineData(cache, [section]);
+		expect(noteCues).toHaveLength(1);
+		expect(noteCues[0].wholeNote).toBe(true);
+		const positions: number[] = [];
+		buildCueWidgetDecorations(state, { cues: noteCues, display: "inline-cues", noteBrief: NOTE_BRIEF })
+			.between(0, state.doc.length, (from) => { positions.push(from); });
+		const bodyStart = state.doc.line(section.lineNumber).from;
+		expect(positions).toHaveLength(2);
+		expect(positions[0]).toBeLessThanOrEqual(bodyStart);
+		expect(positions[1]).toBe(bodyStart);
+		const briefOnly: number[] = [];
+		buildCueWidgetDecorations(state, { cues: [], display: "inline-cues", noteBrief: NOTE_BRIEF })
+			.between(0, state.doc.length, (from) => { briefOnly.push(from); });
+		expect(briefOnly).toEqual([positions[0]]);
+
+	});
+
 	it("renders a single Note Brief widget near the top of the editor", () => {
 		const state = EditorState.create({ doc: NOTE });
 		const widgets = buildCueWidgetDecorations(state, {
@@ -2016,7 +2040,19 @@ describe("cue editor placement", () => {
 		expect(positions).toEqual([state.doc.line(1).to]);
 	});
 
-	it("keeps the Note Brief visible when Live Preview replaces a leading divider", () => {
+	it.each([
+		{ label: "a leading divider", doc: "****\n# Terms", lastReplacedLine: 1 },
+		{
+			label: "Properties before a heading",
+			doc: "---\nAuthor: Mike Schmitz\nTags: [notes, graph, productivity]\n---\n\n# How To Split Notes\nAtomic note taking.",
+			lastReplacedLine: 4,
+		},
+		{
+			label: "Properties before prose",
+			doc: "---\nAuthor: Mike Schmitz\n---\nAtomic note taking.",
+			lastReplacedLine: 3,
+		},
+	])("keeps the Note Brief visible when Live Preview replaces $label", ({ doc, lastReplacedLine }) => {
 		const dom = new JSDOM("<!doctype html><html><body><main></main></body></html>", {
 			pretendToBeVisual: true,
 		});
@@ -2045,7 +2081,6 @@ describe("cue editor placement", () => {
 		}
 		let view: EditorView | null = null;
 		try {
-			const doc = "****\n# Terms";
 			const placementState = EditorState.create({ doc });
 			const cueDecorations = buildCueWidgetDecorations(placementState, {
 				cues: [],
@@ -2063,15 +2098,17 @@ describe("cue editor placement", () => {
 			view = null;
 			parent.replaceChildren();
 
-			const firstLine = placementState.doc.line(1);
-			const dividerDecorations = Decoration.set([
-				Decoration.replace({ block: true }).range(firstLine.from, firstLine.to),
+			const replacementDecorations = Decoration.set([
+				Decoration.replace({ block: true }).range(
+					0,
+					placementState.doc.line(lastReplacedLine).to
+				),
 			]);
 			const unfocusedState = EditorState.create({
 				doc,
 				extensions: [
 					EditorView.decorations.of(cueDecorations),
-					EditorView.decorations.of(dividerDecorations),
+					EditorView.decorations.of(replacementDecorations),
 				],
 			});
 			view = new EditorView({ state: unfocusedState, parent });
