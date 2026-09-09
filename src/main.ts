@@ -975,6 +975,13 @@ export default class FirstRecallPlugin extends Plugin {
 		);
 		menu.addItem((item) =>
 			item
+				.setTitle("Clear Generated Study Material")
+				.setIcon("trash-2")
+				.setDisabled(!this.cacheStore.has(file.path))
+				.onClick(() => this.clearCues(file))
+		);
+		menu.addItem((item) =>
+			item
 				.setTitle("Export Recall Questions and Key Terms to Markdown")
 				.setDisabled(!hasUsableCueCache)
 				.onClick(() => void this.exportCues("markdown"))
@@ -2346,8 +2353,8 @@ export default class FirstRecallPlugin extends Plugin {
 		await this.updateStatusForFile(this.app.workspace.getActiveFile());
 	}
 
-	private async clearCues(): Promise<void> {
-		const file = this.app.workspace.getActiveFile();
+	private async clearCues(target?: TFile): Promise<void> {
+		const file = target ?? this.app.workspace.getActiveFile();
 		if (!file) {
 			new Notice("FirstRecall: open a note first.");
 			return;
