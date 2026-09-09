@@ -45,7 +45,7 @@ import {
 	type FirstRecallCloudCredentialProvider,
 	type SecureCredentialStore,
 } from "./secure-credential-store";
-import { parseSections, type Section } from "./parser";
+import { isWholeNoteSection, parseSections, type Section } from "./parser";
 import {
 	hasUsableCues,
 	normalizeCacheMap,
@@ -1541,7 +1541,7 @@ export default class FirstRecallPlugin extends Plugin {
 		);
 		const firstInfo = headings
 			.map((heading) => ctx.getSectionInfo(heading))
-			.find((info) => info !== null);
+			.find((info) => info !== null) ?? ctx.getSectionInfo(el);
 		const sourceFile = activeView?.file?.path === path ? activeView.file : null;
 		const sourceMarkdown =
 			firstInfo?.text ??
@@ -1604,11 +1604,18 @@ export default class FirstRecallPlugin extends Plugin {
 		if (!cache || (!displayState.showInlineCues && !noteBriefState.showNoteBrief)) {
 			return;
 		}
+		const wholeNote = sourceMarkdown === undefined ? undefined : parseSections(sourceMarkdown)
+			.find(isWholeNoteSection);
+		const wholeNoteAnchor = wholeNote ? Array.from(el.children).find((element) =>
+			!element.classList.contains("firstrecall-cue") &&
+			!element.classList.contains("firstrecall-note-brief") &&
+			ctx.getSectionInfo(element as HTMLElement)?.lineStart === wholeNote.lineNumber - 1
+		) as HTMLElement | undefined : undefined;
 		const noteBriefAnchorLine = noteBriefState.showNoteBrief
-			? buildReadingCueMap(cache, firstInfo?.text ?? "").keys().next().value
+			? wholeNote?.lineNumber ?? buildReadingCueMap(cache, firstInfo?.text ?? "").keys().next().value
 			: undefined;
 
-		for (const heading of headings) {
+		for (const heading of wholeNoteAnchor ? [wholeNoteAnchor] : headings) {
 			const info = ctx.getSectionInfo(heading);
 			if (!info) continue;
 			const map = this.readingMapFor(
@@ -1631,7 +1638,7 @@ export default class FirstRecallPlugin extends Plugin {
 				continue;
 			}
 			const cue = map.get(info.lineStart + 1);
-			const next = heading.nextElementSibling;
+			const next = heading === wholeNoteAnchor ? heading.previousElementSibling : heading.nextElementSibling;
 			if (!cue) {
 				if (next?.hasClass("firstrecall-cue-reading")) next.remove();
 				continue;
@@ -1644,7 +1651,7 @@ export default class FirstRecallPlugin extends Plugin {
 				continue;
 			}
 			heading.insertAdjacentElement(
-				"afterend",
+				heading === wholeNoteAnchor ? "beforebegin" : "afterend",
 				this.buildReadingCueEl(path, cue, cueVisibility)
 			);
 		}

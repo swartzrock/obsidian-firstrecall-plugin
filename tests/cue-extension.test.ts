@@ -2002,6 +2002,30 @@ describe("cue editor placement", () => {
 		expect(positions).toEqual([]);
 	});
 
+	it.each(["Atomic notes connect ideas.\n\nLinks aid retrieval.", "---\nAuthor: Mike\n---\n\nAtomic notes connect ideas."])("places headingless study material before the body: %s", (markdown) => {
+		const section = parseSections(markdown)[0];
+		const cache = buildNoteCache({
+			result: { sections: [{ ...section, question: "Why link notes?", keywords: ["links"], summary: "Connect ideas.", error: null }], noteBrief: NOTE_BRIEF, canceled: false },
+			provider: "test", model: "test", preset: "conceptual", generationMode: "whole-note-context", noteModifiedAt: 1,
+		});
+		const state = EditorState.create({ doc: markdown });
+		const noteCues = buildCueLineData(cache, [section]);
+		expect(noteCues).toHaveLength(1);
+		expect(noteCues[0].wholeNote).toBe(true);
+		const positions: number[] = [];
+		buildCueWidgetDecorations(state, { cues: noteCues, display: "inline-cues", noteBrief: NOTE_BRIEF })
+			.between(0, state.doc.length, (from) => { positions.push(from); });
+		const bodyStart = state.doc.line(section.lineNumber).from;
+		expect(positions).toHaveLength(2);
+		expect(positions[0]).toBeLessThanOrEqual(bodyStart);
+		expect(positions[1]).toBe(bodyStart);
+		const briefOnly: number[] = [];
+		buildCueWidgetDecorations(state, { cues: [], display: "inline-cues", noteBrief: NOTE_BRIEF })
+			.between(0, state.doc.length, (from) => { briefOnly.push(from); });
+		expect(briefOnly).toEqual([positions[0]]);
+
+	});
+
 	it("renders a single Note Brief widget near the top of the editor", () => {
 		const state = EditorState.create({ doc: NOTE });
 		const widgets = buildCueWidgetDecorations(state, {

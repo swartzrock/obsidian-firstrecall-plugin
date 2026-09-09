@@ -23,7 +23,7 @@ import {
 	cueFontSizeClass,
 	type CueFontSize,
 } from "./cornell-layout";
-import { isCueEligibleSection, type Section } from "./parser";
+import { isCueEligibleSection, isWholeNoteSection, parseSections, type Section } from "./parser";
 import type { NoteBriefOutput, SectionSummary } from "./schemas";
 import type { StudyProjection, StudySessionSnapshot } from "./study-session";
 import {
@@ -62,6 +62,8 @@ let nextEditorCueRailCardId = 0;
 export interface CueLineData {
 	/** 1-based line of the heading the cue belongs to. */
 	line: number;
+	/** The card belongs to a headingless note and precedes its body. */
+	wholeNote?: boolean;
 	/** Stable cached section identity, independent of the current heading line. */
 	sectionId: string;
 	heading: string;
@@ -171,6 +173,7 @@ export function buildCueLineData(
 		const failed = Boolean(sec.error) || (!sec.question && !unavailable);
 		const cue = {
 			line,
+			...(current && isWholeNoteSection(current) ? { wholeNote: true } : {}),
 			sectionId: sec.id,
 			heading: sec.heading,
 			question: failed ? "" : (sec.question ?? ""),
@@ -1354,8 +1357,13 @@ function noteBriefAnchor(state: EditorState): number {
 				: state.doc.line(line).to;
 		}
 	}
-	if (!leadingAsteriskDividerPattern.test(firstLine.text)) return firstLine.to;
-	return state.doc.lines > 1 ? state.doc.line(2).from : firstLine.from;
+	if (leadingAsteriskDividerPattern.test(firstLine.text)) {
+		return state.doc.lines > 1 ? state.doc.line(2).from : firstLine.from;
+	}
+	const firstSection = parseSections(state.doc.toString())[0];
+	return isWholeNoteSection(firstSection)
+		? state.doc.line(firstSection.lineNumber).from
+		: firstLine.to;
 }
 
 /** Replace all cues currently rendered in the editor. */
@@ -1423,13 +1431,13 @@ export function buildCueWidgetDecorations(
 			...cueCollapseRenderOptions(payload, cue),
 			...studyOptions,
 		};
-		// Block widget rendered on its own line just after the heading.
+		// Whole-note cards precede the body; headed cards follow their heading.
 		ranges.push(
 			Decoration.widget({
 				widget: new CueWidget(cue, cueOptions),
 				block: true,
 				side: 1,
-			}).range(headingLine.to)
+			}).range(cue.wholeNote ? headingLine.from : headingLine.to)
 		);
 	}
 	return Decoration.set(ranges, true);

@@ -443,7 +443,7 @@ describe("generateNote", () => {
 
 		const result = await generateNote({
 			noteTitle: "T",
-			markdown: "plain note text",
+			markdown: "---\nAuthor: Mike\n---",
 			provider: mockBundleProvider(generateBundle),
 			onProgress: (done, total) => progress.push([done, total]),
 		});
@@ -641,16 +641,18 @@ describe("generateNote", () => {
 		expect(noteBriefSpy).not.toHaveBeenCalled();
 	});
 
-	it("does not generate a title cue for notes with no headings", async () => {
+	it.each(["plain note text", "---\nAuthor: Mike Schmitz\n---\n\nplain note text"])("generates a whole-note card and Note Brief without headings: %s", async (markdown) => {
 		const provider = mockProvider();
 		const result = await generateNote({
 			noteTitle: "T",
-			markdown: "plain note text",
+			markdown,
 			provider,
 		});
-		expect(provider.cueInputs).toEqual([]);
-		expect(provider.noteBriefCalls).toBe(0);
-		expect(result.sections).toEqual([]);
+		expect(provider.cueInputs).toHaveLength(1);
+		expect(provider.cueInputs[0]).toMatchObject({ heading: "Whole note", content: "plain note text" });
+		expect(provider.noteBriefCalls).toBe(1);
+		expect(result.sections).toHaveLength(1);
+		expect(result.noteBrief?.overview).toBe("the note brief");
 	});
 
 	it("skips heading-only sections when generating cues", async () => {

@@ -8,6 +8,16 @@ import {
 } from "../src/parser";
 
 describe("parseSections", () => {
+	it("anchors a whole-note section to body text after Properties", () => {
+		const [section] = parseSections("---\n# YAML comment\nAuthor: Mike\n---\n\nText to study.");
+		expect(section).toMatchObject({ id: "whole-note", level: 0, heading: "Whole note", lineNumber: 6, content: "Text to study." });
+		expect(isCueEligibleSection(section)).toBe(true);
+	});
+
+	it.each(["", "   ", "---\nAuthor: Mike\n---", "---\nAuthor: Mike\n---\n![[photo.jpg]]"])("does not generate from an empty or metadata-only body: %s", (markdown) => {
+		expect(cueEligibleSections(parseSections(markdown))).toEqual([]);
+	});
+
 	it("creates one section per heading (B1.1)", () => {
 		const md = "# A\nalpha\n## B\nbeta\n### C\ngamma";
 		const s = parseSections(md);

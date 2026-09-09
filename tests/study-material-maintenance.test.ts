@@ -294,6 +294,17 @@ describe("study material maintenance planning", () => {
 });
 
 describe("study material maintenance execution", () => {
+	it("generates and saves study material for a headingless note with Properties", async () => {
+		const path = "notes/note.md";
+		const markdown = "---\nAuthor: Mike Schmitz\n---\n\nAtomic notes connect individual ideas.\n\nLinks make those ideas discoverable.";
+		const harness = createHarness({ [path]: markdown });
+		const result = await harness.maintenance.request({ path, kind: "command" });
+		expect(result.status).toBe("completed");
+		expect(harness.caches[path].noteBrief).not.toBeNull();
+		expect(harness.caches[path].sections).toHaveLength(1);
+		expect(harness.cueInputs[0].content).toBe("Atomic notes connect individual ideas.\n\nLinks make those ideas discoverable.");
+	});
+
 	it("commits hosted bundle cards and Note Brief atomically after one request", async () => {
 		const harness = createHarness();
 		const generateBundle = vi.fn(async (

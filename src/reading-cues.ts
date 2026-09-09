@@ -3,8 +3,8 @@
  * Markdown post-processors that hand us one rendered block at a time, so we
  * resolve the cached cues to current document lines (reusing the same
  * {@link buildCueLineData} logic as the editor) and key them by heading line.
- * The post-processor then looks up a heading element's source line and inserts
- * the matching cue beneath it. This module owns both the pure cue mapping and
+ * The post-processor inserts cues after headings or before a headingless note's
+ * first body block. This module owns both the pure cue mapping and
  * the Reading Study DOM projection and control lifecycle.
  */
 
@@ -47,9 +47,8 @@ const readingStudyControlState = new WeakMap<
 
 /**
  * Resolve a note's cached cues against its current Markdown and index them by
- * 1-based heading line. Sections without a heading (the intro/whole-note
- * section, line 1) have no heading element to attach to in reading mode, so
- * callers simply won't find a heading at that line.
+ * 1-based heading line, or first body line for a headingless whole-note card.
+ * Intro sections preceding headings do not receive cards.
  */
 export function buildReadingCueMap(
 	cache: NoteCache,
@@ -183,9 +182,27 @@ export function projectReadingStudyBlock(
 		const cue = cues.find(
 			(candidate) =>
 				candidate.dataset.firstrecallSectionId === section.sectionId &&
-				candidate.previousElementSibling === heading
+				(section.wholeNote || candidate.previousElementSibling === heading)
 		);
-		if (!heading || !cue) continue;
+		if (!section.wholeNote && (!heading || !cue)) continue;
+		const answers = section.wholeNote
+			? Array.from(root.children).filter((element): element is HTMLElement => {
+				if (!(element instanceof root.ownerDocument.defaultView!.HTMLElement) ||
+					element.classList.contains("firstrecall-cue") ||
+					element.classList.contains("firstrecall-note-brief")) return false;
+				const info = getSectionInfo(element);
+				return Boolean(info && info.lineStart + 1 >= section.bodyStartLine &&
+					info.lineEnd + 1 <= section.bodyEndLine && info.lineStart <= info.lineEnd);
+			})
+			: studyBodyNodes(heading!, section, getSectionInfo);
+		for (const answer of answers) {
+			answer.classList.add("firstrecall-reading-study-answer");
+			answer.dataset.studySectionId = section.sectionId;
+			answer.classList.toggle("is-hidden", !section.revealed);
+			if (section.revealed) answer.removeAttribute("aria-hidden");
+			else answer.setAttribute("aria-hidden", "true");
+		}
+		if (!cue) continue;
 
 		cue.classList.add("firstrecall-reading-study-cue");
 		cue.dataset.studySectionId = section.sectionId;
@@ -211,14 +228,6 @@ export function projectReadingStudyBlock(
 			toggle.removeEventListener("click", onClick);
 			toggle.remove();
 		});
-
-		for (const answer of studyBodyNodes(heading, section, getSectionInfo)) {
-			answer.classList.add("firstrecall-reading-study-answer");
-			answer.dataset.studySectionId = section.sectionId;
-			answer.classList.toggle("is-hidden", !section.revealed);
-			if (section.revealed) answer.removeAttribute("aria-hidden");
-			else answer.setAttribute("aria-hidden", "true");
-		}
 	}
 }
 

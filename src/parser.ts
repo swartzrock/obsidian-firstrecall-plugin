@@ -11,13 +11,13 @@
 export interface Section {
 	/** Stable across body edits; based on heading slug + ordinal. */
 	id: string;
-	/** 0 for the intro section, 1-6 for `#`-`######` headings. */
+	/** 0 for intro/whole-note sections, 1-6 for `#`-`######` headings. */
 	level: number;
-	/** Heading text without leading `#`s; empty for the intro section. */
+	/** Heading text, "Whole note" for a headingless note, or empty for an intro. */
 	heading: string;
 	/** Full heading line as written, e.g. "## Foo"; empty for intro. */
 	headingLine: string;
-	/** 1-based line number of the heading (1 for intro). */
+	/** 1-based heading line, first body line for a whole note, or 1 for an intro. */
 	lineNumber: number;
 	/** Body text of the section, excluding the heading line. */
 	content: string;
@@ -56,12 +56,18 @@ interface HeadingMarker {
 
 export function parseSections(markdown: string): Section[] {
 	const lines = markdown.replace(/\r\n?/g, "\n").split("\n");
+	let bodyStart = 0;
+	if (lines[0].trimEnd() === "---") {
+		const end = lines.findIndex((line, index) => index > 0 && line.trimEnd() === "---");
+		if (end !== -1) bodyStart = end + 1;
+	}
+	while (bodyStart < lines.length - 1 && !lines[bodyStart].trim()) bodyStart++;
 
 	const markers: HeadingMarker[] = [];
 	let inFence = false;
 	let fenceToken = "";
 
-	for (let i = 0; i < lines.length; i++) {
+	for (let i = bodyStart; i < lines.length; i++) {
 		const line = lines[i];
 		const fence = line.match(FENCE_RE);
 		if (fence) {
@@ -88,6 +94,20 @@ export function parseSections(markdown: string): Section[] {
 		}
 	}
 
+	// A headingless note still has one studyable body; Properties are not source material.
+	if (markers.length === 0) {
+		const content = lines.slice(bodyStart).join("\n").trim();
+		return [{
+			id: "whole-note",
+			level: 0,
+			heading: "Whole note",
+			headingLine: "",
+			lineNumber: Math.min(bodyStart + 1, lines.length),
+			content,
+			contentHash: lightHash(`whole\n${content}`),
+		}];
+	}
+
 	const sections: Section[] = [];
 	const slugCounts = new Map<string, number>();
 	const makeId = (base: string): string => {
@@ -97,8 +117,8 @@ export function parseSections(markdown: string): Section[] {
 	};
 
 	// Intro section: content before the first heading.
-	const firstHeadingLine = markers.length ? markers[0].lineIndex : lines.length;
-	const introContent = lines.slice(0, firstHeadingLine).join("\n").trim();
+	const firstHeadingLine = markers[0].lineIndex;
+	const introContent = lines.slice(bodyStart, firstHeadingLine).join("\n").trim();
 	if (introContent.length > 0) {
 		sections.push({
 			id: makeId("intro"),
@@ -127,22 +147,11 @@ export function parseSections(markdown: string): Section[] {
 			contentHash: lightHash(`${marker.headingLine}\n${content}`),
 		});
 	}
-
-	// A note with no headings and no intro still yields one whole-note section.
-	if (sections.length === 0) {
-		const whole = markdown.trim();
-		sections.push({
-			id: "section",
-			level: 0,
-			heading: "",
-			headingLine: "",
-			lineNumber: 1,
-			content: whole,
-			contentHash: lightHash(`whole\n${whole}`),
-		});
-	}
-
 	return sections;
+}
+
+export function isWholeNoteSection(section: Pick<Section, "level" | "heading">): boolean {
+	return section.level === 0 && section.heading !== "";
 }
 
 export function isCueEligibleSection(

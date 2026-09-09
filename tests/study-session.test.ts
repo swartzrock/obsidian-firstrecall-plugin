@@ -35,6 +35,15 @@ function resolveAll(markdown: string): StudySectionDescriptor[] {
 }
 
 describe("resolveStudySections", () => {
+	it("studies the entire headingless body without concealing Properties", () => {
+		const body = "Atomic notes connect ideas.\n\nLinks aid retrieval.";
+		const markdown = `---\nAuthor: Mike\n---\n\n${body}`;
+		const sections = resolveAll(markdown);
+		expect(sections).toHaveLength(1);
+		expect(markdown.slice(sections[0].bodyRange.from, sections[0].bodyRange.to)).toBe(body);
+		expect(sections[0].bodyStartLine).toBe(5);
+	});
+
 	it("admits exact fresh cues and describes heading and answer ranges", () => {
 		const markdown = "# Alpha\nA body.\n\n## Beta\nB body.";
 		const sections = parseSections(markdown);

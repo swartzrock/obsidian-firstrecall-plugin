@@ -1,5 +1,5 @@
 import type { CachedSection } from "./cache";
-import type { Section } from "./parser";
+import { isWholeNoteSection, type Section } from "./parser";
 
 export interface StudyTextRange {
 	/** Zero-based inclusive document offset. */
@@ -11,9 +11,11 @@ export interface StudyTextRange {
 /** A fresh cached cue resolved to one exact live section body. */
 export interface StudySectionDescriptor {
 	sectionId: string;
-	/** 1-based source line containing the heading. */
+	/** A headingless note whose entire body is the answer. */
+	wholeNote?: boolean;
+	/** 1-based heading line, or first body line for a whole note. */
 	headingLine: number;
-	/** 1-based first source line after the heading. */
+	/** 1-based first source line of the answer body. */
 	bodyStartLine: number;
 	/** 1-based final source line before the next heading. */
 	bodyEndLine: number;
@@ -108,18 +110,19 @@ export function resolveStudySections(
 		}
 
 		const headingIndex = live.lineNumber - 1;
+		const wholeNote = isWholeNoteSection(live) && orderedLive.length === 1;
 		const headingFrom = lines.starts[headingIndex];
 		const headingTo = lines.ends[headingIndex];
 		if (
 			headingFrom === undefined ||
 			headingTo === undefined ||
-			markdown.slice(headingFrom, headingTo).trimEnd() !== live.headingLine
+			(!wholeNote && markdown.slice(headingFrom, headingTo).trimEnd() !== live.headingLine)
 		) {
 			continue;
 		}
 
 		const next = orderedLive[index + 1];
-		const bodyFrom = lines.starts[headingIndex + 1] ?? headingTo;
+		const bodyFrom = wholeNote ? headingFrom : lines.starts[headingIndex + 1] ?? headingTo;
 		const bodyTo = next
 			? lines.starts[next.lineNumber - 1]
 			: markdown.length;
@@ -132,10 +135,11 @@ export function resolveStudySections(
 
 		descriptors.push({
 			sectionId: live.id,
+			...(wholeNote ? { wholeNote: true } : {}),
 			headingLine: live.lineNumber,
-			bodyStartLine: live.lineNumber + 1,
+			bodyStartLine: live.lineNumber + (wholeNote ? 0 : 1),
 			bodyEndLine: next ? next.lineNumber - 1 : lines.starts.length,
-			headingRange: { from: headingFrom, to: headingTo },
+			headingRange: { from: headingFrom, to: wholeNote ? headingFrom : headingTo },
 			bodyRange: { from: bodyFrom, to: bodyTo },
 		});
 	}
