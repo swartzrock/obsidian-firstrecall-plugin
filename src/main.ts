@@ -1424,23 +1424,20 @@ export default class FirstRecallPlugin extends Plugin {
 		}
 		const dir =
 			file.parent && file.parent.path !== "/" ? `${file.parent.path}/` : "";
-		const outPath = exportFilePath(
+		let outPath = exportFilePath(
 			dir,
 			file.basename,
 			format
 		);
+		let copyNumber = 1;
+		while (this.app.vault.getAbstractFileByPath(outPath)) {
+			outPath = exportFilePath(dir, file.basename, format, copyNumber++);
+		}
 		const content =
 			format === "markdown"
 				? questionsAndTermsToMarkdown(file.basename, questions)
 				: questionsAndTermsToAnki(questions);
-		const existing = this.app.vault.getAbstractFileByPath(outPath);
-		let out: TFile;
-		if (existing instanceof TFile) {
-			await this.app.vault.modify(existing, content);
-			out = existing;
-		} else {
-			out = await this.app.vault.create(outPath, content);
-		}
+		const out = await this.app.vault.create(outPath, content);
 		const questionCount = `${questions.length} recall ${
 			questions.length === 1 ? "question" : "questions"
 		}`;

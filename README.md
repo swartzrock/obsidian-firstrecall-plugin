@@ -155,9 +155,15 @@ Add a folder (or your **Entire vault**) as a **managed folder** to make FirstRec
 
 [Watch or download: Add a managed folder and update its study material (MP4, 13 seconds)](docs/media/managed-folders.mp4)
 
-### Note Brief & Section Study Card Exports
+### Recall Question & Key Term Exports
 
-Helpful if you're using another study tool. FirstRecall can export your generated Note Brief & Section Study Card into **Markdown** or **Anki-compatible TSV** into your Obsidian vault.
+Export generated recall questions and key terms to a **Markdown** study sheet or
+**Anki-compatible TSV** beside your source note. Anki rows use the question as the
+front and key terms as the back, falling back to the section heading when terms
+are absent. Exports do not include the Note Brief, summaries, or full source
+answers. Existing files are preserved: if the export filename is already taken,
+FirstRecall adds ` (1)`, ` (2)`, and so on before the extension until it finds an
+unused filename.
 
 ### LLM Providers & Models
 
@@ -165,8 +171,8 @@ FirstRecall supports:
 
 - **Included trial:** A Simonides-hosted model with no API key or model setup;
   usage and capacity limits apply
-- **Local servers:** Ollama and LM Studio — fully offline generation, nothing leaves
-  your machine
+- **Local servers:** Ollama and LM Studio — generation can stay on your machine
+  when the server and model run locally; a remote endpoint receives your content
 - **Cloud APIs:** Anthropic, OpenAI, Google, xAI, OpenRouter, Groq, Mistral,
   DeepSeek, DeepInfra, Together AI, and Fireworks AI
 - **Terminal tools:** Codex and Claude Code
@@ -175,6 +181,20 @@ Cloud API keys are stored with Obsidian's Secret Storage API. When using the hos
 trial, a cloud API, or a terminal tool backed by an online account, the selected
 service receives the note content needed for generation. Ollama and LM Studio can
 keep generation entirely local when connected to a local server.
+
+FirstRecall is free and open source. The hosted trial requires no account or API
+key; usage and capacity limits apply. Cloud APIs require the provider's account
+and API key and may incur usage charges. Terminal tools require their own setup
+and authentication; subscription, billing, and usage limits depend on that service.
+
+**Terminal tools and files outside the vault:** FirstRecall launches your installed
+Codex or Claude Code executable and passes generation prompts through standard
+input. It uses the operating system's temporary directory as the working directory
+and may launch your login shell to discover executables on your PATH. These tools
+use their own configuration and authentication files outside the vault so they can
+run with your existing account. Their file access and network behavior depend on
+the tool and its configuration; running a terminal tool does not guarantee offline
+generation.
 
 > 
 > **Data Privacy & Third-Party LLM Usage**
@@ -186,6 +206,11 @@ keep generation entirely local when connected to a local server.
 > reused across sessions. The session ID lasts until the plugin reloads, and each
 > request attempt gets a new operation ID. The trial requires no API key, and usage
 > and capacity limits apply.
+>
+> Simonides also processes operational metadata such as request status, token usage,
+> latency, and quota information for service operation, abuse prevention, and
+> reliability monitoring. Its [privacy policy](https://simonides.ai/privacy)
+> explains processing, retention, and third-party services, including Cloudflare.
 >
 > When using another online provider, your note content is sent to that provider's
 > API. You must supply any API key that provider requires. Review the provider's

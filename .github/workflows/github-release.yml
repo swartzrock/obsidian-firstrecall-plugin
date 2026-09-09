@@ -27,4 +27,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="$(node -p "require('./package.json').version")"
-          gh release create "v${VERSION}" main.js manifest.json styles.css --generate-notes --title "v${VERSION}"
+          gh release create "${VERSION}" main.js manifest.json styles.css --generate-notes --title "v${VERSION}"

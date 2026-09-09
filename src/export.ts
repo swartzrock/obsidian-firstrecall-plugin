@@ -71,11 +71,13 @@ export function questionsAndTermsToAnki(questions: ExportQuestion[]): string {
 export function exportFilePath(
 	dir: string,
 	basename: string,
-	format: "markdown" | "anki"
+	format: "markdown" | "anki",
+	copyNumber = 0
 ): string {
 	const ext = format === "markdown" ? "md" : "tsv";
 	const tag = format === "markdown"
 		? "recall-questions-and-key-terms"
 		: "recall-questions-and-key-terms.anki";
-	return `${dir}${basename} (${tag}).${ext}`;
+	const suffix = copyNumber > 0 ? ` (${copyNumber})` : "";
+	return `${dir}${basename} (${tag})${suffix}.${ext}`;
 }
