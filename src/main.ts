@@ -206,6 +206,12 @@ export default class FirstRecallPlugin extends Plugin {
 	override settings: FirstRecallSettings = DEFAULT_SETTINGS;
 
 	private statusBarEl: HTMLElement | null = null;
+	private readonly studyAreaRuns = new Set<{
+		done: number;
+		total: number;
+		failedPaths: string[];
+	}>();
+	private readonly hostedRetryWaits = new Map<symbol, number>();
 	private readonly studySession = new StudySessionController();
 	private readonly studyHeaderMenuActions = new WeakMap<MarkdownView, HTMLElement>();
 	private readonly studyHeaderActionElements = new Set<HTMLElement>();
@@ -1252,17 +1258,32 @@ export default class FirstRecallPlugin extends Plugin {
 		return { ok: true };
 	}
 
-	private setStatus(
-		status: CueStatus,
-		progress?: { done: number; total: number; unit?: string }
-	): void {
+	private generationStatusLabel(): string | null {
+		if (!this.studyAreaRuns.size && !this.hostedRetryWaits.size) return null;
+		let done = 0;
+		let total = 0;
+		let failed = 0;
+		for (const run of this.studyAreaRuns) {
+			done += run.done;
+			total += run.total;
+			failed += run.failedPaths.length;
+		}
+		const progress = this.studyAreaRuns.size
+			? `${done}/${total} section${total === 1 ? "" : "s"}`
+			: "";
+		const failures = failed ? ` · ${failed} note${failed === 1 ? "" : "s"} failed` : "";
+		if (this.hostedRetryWaits.size) {
+			const retryAt = Math.max(...this.hostedRetryWaits.values());
+			return `FirstRecall: Simonides rate limited · retrying at ${new Date(retryAt).toLocaleTimeString()}${progress ? ` · ${progress}` : ""}${failures}`;
+		}
+		return `FirstRecall: generating ${progress}${failures}`;
+	}
+
+	private setStatus(status: CueStatus): void {
 		if (!this.statusBarEl) return;
-		const unit =
-			progress?.unit ? ` ${progress.unit}${progress.total === 1 ? "" : "s"}` : "";
-		const label =
-			status === "generating" && progress
-				? `FirstRecall: generating ${progress.done}/${progress.total}${unit}`
-				: `FirstRecall: ${statusLabel(status)}`;
+		const generationLabel = this.generationStatusLabel();
+		if (generationLabel) status = "generating";
+		const label = generationLabel ?? `FirstRecall: ${statusLabel(status)}`;
 		this.statusBarEl.setText(label);
 		this.statusBarEl.dataset.status = status;
 		delete this.statusBarEl.dataset.coverage;
@@ -1277,6 +1298,10 @@ export default class FirstRecallPlugin extends Plugin {
 	private setStudyMaterialStatus(
 		projection: StudyMaterialStatusProjection
 	): void {
+		if (this.studyAreaRuns.size || this.hostedRetryWaits.size) {
+			this.setStatus("generating");
+			return;
+		}
 		if (!this.statusBarEl) return;
 		const setup = projection.providerSetupRequired ? " · AI setup needed" : "";
 		this.statusBarEl.setText(`FirstRecall: ${projection.statusLabel}${setup}`);
@@ -1821,6 +1846,7 @@ export default class FirstRecallPlugin extends Plugin {
 			const installationId = await this.hostedDemoInstallationId();
 			const limiter = this.providerRequestLimiter("hosted-demo");
 			const transport = this.makeTransport();
+			const retryToken = Symbol();
 			return makeFirstRecallHostedDemoProvider({
 				transport: async (request) => {
 					await limiter.acquire(request.signal);
@@ -1830,6 +1856,13 @@ export default class FirstRecallPlugin extends Plugin {
 				installationId,
 				sessionId: this.hostedDemoSessionId,
 				createOperationId: () => crypto.randomUUID(),
+				onRetryWait: (milliseconds) => {
+					if (milliseconds === null) this.hostedRetryWaits.delete(retryToken);
+					else this.hostedRetryWaits.set(retryToken, Date.now() + milliseconds);
+					if (!this.statusBarEl) return;
+					if (this.studyAreaRuns.size || this.hostedRetryWaits.size) this.setStatus("generating");
+					else void this.updateStatusForFile(this.app.workspace.getActiveFile());
+				},
 			});
 		}
 		const providerId = firstRecallSelectedProvider(this.settings);
@@ -2185,41 +2218,44 @@ export default class FirstRecallPlugin extends Plugin {
 		}
 		const completed: string[] = [];
 		const failed: string[] = [];
-		const activeFile = this.app.workspace.getActiveFile();
-		if (activeFile && plan.items.some((item) => item.path === activeFile.path)) {
-			await this.setUpdatingStatusForFile(activeFile);
-		} else {
-			this.setStatus("generating", {
-				done: 0,
-				total: plan.items.reduce((total, item) => total + item.sectionCount, 0),
-				unit: "section",
-			});
-		}
+		const progress = {
+			done: 0,
+			total: plan.items.reduce((total, item) => total + item.sectionCount, 0),
+			failedPaths: failed,
+		};
+		this.studyAreaRuns.add(progress);
+		this.setStatus("generating");
 		const kind: MaintenanceOperationKind = opts.automatic
 			? "automatic"
 			: mode === "retry-failed"
 				? "retry"
 				: "catch-up";
-		for (const item of plan.items) {
-			const outcome = await this.maintenance.request({
-				path: item.path,
-				kind,
-				...(item.action === "generate-note"
-					? {}
-					: { sectionIds: item.sectionIds }),
-			});
-			if (outcome.status === "completed" ||
-				(outcome.status === "skipped" && outcome.reason === "no-work")) {
-				completed.push(item.path);
-			} else if (outcome.status === "failed") {
-				failed.push(item.path);
+		try {
+			for (const item of plan.items) {
+				const outcome = await this.maintenance.request({
+					path: item.path,
+					kind,
+					...(item.action === "generate-note"
+						? {}
+						: { sectionIds: item.sectionIds }),
+				});
+				if (outcome.status === "completed" ||
+					(outcome.status === "skipped" && outcome.reason === "no-work")) {
+					completed.push(item.path);
+				} else if (outcome.status === "failed") {
+					failed.push(item.path);
+				}
+				progress.done += item.sectionCount;
+				this.setStatus("generating");
 			}
+		} finally {
+			this.studyAreaRuns.delete(progress);
+			await this.updateStatusForFile(this.app.workspace.getActiveFile());
 		}
 		const summary = summarizeStudyAreaRun(plan, {
 			completedPaths: completed,
 			failedPaths: failed,
 		});
-		await this.updateStatusForFile(this.app.workspace.getActiveFile());
 		if (!opts.automatic || summary.failed) {
 			new Notice(this.studyAreaSummaryNotice(area, summary));
 		}
