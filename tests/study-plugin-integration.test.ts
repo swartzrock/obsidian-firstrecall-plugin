@@ -342,6 +342,54 @@ it("registers the stable command IDs with executable callbacks", async () => {
 	}
 });
 
+describe("Export file preservation", () => {
+	it.each([
+		["markdown", "notes/", "md", "recall-questions-and-key-terms"],
+		["anki", "", "tsv", "recall-questions-and-key-terms.anki"],
+	] as const)("numbers %s exports without changing existing files", async (format, dir, ext, tag) => {
+		const harness = createHarness();
+		Object.assign(harness.noteFile, { parent: { path: dir ? "notes" : "/" } });
+		await harness.plugin.onload();
+		const stem = `${dir}agents (${tag})`;
+		const existing = new Map([
+			[`${stem}.${ext}`, "User-edited export"],
+			[`${stem} (1).${ext}`, "Another saved export"],
+		]);
+		const create = vi.fn(async (path: string, content: string) => {
+			if (existing.has(path)) throw new Error("File already exists");
+			existing.set(path, content);
+			return file(path);
+		});
+		const modify = vi.fn(async (target: TFile, content: string) => {
+			existing.set(target.path, content);
+		});
+		Object.assign(harness.plugin.app.vault, {
+			getAbstractFileByPath: (path: string) => existing.has(path) ? file(path) : null,
+			create,
+			modify,
+		});
+		const exporter = harness.plugin as unknown as {
+			exportCues(format: "markdown" | "anki"): Promise<void>;
+		};
+
+		await exporter.exportCues(format);
+		harness.setActiveView(harness.firstView, harness.noteFile);
+		await exporter.exportCues(format);
+
+		expect(create.mock.calls.map(([path]) => path)).toEqual([
+			`${stem} (2).${ext}`,
+			`${stem} (3).${ext}`,
+		]);
+		expect(existing.get(`${stem}.${ext}`)).toBe("User-edited export");
+		expect(existing.get(`${stem} (1).${ext}`)).toBe("Another saved export");
+		expect(modify).not.toHaveBeenCalled();
+		expect(notices.at(-1)).toContain(`${stem} (3).${ext}`);
+		if (format === "markdown") {
+			expect(harness.openedFiles).toEqual([`${stem} (2).${ext}`, `${stem} (3).${ext}`]);
+		}
+	});
+});
+
 describe("Study plugin orchestration", () => {
 	it.each([false, true])("advances vault progress and exposes hosted retry waits (429: %s)", async (rateLimited) => {
 		vi.useFakeTimers();

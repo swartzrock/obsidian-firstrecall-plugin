@@ -161,8 +161,9 @@ Export generated recall questions and key terms to a **Markdown** study sheet or
 **Anki-compatible TSV** beside your source note. Anki rows use the question as the
 front and key terms as the back, falling back to the section heading when terms
 are absent. Exports do not include the Note Brief, summaries, or full source
-answers. Re-exporting replaces the existing export file of the same name; copy or
-rename it first if you have edited it.
+answers. Existing files are preserved: if the export filename is already taken,
+FirstRecall adds ` (1)`, ` (2)`, and so on before the extension until it finds an
+unused filename.
 
 ### LLM Providers & Models
 
