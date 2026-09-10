@@ -1947,7 +1947,12 @@ html.firstrecall-editor-cue-width-resizing * {
 }
 
 .firstrecall-reading-study-answer.is-hidden {
-	visibility: hidden;
+	filter: blur(4px);
+	opacity: 0.58;
+	user-select: none;
+	transition:
+		filter 120ms ease,
+		opacity 120ms ease;
 }
 
 .firstrecall-reading-study-cue {
