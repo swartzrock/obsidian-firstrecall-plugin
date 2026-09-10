@@ -953,20 +953,25 @@ export default class FirstRecallPlugin extends Plugin {
 		const isStudying = current.active && current.path === file.path;
 		const hidden = this.visibility.isHidden(file.path);
 		const menu = new Menu();
-		menu.addItem((item) =>
-			item
-				.setTitle("Generate study material for this note")
-				.setIcon(MENU_NOTE_ICON)
-				.onClick(() => this.generateCuesForFile(file))
-		);
-		menu.addItem((item) =>
+		const studyFirst = canStudy &&
+			this.studyMaterialProjection(file, view.editor.getValue()).classification.freshness === "current";
+		const addStudyItem = () => menu.addItem((item) =>
 			item
 				.setTitle(isStudying ? "Exit Study" : "Study this note")
 				.setIcon(STUDY_RIBBON_ICON)
 				.setDisabled(!canStudy)
 				.onClick(this.toggleStudyForActiveView)
 		);
-		menu.addSeparator();
+		if (studyFirst) {
+			addStudyItem();
+			menu.addSeparator();
+		}
+		menu.addItem((item) =>
+			item
+				.setTitle("Generate study material for this note")
+				.setIcon(MENU_NOTE_ICON)
+				.onClick(() => this.generateCuesForFile(file))
+		);
 		menu.addItem((item) =>
 			item
 				.setTitle(visibilityMenuLabel(hidden))
@@ -982,6 +987,10 @@ export default class FirstRecallPlugin extends Plugin {
 				.onClick(() => this.clearCues(file))
 		);
 		menu.addSeparator();
+		if (!studyFirst) {
+			addStudyItem();
+			menu.addSeparator();
+		}
 		menu.addItem((item) =>
 			item
 				.setTitle("Export Recall Questions and Key Terms to Markdown")
