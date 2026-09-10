@@ -574,7 +574,7 @@ describe("Reading postprocessor Study plumbing", () => {
 
 	});
 
-	it("temporarily forces strict inline cues without mutating saved visibility", () => {
+	it.each(["combined", "separate"])("temporarily forces strict inline cues in %s blocks without mutating saved visibility", (layout) => {
 		const dom = new JSDOM(`
 			<div class="markdown-preview-view" id="container">
 				<div id="block">
@@ -627,6 +627,15 @@ describe("Reading postprocessor Study plumbing", () => {
 		const persistCueSectionCollapse = vi.fn(async () => undefined);
 		const container = dom.window.document.querySelector<HTMLElement>("#container")!;
 		const block = dom.window.document.querySelector<HTMLElement>("#block")!;
+		const renderBlocks = layout === "separate"
+			? Array.from(block.children).map((element) => {
+				const wrapper = document.createElement("div");
+				wrapper.dataset.lines = (element as HTMLElement).dataset.lines;
+				element.replaceWith(wrapper);
+				wrapper.append(element);
+				return wrapper;
+			})
+			: [block];
 		const view = {
 			file: { path },
 			getMode: () => "preview",
@@ -678,7 +687,7 @@ describe("Reading postprocessor Study plumbing", () => {
 			},
 		};
 
-		const render = () =>
+		const render = () => renderBlocks.forEach((renderBlock) =>
 			(
 				plugin as unknown as {
 					renderReadingCues(
@@ -686,7 +695,7 @@ describe("Reading postprocessor Study plumbing", () => {
 						context: typeof context
 					): void;
 				}
-			).renderReadingCues(block, context);
+			).renderReadingCues(renderBlock, context));
 		render();
 		render();
 

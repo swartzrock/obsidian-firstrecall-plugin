@@ -113,7 +113,7 @@ function isHeading(element: Element): boolean {
 }
 
 function studyBodyNodes(
-	heading: HTMLElement,
+	root: HTMLElement,
 	section: StudySessionSnapshot["sections"][number],
 	getSectionInfo: (element: HTMLElement) => ReadingSectionInfo | null
 ): HTMLElement[] {
@@ -122,25 +122,24 @@ function studyBodyNodes(
 		lineStart: number;
 		lineEnd: number;
 	}> = [];
-	let sibling = heading.nextElementSibling;
-	while (sibling && !isHeading(sibling)) {
+	for (const element of Array.from(root.children)) {
 		if (
-			sibling instanceof heading.ownerDocument.defaultView!.HTMLElement &&
-			!sibling.classList.contains("firstrecall-cue")
+			!(element instanceof root.ownerDocument.defaultView!.HTMLElement) ||
+			isHeading(element) ||
+			element.classList.contains("firstrecall-cue") ||
+			element.classList.contains("firstrecall-note-brief")
+		) continue;
+		const info = getSectionInfo(element);
+		const lineStart = (info?.lineStart ?? -1) + 1;
+		const lineEnd = (info?.lineEnd ?? -1) + 1;
+		if (
+			info &&
+			lineStart >= section.bodyStartLine &&
+			lineEnd <= section.bodyEndLine &&
+			lineStart <= lineEnd
 		) {
-			const info = getSectionInfo(sibling);
-			const lineStart = (info?.lineStart ?? -1) + 1;
-			const lineEnd = (info?.lineEnd ?? -1) + 1;
-			if (
-				info &&
-				lineStart >= section.bodyStartLine &&
-				lineEnd <= section.bodyEndLine &&
-				lineStart <= lineEnd
-			) {
-				candidates.push({ element: sibling, lineStart, lineEnd });
-			}
+			candidates.push({ element, lineStart, lineEnd });
 		}
-		sibling = sibling.nextElementSibling;
 	}
 
 	return candidates
@@ -184,17 +183,8 @@ export function projectReadingStudyBlock(
 				candidate.dataset.firstrecallSectionId === section.sectionId &&
 				(section.wholeNote || candidate.previousElementSibling === heading)
 		);
-		if (!section.wholeNote && (!heading || !cue)) continue;
-		const answers = section.wholeNote
-			? Array.from(root.children).filter((element): element is HTMLElement => {
-				if (!(element instanceof root.ownerDocument.defaultView!.HTMLElement) ||
-					element.classList.contains("firstrecall-cue") ||
-					element.classList.contains("firstrecall-note-brief")) return false;
-				const info = getSectionInfo(element);
-				return Boolean(info && info.lineStart + 1 >= section.bodyStartLine &&
-					info.lineEnd + 1 <= section.bodyEndLine && info.lineStart <= info.lineEnd);
-			})
-			: studyBodyNodes(heading!, section, getSectionInfo);
+		// Answer blocks can arrive separately from their heading and cue.
+		const answers = studyBodyNodes(root, section, getSectionInfo);
 		for (const answer of answers) {
 			answer.classList.add("firstrecall-reading-study-answer");
 			answer.dataset.studySectionId = section.sectionId;
