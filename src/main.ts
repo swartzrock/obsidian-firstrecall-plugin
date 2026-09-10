@@ -84,6 +84,7 @@ import {
 	removeReadingStudyControls,
 	restoreReadingStudyBlock,
 	syncReadingStudyControls,
+	syncReadingStudyState,
 	type ReadingCueVisibility,
 } from "./reading-cues";
 import {
@@ -713,18 +714,18 @@ export default class FirstRecallPlugin extends Plugin {
 			controlsContainer: this.studyControlsContainer(view),
 			toggleSection: (sectionId) => {
 				this.studySession.toggleReveal(path, sectionId);
-				this.refreshStudyProjections();
+				this.refreshStudyRevealState();
 			},
 			showAll: () => {
 				const current = this.studySession.snapshot();
 				if (current.revealedCount === current.total) return;
 				this.studySession.showAll(path);
-				this.refreshStudyProjections();
+				this.refreshStudyRevealState();
 			},
 			hideAll: () => {
 				if (this.studySession.snapshot().revealedCount === 0) return;
 				this.studySession.hideAll(path);
-				this.refreshStudyProjections();
+				this.refreshStudyRevealState();
 			},
 			exit: () => this.endStudySession(),
 			documentChanged: (markdown) => {
@@ -1711,6 +1712,25 @@ export default class FirstRecallPlugin extends Plugin {
 			view.containerEl.querySelector<HTMLElement>(".markdown-preview-view") ??
 			view.containerEl
 		);
+	}
+
+	private refreshStudyRevealState(): void {
+		const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+		const path = view?.file?.path;
+		const cache = path ? this.cacheStore.get(path) : null;
+		if (
+			view && path && cache && view.getMode() === "preview" &&
+			this.projectedStudySurface?.view === view &&
+			this.projectedStudySurface.mode === "preview"
+		) {
+			const projection = this.readingStudyProjection(path, undefined, cache);
+			if (projection) {
+				syncReadingStudyState(view.containerEl, projection.snapshot);
+				syncReadingStudyControls(view.containerEl, projection, this.studyControlsContainer(view));
+				return;
+			}
+		}
+		this.refreshStudyProjections();
 	}
 
 	private refreshStudyProjections(): void {

@@ -113,7 +113,7 @@ function isHeading(element: Element): boolean {
 }
 
 function studyBodyNodes(
-	heading: HTMLElement,
+	root: HTMLElement,
 	section: StudySessionSnapshot["sections"][number],
 	getSectionInfo: (element: HTMLElement) => ReadingSectionInfo | null
 ): HTMLElement[] {
@@ -122,25 +122,24 @@ function studyBodyNodes(
 		lineStart: number;
 		lineEnd: number;
 	}> = [];
-	let sibling = heading.nextElementSibling;
-	while (sibling && !isHeading(sibling)) {
+	for (const element of Array.from(root.children)) {
 		if (
-			sibling instanceof heading.ownerDocument.defaultView!.HTMLElement &&
-			!sibling.classList.contains("firstrecall-cue")
+			!(element instanceof root.ownerDocument.defaultView!.HTMLElement) ||
+			isHeading(element) ||
+			element.classList.contains("firstrecall-cue") ||
+			element.classList.contains("firstrecall-note-brief")
+		) continue;
+		const info = getSectionInfo(element);
+		const lineStart = (info?.lineStart ?? -1) + 1;
+		const lineEnd = (info?.lineEnd ?? -1) + 1;
+		if (
+			info &&
+			lineStart >= section.bodyStartLine &&
+			lineEnd <= section.bodyEndLine &&
+			lineStart <= lineEnd
 		) {
-			const info = getSectionInfo(sibling);
-			const lineStart = (info?.lineStart ?? -1) + 1;
-			const lineEnd = (info?.lineEnd ?? -1) + 1;
-			if (
-				info &&
-				lineStart >= section.bodyStartLine &&
-				lineEnd <= section.bodyEndLine &&
-				lineStart <= lineEnd
-			) {
-				candidates.push({ element: sibling, lineStart, lineEnd });
-			}
+			candidates.push({ element, lineStart, lineEnd });
 		}
-		sibling = sibling.nextElementSibling;
 	}
 
 	return candidates
@@ -184,39 +183,20 @@ export function projectReadingStudyBlock(
 				candidate.dataset.firstrecallSectionId === section.sectionId &&
 				(section.wholeNote || candidate.previousElementSibling === heading)
 		);
-		if (!section.wholeNote && (!heading || !cue)) continue;
-		const answers = section.wholeNote
-			? Array.from(root.children).filter((element): element is HTMLElement => {
-				if (!(element instanceof root.ownerDocument.defaultView!.HTMLElement) ||
-					element.classList.contains("firstrecall-cue") ||
-					element.classList.contains("firstrecall-note-brief")) return false;
-				const info = getSectionInfo(element);
-				return Boolean(info && info.lineStart + 1 >= section.bodyStartLine &&
-					info.lineEnd + 1 <= section.bodyEndLine && info.lineStart <= info.lineEnd);
-			})
-			: studyBodyNodes(heading!, section, getSectionInfo);
+		// Answer blocks can arrive separately from their heading and cue.
+		const answers = studyBodyNodes(root, section, getSectionInfo);
 		for (const answer of answers) {
 			answer.classList.add("firstrecall-reading-study-answer");
 			answer.dataset.studySectionId = section.sectionId;
-			answer.classList.toggle("is-hidden", !section.revealed);
-			if (section.revealed) answer.removeAttribute("aria-hidden");
-			else answer.setAttribute("aria-hidden", "true");
 		}
 		if (!cue) continue;
 
 		cue.classList.add("firstrecall-reading-study-cue");
 		cue.dataset.studySectionId = section.sectionId;
-		cue.dataset.studyState = section.revealed ? "revealed" : "hidden";
 
 		const toggle = cue.ownerDocument.createElement("button");
 		toggle.type = "button";
 		toggle.className = "firstrecall-study-section-toggle";
-		toggle.dataset.revealed = String(section.revealed);
-		const label = section.revealed ? "Hide answer" : "Show answer";
-		toggle.setAttribute("aria-label", label);
-		toggle.setAttribute("aria-pressed", String(section.revealed));
-		setIcon(toggle, section.revealed ? "eye-off" : "eye");
-		setTooltip(toggle, label, { placement: "right" });
 		const onClick = (event: MouseEvent) => {
 			event.preventDefault();
 			event.stopPropagation();
@@ -228,6 +208,41 @@ export function projectReadingStudyBlock(
 			toggle.removeEventListener("click", onClick);
 			toggle.remove();
 		});
+	}
+	syncReadingStudyState(root, projection.snapshot);
+}
+
+/** Update reveal state without replacing Markdown, cards, or focused buttons. */
+export function syncReadingStudyState(root: HTMLElement, snapshot: StudySessionSnapshot): void {
+	const sections = new Map(
+		(snapshot.active ? snapshot.sections : []).map((section) => [section.sectionId, section])
+	);
+	for (const answer of root.querySelectorAll<HTMLElement>(".firstrecall-reading-study-answer")) {
+		const section = sections.get(answer.dataset.studySectionId ?? "");
+		const hidden = Boolean(section && !section.revealed);
+		answer.classList.toggle("is-hidden", hidden);
+		if (hidden) answer.setAttribute("aria-hidden", "true");
+		else answer.removeAttribute("aria-hidden");
+		if (!section) {
+			answer.classList.remove("firstrecall-reading-study-answer");
+			delete answer.dataset.studySectionId;
+		}
+	}
+	for (const cue of root.querySelectorAll<HTMLElement>(".firstrecall-reading-study-cue")) {
+		const section = sections.get(cue.dataset.studySectionId ?? "");
+		if (!section) {
+			clearReadingStudyCue(cue);
+			continue;
+		}
+		cue.dataset.studyState = section.revealed ? "revealed" : "hidden";
+		const toggle = cue.querySelector<HTMLButtonElement>(".firstrecall-study-section-toggle");
+		if (!toggle) continue;
+		toggle.dataset.revealed = String(section.revealed);
+		const label = section.revealed ? "Hide answer" : "Show answer";
+		toggle.setAttribute("aria-label", label);
+		toggle.setAttribute("aria-pressed", String(section.revealed));
+		setIcon(toggle, section.revealed ? "eye-off" : "eye");
+		setTooltip(toggle, label, { placement: "right" });
 	}
 }
 
