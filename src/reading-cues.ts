@@ -188,25 +188,15 @@ export function projectReadingStudyBlock(
 		for (const answer of answers) {
 			answer.classList.add("firstrecall-reading-study-answer");
 			answer.dataset.studySectionId = section.sectionId;
-			answer.classList.toggle("is-hidden", !section.revealed);
-			if (section.revealed) answer.removeAttribute("aria-hidden");
-			else answer.setAttribute("aria-hidden", "true");
 		}
 		if (!cue) continue;
 
 		cue.classList.add("firstrecall-reading-study-cue");
 		cue.dataset.studySectionId = section.sectionId;
-		cue.dataset.studyState = section.revealed ? "revealed" : "hidden";
 
 		const toggle = cue.ownerDocument.createElement("button");
 		toggle.type = "button";
 		toggle.className = "firstrecall-study-section-toggle";
-		toggle.dataset.revealed = String(section.revealed);
-		const label = section.revealed ? "Hide answer" : "Show answer";
-		toggle.setAttribute("aria-label", label);
-		toggle.setAttribute("aria-pressed", String(section.revealed));
-		setIcon(toggle, section.revealed ? "eye-off" : "eye");
-		setTooltip(toggle, label, { placement: "right" });
 		const onClick = (event: MouseEvent) => {
 			event.preventDefault();
 			event.stopPropagation();
@@ -218,6 +208,41 @@ export function projectReadingStudyBlock(
 			toggle.removeEventListener("click", onClick);
 			toggle.remove();
 		});
+	}
+	syncReadingStudyState(root, projection.snapshot);
+}
+
+/** Update reveal state without replacing Markdown, cards, or focused buttons. */
+export function syncReadingStudyState(root: HTMLElement, snapshot: StudySessionSnapshot): void {
+	const sections = new Map(
+		(snapshot.active ? snapshot.sections : []).map((section) => [section.sectionId, section])
+	);
+	for (const answer of root.querySelectorAll<HTMLElement>(".firstrecall-reading-study-answer")) {
+		const section = sections.get(answer.dataset.studySectionId ?? "");
+		const hidden = Boolean(section && !section.revealed);
+		answer.classList.toggle("is-hidden", hidden);
+		if (hidden) answer.setAttribute("aria-hidden", "true");
+		else answer.removeAttribute("aria-hidden");
+		if (!section) {
+			answer.classList.remove("firstrecall-reading-study-answer");
+			delete answer.dataset.studySectionId;
+		}
+	}
+	for (const cue of root.querySelectorAll<HTMLElement>(".firstrecall-reading-study-cue")) {
+		const section = sections.get(cue.dataset.studySectionId ?? "");
+		if (!section) {
+			clearReadingStudyCue(cue);
+			continue;
+		}
+		cue.dataset.studyState = section.revealed ? "revealed" : "hidden";
+		const toggle = cue.querySelector<HTMLButtonElement>(".firstrecall-study-section-toggle");
+		if (!toggle) continue;
+		toggle.dataset.revealed = String(section.revealed);
+		const label = section.revealed ? "Hide answer" : "Show answer";
+		toggle.setAttribute("aria-label", label);
+		toggle.setAttribute("aria-pressed", String(section.revealed));
+		setIcon(toggle, section.revealed ? "eye-off" : "eye");
+		setTooltip(toggle, label, { placement: "right" });
 	}
 }
 

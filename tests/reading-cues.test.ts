@@ -6,6 +6,7 @@ import {
 	readingCueDisplayState,
 	readingNoteBriefDisplayState,
 	syncReadingStudyControls,
+	syncReadingStudyState,
 } from "../src/reading-cues";
 import { buildNoteCache } from "../src/cache";
 import { parseSections } from "../src/parser";
@@ -404,13 +405,7 @@ describe("projectReadingStudyBlock", () => {
 			sections: hidden.sections.map((section) => ({ ...section, revealed: true })),
 			revealedCount: 1,
 		};
-		projectReadingStudyBlock(block, getSectionInfo, {
-			snapshot: revealed,
-			toggleSection: vi.fn(),
-			showAll: vi.fn(),
-			hideAll: vi.fn(),
-			exit: vi.fn(),
-		});
+		syncReadingStudyState(block, revealed);
 		expect(answer.classList.contains("is-hidden")).toBe(false);
 		expect(answer.hasAttribute("aria-hidden")).toBe(false);
 		const revealedToggle = block.querySelector<HTMLButtonElement>(
@@ -420,7 +415,9 @@ describe("projectReadingStudyBlock", () => {
 		expect(revealedToggle.getAttribute("aria-pressed")).toBe("true");
 		expect(revealedToggle.dataset.icon).toBe("eye-off");
 
-		projectReadingStudyBlock(block, getSectionInfo, null);
+		syncReadingStudyState(block, hidden);
+		expect(answer.getAttribute("aria-hidden")).toBe("true");
+		syncReadingStudyState(block, { ...hidden, sections: [], total: 0 });
 		expect(answer.classList.contains("firstrecall-reading-study-answer")).toBe(false);
 		expect(answer.hasAttribute("aria-hidden")).toBe(false);
 		expect(block.querySelector(".firstrecall-study-section-toggle")).toBeNull();
@@ -739,11 +736,18 @@ describe("Reading postprocessor Study plumbing", () => {
 		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
 			"true"
 		);
-		block
-			.querySelector<HTMLElement>(firstCueSelector)
-			?.querySelector<HTMLButtonElement>(".firstrecall-study-section-toggle")
-			?.click();
-		render();
+		const eye = block.querySelector<HTMLElement>(firstCueSelector)!
+			.querySelector<HTMLButtonElement>(".firstrecall-study-section-toggle")!;
+		const controls = container.querySelector(".firstrecall-reading-study-controls");
+		eye.focus();
+		eye.click();
+		expect(plugin.refreshReadingModeSurface).not.toHaveBeenCalled();
+		expect(plugin.refreshEditorCues).not.toHaveBeenCalled();
+		expect(eye.isConnected).toBe(true);
+		expect(document.activeElement).toBe(eye);
+		expect(eye.getAttribute("aria-label")).toBe("Hide answer");
+		expect(eye.getAttribute("aria-pressed")).toBe("true");
+		expect(container.querySelector(".firstrecall-reading-study-controls")).toBe(controls);
 		expect(block.querySelector<HTMLElement>("#a")?.hasAttribute("aria-hidden")).toBe(
 			false
 		);
@@ -757,7 +761,7 @@ describe("Reading postprocessor Study plumbing", () => {
 		).toBe("1");
 
 		buttonByAccessibleName(container, /hide.*all/i).click();
-		render();
+		expect(eye.getAttribute("aria-label")).toBe("Show answer");
 		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe(
 			"true"
 		);
@@ -766,6 +770,16 @@ describe("Reading postprocessor Study plumbing", () => {
 				.querySelector(".firstrecall-study-progress-track")
 				?.getAttribute("aria-valuenow")
 		).toBe("0");
+
+		buttonByAccessibleName(container, /show.*all/i).click();
+		expect(block.querySelectorAll(".firstrecall-reading-study-answer.is-hidden")).toHaveLength(0);
+		expect(eye.getAttribute("aria-label")).toBe("Hide answer");
+		eye.click();
+		expect(block.querySelector<HTMLElement>("#a")?.getAttribute("aria-hidden")).toBe("true");
+		expect(block.querySelector<HTMLElement>("#b")?.hasAttribute("aria-hidden")).toBe(false);
+		expect(eye.getAttribute("aria-label")).toBe("Show answer");
+		expect(plugin.refreshReadingModeSurface).not.toHaveBeenCalled();
+		expect(plugin.refreshEditorCues).not.toHaveBeenCalled();
 
 		buttonByAccessibleName(container, /exit/i).click();
 		expect(block.querySelector<HTMLElement>("#a")?.hasAttribute("aria-hidden")).toBe(
