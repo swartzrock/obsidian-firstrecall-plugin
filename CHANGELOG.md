@@ -1,5 +1,11 @@
 # firstrecall
 
+## 0.7.3
+
+### Patch Changes
+
+- 96de9f0: Prioritize Study in the note menu when material is current and Generate when it needs attention. Group Generate, Hide, and Clear together, with exports in their own section.
+
 ## 0.7.2
 
 ### Patch Changes
