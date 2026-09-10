@@ -1249,6 +1249,10 @@ button.firstrecall-provider-button.is-selected {
 	margin-bottom: 0;
 }
 
+.firstrecall-inline-cue-widget>.firstrecall-editor-study-cue {
+	margin-bottom: 14px;
+}
+
 .firstrecall-label-icon {
 	display: inline-flex;
 	align-items: center;
@@ -1957,6 +1961,7 @@ html.firstrecall-editor-cue-width-resizing * {
 
 .firstrecall-reading-study-cue {
 	position: relative;
+	margin-bottom: calc(1em + 14px);
 }
 
 .firstrecall-reading-study-cue[data-study-state="revealed"] {
@@ -2088,6 +2093,15 @@ button.firstrecall-study-section-toggle {
 	box-shadow: var(--shadow-s);
 	cursor: pointer;
 	transform: translateY(-50%);
+}
+
+.firstrecall-cue>button.firstrecall-study-section-toggle {
+	top: auto;
+	bottom: -14px;
+	inset-inline-start: 0;
+	inset-inline-end: 0;
+	margin-inline: auto;
+	transform: none;
 }
 
 button.firstrecall-study-section-toggle:hover,
