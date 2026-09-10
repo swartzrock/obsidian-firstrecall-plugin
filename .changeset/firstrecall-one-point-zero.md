@@ -2,11 +2,11 @@
 "firstrecall": major
 ---
 
-FirstRecall 1.0
+# FirstRecall 1.0 - first official release
 
 FirstRecall turns your Obsidian notes into recall questions beside your text. Try answering from memory, then reveal the source to check your answer.
 
-### What’s included
+### ✨ What’s included
 
 - Get an overview with a Note Brief: the big picture, core idea, what to review first, and a whole-note self-test.
 - Generate study cards with a summary, recall question, and key terms for each section. FirstRecall also works with notes that have no headings.
@@ -18,7 +18,7 @@ FirstRecall turns your Obsidian notes into recall questions beside your text. Tr
 - Export recall questions and key terms to Markdown or Anki-compatible TSV. Exports use numbered copies when files already exist, preserving your edits.
 - Store cloud API credentials in Obsidian’s Secret Storage. Diagnostic logs omit model response previews.
 
-### Installation
+### 🔨Installation
 
 FirstRecall is free and open source. It requires Obsidian Desktop 1.11.4 or later.
 
@@ -28,7 +28,7 @@ Until FirstRecall is available in the Community Plugins directory, install [BRAT
 https://github.com/swartzrock/obsidian-firstrecall-plugin
 ```
 
-### Start studying
+### 🏎️ Start studying
 
 Open Settings → FirstRecall → AI model and choose a provider. Then open a note and select Generate study material for this note from the FirstRecall menu.
 
@@ -36,6 +36,6 @@ Choose Study this note, try answering the question, and reveal the source when y
 
 The hosted trial needs no account or API key; usage and capacity limits apply. Other online providers may require an account and charge for usage. See the [guide](https://www.firstrecall.ai/guide) for setup help and the [Simonides privacy policy](https://simonides.ai/privacy) for hosted-trial data handling.
 
-### Feedback
+### 🗣️ Feedback
 
 If you find a bug, have an idea, or get study material that doesn’t work for your note, [open an issue](https://github.com/swartzrock/obsidian-firstrecall-plugin/issues). Tell us what you expected and what happened. Please leave out private note content and API keys.
