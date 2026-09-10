@@ -8,15 +8,13 @@ FirstRecall turns your Obsidian notes into recall questions beside your text. Tr
 
 ### ✨ What’s included
 
-- Get an overview with a Note Brief: the big picture, core idea, what to review first, and a whole-note self-test.
-- Generate study cards with a summary, recall question, and key terms for each section. FirstRecall also works with notes that have no headings.
+- Generate study material with your preferred AI provider (API keys securely saved to Obsidian’s Secret Storage). 
+- Get an overview with a Note Brief: the big picture, core idea, and what to review first.
+- Generate study cards with a summary, recall question, and key terms for each section.
 - Generate and study material without changing your source Markdown. Study material is cached separately in your vault.
 - Use Study Mode in Editing or Reading view. Hide the source with Blur or Collapse, try the recall question, then reveal the section to check your answer.
-- Scan managed folders for missing or outdated study material. Update on demand or enable automatic updates after editing. If an update fails, the last successful material stays available.
-- Choose Cornell cards beside your notes or Inline cards in Editing view. Resize Cornell cards and choose which summaries, questions, and key terms appear.
-- Generate material with the Simonides hosted trial, one of 11 cloud API providers, Ollama, LM Studio, or your installed Codex or Claude Code terminal app. Cloud-backed generation sends content to the selected service. A local server and model can keep generation on your machine.
-- Export recall questions and key terms to Markdown or Anki-compatible TSV. Exports use numbered copies when files already exist, preserving your edits.
-- Store cloud API credentials in Obsidian’s Secret Storage. Diagnostic logs omit model response previews.
+- Manage folders to do bulk updates or enable automatic updates after editing.
+- Choose Cornell cards beside your notes or Inline cards in Editing view. 
 
 ### 🔨Installation
 
