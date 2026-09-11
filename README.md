@@ -11,7 +11,7 @@
 [![GitHub release](https://img.shields.io/github/v/release/swartzrock/obsidian-firstrecall-plugin?include_prereleases&label=release)](https://github.com/swartzrock/obsidian-firstrecall-plugin/releases)
 [![GitHub release date](https://img.shields.io/github/release-date/swartzrock/obsidian-firstrecall-plugin)](https://github.com/swartzrock/obsidian-firstrecall-plugin/releases)
 [![Last commit](https://img.shields.io/github/last-commit/swartzrock/obsidian-firstrecall-plugin)](https://github.com/swartzrock/obsidian-firstrecall-plugin/commits/main)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License: PolyForm Perimeter 1.0.1](https://img.shields.io/badge/License-PolyForm_Perimeter_1.0.1-blue.svg)](LICENSE)
 
 
 **You highlighted it. You reread it. You still can't recall it.**
@@ -182,7 +182,12 @@ trial, a cloud API, or a terminal tool backed by an online account, the selected
 service receives the note content needed for generation. Ollama and LM Studio can
 keep generation entirely local when connected to a local server.
 
-FirstRecall is free and open source. The hosted trial requires no account or API
+FirstRecall is free to use and source-available under the
+[PolyForm Perimeter License 1.0.1](LICENSE). Personal and workplace use are allowed;
+using the software to provide a competing product to others is not, even if that
+product is free.
+
+The hosted trial requires no account or API
 key; usage and capacity limits apply. Cloud APIs require the provider's account
 and API key and may incur usage charges. Terminal tools require their own setup
 and authentication; subscription, billing, and usage limits depend on that service.
