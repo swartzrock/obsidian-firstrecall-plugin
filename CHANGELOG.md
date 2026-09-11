@@ -1,5 +1,17 @@
 # firstrecall
 
+## 0.7.4
+
+### Patch Changes
+
+- 3179cc9: Add an opt-in developer console flag to log the next Simonides request and raw response, including transport errors and the automatic rate-limit retry. The flag is consumed when the call starts and adds no settings UI.
+- 4da8c46: Fix Study mode in Reading view so answers blur like Editing view, including when headings and answers render in separate blocks.
+  
+  Center the reveal button on the bottom border of inline study cards in Editing and Reading, with space before the answer. Side-rail cards keep the button on the right edge.
+  
+  Preserve the Reading view viewport and focused eye button when revealing or hiding answers by updating study state without rebuilding the note.
+- 3179cc9: Keep FirstRecall's interactive side-rail cards accessible in CodeMirror so focusing the Study eye button no longer conflicts with the gutter's aria-hidden attribute. Preserve neighboring gutters' hidden state and restore original attributes when the cards or extension are removed.
+
 ## 0.7.3
 
 ### Patch Changes
