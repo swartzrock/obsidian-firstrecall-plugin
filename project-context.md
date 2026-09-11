@@ -27,7 +27,7 @@ The core product idea is: **help people retrieve and retain knowledge from notes
 - Repository: <https://github.com/swartzrock/obsidian-firstrecall-plugin>
 - Plugin ID: `first-recall`.
 - Author: `swartzrock`.
-- License: [PolyForm Perimeter 1.0.1](license.md) (source-available; personal and workplace use allowed, providing competing products prohibited).
+- License: [GNU GPLv3 only](license.md) (`GPL-3.0-only`; open source, commercial use allowed, distribution subject to GPLv3 requirements).
 - Current manifest/package version: `0.6.1`.
 - Minimum supported Obsidian version: `1.11.4`.
 - Platform: Obsidian Desktop only (`isDesktopOnly: true`).
