@@ -7,11 +7,12 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-
 jobs:
   release:
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     if: >-
       github.event.pull_request.merged && github.event.pull_request.title == 'chore: release'
     runs-on: ubuntu-latest
@@ -26,9 +27,18 @@ jobs:
           bun-version: 1.3.14
       - run: bun install --frozen-lockfile
       - run: bun run check
+      - name: Prepare release notes
+        run: node prepare-release.mjs > "$RUNNER_TEMP/release-notes.md"
+      - name: Generate artifact attestation
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            styles.css
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           VERSION="$(node -p "require('./package.json').version")"
-          gh release create "${VERSION}" main.js manifest.json styles.css --target "$RELEASE_COMMIT" --generate-notes --title "v${VERSION}"
+          gh release create "${VERSION}" main.js manifest.json styles.css --target "$RELEASE_COMMIT" --notes-file "$RUNNER_TEMP/release-notes.md" --title "${VERSION}"
