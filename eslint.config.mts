@@ -56,7 +56,7 @@ export default defineConfig([
   },
   ...obsidianmd.configs.recommended,
   {
-    files: ["*.config.mjs", "version-bump.mjs"],
+    files: ["*.config.mjs", "version-bump.mjs", "prepare-release.mjs"],
     rules: typeAwareObsidianRules,
   },
   {
