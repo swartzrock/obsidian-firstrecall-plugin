@@ -1852,6 +1852,58 @@ const cueGutter = gutter({
 	markers: (view) => view.state.field(cueGutterField).markers,
 });
 
+const cueGutterAccessibilityPlugin = ViewPlugin.fromClass(
+	class {
+		private readonly originalAttributes = new Map<Element, string | null>();
+
+		constructor(private readonly view: EditorView) {
+			this.update();
+		}
+
+		update(): void {
+			const attributes = new Map<Element, string | null>();
+			const gutter = this.view.scrollDOM.querySelector(".firstrecall-editor-hook-gutter");
+			const wrapper = gutter?.parentElement;
+			if (gutter?.querySelector(".firstrecall-editor-hook") && wrapper) {
+				// CodeMirror hides the shared gutter wrapper, but our cards contain controls.
+				attributes.set(wrapper, null);
+				for (const sibling of wrapper.children) {
+					if (sibling !== gutter) attributes.set(sibling, "true");
+				}
+			}
+			for (const [element, original] of this.originalAttributes) {
+				if (!attributes.has(element)) {
+					this.setHidden(element, original);
+					this.originalAttributes.delete(element);
+				}
+			}
+			for (const [element, value] of attributes) {
+				if (!this.originalAttributes.has(element)) {
+					this.originalAttributes.set(element, element.getAttribute("aria-hidden"));
+				}
+				this.setHidden(element, value);
+			}
+		}
+
+		private setHidden(element: Element, value: string | null): void {
+			if (element.getAttribute("aria-hidden") === value) return;
+			if (value === null) element.removeAttribute("aria-hidden");
+			else element.setAttribute("aria-hidden", value);
+		}
+
+		destroy(): void {
+			const focused = this.view.dom.ownerDocument.activeElement;
+			if (focused?.closest(".firstrecall-editor-hook-gutter") && this.view.dom.contains(focused)) {
+				this.view.focus();
+			}
+			for (const [element, original] of this.originalAttributes) {
+				this.setHidden(element, original);
+			}
+			this.originalAttributes.clear();
+		}
+	}
+);
+
 export function scheduleRailLayoutMeasure(view: EditorView): void {
 	if (!viewHasRailCards(view)) return;
 	view.requestMeasure({
@@ -2089,6 +2141,7 @@ export const cueEditorExtension = [
 	cueRailSpacerField,
 	cueGutterField,
 	cueGutter,
+	cueGutterAccessibilityPlugin,
 	cueRailLayoutPlugin,
 	cueEditorStudyPlugin,
 ];
