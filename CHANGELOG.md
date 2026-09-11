@@ -1,5 +1,11 @@
 # firstrecall
 
+## 0.7.5
+
+### Patch Changes
+
+- d94f895: Updated to use the GPL 3 open source license
+
 ## 0.7.4
 
 ### Patch Changes
