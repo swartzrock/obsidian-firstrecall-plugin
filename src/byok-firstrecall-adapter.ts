@@ -480,7 +480,7 @@ export function wrapFirstRecallByokRuntime(
 	requestGate?: ProviderRequestRateGate
 ): FirstRecallByokRuntime {
 	runtime = withGenerationRequestGate(runtime, requestGate);
-	const generateFromObject = Boolean(runtime.generateObject);
+	const generateFromObject = typeof runtime.generateObject === "function";
 	const cueRuntime: FirstRecallByokRuntime = {
 		id: runtime.id,
 		label: runtime.label,

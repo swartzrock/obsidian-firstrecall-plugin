@@ -124,7 +124,7 @@ function studyBodyNodes(
 	}> = [];
 	for (const element of Array.from(root.children)) {
 		if (
-			!(element instanceof root.ownerDocument.defaultView!.HTMLElement) ||
+			!element.instanceOf(root.ownerDocument.defaultView!.HTMLElement) ||
 			isHeading(element) ||
 			element.classList.contains("firstrecall-cue") ||
 			element.classList.contains("firstrecall-note-brief")
@@ -194,7 +194,7 @@ export function projectReadingStudyBlock(
 		cue.classList.add("firstrecall-reading-study-cue");
 		cue.dataset.studySectionId = section.sectionId;
 
-		const toggle = cue.ownerDocument.createElement("button");
+		const toggle = cue.ownerDocument.defaultView!.createEl("button");
 		toggle.type = "button";
 		toggle.className = "firstrecall-study-section-toggle";
 		const onClick = (event: MouseEvent) => {
@@ -280,53 +280,53 @@ export function syncReadingStudyControls(
 	for (const duplicate of hosts) removeReadingStudyControlHost(duplicate);
 	if (!host) {
 		const doc = container.ownerDocument;
-		host = doc.createElement("div");
+		host = doc.defaultView!.createDiv();
 		host.className = "firstrecall-reading-study-controls";
 		host.setAttribute("role", "region");
 		host.setAttribute("aria-label", "Study controls");
 
-		const help = doc.createElement("span");
+		const help = doc.defaultView!.createSpan();
 		help.className = "firstrecall-study-help";
 		setIcon(help, "eye");
-		const helpCopy = doc.createElement("span");
+		const helpCopy = doc.defaultView!.createSpan();
 		helpCopy.className = "firstrecall-study-help-copy";
-		const helpTitle = doc.createElement("span");
+		const helpTitle = doc.defaultView!.createSpan();
 		helpTitle.className = "firstrecall-study-help-title";
 		helpTitle.textContent = "Show or hide answers";
-		const helpDetail = doc.createElement("span");
+		const helpDetail = doc.defaultView!.createSpan();
 		helpDetail.className = "firstrecall-study-help-detail";
 		helpDetail.textContent = "Click the eye icon on any section card.";
 		helpCopy.append(helpTitle, helpDetail);
 		help.append(helpCopy);
 
-		const progress = doc.createElement("span");
+		const progress = doc.defaultView!.createSpan();
 		progress.className = "firstrecall-reading-study-progress";
 		progress.setAttribute("aria-live", "polite");
 
-		const progressTrack = doc.createElement("div");
+		const progressTrack = doc.defaultView!.createDiv();
 		progressTrack.className = "firstrecall-study-progress-track";
 		progressTrack.setAttribute("role", "progressbar");
 		progressTrack.setAttribute("aria-valuemin", "0");
 		progressTrack.setAttribute("aria-label", "Answers revealed");
-		const progressFill = doc.createElement("div");
+		const progressFill = doc.defaultView!.createDiv();
 		progressFill.className = "firstrecall-study-progress-fill";
 		progressTrack.append(progressFill);
 
-		const showAll = doc.createElement("button");
+		const showAll = doc.defaultView!.createEl("button");
 		showAll.type = "button";
 		showAll.className =
 			"firstrecall-study-action firstrecall-reading-study-show-all";
 		setIcon(showAll, "eye");
 		showAll.append("Show All Answers");
 
-		const hideAll = doc.createElement("button");
+		const hideAll = doc.defaultView!.createEl("button");
 		hideAll.type = "button";
 		hideAll.className =
 			"firstrecall-study-action firstrecall-reading-study-hide-all";
 		setIcon(hideAll, "eye-off");
 		hideAll.append("Hide All Answers");
 
-		const exit = doc.createElement("button");
+		const exit = doc.defaultView!.createEl("button");
 		exit.type = "button";
 		exit.className = "firstrecall-study-action firstrecall-reading-study-exit";
 		setIcon(exit, "log-out");
@@ -342,7 +342,7 @@ export function syncReadingStudyControls(
 		showAll.addEventListener("click", onShowAll);
 		hideAll.addEventListener("click", onHideAll);
 		exit.addEventListener("click", onExit);
-		const actions = doc.createElement("div");
+		const actions = doc.defaultView!.createDiv();
 		actions.className = "firstrecall-study-actions";
 		actions.append(showAll, hideAll, exit);
 		host.append(help, progress, progressTrack, actions);

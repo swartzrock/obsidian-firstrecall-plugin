@@ -171,7 +171,7 @@ function labelControlWithText(
 	controlEl: HTMLElement,
 	label: string
 ): HTMLElement {
-	const labelEl = controlEl.ownerDocument.createElement("span");
+	const labelEl = controlEl.ownerDocument.defaultView!.createSpan();
 	labelEl.hidden = true;
 	labelEl.textContent = label;
 	controlEl.appendChild(labelEl);
@@ -348,7 +348,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	}
 
 	private renderSettingsHome(containerEl: HTMLElement): void {
-		new Setting(containerEl).setName("Settings").setHeading();
+		new Setting(containerEl).setName("Preferences").setHeading();
 
 		const navEl = containerEl.createDiv({ cls: "firstrecall-settings-nav" });
 		this.renderSettingsNavCard(navEl, {
@@ -757,7 +757,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 						? "firstrecall-active-provider-panel"
 						: resultsId,
 				},
-			}) as HTMLButtonElement;
+			});
 			optionEl.createDiv({
 				cls: "firstrecall-provider-path-description",
 				text: definition.description,
@@ -857,7 +857,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			return;
 		}
 		if (definition.icon.source === "firstrecall") {
-			const imageEl = activeDocument.createElement("img");
+			const imageEl = activeDocument.defaultView!.createEl("img");
 			imageEl.alt = "";
 			imageEl.draggable = false;
 			imageEl.src = definition.icon.imageUrl;
@@ -988,11 +988,11 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		label: string,
 		stateClass: string
 	): void {
-		const chipEl = containerEl.createEl("span", {
+		const chipEl = containerEl.createSpan({
 			cls: `firstrecall-status-chip ${stateClass}`,
 		});
-		chipEl.createEl("span", { cls: "firstrecall-status-chip-dot" });
-		chipEl.createEl("span", {
+		chipEl.createSpan({ cls: "firstrecall-status-chip-dot" });
+		chipEl.createSpan({
 			cls: "firstrecall-status-chip-label",
 			text: label,
 		});
@@ -1006,11 +1006,11 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		const headingEl = containerEl.createDiv({
 			cls: "firstrecall-settings-flow-heading",
 		});
-		headingEl.createEl("div", {
+		headingEl.createDiv({
 			cls: "firstrecall-settings-flow-title",
 			text: title,
 		});
-		headingEl.createEl("div", {
+		headingEl.createDiv({
 			cls: "firstrecall-settings-flow-desc",
 			text: description,
 		});
@@ -2481,7 +2481,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		if (!selectedModel) {
 			try {
 				const models = await this.plugin.listProviderModels(
-					selectedProvider as FirstRecallFetchedModelProvider
+					selectedProvider
 				);
 				recordFirstRecallProviderConnectionSuccess(this.plugin.settings);
 				await this.plugin.saveSettings();

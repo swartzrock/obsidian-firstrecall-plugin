@@ -99,6 +99,23 @@ export default defineConfig([
     },
   },
   {
+    files: ["src/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "error",
+      "@typescript-eslint/no-unsafe-call": "error",
+      "@typescript-eslint/no-unsafe-member-access": "error",
+      "@typescript-eslint/no-unsafe-return": "error",
+      "@typescript-eslint/no-unsafe-argument": "error",
+      "@typescript-eslint/unbound-method": "error",
+      "@typescript-eslint/no-unnecessary-type-assertion": "error",
+      "obsidianmd/no-global-this": "error",
+      "obsidianmd/prefer-window-timers": "error",
+      "obsidianmd/prefer-instanceof": "error",
+      "obsidianmd/prefer-create-el": "error",
+      "obsidianmd/settings-tab/no-problematic-settings-headings": "error",
+    },
+  },
+  {
     files: ["packages/*/tests/**/*.ts", "tests/**/*.ts"],
     rules: {
       "@microsoft/sdl/no-inner-html": "off",
@@ -107,6 +124,7 @@ export default defineConfig([
       "no-unsanitized/property": "off",
       "obsidianmd/no-static-styles-assignment": "off",
       "obsidianmd/prefer-active-doc": "off",
+      "obsidianmd/prefer-create-el": "off",
     },
   },
 ]);

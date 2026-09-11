@@ -1,5 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { JSDOM } from "jsdom";
+import { describe, expect, it, vi } from "vitest";
 import {
 	createHostedDemoProvider,
 	HostedDemoApiError,
@@ -140,123 +139,19 @@ function providerWithResponse(body: unknown, operationIds = [OPERATION_ID]) {
 }
 
 describe("hosted demo provider", () => {
-	describe("one-call console logging", () => {
-		const debugKey = "firstrecall.debug.simonides.next";
-		let dom: JSDOM;
-		let log: ReturnType<typeof vi.spyOn>;
-
-		beforeEach(() => {
-			dom = new JSDOM("", { url: "https://obsidian.local" });
-			vi.stubGlobal("localStorage", dom.window.localStorage);
-			log = vi.spyOn(console, "log").mockImplementation(() => {});
-		});
-
-		afterEach(() => {
+	it("ignores the old local-storage debug flag and never logs payloads", async () => {
+		const storage = { getItem: vi.fn(() => "1"), removeItem: vi.fn() };
+		vi.stubGlobal("localStorage", storage);
+		const log = vi.spyOn(console, "log").mockImplementation(() => {});
+		try {
+			await providerWithResponse(successResponse()).provider.generateBundle(input());
+			expect(storage.getItem).not.toHaveBeenCalled();
+			expect(storage.removeItem).not.toHaveBeenCalled();
+			expect(log).not.toHaveBeenCalled();
+		} finally {
 			vi.restoreAllMocks();
 			vi.unstubAllGlobals();
-			dom.window.close();
-		});
-
-		it.each([null, "0", "true"])("does not log payloads with flag %s", async (flag) => {
-			if (flag !== null) dom.window.localStorage.setItem(debugKey, flag);
-			await providerWithResponse(successResponse()).provider.generateBundle(input());
-			expect(log).not.toHaveBeenCalled();
-		});
-
-		it("logs the next call only, even when another call starts before it finishes", async () => {
-			const { provider, transport } = providerWithResponse(successResponse());
-			dom.window.localStorage.setItem(debugKey, "1");
-			const first = provider.generateBundle(input());
-			expect(dom.window.localStorage.getItem(debugKey)).toBeNull();
-			const second = providerWithResponse(successResponse()).provider.generateBundle(input());
-			await Promise.all([first, second]);
-			expect(log).toHaveBeenCalledTimes(2);
-			expect(log).toHaveBeenNthCalledWith(1, "[Simonides] Request", {
-				operationId: OPERATION_ID,
-				url: "https://api.simonides.ai/v1/demo-bundles",
-				body: await transport.mock.calls[0][0].text(),
-			});
-			expect(log).toHaveBeenNthCalledWith(2, "[Simonides] Response", {
-				operationId: OPERATION_ID,
-				status: 200,
-				body: JSON.stringify(successResponse()),
-			});
-		});
-
-		it.each(["not JSON", JSON.stringify({ unexpected: "response" })])(
-			"logs the raw response before rejecting invalid output: %s", async (body) => {
-				const { provider, transport } = providerWithResponse(successResponse());
-				transport.mockResolvedValueOnce(new Response(body, { status: 502 }));
-				dom.window.localStorage.setItem(debugKey, "1");
-				await expect(provider.generateBundle(input())).rejects.toBeInstanceOf(HostedDemoProtocolError);
-				expect(log).toHaveBeenLastCalledWith("[Simonides] Response", {
-					operationId: OPERATION_ID, status: 502, body,
-				});
-				expect(dom.window.localStorage.getItem(debugKey)).toBeNull();
-			}
-		);
-
-		it("logs both attempts of an automatic retry", async () => {
-			const transport = vi.fn()
-				.mockResolvedValueOnce(new Response("slow down", { status: 429 }))
-				.mockResolvedValueOnce(new Response(JSON.stringify(successResponse([completeSection()], NEXT_OPERATION_ID))));
-			const provider = createHostedDemoProvider({
-				transport, clientVersion: "0.5.0", installationId: INSTALLATION_ID,
-				sessionId: SESSION_ID,
-				createOperationId: vi.fn().mockReturnValueOnce(OPERATION_ID).mockReturnValue(NEXT_OPERATION_ID),
-				sleep: async () => {},
-			});
-			dom.window.localStorage.setItem(debugKey, "1");
-			await provider.generateBundle(input());
-			expect(log).toHaveBeenCalledTimes(4);
-			expect(log).toHaveBeenNthCalledWith(2, "[Simonides] Response", {
-				operationId: OPERATION_ID, status: 429, body: "slow down",
-			});
-			expect(log).toHaveBeenNthCalledWith(3, "[Simonides] Request", expect.objectContaining({
-				operationId: NEXT_OPERATION_ID,
-			}));
-		});
-
-		it("logs transport errors and leaves subsequent calls quiet", async () => {
-			const { provider, transport } = providerWithResponse(successResponse());
-			const error = new Error("Connection failed");
-			transport.mockRejectedValueOnce(error);
-			dom.window.localStorage.setItem(debugKey, "1");
-			await expect(provider.generateBundle(input())).rejects.toBe(error);
-			expect(log).toHaveBeenLastCalledWith("[Simonides] Transport error", {
-				operationId: OPERATION_ID, error,
-			});
-			log.mockClear();
-			await providerWithResponse(successResponse()).provider.generateBundle(input());
-			expect(log).not.toHaveBeenCalled();
-		});
-
-		it("consumes the flag when local request validation prevents sending", async () => {
-			const { provider, transport } = providerWithResponse(successResponse());
-			const errorLog = vi.spyOn(console, "error").mockImplementation(() => {});
-			dom.window.localStorage.setItem(debugKey, "1");
-			const result = provider.generateBundle(input({ sections: [] }));
-			expect(dom.window.localStorage.getItem(debugKey)).toBeNull();
-			await expect(result).rejects.toBeInstanceOf(HostedDemoProtocolError);
-			expect(transport).not.toHaveBeenCalled();
-			expect(errorLog).toHaveBeenCalledWith(
-				"[Simonides] Request validation failed; request not sent",
-				expect.objectContaining({ operationId: OPERATION_ID }),
-			);
-			expect(log).not.toHaveBeenCalled();
-		});
-
-		it.each(["missing", "getItem", "removeItem"])("keeps generation working when storage is %s", async (failure) => {
-			dom.window.localStorage.setItem(debugKey, "1");
-			if (failure === "missing") {
-				vi.stubGlobal("localStorage", undefined);
-			} else {
-				vi.spyOn(dom.window.Storage.prototype, failure as "getItem" | "removeItem")
-					.mockImplementation(() => { throw new Error("Storage unavailable"); });
-			}
-			await providerWithResponse(successResponse()).provider.generateBundle(input());
-			expect(log).not.toHaveBeenCalled();
-		});
+		}
 	});
 
 	it("clears the visible retry wait when generation is canceled", async () => {

@@ -6,6 +6,7 @@ import {
 	Notice,
 	Plugin,
 	TFile,
+	TFolder,
 	requestUrl,
 	type MarkdownFileInfo,
 	type MarkdownPostProcessorContext,
@@ -136,7 +137,6 @@ import {
 } from "./editor-hook-layout";
 import {
 	findMaintainedStudyAreaForPath,
-	isDescendantPath,
 	normalizeVaultPath,
 	planStudyAreaGeneration,
 	studyAreaNameForParentPath,
@@ -916,7 +916,7 @@ export default class FirstRecallPlugin extends Plugin {
 		action.classList.add("firstrecall-study-header-action");
 		action.classList.add("firstrecall-study-header-menu-action");
 		action.querySelector("svg")?.remove();
-		const logo = action.ownerDocument.createElement("img");
+		const logo = action.ownerDocument.defaultView!.createEl("img");
 		logo.className = "firstrecall-study-header-logo";
 		logo.alt = "";
 		logo.draggable = false;
@@ -926,7 +926,7 @@ export default class FirstRecallPlugin extends Plugin {
 		);
 		logo.src = `data:image/svg+xml,${encodeURIComponent(headerLogoSvg)}`;
 		action.prepend(logo);
-		const label = action.ownerDocument.createElement("span");
+		const label = action.ownerDocument.defaultView!.createSpan();
 		label.className = "firstrecall-study-header-label";
 		label.textContent = "FirstRecall";
 		action.appendChild(label);
@@ -1343,10 +1343,11 @@ export default class FirstRecallPlugin extends Plugin {
 		if (subpage === "study-areas") {
 			this.settingTab.openStudyAreas();
 		}
-		// @ts-expect-error - setting is available on the desktop app.
-		this.app.setting?.open?.();
-		// @ts-expect-error - openTabById is available on the desktop app.
-		this.app.setting?.openTabById?.(this.manifest.id);
+		const app = this.app as typeof this.app & {
+			setting?: { open(): void; openTabById(id: string): void };
+		};
+		app.setting?.open();
+		app.setting?.openTabById(this.manifest.id);
 	}
 
 	/** Status-pill click: open settings when unconfigured, else toggle visibility. */
@@ -2308,16 +2309,28 @@ export default class FirstRecallPlugin extends Plugin {
 		return this.settings.studyAreas.find((area) => area.id === areaId) ?? null;
 	}
 
+	private studyAreaFiles(parentPath: string): TFile[] {
+		const folder = parentPath
+			? this.app.vault.getFolderByPath(parentPath)
+			: this.app.vault.getRoot();
+		if (!folder) return [];
+		const files: TFile[] = [];
+		const folders = [folder];
+		while (folders.length) {
+			for (const child of folders.pop()!.children) {
+				if (child instanceof TFolder) folders.push(child);
+				else if (child instanceof TFile && child.extension === "md") files.push(child);
+			}
+		}
+		return files;
+	}
+
 	private async buildStudyAreaPlan(
 		area: StudyArea,
 		mode: StudyAreaPlanMode,
 		targetFiles?: readonly TFile[]
 	): Promise<StudyAreaGenerationPlan> {
-		const files =
-			targetFiles ??
-			this.app.vault
-				.getMarkdownFiles()
-				.filter((file) => isDescendantPath(file.path, area.parentPath));
+		const files = targetFiles ?? this.studyAreaFiles(area.parentPath);
 		const snapshots = await Promise.all(
 			files.map(async (file) => {
 				const markdown = await this.app.vault.cachedRead(file);
@@ -2447,7 +2460,7 @@ class RegenerateSettingsModal extends Modal {
 		contentEl.createEl("p", {
 			text: `FirstRecall settings that affect recall questions changed. Regenerate cached section cards for "${this.noteName}" now?`,
 		});
-		const actions = contentEl.createEl("div", {
+		const actions = contentEl.createDiv({
 			cls: "firstrecall-modal-actions",
 		});
 		const cancel = actions.createEl("button", { text: "Not now" });

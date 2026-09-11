@@ -527,9 +527,9 @@ export async function generateNote(
 	const wholeNoteContext = params.useWholeNoteContext
 		? clampText(extractStudyableText(markdown), maxContextChars)
 		: undefined;
-	const includesNoteBrief = sections.length > 0 && Boolean(provider.generateNoteBrief);
+	const includesNoteBrief = sections.length > 0 && typeof provider.generateNoteBrief === "function";
 	const total = sections.length + (includesNoteBrief ? 1 : 0);
-	const results: SectionResult[] = new Array(sections.length);
+	const results: SectionResult[] = new Array<SectionResult>(sections.length);
 	const maxGeneratedSections = providerSectionLimit(provider);
 	const generatedSectionCount = maxGeneratedSections === null
 		? sections.length

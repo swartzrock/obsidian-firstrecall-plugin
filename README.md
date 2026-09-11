@@ -74,6 +74,10 @@ Your Markdown files are never touched. FirstRecall uses your selected AI / LLM p
 
 The FirstRecall plugin is designed for Obsidian Desktop v1.11.4 or later (to use Obsidian's   [Secret Storage](https://docs.obsidian.md/plugins/guides/secret-storage) for securely storing API keys)
 
+Open **Settings → FirstRecall** to configure the plugin. Integration with Obsidian
+1.13’s settings search is not yet implemented; the existing settings pages remain
+available.
+
 
 
 BRAT is the easiest way to try pre-release Obsidian plugins and keep them updated from GitHub.
@@ -200,6 +204,13 @@ use their own configuration and authentication files outside the vault so they c
 run with your existing account. Their file access and network behavior depend on
 the tool and its configuration; running a terminal tool does not guarantee offline
 generation.
+
+Community review tools report **Direct Filesystem Access** and **Shell Execution**
+because the bundled BYOK runtime uses Node's filesystem APIs to locate installed
+executables and `child_process` to run the optional terminal providers. These
+capabilities are required for Codex CLI and Claude CLI support. Select a cloud API,
+the included trial, or a local model server if you do not want to run a terminal
+provider.
 
 > 
 > **Data Privacy & Third-Party LLM Usage**

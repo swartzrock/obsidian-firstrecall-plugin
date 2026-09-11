@@ -240,7 +240,7 @@ class CueWidget extends WidgetType {
 				}
 			: this.options;
 		const element = renderCueElement(this.cue, "inline-cues", options);
-		const wrapper = element.ownerDocument.createElement("div");
+		const wrapper = element.ownerDocument.defaultView!.createDiv();
 		wrapper.className = "firstrecall-inline-cue-widget";
 		wrapper.appendChild(element);
 		return wrapper;
@@ -289,7 +289,7 @@ class RailSpacerWidget extends WidgetType {
 	}
 
 	toDOM(): HTMLElement {
-		const element = cueDocument().createElement("div");
+		const element = cueDocument().defaultView!.createDiv();
 		element.className = "firstrecall-editor-rail-spacer";
 		element.setAttribute("aria-hidden", "true");
 		element.style.height = `${this.height}px`;
@@ -378,7 +378,7 @@ export function appendFreshnessBadge(
 	) {
 		return;
 	}
-	const badge = parent.ownerDocument.createElement("span");
+	const badge = parent.ownerDocument.defaultView!.createSpan();
 	badge.className = "firstrecall-freshness-badge";
 	badge.textContent = "Outdated";
 	parent.prepend(badge);
@@ -393,7 +393,7 @@ function applyEditorStudyCueInteraction(
 	element.dataset.studySectionId = study.sectionId;
 	element.dataset.studyState = study.revealed ? "revealed" : "hidden";
 
-	const toggle = element.ownerDocument.createElement("button");
+	const toggle = element.ownerDocument.defaultView!.createEl("button");
 	toggle.type = "button";
 	toggle.className = "firstrecall-study-section-toggle";
 	toggle.dataset.revealed = String(study.revealed);
@@ -434,7 +434,7 @@ function renderCornellCueElement(
 	options: CueRenderOptions = {}
 ): HTMLElement {
 	const doc = cueDocument();
-	const root = doc.createElement("div");
+	const root = doc.defaultView!.createDiv();
 	root.className = [
 		"firstrecall-editor-hook",
 		"firstrecall-editor-cornell-card",
@@ -453,14 +453,14 @@ function renderCornellCueElement(
 	root.dataset.termsVisible = String(showTerms);
 	applyCueLayoutClasses(root, options);
 
-	const card = doc.createElement("div");
+	const card = doc.defaultView!.createDiv();
 	card.className = "firstrecall-cornell-cue";
 	root.appendChild(card);
 
 	if (cue.error) {
 		card.classList.add("firstrecall-cornell-cue-error");
 		card.title = cue.error;
-		const q = doc.createElement("div");
+		const q = doc.defaultView!.createDiv();
 		q.className = "firstrecall-cornell-q";
 		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
 		card.appendChild(q);
@@ -468,7 +468,7 @@ function renderCornellCueElement(
 	}
 	if (cue.unavailable) {
 		card.classList.add("firstrecall-cornell-cue-unavailable");
-		const q = doc.createElement("div");
+		const q = doc.defaultView!.createDiv();
 		q.className = "firstrecall-cornell-q";
 		q.textContent = cue.unavailable;
 		card.appendChild(q);
@@ -477,9 +477,9 @@ function renderCornellCueElement(
 
 	root.classList.add("firstrecall-editor-hook-sectioned");
 	if (showSummary && cue.summary) {
-		const summary = doc.createElement("div");
+		const summary = doc.defaultView!.createDiv();
 		summary.className = "firstrecall-summary";
-		const summaryText = doc.createElement("span");
+		const summaryText = doc.defaultView!.createSpan();
 		summaryText.className = "firstrecall-summary-takeaway";
 		summaryText.textContent = cue.summary;
 		summary.appendChild(summaryText);
@@ -492,7 +492,7 @@ function renderCornellCueElement(
 		);
 	}
 	if (showQuestion) {
-		const q = doc.createElement("div");
+		const q = doc.defaultView!.createDiv();
 		q.className = "firstrecall-cornell-q";
 		q.textContent = cue.question;
 		appendEditorHookDisclosure(
@@ -505,7 +505,7 @@ function renderCornellCueElement(
 	}
 
 	if (showTerms && termValues.length) {
-		const kw = doc.createElement("div");
+		const kw = doc.defaultView!.createDiv();
 		kw.className = "firstrecall-cornell-kw";
 		appendCueTerms(kw, termValues, "firstrecall-cornell-term");
 		appendEditorHookDisclosure(
@@ -524,7 +524,7 @@ function renderInlineCueElement(
 	cue: CueLineData,
 	options: CueRenderOptions = {}
 ): HTMLElement {
-	const root = cueDocument().createElement("div");
+	const root = cueDocument().defaultView!.createDiv();
 	root.className = "firstrecall-cue firstrecall-editor-hook-sectioned";
 	root.setAttribute("role", "note");
 	const showSummary = options.showSummary ?? true;
@@ -538,7 +538,7 @@ function renderInlineCueElement(
 	if (cue.error) {
 		root.classList.add("firstrecall-cue-error");
 		root.title = cue.error;
-		const q = cueDocument().createElement("div");
+		const q = cueDocument().defaultView!.createDiv();
 		q.className = "firstrecall-cue-question";
 		q.textContent = "\u26a0 Generation failed \u2014 regenerate";
 		root.appendChild(q);
@@ -546,7 +546,7 @@ function renderInlineCueElement(
 	}
 	if (cue.unavailable) {
 		root.classList.add("firstrecall-cue-unavailable");
-		const q = cueDocument().createElement("div");
+		const q = cueDocument().defaultView!.createDiv();
 		q.className = "firstrecall-cue-question";
 		q.textContent = cue.unavailable;
 		root.appendChild(q);
@@ -554,9 +554,9 @@ function renderInlineCueElement(
 	}
 
 	if (showSummary && cue.summary) {
-		const summary = cueDocument().createElement("div");
+		const summary = cueDocument().defaultView!.createDiv();
 		summary.className = "firstrecall-summary";
-		const summaryText = cueDocument().createElement("span");
+		const summaryText = cueDocument().defaultView!.createSpan();
 		summaryText.className = "firstrecall-summary-takeaway";
 		summaryText.textContent = cue.summary;
 		summary.appendChild(summaryText);
@@ -569,7 +569,7 @@ function renderInlineCueElement(
 		);
 	}
 	if (showQuestion) {
-		const q = cueDocument().createElement("div");
+		const q = cueDocument().defaultView!.createDiv();
 		q.className = "firstrecall-cue-question firstrecall-editor-hook-title";
 		q.textContent = cue.question;
 		appendEditorHookDisclosure(
@@ -582,7 +582,7 @@ function renderInlineCueElement(
 	}
 
 	if (showTerms && cue.keywords.length) {
-		const kw = cueDocument().createElement("div");
+		const kw = cueDocument().defaultView!.createDiv();
 		kw.className = "firstrecall-cue-keywords firstrecall-editor-hook-keywords";
 		appendCueTerms(kw, cue.keywords);
 		appendEditorHookDisclosure(
@@ -600,7 +600,7 @@ function appendLabelIcon(
 	parent: HTMLElement,
 	icon: string | readonly string[]
 ): void {
-	const iconEl = parent.ownerDocument.createElement("span");
+	const iconEl = parent.ownerDocument.defaultView!.createSpan();
 	iconEl.className = "firstrecall-label-icon";
 	iconEl.setAttribute("aria-hidden", "true");
 	const icons: readonly string[] = typeof icon === "string" ? [icon] : icon;
@@ -613,7 +613,7 @@ function appendLabelIcon(
 }
 
 function appendLabelText(parent: HTMLElement, label: string): void {
-	const labelText = parent.ownerDocument.createElement("span");
+	const labelText = parent.ownerDocument.defaultView!.createSpan();
 	labelText.className = "firstrecall-label-text";
 	labelText.textContent = label;
 	parent.appendChild(labelText);
@@ -625,7 +625,7 @@ function appendCueTerms(
 	chipClass = "firstrecall-cue-term"
 ): void {
 	for (const term of terms) {
-		const chip = parent.ownerDocument.createElement("span");
+		const chip = parent.ownerDocument.defaultView!.createSpan();
 		chip.className = chipClass;
 		chip.textContent = term;
 		parent.appendChild(chip);
@@ -664,12 +664,12 @@ function finalizeRailCard(
 		nextEditorCueRailCardId += 1;
 		root.id = `firstrecall-editor-rail-card-${nextEditorCueRailCardId}`;
 	}
-	const grip = root.ownerDocument.createElement("div");
+	const grip = root.ownerDocument.defaultView!.createDiv();
 	grip.className = "firstrecall-editor-cue-width-grip";
 	grip.tabIndex = 0;
 	grip.setAttribute("role", "separator");
 	grip.setAttribute("aria-orientation", "vertical");
-	const gripLabel = root.ownerDocument.createElement("span");
+	const gripLabel = root.ownerDocument.defaultView!.createSpan();
 	gripLabel.id = `${root.id}-width-grip-label`;
 	gripLabel.className = "firstrecall-editor-cue-width-grip-label";
 	gripLabel.textContent = "Cornell section card rail width";
@@ -1150,12 +1150,12 @@ function appendEditorHookDisclosure(
 	collapse: CueSectionCollapseRenderState | undefined
 ): void {
 	const doc = parent.ownerDocument;
-	const button = doc.createElement("button");
+	const button = doc.defaultView!.createEl("button");
 	button.type = "button";
 	button.className = "firstrecall-editor-hook-section-toggle";
 	button.dataset.section = kind;
 
-	const sectionLabel = doc.createElement("span");
+	const sectionLabel = doc.defaultView!.createSpan();
 	sectionLabel.className = "firstrecall-editor-hook-section-label";
 	sectionLabel.dataset.section = kind;
 	appendLabelIcon(sectionLabel, CUE_SECTION_ICON_CANDIDATES[kind]);
@@ -1168,23 +1168,23 @@ function appendEditorHookDisclosure(
 				: "SUMMARY"
 	);
 
-	const chevron = doc.createElement("span");
+	const chevron = doc.defaultView!.createSpan();
 	chevron.className = "firstrecall-editor-hook-section-chevron";
 	chevron.setAttribute("aria-hidden", "true");
 	setIcon(chevron, "chevron-down");
 	sectionLabel.appendChild(chevron);
 	button.appendChild(sectionLabel);
 
-	const preview = doc.createElement("span");
+	const preview = doc.defaultView!.createSpan();
 	preview.className = "firstrecall-editor-hook-section-preview";
 	preview.textContent = previewText;
 	button.appendChild(preview);
 
-	const body = doc.createElement("div");
+	const body = doc.defaultView!.createDiv();
 	body.className = "firstrecall-editor-hook-section-body";
 	body.dataset.section = kind;
 	body.id = editorHookSectionBodyId();
-	const bodyContent = doc.createElement("div");
+	const bodyContent = doc.defaultView!.createDiv();
 	bodyContent.className = "firstrecall-editor-hook-section-content";
 	bodyContent.appendChild(content);
 	body.appendChild(bodyContent);
@@ -1271,45 +1271,45 @@ export function renderNoteBriefElement(
 	freshness: ComponentFreshness = "current"
 ): HTMLElement {
 	const doc = cueDocument();
-	const root = doc.createElement("section");
+	const root = doc.defaultView!.createEl("section");
 	root.className = `firstrecall-note-brief firstrecall-note-brief-${variant}`;
 	root.setAttribute("role", "note");
 
-	const label = doc.createElement("div");
+	const label = doc.defaultView!.createDiv();
 	label.className = "firstrecall-note-brief-label";
 	appendLabelIcon(label, "sparkles");
 	appendLabelText(label, "Note Brief");
 	appendFreshnessBadge(label, freshness);
 	root.appendChild(label);
 
-	const overview = doc.createElement("p");
+	const overview = doc.defaultView!.createEl("p");
 	overview.className = "firstrecall-note-brief-overview";
 	overview.textContent = noteBrief.overview;
 	root.appendChild(overview);
 
-	const cards = doc.createElement("div");
+	const cards = doc.defaultView!.createDiv();
 	cards.className = "firstrecall-note-brief-insights";
 	for (const key of noteBriefCardOrder) {
 		const card = noteBrief[key];
-		const cardEl = doc.createElement("div");
+		const cardEl = doc.defaultView!.createDiv();
 		cardEl.className = "firstrecall-note-brief-insight";
 		cardEl.dataset.card = key;
 
 		const insightLabel = noteBriefInsightLabels[key];
 		const displayTitle = noteBriefTitleWithoutRepeatedLabel(card.title, insightLabel);
 		if (displayTitle) {
-			const title = doc.createElement("div");
+			const title = doc.defaultView!.createDiv();
 			title.className = "firstrecall-note-brief-insight-title";
 			title.textContent = displayTitle;
 			cardEl.appendChild(title);
 		}
 
-		const detail = doc.createElement("div");
+		const detail = doc.defaultView!.createDiv();
 		detail.className = "firstrecall-note-brief-insight-detail";
 		detail.textContent = card.detail;
 		cardEl.appendChild(detail);
 
-		const badge = doc.createElement("span");
+		const badge = doc.defaultView!.createSpan();
 		badge.className = "firstrecall-note-brief-insight-badge firstrecall-cue-term";
 		badge.textContent = insightLabel;
 		cardEl.appendChild(badge);
@@ -1340,7 +1340,7 @@ function noteBriefKey(noteBrief: NoteBriefOutput | null | undefined): string {
 
 function cueDocument(): Document {
 	return typeof activeDocument === "undefined"
-		? globalThis.document
+		? window.document
 		: activeDocument;
 }
 
@@ -2018,31 +2018,31 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			if (!projection || !snapshot?.active) return;
 
 			const doc = this.view.dom.ownerDocument;
-			const host = doc.createElement("div");
+			const host = doc.defaultView!.createDiv();
 			host.className = "firstrecall-editor-study-controls";
 			host.setAttribute("role", "region");
 			host.setAttribute("aria-label", "Study controls");
 
-			const help = doc.createElement("span");
+			const help = doc.defaultView!.createSpan();
 			help.className = "firstrecall-study-help";
 			setIcon(help, "eye");
-			const helpCopy = doc.createElement("span");
+			const helpCopy = doc.defaultView!.createSpan();
 			helpCopy.className = "firstrecall-study-help-copy";
-			const helpTitle = doc.createElement("span");
+			const helpTitle = doc.defaultView!.createSpan();
 			helpTitle.className = "firstrecall-study-help-title";
 			helpTitle.textContent = "Show or hide answers";
-			const helpDetail = doc.createElement("span");
+			const helpDetail = doc.defaultView!.createSpan();
 			helpDetail.className = "firstrecall-study-help-detail";
 			helpDetail.textContent = "Click the eye icon on any section card.";
 			helpCopy.append(helpTitle, helpDetail);
 			help.append(helpCopy);
 
-			const progress = doc.createElement("span");
+			const progress = doc.defaultView!.createSpan();
 			progress.className = "firstrecall-editor-study-progress";
 			progress.setAttribute("aria-live", "polite");
 			progress.textContent = `${snapshot.revealedCount} / ${snapshot.total} answers revealed`;
 
-			const progressTrack = doc.createElement("div");
+			const progressTrack = doc.defaultView!.createDiv();
 			progressTrack.className = "firstrecall-study-progress-track";
 			progressTrack.setAttribute("role", "progressbar");
 			progressTrack.setAttribute("aria-valuemin", "0");
@@ -2052,7 +2052,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 				String(snapshot.revealedCount)
 			);
 			progressTrack.setAttribute("aria-label", "Answers revealed");
-			const progressFill = doc.createElement("div");
+			const progressFill = doc.defaultView!.createDiv();
 			progressFill.className = "firstrecall-study-progress-fill";
 			progressFill.style.width = `${
 				snapshot.total > 0
@@ -2061,7 +2061,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			}%`;
 			progressTrack.append(progressFill);
 
-			const showAll = doc.createElement("button");
+			const showAll = doc.defaultView!.createEl("button");
 			showAll.type = "button";
 			showAll.className =
 				"firstrecall-study-action firstrecall-editor-study-show-all";
@@ -2069,7 +2069,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			showAll.append("Show All Answers");
 			showAll.disabled = snapshot.revealedCount === snapshot.total;
 
-			const hideAll = doc.createElement("button");
+			const hideAll = doc.defaultView!.createEl("button");
 			hideAll.type = "button";
 			hideAll.className =
 				"firstrecall-study-action firstrecall-editor-study-hide-all";
@@ -2077,7 +2077,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			hideAll.append("Hide All Answers");
 			hideAll.disabled = snapshot.revealedCount === 0;
 
-			const exit = doc.createElement("button");
+			const exit = doc.defaultView!.createEl("button");
 			exit.type = "button";
 			exit.className = "firstrecall-study-action firstrecall-editor-study-exit";
 			setIcon(exit, "log-out");
@@ -2089,7 +2089,7 @@ const cueEditorStudyPlugin = ViewPlugin.fromClass(
 			showAll.addEventListener("click", onShowAll);
 			hideAll.addEventListener("click", onHideAll);
 			exit.addEventListener("click", onExit);
-			const actions = doc.createElement("div");
+			const actions = doc.defaultView!.createDiv();
 			actions.className = "firstrecall-study-actions";
 			actions.append(showAll, hideAll, exit);
 			host.append(help, progress, progressTrack, actions);

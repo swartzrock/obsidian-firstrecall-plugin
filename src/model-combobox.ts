@@ -105,7 +105,7 @@ export function renderModelCombobox(opts: {
 		},
 	});
 	opts.renderToggleIcon?.(toggleEl);
-	const toggleLabelEl = toggleEl.ownerDocument.createElement("span");
+	const toggleLabelEl = toggleEl.ownerDocument.defaultView!.createSpan();
 	toggleLabelEl.id = `${comboboxId}-toggle-label`;
 	toggleLabelEl.hidden = true;
 	toggleLabelEl.textContent = `Show ${suggestionsLabel}`;
