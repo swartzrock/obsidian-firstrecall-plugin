@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { JSDOM } from "jsdom";
-import { EditorState, type Extension } from "@codemirror/state";
-import { Decoration, EditorView } from "@codemirror/view";
+import { Compartment, EditorState, type Extension } from "@codemirror/state";
+import { Decoration, EditorView, lineNumbers } from "@codemirror/view";
 import {
 	applyEditorCueWidthPreview,
 	buildCueGutterMarkers,
@@ -186,6 +186,69 @@ function buttonByAccessibleName(
 }
 
 describe("Editing View Study projection", () => {
+	it("keeps rail eye buttons outside aria-hidden ancestors while other gutters stay hidden", () => {
+		const plugin = new Compartment();
+		withEditorView("# Terms\nbody", [lineNumbers(), plugin.of(cueEditorExtension)], (view) => {
+			const toggleSection = vi.fn((_sectionId: string) => {
+				view.dispatch({ effects: setCuesEffect.of({
+					...payload,
+					study: { ...payload.study!, snapshot: studySnapshot({
+						sections: studySnapshot().sections.map((section) => ({ ...section, revealed: true })),
+						revealedCount: 1,
+					}) },
+				}) });
+			});
+			const payload: CueEditorRenderState = {
+				cues: [cue()], display: "cornell",
+				study: {
+					snapshot: studySnapshot(), toggleSection,
+					showAll: vi.fn(), hideAll: vi.fn(), exit: vi.fn(),
+				},
+			};
+			const gutters = view.dom.querySelector<HTMLElement>(".cm-gutters")!;
+			const numbers = view.dom.querySelector<HTMLElement>(".cm-lineNumbers")!;
+			expect(gutters.getAttribute("aria-hidden")).toBe("true");
+			view.dispatch({ effects: setCuesEffect.of(payload) });
+			let eye = view.dom.querySelector<HTMLButtonElement>(".firstrecall-study-section-toggle")!;
+			expect(eye).not.toBeNull();
+			expect(eye.closest('[aria-hidden="true"]')).toBeNull();
+			expect(numbers.getAttribute("aria-hidden")).toBe("true");
+			eye.focus();
+			expect(document.activeElement).toBe(eye);
+			eye.click();
+			expect(toggleSection).toHaveBeenCalledWith("section-terms");
+			eye = view.dom.querySelector<HTMLButtonElement>(".firstrecall-study-section-toggle")!;
+			expect(eye.getAttribute("aria-label")).toBe("Hide answer");
+			expect(eye.closest('[aria-hidden="true"]')).toBeNull();
+			eye.focus();
+			view.dispatch({ selection: { anchor: 0 } });
+			expect(document.activeElement).toBe(eye);
+			expect(eye.closest('[aria-hidden="true"]')).toBeNull();
+
+			view.dispatch({ effects: setCuesEffect.of({ ...payload, display: "inline-cues" }) });
+			expect(gutters.getAttribute("aria-hidden")).toBe("true");
+			expect(numbers.hasAttribute("aria-hidden")).toBe(false);
+			expect(view.dom.querySelector(".firstrecall-study-section-toggle")?.closest('[aria-hidden="true"]')).toBeNull();
+
+			view.dispatch({ effects: setCuesEffect.of(payload) });
+			expect(gutters.hasAttribute("aria-hidden")).toBe(false);
+			view.dom.querySelector<HTMLButtonElement>(".firstrecall-study-section-toggle")!.focus();
+			const focusedWhenHidden: boolean[] = [];
+			const setAttribute = gutters.setAttribute.bind(gutters);
+			const attributeSpy = vi.spyOn(gutters, "setAttribute").mockImplementation((name, value) => {
+				if (name === "aria-hidden" && value === "true") {
+					focusedWhenHidden.push(gutters.contains(document.activeElement));
+				}
+				setAttribute(name, value);
+			});
+			view.dispatch({ effects: plugin.reconfigure([]) });
+			attributeSpy.mockRestore();
+			expect(focusedWhenHidden).toEqual([false]);
+			expect(gutters.getAttribute("aria-hidden")).toBe("true");
+			expect(numbers.hasAttribute("aria-hidden")).toBe(false);
+		});
+	});
+
 	it("conceals only an admitted answer body and removes it from the accessibility tree", () => {
 		const state = EditorState.create({ doc: "# Terms\nbody" });
 		const decorations = buildEditorStudyAnswerDecorations(
