@@ -1,4 +1,5 @@
 import { JSDOM } from "jsdom";
+import { Setting, type SettingDefinition, type SettingDefinitionItem } from "obsidian";
 import { describe, it, expect, vi } from "vitest";
 import {
 	AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS,
@@ -1486,5 +1487,128 @@ describe("folders and automatic updates settings", () => {
 		expect(
 			tab.containerEl.querySelector(".firstrecall-study-area-provider-setup")
 		).toBeNull();
+	});
+});
+
+function searchableEntries(items: SettingDefinitionItem[], pagePath: string[] = []): Array<{
+	definition: SettingDefinition;
+	pagePath: string[];
+}> {
+	return items.flatMap((item) => {
+		if ("type" in item) {
+			return searchableEntries(item.items ?? [], item.type === "page"
+				? [...pagePath, item.name]
+				: pagePath);
+		}
+		return [{ definition: item, pagePath }];
+	});
+}
+
+function renderSearchSection(tab: FirstRecallSettingTab, query: string): Setting {
+	const entry = searchableEntries(tab.getSettingDefinitions()).find(({ definition }) =>
+		definition.name === query || definition.aliases?.includes(query)
+	);
+	if (!entry || !("render" in entry.definition) || !entry.definition.render) {
+		throw new Error(`No renderable search result for ${query}`);
+	}
+	tab.containerEl.empty();
+	const setting = new Setting(tab.containerEl).setName(entry.definition.name);
+	entry.definition.render(setting, {} as never);
+	return setting;
+}
+
+describe("searchable settings", () => {
+	it("indexes every settings section without rendering, accessing credentials, or scanning the vault", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		plugin.settings.studyAreas = [studyArea()];
+		const enumerate = vi.spyOn(tab.app.vault, "getAllLoadedFiles");
+		const entries = searchableEntries(tab.getSettingDefinitions());
+		const terms = entries.flatMap(({ definition }) => [definition.name, ...(definition.aliases ?? [])]);
+		expect(terms).toEqual(expect.arrayContaining([
+			"API key", "Custom model ID", "Parallel requests", "API Rate limit",
+			"Recall question style", "Note Brief instructions", "Automatic update delay",
+			"Show Note Brief", "Show summary", "Show recall question", "Show key terms",
+			"Section card layout", "Study text size", "Study Mode hide style",
+		]));
+		expect(entries.find(({ definition }) => definition.aliases?.includes("API key"))?.pagePath).toEqual(["AI model"]);
+		expect(entries.find(({ definition }) => definition.aliases?.includes("Automatic update delay"))?.pagePath).toEqual(["Managed folders"]);
+		expect(tab.containerEl.childElementCount).toBe(0);
+		expect(enumerate).not.toHaveBeenCalled();
+		expect(plugin.previewStudyArea).not.toHaveBeenCalled();
+		expect(plugin.isProviderCredentialSaved).not.toHaveBeenCalled();
+		expect(plugin.saveSettings).not.toHaveBeenCalled();
+	});
+
+	it("keeps the host search row while saving display controls through the plugin's existing persistence path", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		const host = renderSearchSection(tab, "Show summary");
+		expect(host.settingEl.parentElement).toBe(tab.containerEl);
+		expect(host.settingEl.classList.contains("firstrecall-searchable-settings-section")).toBe(true);
+		await changeToggle(host.settingEl, "Show summary", false);
+		expect(plugin.settings.showSummary).toBe(false);
+		expect(plugin.saveSettings).toHaveBeenCalledWith({ refreshReviewSurfaces: false });
+		expect(plugin.refreshEditorCues).toHaveBeenCalledOnce();
+		expect(plugin.refreshReadingModeSurface).toHaveBeenCalledOnce();
+	});
+
+	it("refreshes native definitions after changing provider instead of calling legacy display", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		const legacy = vi.spyOn(tab, "display");
+		tab.update = vi.fn(() => { renderSearchSection(tab, "Provider and model"); });
+		renderSearchSection(tab, "API key");
+		providerPathButton(tab.containerEl, "API key").click();
+		tab.containerEl.querySelector<HTMLButtonElement>('[data-provider="anthropic"]')!.click();
+		await vi.waitFor(() => expect(tab.update).toHaveBeenCalled());
+		expect(plugin.settings.byok.selectedProvider).toBe("anthropic");
+		expect(tab.containerEl.querySelectorAll(".firstrecall-active-provider-panel")).toHaveLength(1);
+		expect(tab.containerEl.querySelector(".firstrecall-api-key-input")).not.toBeNull();
+		expect(legacy).not.toHaveBeenCalled();
+	});
+
+	it("updates native appearance controls and refreshes review surfaces", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		tab.update = vi.fn(() => { renderSearchSection(tab, "Appearance"); });
+		renderSearchSection(tab, "Section card layout");
+		await clickThumbnail(tab.containerEl.querySelector(".firstrecall-thumbnail-group-editor-display")!, "inline-cues");
+		await vi.waitFor(() => expect(tab.update).toHaveBeenCalledOnce());
+		expect(plugin.settings.editorCueDisplay).toBe("inline-cues");
+		expect(plugin.refreshEditorCues).toHaveBeenCalledOnce();
+	});
+
+	it("defers refreshes triggered by a folder scan until the native render finishes", async () => {
+		const { tab, plugin } = await setupSettingsTab({ providerConfigured: true });
+		plugin.settings.studyAreas = [studyArea()];
+		let resolveScan!: (value: ReturnType<typeof studyAreaPlan>) => void;
+		plugin.previewStudyArea.mockImplementation(() => new Promise((resolve) => { resolveScan = resolve; }));
+		tab.update = vi.fn(() => { renderSearchSection(tab, "Automatic update delay"); });
+		renderSearchSection(tab, "Automatic update delay");
+		expect(plugin.previewStudyArea).toHaveBeenCalledOnce();
+		expect(tab.update).not.toHaveBeenCalled();
+		await Promise.resolve();
+		expect(tab.update).toHaveBeenCalledOnce();
+		resolveScan(studyAreaPlan());
+		await vi.waitFor(() => expect(tab.update).toHaveBeenCalledTimes(2));
+		expect(plugin.previewStudyArea).toHaveBeenCalledOnce();
+		expect(tab.containerEl.querySelectorAll(".firstrecall-study-area-row")).toHaveLength(1);
+	});
+
+	it("opens the native managed-folder page for programmatic navigation", async () => {
+		const { tab } = await setupSettingsTab();
+		tab.update = vi.fn();
+		const navigateToSearchResult = vi.fn();
+		Object.assign(tab.app, { setting: { navigateToSearchResult } });
+		tab.openStudyAreas();
+		expect(tab.update).toHaveBeenCalledOnce();
+		expect(navigateToSearchResult).toHaveBeenCalledWith({ tab, pagePath: ["Managed folders"] });
+	});
+
+	it("continues to navigate and save on hosts without the declarative API", async () => {
+		const { tab, plugin } = await setupSettingsTab();
+		expect(typeof tab.update).toBe("undefined");
+		tab.display();
+		await changeToggle(tab.containerEl, "Show Note Brief", false);
+		expect(plugin.settings.showNoteBrief).toBe(false);
+		tab.openStudyAreas();
+		expect(settingText(tab.containerEl)).toContain("Add folder or vault");
 	});
 });

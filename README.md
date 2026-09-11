@@ -74,9 +74,10 @@ Your Markdown files are never touched. FirstRecall uses your selected AI / LLM p
 
 The FirstRecall plugin is designed for Obsidian Desktop v1.11.4 or later (to use Obsidian's   [Secret Storage](https://docs.obsidian.md/plugins/guides/secret-storage) for securely storing API keys)
 
-Open **Settings → FirstRecall** to configure the plugin. Integration with Obsidian
-1.13’s settings search is not yet implemented; the existing settings pages remain
-available.
+Open **Settings → FirstRecall** to configure the plugin. On Obsidian 1.13 or later,
+use settings search to find a section by its controls—for example, “API key,”
+“Parallel requests,” “Show summary,” or “Study text size.” Earlier Obsidian versions
+continue to use the existing settings pages.
 
 
 

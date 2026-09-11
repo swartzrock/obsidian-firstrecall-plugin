@@ -2431,3 +2431,10 @@ button.firstrecall-study-area-remove {
 	width: 16px;
 	height: 16px;
 }
+
+/* Keep each searchable section in its host row while preserving custom layouts. */
+.firstrecall-searchable-settings-section.setting-item {
+	display: block;
+	padding: 0;
+	border-top: none;
+}
