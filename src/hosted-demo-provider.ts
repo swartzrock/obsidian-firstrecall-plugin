@@ -14,6 +14,19 @@ export const HOSTED_DEMO_ENDPOINT =
 
 const hostedDemoDefinition = firstRecallProviderDefinition("hosted-demo");
 
+function consumeDebugNextCall(): boolean {
+	try {
+		const key = "firstrecall.debug.simonides.next";
+		if (globalThis.localStorage?.getItem(key) !== "1") return false;
+		// Claim the call synchronously; retries use the same local debug flag.
+		globalThis.localStorage.removeItem(key);
+		return true;
+	} catch {
+		// Unavailable storage must neither break generation nor enable logging.
+		return false;
+	}
+}
+
 const uuidSchema = z.string().regex(
 	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
 	"must be a lowercase UUID"
@@ -465,6 +478,7 @@ export function createHostedDemoProvider(
 ): HostedDemoProvider {
 	return {
 		async generateBundle(input, signal) {
+			const debug = consumeDebugNextCall();
 			for (let attempt = 0; attempt < 2; attempt++) {
 				const operationId = deps.createOperationId();
 				const payload = {
@@ -492,15 +506,34 @@ export function createHostedDemoProvider(
 					);
 				}
 
+				const body = JSON.stringify(requestBody.data);
 				const request = new Request(HOSTED_DEMO_ENDPOINT, {
 					method: "POST",
 					headers: { "content-type": "application/json" },
-					body: JSON.stringify(requestBody.data),
+					body,
 					signal,
 				});
-				const response = await deps.transport(request);
+				if (debug) {
+					// eslint-disable-next-line obsidianmd/rule-custom-message -- Explicitly enabled one-call diagnostics.
+					console.log("[Simonides] Request", { operationId, url: request.url, body });
+				}
+				let response: Response;
+				let responseText: string;
+				try {
+					response = await deps.transport(request);
+					responseText = await response.text();
+				} catch (error) {
+					// eslint-disable-next-line obsidianmd/rule-custom-message -- Explicitly enabled one-call diagnostics.
+					if (debug) console.log("[Simonides] Transport error", { operationId, error });
+					throw error;
+				}
+				if (debug) {
+					// eslint-disable-next-line obsidianmd/rule-custom-message -- Explicitly enabled one-call diagnostics.
+					console.log("[Simonides] Response", {
+						operationId, status: response.status, body: responseText,
+					});
+				}
 
-				let responseText = await response.text();
 				if (response.status === 429) {
 					if (attempt === 1) {
 						throw protocolError("rate limit persisted after retry");
