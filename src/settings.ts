@@ -6,6 +6,7 @@ import {
 	Setting,
 	TFolder,
 	setIcon,
+	requireApiVersion,
 	type SettingDefinition,
 	type SettingDefinitionItem,
 } from "obsidian";
@@ -391,7 +392,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			}
 			return;
 		}
-		if (typeof this.update === "function") {
+		if (requireApiVersion("1.13.0")) {
 			this.update();
 		} else {
 			this.renderLegacySettings();
@@ -557,7 +558,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private openSubpage(subpage: FirstRecallSettingsSubpage): void {
 		this.currentSubpage = subpage;
 		this.refreshSettings();
-		if (typeof this.update !== "function") return;
+		if (!requireApiVersion("1.13.0")) return;
 		const pageNames = {
 			home: [],
 			"ai-model": ["AI model"],

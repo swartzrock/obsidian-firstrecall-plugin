@@ -187,7 +187,7 @@ trial, a cloud API, or a terminal tool backed by an online account, the selected
 service receives the note content needed for generation. Ollama and LM Studio can
 keep generation entirely local when connected to a local server.
 
-FirstRecall is free and open source under the
+Copyright (c) 2026 Jason Swartz. FirstRecall is free and open source under the
 [GNU General Public License, version 3 only (GPLv3)](license.md). Personal,
 workplace, and commercial use are allowed. Distributed copies and modified
 versions must comply with GPLv3, including its source-code sharing requirements.
