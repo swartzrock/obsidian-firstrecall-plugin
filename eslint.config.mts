@@ -101,6 +101,7 @@ export default defineConfig([
   {
     files: ["src/**/*.ts"],
     rules: {
+      "obsidianmd/no-unsupported-api": "error",
       "@typescript-eslint/no-unsafe-assignment": "error",
       "@typescript-eslint/no-unsafe-call": "error",
       "@typescript-eslint/no-unsafe-member-access": "error",

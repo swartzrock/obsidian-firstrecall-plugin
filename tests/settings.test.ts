@@ -1,6 +1,7 @@
 import { JSDOM } from "jsdom";
+import * as obsidian from "obsidian";
 import { Setting, type SettingDefinition, type SettingDefinitionItem } from "obsidian";
-import { describe, it, expect, vi } from "vitest";
+import { beforeEach, describe, it, expect, vi, type Mock } from "vitest";
 import {
 	AUTO_GENERATION_SETTLE_DELAY_SECONDS_OPTIONS,
 	DEFAULT_AUTO_GENERATION_SETTLE_DELAY_SECONDS,
@@ -293,6 +294,7 @@ function createObsidianMock() {
 
 	return {
 		App: class {},
+		requireApiVersion: (_version: string) => false,
 		Modal: MockModal,
 		Notice: class {},
 		PluginSettingTab: MockPluginSettingTab,
@@ -327,7 +329,7 @@ function loadSettingsModule(): Promise<SettingsModule> {
 
 type MockPlugin = {
 	settings: FirstRecallSettings;
-	saveSettings: ReturnType<typeof vi.fn>;
+	saveSettings: Mock<() => Promise<void>>;
 	refreshEditorCues: ReturnType<typeof vi.fn>;
 	refreshReadingModeSurface: ReturnType<typeof vi.fn>;
 	noteCueSettingsChanged: ReturnType<typeof vi.fn>;
@@ -337,12 +339,12 @@ type MockPlugin = {
 	isProviderCredentialSaved: ReturnType<typeof vi.fn>;
 	saveCloudProviderCredential: ReturnType<typeof vi.fn>;
 	clearCloudProviderCredential: ReturnType<typeof vi.fn>;
-	createStudyArea: ReturnType<typeof vi.fn>;
+	createStudyArea: Mock<(parentPath: string) => Promise<FirstRecallSettings["studyAreas"][number] | null>>;
 	updateStudyArea: ReturnType<typeof vi.fn>;
 	removeStudyArea: ReturnType<typeof vi.fn>;
 	recoverDisabledStudyArea: ReturnType<typeof vi.fn>;
-	previewStudyArea: ReturnType<typeof vi.fn>;
-	runStudyArea: ReturnType<typeof vi.fn>;
+	previewStudyArea: Mock<() => Promise<unknown>>;
+	runStudyArea: Mock<() => Promise<unknown>>;
 	registerDomEvent: (
 		el: HTMLElement,
 		type: string,
@@ -1518,6 +1520,7 @@ function renderSearchSection(tab: FirstRecallSettingTab, query: string): Setting
 }
 
 describe("searchable settings", () => {
+	beforeEach(() => vi.restoreAllMocks());
 	it("indexes every settings section without rendering, accessing credentials, or scanning the vault", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.studyAreas = [studyArea()];
@@ -1554,6 +1557,7 @@ describe("searchable settings", () => {
 	it("refreshes native definitions after changing provider instead of calling legacy display", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		const legacy = vi.spyOn(tab, "display");
+		vi.spyOn(obsidian, "requireApiVersion").mockReturnValue(true);
 		tab.update = vi.fn(() => { renderSearchSection(tab, "Provider and model"); });
 		renderSearchSection(tab, "API key");
 		providerPathButton(tab.containerEl, "API key").click();
@@ -1567,6 +1571,7 @@ describe("searchable settings", () => {
 
 	it("updates native appearance controls and refreshes review surfaces", async () => {
 		const { tab, plugin } = await setupSettingsTab();
+		vi.spyOn(obsidian, "requireApiVersion").mockReturnValue(true);
 		tab.update = vi.fn(() => { renderSearchSection(tab, "Appearance"); });
 		renderSearchSection(tab, "Section card layout");
 		await clickThumbnail(tab.containerEl.querySelector(".firstrecall-thumbnail-group-editor-display")!, "inline-cues");
@@ -1580,6 +1585,7 @@ describe("searchable settings", () => {
 		plugin.settings.studyAreas = [studyArea()];
 		let resolveScan!: (value: ReturnType<typeof studyAreaPlan>) => void;
 		plugin.previewStudyArea.mockImplementation(() => new Promise((resolve) => { resolveScan = resolve; }));
+		vi.spyOn(obsidian, "requireApiVersion").mockReturnValue(true);
 		tab.update = vi.fn(() => { renderSearchSection(tab, "Automatic update delay"); });
 		renderSearchSection(tab, "Automatic update delay");
 		expect(plugin.previewStudyArea).toHaveBeenCalledOnce();
@@ -1594,12 +1600,24 @@ describe("searchable settings", () => {
 
 	it("opens the native managed-folder page for programmatic navigation", async () => {
 		const { tab } = await setupSettingsTab();
+		vi.spyOn(obsidian, "requireApiVersion").mockReturnValue(true);
 		tab.update = vi.fn();
 		const navigateToSearchResult = vi.fn();
 		Object.assign(tab.app, { setting: { navigateToSearchResult } });
 		tab.openStudyAreas();
 		expect(tab.update).toHaveBeenCalledOnce();
 		expect(navigateToSearchResult).toHaveBeenCalledWith({ tab, pagePath: ["Managed folders"] });
+	});
+
+	it("uses legacy settings below 1.13 even when an update method exists", async () => {
+		const { tab } = await setupSettingsTab();
+		const update = vi.fn();
+		tab.update = update;
+		const version = vi.spyOn(obsidian, "requireApiVersion").mockReturnValue(false);
+		tab.openStudyAreas();
+		expect(version).toHaveBeenCalledWith("1.13.0");
+		expect(update).not.toHaveBeenCalled();
+		expect(settingText(tab.containerEl)).toContain("Add folder or vault");
 	});
 
 	it("continues to navigate and save on hosts without the declarative API", async () => {

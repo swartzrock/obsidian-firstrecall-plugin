@@ -1,3 +1,7 @@
+export function requireApiVersion(_version: string): boolean {
+	return false;
+}
+
 export class App {}
 
 export class Plugin {

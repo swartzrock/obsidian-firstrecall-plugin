@@ -1865,9 +1865,10 @@ button.firstrecall-provider-button.is-selected {
 }
 
 html.firstrecall-editor-cue-width-resizing,
-html.firstrecall-editor-cue-width-resizing * {
-	cursor: ew-resize !important;
-	user-select: none !important;
+html.firstrecall-editor-cue-width-resizing body:is(.theme-light, .theme-dark),
+html.firstrecall-editor-cue-width-resizing body:is(.theme-light, .theme-dark) * {
+	cursor: ew-resize;
+	user-select: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
