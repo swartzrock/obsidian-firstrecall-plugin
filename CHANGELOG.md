@@ -1,5 +1,11 @@
 # firstrecall
 
+## 1.0.1
+
+### Patch Changes
+
+- b530153: Addressed obsidian community recommendations for the plugin, minor change.
+
 ## 1.0.0
 
 ### Major Changes
