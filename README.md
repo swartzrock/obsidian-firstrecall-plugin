@@ -1,6 +1,6 @@
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/media/fr-logo-dark.png">
-  <img src="docs/media/fr-logo-light.png" alt="FirstRecall" height="72">
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/swartzrock/obsidian-firstrecall-plugin/main/docs/media/fr-logo-dark.png">
+  <img src="https://raw.githubusercontent.com/swartzrock/obsidian-firstrecall-plugin/main/docs/media/fr-logo-light.png" alt="FirstRecall" height="72">
 </picture>
 
 
@@ -74,22 +74,14 @@ Your Markdown files are never touched. FirstRecall uses your selected AI / LLM p
 
 The FirstRecall plugin is designed for Obsidian Desktop v1.11.4 or later (to use Obsidian's   [Secret Storage](https://docs.obsidian.md/plugins/guides/secret-storage) for securely storing API keys)
 
+1. Visit [FirstRecall on the Obsidian community page](https://community.obsidian.md/plugins/first-recall).
+2. Click **Add to Obsidian** to open the plugin listing in Obsidian.
+3. Click **Install**, then **Enable**.
+
 Open **Settings → FirstRecall** to configure the plugin. On Obsidian 1.13 or later,
 use settings search to find a section by its controls—for example, “API key,”
 “Parallel requests,” “Show summary,” or “Study text size.” Earlier Obsidian versions
 continue to use the existing settings pages.
-
-
-
-BRAT is the easiest way to try pre-release Obsidian plugins and keep them updated from GitHub.
-
-1. In Obsidian, install and enable [BRAT](https://github.com/TfTHacker/obsidian42-brat) from Community plugins.
-2. Open BRAT settings and choose `Add Beta plugin`.
-3. Paste this repository URL:
-
-   ```text
-   https://github.com/swartzrock/obsidian-firstrecall-plugin
-   ```
 
 ## Quick start
 
