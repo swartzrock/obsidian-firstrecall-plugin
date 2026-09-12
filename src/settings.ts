@@ -6,6 +6,8 @@ import {
 	Setting,
 	TFolder,
 	setIcon,
+	type SettingDefinition,
+	type SettingDefinitionItem,
 } from "obsidian";
 import type FirstRecallPlugin from "./main";
 import {
@@ -292,13 +294,111 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private readonly studyAreaUi = new Map<string, StudyAreaUiState>();
 	private providerIconRenderCount = 0;
 	private providerPickerPath: FirstRecallCredentialKind | null = null;
+	private renderingDefinitions = 0;
+	private refreshQueued = false;
 
 	constructor(app: App, plugin: FirstRecallPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
 	}
 
+	// Definitions are also built while Obsidian indexes settings with the tab closed.
+	// Keep all DOM work, folder scans, and provider setup inside render callbacks.
+	override getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				type: "page",
+				name: "AI model",
+				desc: "Choose a provider and model, check the connection, and tune request speed.",
+				items: [this.searchableSection("Provider and model", [
+					"Provider", "Connection type", "API key", "Secret Storage",
+					"Terminal apps", "Local server", "Model", "Custom model ID",
+					"Connection", "Test connection", "Refresh models",
+					"Parallel requests", "API Rate limit", "Performance",
+					...firstRecallProviderDefinitions().flatMap((provider) => [
+						provider.label, provider.credentialField.label, provider.modelField.label,
+					]),
+				], (container) => this.renderAiModelSection(container, false))],
+			},
+			{
+				type: "page",
+				name: "Generation",
+				desc: "Choose the recall-question style and review generation instructions.",
+				items: [this.searchableSection("Recall question style", [
+					"Section study card instructions", "Note Brief instructions", "Advanced",
+				], (container) => this.renderCueGenerationSection(container, false))],
+			},
+			{
+				type: "page",
+				name: "Managed folders",
+				desc: "Generate and refresh study material in bulk, with optional automatic updates.",
+				items: [this.searchableSection("Folders and automatic updates", [
+					"Add folder or vault", "Entire vault", "Automatic update delay",
+					"Update automatically", "Scan again", "Retry update",
+					"Bring study material up to date", "Folders needing attention",
+					"Recover managed folder",
+				], (container) => this.renderStudyAreasSection(container, false))],
+			},
+			this.searchableSection("Display", [
+				"Show Note Brief", "Show summary", "Show recall question", "Show key terms",
+			], (container) => this.renderArtifactVisibilitySection(container)),
+			this.searchableSection("Appearance", [
+				"Section card layout", "Study text size", "Font size", "Cornell", "Inline",
+			], (container) => this.renderAppearanceSection(container)),
+			this.searchableSection("Study Mode hide style", [
+				"Blur", "Collapse", "Hide answers",
+			], (container) => this.renderStudySection(container, true)),
+		];
+	}
+
+	private searchableSection(
+		name: string,
+		aliases: string[],
+		render: (containerEl: HTMLElement) => void
+	): SettingDefinition {
+		return {
+			name,
+			aliases,
+			render: (setting) => {
+				// Retain Obsidian's row for search focus and highlighting; render the
+				// existing custom controls inside it so both versions share save logic.
+				setting.settingEl.empty();
+				setting.settingEl.addClass("firstrecall-searchable-settings-section");
+				this.renderingDefinitions++;
+				try {
+					render(setting.settingEl);
+				} finally {
+					this.renderingDefinitions--;
+				}
+			},
+		};
+	}
+
 	override display(): void {
+		this.renderLegacySettings();
+	}
+
+	private refreshSettings(): void {
+		// A folder's initial scan can request a refresh while its row is mounting.
+		// Let Obsidian finish its render before updating the definition tree.
+		if (this.renderingDefinitions > 0) {
+			if (!this.refreshQueued) {
+				this.refreshQueued = true;
+				queueMicrotask(() => {
+					this.refreshQueued = false;
+					this.refreshSettings();
+				});
+			}
+			return;
+		}
+		if (typeof this.update === "function") {
+			this.update();
+		} else {
+			this.renderLegacySettings();
+		}
+	}
+
+	private renderLegacySettings(): void {
 		const { containerEl } = this;
 		containerEl.empty();
 
@@ -456,7 +556,25 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 
 	private openSubpage(subpage: FirstRecallSettingsSubpage): void {
 		this.currentSubpage = subpage;
-		this.display();
+		this.refreshSettings();
+		if (typeof this.update !== "function") return;
+		const pageNames = {
+			home: [],
+			"ai-model": ["AI model"],
+			"cue-generation": ["Generation"],
+			"study-areas": ["Managed folders"],
+		};
+		// Obsidian exposes no public programmatic sub-page navigation API.
+		// Use the same guarded desktop settings host used to open this tab.
+		const app = this.app as App & {
+			setting?: {
+				navigateToSearchResult?: (target: {
+					tab: PluginSettingTab;
+					pagePath: string[];
+				}) => void;
+			};
+		};
+		app.setting?.navigateToSearchResult?.({ tab: this, pagePath: pageNames[subpage] });
 	}
 
 	private aiModelSummary(): string {
@@ -919,7 +1037,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		if (provider === firstRecallSelectedProvider(this.plugin.settings)) return;
 		setFirstRecallSelectedProvider(this.plugin.settings, provider);
 		await this.plugin.saveSettings();
-		this.display();
+		this.refreshSettings();
 	}
 
 	private renderProviderSetupStatus(containerEl: HTMLElement): void {
@@ -1218,23 +1336,23 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 						new Notice(
 							`FirstRecall: remove folder coverage before using ${vaultScopeLabel}.`
 						);
-						this.display();
+						this.refreshSettings();
 						return;
 					}
 					if (assignedFolderPaths.has(normalized)) {
 						new Notice("FirstRecall: that managed folder already exists.");
-						this.display();
+						this.refreshSettings();
 						return;
 					}
 					if (!isEntireVaultSelection && !folderPaths.includes(normalized)) {
 						new Notice(`FirstRecall: "${normalized}" is not an existing folder.`);
-						this.display();
+						this.refreshSettings();
 						return;
 					}
 					const area = await this.plugin.createStudyArea(normalized);
 					if (area) {
 						this.studyAreaUi.delete(area.id);
-						this.display();
+						this.refreshSettings();
 					}
 				},
 				renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
@@ -1336,7 +1454,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 						...area,
 						maintenanceMode: value ? "maintain-on-save" : "paused",
 					});
-					this.display();
+					this.refreshSettings();
 				});
 		});
 
@@ -1398,7 +1516,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				confirmText: "Remove",
 				onConfirm: async () => {
 					await this.plugin.removeStudyArea(area.id);
-					this.display();
+					this.refreshSettings();
 				},
 			}).open();
 		});
@@ -1444,7 +1562,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		state.scanToken = token;
 		state.hasScanned = true;
 		state.message = null;
-		this.display();
+		this.refreshSettings();
 		try {
 			const plan = await this.plugin.previewStudyArea(areaId);
 			if (state.scanToken !== token || state.phase !== "scanning") return;
@@ -1456,7 +1574,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			state.phase = "failure";
 			state.message = "Scan failed. No partial results were kept.";
 		}
-		this.display();
+		this.refreshSettings();
 	}
 
 	private cancelStudyAreaScan(areaId: string): void {
@@ -1467,7 +1585,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		state.plan = null;
 		state.hasScanned = true;
 		state.message = "Scan canceled. Automatic updates remain off until you enable them.";
-		this.display();
+		this.refreshSettings();
 	}
 
 	private async runStudyAreaAction(
@@ -1479,7 +1597,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		if (!this.plugin.isProviderConfigured()) return;
 		state.phase = "running";
 		state.message = null;
-		this.display();
+		this.refreshSettings();
 		let summary: StudyAreaRunSummary | null = null;
 		try {
 			summary = await this.plugin.runStudyArea(areaId, mode);
@@ -1490,7 +1608,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			state.phase = "failure";
 			state.message = "Update failed. Your last good study material was kept.";
 		}
-		this.display();
+		this.refreshSettings();
 	}
 
 	private studyAreaCompletionPhase(
@@ -1558,7 +1676,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					),
 				});
 				this.studyAreaUi.delete(area.id);
-				this.display();
+				this.refreshSettings();
 			});
 		}
 		const options = this.studyAreaExclusionPaths(area);
@@ -1588,7 +1706,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					excludedPaths: [...area.excludedPaths, normalized],
 				});
 				this.studyAreaUi.delete(area.id);
-				this.display();
+				this.refreshSettings();
 			},
 			renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
 			suggestionsLabel: "exclusion suggestions",
@@ -1622,7 +1740,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					await this.plugin.recoverDisabledStudyArea(area.id, conflict?.id);
 					this.studyAreaUi.delete(area.id);
-					this.display();
+					this.refreshSettings();
 				})
 		);
 	}
@@ -1732,7 +1850,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			setValue: (value) => {
 				this.plugin.settings.editorCueDisplay = value;
 			},
-			afterSave: () => this.display(),
+			afterSave: () => this.refreshSettings(),
 			className: "firstrecall-thumbnail-group-editor-display",
 			refreshReading: false,
 		});
@@ -1966,13 +2084,13 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					if (value === ANTHROPIC_CUSTOM_MODEL_ID) {
 						stored.modelSelection = ANTHROPIC_CUSTOM_MODEL_ID;
 						await this.plugin.saveSettings();
-						this.display();
+						this.refreshSettings();
 						return;
 					}
 					stored.modelSelection = value;
 					setFirstRecallProviderModel(s, ByokProvider.Anthropic, value);
 					await this.plugin.saveSettings();
-					this.display();
+					this.refreshSettings();
 				});
 		});
 		this.addModelRefreshButton(modelSetting, {
@@ -2039,7 +2157,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		}
 		this.syncAnthropicModelSelection();
 		await this.plugin.saveSettings();
-		this.display();
+		this.refreshSettings();
 		new Notice(`FirstRecall: ${message}`);
 	}
 
@@ -2214,7 +2332,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					}
 					opts.onSaved();
 					await this.plugin.saveSettings();
-					this.display();
+					this.refreshSettings();
 					new Notice("FirstRecall: API key saved securely.");
 				})
 		);
@@ -2236,7 +2354,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 						}
 						opts.onSaved();
 						await this.plugin.saveSettings();
-						this.display();
+						this.refreshSettings();
 						new Notice("FirstRecall: API key cleared.");
 					})
 			);
@@ -2277,7 +2395,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				const previousValue = opts.getModel().trim();
 				opts.setModel(value);
 				await this.plugin.saveSettings();
-				if (value !== previousValue) this.display();
+				if (value !== previousValue) this.refreshSettings();
 			},
 			renderToggleIcon: (iconEl) => setIcon(iconEl, "chevron-down"),
 		});
@@ -2387,7 +2505,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			);
 		}
 		await this.plugin.saveSettings();
-		this.display();
+		this.refreshSettings();
 		const successCount = firstRecallFetchedModelCount(
 			this.plugin.settings,
 			opts.provider
@@ -2436,7 +2554,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		if (status.ok) {
 			recordFirstRecallProviderConnectionSuccess(this.plugin.settings);
 			await this.plugin.saveSettings();
-			this.display();
+			this.refreshSettings();
 		}
 		new Notice(formatFirstRecallNotice(status.message));
 	}
@@ -2461,7 +2579,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		if (status.ok) {
 			recordFirstRecallProviderConnectionSuccess(this.plugin.settings);
 			await this.plugin.saveSettings();
-			this.display();
+			this.refreshSettings();
 		}
 		new Notice(formatFirstRecallNotice(status.message));
 	}
@@ -2485,7 +2603,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				);
 				recordFirstRecallProviderConnectionSuccess(this.plugin.settings);
 				await this.plugin.saveSettings();
-				this.display();
+				this.refreshSettings();
 				const providerName = byokProviderDefinition(selectedProvider).shortLabel;
 				new Notice(
 					`FirstRecall: Connected to ${providerName} (${models.length} model${models.length === 1 ? "" : "s"} available). Choose a model and test again to verify generation with that model.`
@@ -2508,7 +2626,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		if (status.ok) {
 			recordFirstRecallProviderConnectionSuccess(this.plugin.settings);
 			await this.plugin.saveSettings();
-			this.display();
+			this.refreshSettings();
 		}
 		if (status.ok && provider.id === "anthropic") {
 			const stored = firstRecallProviderSettings(this.plugin.settings, ByokProvider.Anthropic);

@@ -113,6 +113,7 @@ export default defineConfig([
       "obsidianmd/prefer-instanceof": "error",
       "obsidianmd/prefer-create-el": "error",
       "obsidianmd/settings-tab/no-problematic-settings-headings": "error",
+      "obsidianmd/settings-tab/prefer-setting-definitions": "error",
     },
   },
   {

@@ -1340,14 +1340,14 @@ export default class FirstRecallPlugin extends Plugin {
 
 	/** Open Settings on the FirstRecall tab. */
 	private openSettings(subpage?: "study-areas"): void {
-		if (subpage === "study-areas") {
-			this.settingTab.openStudyAreas();
-		}
 		const app = this.app as typeof this.app & {
 			setting?: { open(): void; openTabById(id: string): void };
 		};
 		app.setting?.open();
 		app.setting?.openTabById(this.manifest.id);
+		if (subpage === "study-areas") {
+			this.settingTab.openStudyAreas();
+		}
 	}
 
 	/** Status-pill click: open settings when unconfigured, else toggle visibility. */
