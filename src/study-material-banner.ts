@@ -62,7 +62,7 @@ export function syncStudyMaterialBanner(
 		removeStudyMaterialBanner(container);
 		return null;
 	}
-	const host = existing.shift() ?? container.ownerDocument.createElement("aside");
+	const host = existing.shift() ?? container.ownerDocument.defaultView!.createEl("aside");
 	existing.forEach(removeHost);
 	const renderKey = `${state.revision}\u0000${state.kind}\u0000${state.action}`;
 	bannerActions.set(host, actions);
@@ -91,14 +91,14 @@ export function syncStudyMaterialBanner(
 		container.prepend(host);
 	}
 
-	const message = container.ownerDocument.createElement("span");
+	const message = container.ownerDocument.defaultView!.createSpan();
 	message.className = "firstrecall-study-material-banner-message";
 	message.textContent = state.kind === "failed"
 		? "Some study material could not be updated. Your last successful version is still shown."
 		: "This note has study material that is out of date.";
 	host.appendChild(message);
 
-	const controls = container.ownerDocument.createElement("span");
+	const controls = container.ownerDocument.defaultView!.createSpan();
 	controls.className = "firstrecall-study-material-banner-actions";
 	host.appendChild(controls);
 	const listeners: Array<{
@@ -109,7 +109,7 @@ export function syncStudyMaterialBanner(
 		action: "update" | "retry" | "dismiss",
 		label: string
 	): HTMLButtonElement => {
-		const button = container.ownerDocument.createElement("button");
+		const button = container.ownerDocument.defaultView!.createEl("button");
 		button.type = "button";
 		button.dataset.bannerAction = action;
 		button.className = `firstrecall-study-material-banner-${action}`;

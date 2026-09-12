@@ -50,9 +50,9 @@ export function abortableDelay(
 			signal?.removeEventListener("abort", onAbort);
 			resolve();
 		};
-		const timer = setTimeout(finish, milliseconds);
+		const timer = window.setTimeout(finish, milliseconds);
 		const onAbort = (): void => {
-			clearTimeout(timer);
+			window.clearTimeout(timer);
 			if (signal) reject(abortReason(signal));
 		};
 		signal?.addEventListener("abort", onAbort, { once: true });

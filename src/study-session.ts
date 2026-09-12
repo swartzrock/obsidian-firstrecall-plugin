@@ -38,11 +38,11 @@ export interface StudySessionSnapshot {
 export interface StudyProjection {
 	snapshot: StudySessionSnapshot;
 	controlsContainer?: HTMLElement;
-	toggleSection(sectionId: string): void;
+	toggleSection: (sectionId: string) => void;
 	showAll(): void;
 	hideAll(): void;
 	exit(): void;
-	documentChanged?(markdown: string): void;
+	documentChanged?: (markdown: string) => void;
 }
 
 interface SourceLines {

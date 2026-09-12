@@ -254,7 +254,7 @@ export function validateCueBatch(
 	}
 	const items: CueBatchValidationItem[] = [];
 	for (let i = 0; i < expectedCount; i++) {
-		const value = cues[i];
+		const value: unknown = cues[i];
 		if (value === undefined) {
 			items.push({ value: null, error: `missing section study card for section ${i + 1}` });
 			continue;

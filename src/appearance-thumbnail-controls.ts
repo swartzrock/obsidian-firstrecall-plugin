@@ -38,7 +38,7 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 	config: AppearanceThumbnailGroupOptions<T>
 ): AppearanceThumbnailGroup<T> {
 	const doc = config.parentEl.ownerDocument;
-	const root = doc.createElement("div");
+	const root = doc.defaultView!.createDiv();
 	root.className = [
 		"firstrecall-thumbnail-group",
 		config.className ?? "",
@@ -46,7 +46,7 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 		.filter(Boolean)
 		.join(" ");
 	if (config.groupLabel) {
-		const label = doc.createElement("span");
+		const label = doc.defaultView!.createSpan();
 		label.id = `firstrecall-thumbnail-group-label-${nextAppearanceThumbnailGroupLabelId++}`;
 		label.hidden = true;
 		label.textContent = config.groupLabel;
@@ -59,25 +59,25 @@ export function renderAppearanceThumbnailGroup<T extends string>(
 	let currentValue = config.value;
 
 	for (const option of config.options) {
-		const button = doc.createElement("button");
+		const button = doc.defaultView!.createEl("button");
 		button.type = "button";
 		button.className = "firstrecall-thumbnail-button";
 		button.dataset.optionId = option.id;
 		button.disabled = Boolean(option.disabled);
 
-		const preview = doc.createElement("div");
+		const preview = doc.defaultView!.createDiv();
 		preview.className = "firstrecall-thumbnail-preview";
 		preview.setAttribute("aria-hidden", "true");
 		option.renderPreview?.(preview, option);
 		button.appendChild(preview);
 
-		const label = doc.createElement("span");
+		const label = doc.defaultView!.createSpan();
 		label.className = "firstrecall-thumbnail-label";
 		label.textContent = option.label;
 		button.appendChild(label);
 
 		if (option.description) {
-			const description = doc.createElement("span");
+			const description = doc.defaultView!.createSpan();
 			description.className = "firstrecall-thumbnail-description";
 			description.textContent = option.description;
 			button.appendChild(description);
@@ -149,21 +149,21 @@ function renderCuePreview(
 	classes: string[]
 ): void {
 	const doc = previewEl.ownerDocument;
-	const surface = doc.createElement("div");
+	const surface = doc.defaultView!.createDiv();
 	surface.className = ["firstrecall-preview-surface", ...classes].join(" ");
-	const card = doc.createElement("div");
+	const card = doc.defaultView!.createDiv();
 	card.className = "firstrecall-preview-card";
 	surface.appendChild(card);
 
-	const rail = doc.createElement("div");
+	const rail = doc.defaultView!.createDiv();
 	rail.className = "firstrecall-preview-rail";
 	card.appendChild(rail);
 
-	const content = doc.createElement("div");
+	const content = doc.defaultView!.createDiv();
 	content.className = "firstrecall-preview-content";
 	card.appendChild(content);
 
-	const question = doc.createElement("div");
+	const question = doc.defaultView!.createDiv();
 	question.className = "firstrecall-preview-question";
 	question.textContent = SAMPLE_QUESTION;
 	content.appendChild(question);
@@ -198,14 +198,14 @@ function editorCueCard(
 	doc: Document,
 	display: "cornell" | "inline-cues"
 ): HTMLElement {
-	const card = doc.createElement("div");
+	const card = doc.defaultView!.createDiv();
 	card.className = [
 		"firstrecall-preview-editor-cue-card",
 		`firstrecall-preview-editor-cue-card-${display}`,
 	].join(" ");
 
 	if (display === "cornell") {
-		const grip = doc.createElement("span");
+		const grip = doc.defaultView!.createSpan();
 		grip.className = "firstrecall-preview-editor-cue-grip";
 		card.appendChild(grip);
 	}
@@ -229,33 +229,33 @@ function editorCueSection(
 	labelText: string,
 	bodyText: string | null
 ): HTMLElement {
-	const section = doc.createElement("div");
+	const section = doc.defaultView!.createDiv();
 	section.className = "firstrecall-preview-editor-cue-section";
 
-	const label = doc.createElement("span");
+	const label = doc.defaultView!.createSpan();
 	label.className = "firstrecall-preview-editor-cue-section-label";
-	const icon = doc.createElement("span");
+	const icon = doc.defaultView!.createSpan();
 	icon.className = "firstrecall-preview-editor-cue-icon";
 	icon.dataset.section = kind;
-	const text = doc.createElement("span");
+	const text = doc.defaultView!.createSpan();
 	text.textContent = labelText;
-	const chevron = doc.createElement("span");
+	const chevron = doc.defaultView!.createSpan();
 	chevron.className = "firstrecall-preview-editor-cue-chevron";
 	label.append(icon, text, chevron);
 	section.appendChild(label);
 
 	if (kind === "terms") {
-		const terms = doc.createElement("span");
+		const terms = doc.defaultView!.createSpan();
 		terms.className = "firstrecall-preview-editor-cue-terms";
 		for (const termText of ["frontier AI", "data"]) {
-			const term = doc.createElement("span");
+			const term = doc.defaultView!.createSpan();
 			term.className = "firstrecall-preview-editor-cue-term";
 			term.textContent = termText;
 			terms.appendChild(term);
 		}
 		section.appendChild(terms);
 	} else if (bodyText) {
-		const body = doc.createElement("span");
+		const body = doc.defaultView!.createSpan();
 		body.className = [
 			"firstrecall-preview-editor-cue-body",
 			kind === "question" ? "firstrecall-preview-editor-cue-question" : "",
@@ -270,16 +270,16 @@ function editorCueSection(
 }
 
 function editorPreviewSurface(doc: Document, classes: string[]): HTMLElement {
-	const surface = doc.createElement("div");
+	const surface = doc.defaultView!.createDiv();
 	surface.className = ["firstrecall-preview-editor-surface", ...classes].join(" ");
 	return surface;
 }
 
 function editorScene(doc: Document): HTMLElement {
-	const scene = doc.createElement("div");
+	const scene = doc.defaultView!.createDiv();
 	scene.className = "firstrecall-preview-editor-scene";
 	for (const variant of ["short", "long", "medium"] as const) {
-		const line = doc.createElement("span");
+		const line = doc.defaultView!.createSpan();
 		line.className = `firstrecall-preview-editor-line firstrecall-preview-editor-line-${variant}`;
 		scene.appendChild(line);
 	}

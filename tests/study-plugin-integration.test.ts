@@ -24,7 +24,7 @@ vi.mock("obsidian", async (importOriginal) => {
 	};
 });
 
-import { TFile } from "obsidian";
+import { TFile, TFolder } from "obsidian";
 import FirstRecallPlugin from "../src/main";
 import type { StudySessionController } from "../src/study-session";
 import {
@@ -244,7 +244,10 @@ function createHarness() {
 			cachedRead: (target: TFile) => cachedRead(target),
 			getAbstractFileByPath: (path: string) =>
 				[noteFile, otherFile].find((target) => target.path === path) ?? null,
-			getMarkdownFiles: () => [noteFile, otherFile],
+			getFolderByPath: (path: string) => path === "notes"
+				? Object.assign(new TFolder(), { children: [noteFile, otherFile] })
+				: null,
+			getRoot: () => Object.assign(new TFolder(), { children: [noteFile, otherFile] }),
 		},
 	};
 	const plugin = new FirstRecallPlugin(app as never, {} as never);
@@ -494,6 +497,26 @@ describe("Study plugin orchestration", () => {
 		expect(remove).toHaveBeenCalledWith(harness.noteFile.path);
 		expect(harness.data.caches).not.toHaveProperty(harness.noteFile.path);
 		expect(harness.firstView.previewMode.rerender).toHaveBeenCalledWith(true);
+	});
+
+	it("discovers only Markdown files beneath the selected managed folder", () => {
+		const harness = createHarness();
+		const nested = file("notes/nested/topic.md");
+		const image = Object.assign(file("notes/picture.png"), { extension: "png" });
+		const folder = Object.assign(new TFolder(), {
+			children: [harness.noteFile, image, Object.assign(new TFolder(), { children: [nested] })],
+		});
+		const plugin = harness.plugin as unknown as {
+			app: { vault: { getFolderByPath(path: string): TFolder | null; getRoot(): TFolder } };
+			studyAreaFiles(path: string): TFile[];
+		};
+		plugin.app.vault.getFolderByPath = vi.fn((path) => path === "notes" ? folder : null);
+		const getRoot = vi.spyOn(plugin.app.vault, "getRoot");
+		expect(plugin.studyAreaFiles("notes")).toEqual([harness.noteFile, nested]);
+		expect(getRoot).not.toHaveBeenCalled();
+		expect(plugin.studyAreaFiles("missing")).toEqual([]);
+		expect(plugin.studyAreaFiles("")).toEqual([harness.noteFile, harness.otherFile]);
+		expect(getRoot).toHaveBeenCalledOnce();
 	});
 
 	it("passes planned section targets into scope maintenance requests", async () => {
