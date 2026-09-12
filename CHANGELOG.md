@@ -1,5 +1,11 @@
 # firstrecall
 
+## 1.0.2
+
+### Patch Changes
+
+- 7274c24: Fix community submission checks for API compatibility, TypeScript libraries, license recognition, resize styles, and development dependency advisories.
+
 ## 1.0.1
 
 ### Patch Changes
