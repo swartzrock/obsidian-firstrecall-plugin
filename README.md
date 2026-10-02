@@ -22,6 +22,13 @@ The FirstRecall plugin turns any Obsidian note into active-recall practice by ge
 
 Your Markdown files are never touched. FirstRecall uses your selected AI / LLM provider to generate the **Note Brief** and **section study cards** and caches them inside your Obsidian vault.
 
+|   |   |
+| --- | --- |
+| [<img src="docs/marketing/01-test-what-you-remember.png" width="512" alt="Test what you remember in Study Mode" />](docs/marketing/01-test-what-you-remember.png) | [<img src="docs/marketing/02-turn-notes-into-study-cards.png" width="512" alt="Turn notes into study cards" />](docs/marketing/02-turn-notes-into-study-cards.png) |
+| [<img src="docs/marketing/03-focus-your-review.png" width="512" alt="Focus your review with a Note Brief" />](docs/marketing/03-focus-your-review.png) | [<img src="docs/marketing/04-choose-your-ai.png" width="512" alt="Choose your AI provider" />](docs/marketing/04-choose-your-ai.png) |
+
+Click a screenshot to view it at full size.
+
 [![FirstRecall Study Mode with recall questions beside the blurred source text](docs/media/generate-and-study.jpg)](docs/media/generate-and-study.mp4)
 
 [Watch or download: Generate study material and enter Study Mode (MP4, 18 seconds)](docs/media/generate-and-study.mp4)
