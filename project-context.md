@@ -2,12 +2,6 @@
 
 Last verified: September 6, 2026, against the current working tree. This is a durable context document for product, design, engineering, testing, and positioning work on the **Obsidian plugin in this repository**. It is descriptive, not an implementation plan.
 
-## Scope boundary
-
-This document covers FirstRecall's plugin experience and implementation. It does **not** document the separately hosted AI service, its architecture, policies, operations, ownership, roadmap, or branding.
-
-The plugin includes an optional hosted-trial provider alongside API-key, local-server, and terminal providers. That integration is mentioned only where it affects plugin behavior. Treat the service behind it as an external provider and consult that project's own sources for service-specific facts.
-
 ## At a glance
 
 FirstRecall is a desktop Obsidian plugin that turns existing Markdown notes into active-recall study material without inserting generated text into the source notes.
@@ -64,7 +58,7 @@ FirstRecall is not a general-purpose chat interface, a note writer, or a full sp
 | **Key terms** | Two to five short terms that anchor important evidence or vocabulary. |
 | **Study Mode** | A temporary recall-before-reveal view that conceals source-section bodies until the user reveals them. |
 | **Managed folder** | A folder—or the entire vault—whose notes can be scanned, bulk-updated, and optionally maintained after edits. |
-| **Provider** | The hosted trial, cloud API, local model server, or terminal tool through which FirstRecall accesses an AI model. |
+| **Provider** | The cloud API, local model server, or terminal tool through which FirstRecall accesses an AI model. |
 | **Study material** | The Note Brief and section study cards collectively. Internal code often uses `cue` for section-card concepts. |
 
 Use these terms in user-facing work. In particular, prefer **section study card** over the internal term **cue**.
@@ -134,27 +128,23 @@ Important eligibility rules:
 
 Generation prompts explicitly instruct models to treat note text as source data rather than instructions and to ground cards in explicit section content. Whole-note context and headings help judge relevance but are not supposed to substitute for evidence in the section.
 
-The default text budget is 8,000 characters per prompt. Longer note context and section content may be truncated with a visible marker. Provider-specific bundle paths apply their own bounded title, context, section, and total-content limits.
+The default text budget is 8,000 characters per prompt. Longer note context and section content may be truncated with a visible marker.
 
 ## Generation and provider choices
 
-The provider abstraction supports four user-facing connection types:
+The provider abstraction supports three user-facing connection types:
 
 | Connection type | Plugin options | Credential/model behavior |
 | --- | --- | --- |
-| Included trial | Simonides hosted AI trial | No API key or model selection; usage and capacity limits can apply. |
 | API key | Anthropic, OpenAI, Google/Gemini, xAI, OpenRouter, Groq, Mistral, DeepSeek, DeepInfra, Together AI, Fireworks AI | Provider-specific API key and model; supported providers can fetch available models. |
 | Local server | Ollama, LM Studio | Local server URL plus an installed model. |
 | Terminal app | Codex CLI, Claude Code CLI | Configurable command; model is optional and can use the CLI default. |
 
-The hosted trial is one external provider integration, not the identity or architecture of the plugin.
-
 The plugin's runtime can accommodate providers that generate:
 
 - one section at a time;
-- a batch of section cards;
-- a Note Brief separately; or
-- an atomic bundle of cards plus Note Brief.
+- a batch of section cards; or
+- a Note Brief separately.
 
 For text-returning providers, responses are extracted from JSON or fenced JSON, normalized, and validated with Zod. Invalid responses receive one corrective retry before surfacing a validation failure. Structured-output providers validate returned objects directly.
 
@@ -172,8 +162,7 @@ FirstRecall does not insert generated material into the source Markdown file. It
 - per-note generated caches;
 - per-note maintenance/freshness state;
 - per-note visibility state;
-- per-card collapsed-component state; and
-- a generated installation identifier used by the optional trial integration.
+- per-card collapsed-component state.
 
 Each note cache records the generation timestamp, source modification time, provider, model, generation mode, question preset, section identities and hashes, generated card fields, failures or provider-limit placeholders, and Note Brief.
 
@@ -182,7 +171,7 @@ Cloud API keys are stored through Obsidian Secret Storage rather than ordinary p
 Privacy claims must remain provider-specific:
 
 - Ollama and LM Studio can keep generation local when pointed at a local server.
-- Cloud APIs, the included trial, and terminal tools backed by online accounts send the note content required for generation to their respective provider paths.
+- Cloud APIs and terminal tools backed by online accounts send the note content required for generation to their respective provider paths.
 - “Source Markdown is unchanged” does not mean “note content never leaves the device.”
 
 This document makes no claims about an external provider's retention, logging, model training, security, or service availability.
@@ -382,7 +371,6 @@ Future work should preserve these decisions unless an explicit product change su
 
 ## Known context gaps and cautions
 
-- The manifest still reports `0.6.1` while the active branch contains later hosted-trial and documentation work. Reconfirm the release version before making release claims.
 - The README's broad export wording can imply that full Note Briefs or full cards are exported; the implementation currently exports recall questions and key terms only.
 - Managed-area exclusions exist in the data model but are hidden in the current settings UI.
 - No end-to-end Obsidian desktop session was run while refreshing this document. The repository's unit and integration tests are the implementation evidence; visual behavior should still be verified in Obsidian before release.
@@ -401,5 +389,3 @@ Prefer current local code over this summary when they diverge. Start with:
 - [`src/generator.ts`](./src/generator.ts) and [`src/parser.ts`](./src/parser.ts) — generation and note-eligibility behavior.
 - [`src/study-material-maintenance.ts`](./src/study-material-maintenance.ts) and [`src/study-material-state.ts`](./src/study-material-state.ts) — update and failure semantics.
 - [`tests/`](./tests/) — executable behavior specifications.
-
-For facts about the separately hosted provider service, use that service's own repository and documentation rather than extending this file.

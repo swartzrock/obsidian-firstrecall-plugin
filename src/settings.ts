@@ -68,7 +68,6 @@ import {
 } from "./byok-model-options";
 import { formatParallelRequestsDescription } from "./parallel-requests-guidance";
 import {
-	effectiveProviderRequestRate,
 	isRequestsPerTenSeconds,
 	REQUEST_RATE_OPTIONS,
 	type RequestsPerTenSeconds,
@@ -231,7 +230,7 @@ export interface FirstRecallSettings {
 
 export const DEFAULT_SETTINGS: FirstRecallSettings = {
 	byok: {
-		selectedProvider: "hosted-demo",
+		selectedProvider: null,
 		providers: {
 			ollama: {
 				credential: "http://localhost:11434",
@@ -581,9 +580,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	private aiModelSummary(): string {
 		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		if (!provider) return "Select an AI provider to generate study material";
-		if (provider === "hosted-demo") {
-			return "Simonides trial · Included trial model · Ready";
-		}
 		const setup = deriveFirstRecallProviderSetupStatus(this.plugin.settings);
 		const providerLabel = this.providerDisplayName(provider);
 		const modelLabel = this.selectedModelLabel() || "No model selected";
@@ -626,7 +622,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		const settings = this.plugin.settings;
 		const provider = firstRecallSelectedProvider(settings);
 		if (!provider) return "";
-		if (provider === "hosted-demo") return "Included trial model";
 		const modelId = firstRecallProviderModel(settings, provider).trim();
 		if (provider === "anthropic") {
 			if (!modelId) return "";
@@ -719,7 +714,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	}
 
 	private renderRequestRateSetting(containerEl: HTMLElement): void {
-		const provider = firstRecallSelectedProvider(this.plugin.settings);
 		const configuredRate = this.plugin.settings.requestsPerTenSeconds;
 		const labels: Record<RequestsPerTenSeconds, string> = {
 			1: "6/minute",
@@ -735,10 +729,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					dropdown.addOption(String(option), labels[option]);
 				}
 				dropdown
-					.setValue(String(provider
-						? effectiveProviderRequestRate(provider, configuredRate)
-						: configuredRate))
-					.setDisabled(provider === "hosted-demo")
+					.setValue(String(configuredRate))
 					.onChange(async (value) => {
 						const parsed = Number(value);
 						if (!isRequestsPerTenSeconds(parsed)) return;
@@ -767,30 +758,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		const fieldsEl = panelEl.createDiv({
 			cls: "firstrecall-active-provider-fields",
 		});
-		if (provider === "hosted-demo") {
-			const descriptionEl = fieldsEl.createDiv({
-				cls: "firstrecall-settings-flow-desc firstrecall-hosted-trial-copy",
-			});
-			descriptionEl.createEl("p", {
-				text: "Simonides is FirstRecall's hosted AI service. It uses your note content to generate study materials.",
-			});
-			descriptionEl.createEl("p", {
-				text: "Free during the trial. Usage and capacity limits apply.",
-			});
-			const privacyEl = descriptionEl.createEl("p");
-			privacyEl.createSpan({
-				text: "Simonides processes your note content transiently without intentionally writing it to its application database, analytics dataset, request logs, or AI Gateway payload logs, and does not use it to train its own models. ",
-			});
-			privacyEl.createEl("a", {
-				text: "Privacy policy",
-				attr: { href: "https://simonides.ai/privacy" },
-			});
-			descriptionEl.createEl("a", {
-				text: "Learn more about Simonides",
-				attr: { href: "https://simonides.ai/" },
-			});
-			return;
-		}
 		this.renderProviderCredentialSettings(fieldsEl);
 		this.renderProviderModelSettings(fieldsEl);
 		this.renderProviderSetupStatus(fieldsEl);
@@ -824,11 +791,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 			title: string;
 			description: string;
 		}> = [
-			{
-				path: "trial",
-				title: "Simonides hosted AI trial",
-				description: "Generate study materials without an API key."
-			},
 			{
 				path: "api-key",
 				title: "API key",
@@ -872,9 +834,7 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 					type: "button",
 					"aria-describedby": descriptionId,
 					"aria-expanded": String(this.providerPickerPath === definition.path),
-					"aria-controls": definition.path === "trial"
-						? "firstrecall-active-provider-panel"
-						: resultsId,
+					"aria-controls": resultsId,
 				},
 			});
 			optionEl.createDiv({
@@ -913,9 +873,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				resultsEl.empty();
 				this.renderProviderOptions(resultsEl, control.path);
 				this.syncProviderSetupPanelVisibility(containerEl, control.path);
-				if (control.path === "trial") {
-					void this.selectProvider("hosted-demo");
-				}
 			});
 		}
 	}
@@ -928,7 +885,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		const definitions = firstRecallProviderDefinitions().filter(
 			(definition) => definition.credentialKind === path
 		);
-		if (path === "trial") return;
 
 		containerEl.createDiv({
 			cls: "firstrecall-provider-step-label",
@@ -973,14 +929,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		});
 		if (typeof definition.icon === "string") {
 			setIcon(iconEl, definition.icon);
-			return;
-		}
-		if (definition.icon.source === "firstrecall") {
-			const imageEl = activeDocument.defaultView!.createEl("img");
-			imageEl.alt = "";
-			imageEl.draggable = false;
-			imageEl.src = definition.icon.imageUrl;
-			iconEl.appendChild(imageEl);
 			return;
 		}
 		const iconSvg = definition.icon.svg;

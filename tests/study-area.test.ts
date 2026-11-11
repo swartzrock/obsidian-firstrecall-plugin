@@ -426,8 +426,8 @@ describe("study area generation planning", () => {
 			summary: null,
 			unavailable: {
 				reason: "provider-limit",
-				providerId: "hosted-demo",
-				providerLabel: "Simonides trial",
+				providerId: "openai",
+				providerLabel: "Test provider",
 				maxSections: 5,
 			},
 		};

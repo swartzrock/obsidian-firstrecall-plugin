@@ -375,14 +375,7 @@ button.firstrecall-provider-button.is-selected {
 	color: var(--text-normal);
 }
 
-.firstrecall-provider-icon[data-provider="hosted-demo"] {
-	width: 32px;
-	height: 32px;
-	flex: 0 0 32px;
-}
-
-.firstrecall-provider-icon svg,
-.firstrecall-provider-icon img {
+.firstrecall-provider-icon svg {
 	display: block;
 	width: 100%;
 	height: 100%;
@@ -458,14 +451,6 @@ button.firstrecall-provider-button.is-selected {
 
 .firstrecall-active-provider-fields {
 	margin-top: 14px;
-}
-
-.firstrecall-hosted-trial-copy p {
-	margin: 0 0 8px;
-}
-
-.firstrecall-hosted-trial-copy>a {
-	display: inline-block;
 }
 
 .firstrecall-active-provider-fields .firstrecall-api-key-setting .setting-item-control {

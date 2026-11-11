@@ -25,7 +25,7 @@ Your Markdown files are never touched. FirstRecall uses your selected AI / LLM p
 |   |   |
 | --- | --- |
 | [<img src="docs/marketing/01-test-what-you-remember.png" width="512" alt="Test what you remember in Study Mode" />](docs/marketing/01-test-what-you-remember.png) | [<img src="docs/marketing/02-turn-notes-into-study-cards.png" width="512" alt="Turn notes into study cards" />](docs/marketing/02-turn-notes-into-study-cards.png) |
-| [<img src="docs/marketing/03-focus-your-review.png" width="512" alt="Focus your review with a Note Brief" />](docs/marketing/03-focus-your-review.png) | [<img src="docs/marketing/04-choose-your-ai.png" width="512" alt="Choose your AI provider" />](docs/marketing/04-choose-your-ai.png) |
+| [<img src="docs/marketing/03-focus-your-review.png" width="512" alt="Focus your review with a Note Brief" />](docs/marketing/03-focus-your-review.png) |  |
 
 Click a screenshot to view it at full size.
 
@@ -54,26 +54,15 @@ Click a screenshot to view it at full size.
 
 - **Syncs with your changes**  Avoid stale summaries by turning on automatic updates for your managed folder(s). FirstRecall will update any changed sections after you finish editing.
 
-- **Start with the included trial or run on your LLM** Try FirstRecall without an
-  API key, use Anthropic, OpenAI, Gemini, xAI, or another cloud provider with your
-  preferred model, or keep generation private with Ollama or LM Studio. The Codex
+- **Use your preferred AI provider** Use Anthropic, OpenAI, Gemini, xAI,
+  or another cloud provider with your preferred model, or keep generation private with Ollama or LM Studio. The Codex
   and Claude Code terminal tools are also supported.
-
-  - **Simonides hosted AI trial** Generate study materials with Simonides' free, secure hosted AI. Usage limits apply.
-
-    <img src="docs/media/provider-trial.jpg" width="300">
 
   - **API key** Use an API key from Anthropic, OpenAI, Gemini, xAI, OpenRouter, Groq, Mistral, DeepSeek, DeepInfra, Together AI, or Fireworks AI.
 
-    <img src="docs/media/provider-api.jpg" width="300">
-
   - **Terminal apps** Use Codex or Claude Code's terminal apps if they are already installed and configured with your account.
 
-    <img src="docs/media/provider-terminal.jpg" width="300">
-
   - **Local server** Use your own LLMs with Ollama or LM Studio.
-
-    <img src="docs/media/provider-local.jpg" width="300">
 
 
 
@@ -93,8 +82,8 @@ continue to use the existing settings pages.
 ## Quick start
 
 1. Open **Settings → FirstRecall → AI model**.
-2. Choose the included **Simonides hosted AI trial**, or select another provider,
-   complete its setup, choose a model, and run **Test connection**.
+2. Choose an **API key**, **Terminal apps**, or **Local server** connection, select
+   a provider, complete its setup, choose a model if required, and run **Test connection**.
 3. Open a note with headings and select **Generate study material for this
    note** from the FirstRecall dropdown menu. 
 4. Select **Study this note** from the FirstRecall dropdown to practice recalling each section before revealing its answer.
@@ -173,16 +162,14 @@ unused filename.
 
 FirstRecall supports:
 
-- **Included trial:** A Simonides-hosted model with no API key or model setup;
-  usage and capacity limits apply
 - **Local servers:** Ollama and LM Studio — generation can stay on your machine
   when the server and model run locally; a remote endpoint receives your content
 - **Cloud APIs:** Anthropic, OpenAI, Google, xAI, OpenRouter, Groq, Mistral,
   DeepSeek, DeepInfra, Together AI, and Fireworks AI
 - **Terminal tools:** Codex and Claude Code
 
-Cloud API keys are stored with Obsidian's Secret Storage API. When using the hosted
-trial, a cloud API, or a terminal tool backed by an online account, the selected
+Cloud API keys are stored with Obsidian's Secret Storage API. When using a cloud
+API or a terminal tool backed by an online account, the selected
 service receives the note content needed for generation. Ollama and LM Studio can
 keep generation entirely local when connected to a local server.
 
@@ -191,8 +178,7 @@ Copyright (c) 2026 Jason Swartz. FirstRecall is free and open source under the
 workplace, and commercial use are allowed. Distributed copies and modified
 versions must comply with GPLv3, including its source-code sharing requirements.
 
-The hosted trial requires no account or API
-key; usage and capacity limits apply. Cloud APIs require the provider's account
+Cloud APIs require the provider's account
 and API key and may incur usage charges. Terminal tools require their own setup
 and authentication; subscription, billing, and usage limits depend on that service.
 
@@ -208,27 +194,14 @@ generation.
 Community review tools report **Direct Filesystem Access** and **Shell Execution**
 because the bundled BYOK runtime uses Node's filesystem APIs to locate installed
 executables and `child_process` to run the optional terminal providers. These
-capabilities are required for Codex CLI and Claude CLI support. Select a cloud API,
-the included trial, or a local model server if you do not want to run a terminal
+capabilities are required for Codex CLI and Claude CLI support. Select a cloud API
+or a local model server if you do not want to run a terminal
 provider.
 
 > 
 > **Data Privacy & Third-Party LLM Usage**
 >
-> The included trial sends the note title, note context, and eligible section content
-> to `https://api.simonides.ai` for generation. Requests also include randomly
-> generated installation, session, and operation identifiers used to apply usage
-> limits and coordinate requests. The installation ID is saved in plugin data and
-> reused across sessions. The session ID lasts until the plugin reloads, and each
-> request attempt gets a new operation ID. The trial requires no API key, and usage
-> and capacity limits apply.
->
-> Simonides also processes operational metadata such as request status, token usage,
-> latency, and quota information for service operation, abuse prevention, and
-> reliability monitoring. Its [privacy policy](https://simonides.ai/privacy)
-> explains processing, retention, and third-party services, including Cloudflare.
->
-> When using another online provider, your note content is sent to that provider's
+> When using an online provider, your note content is sent to that provider's
 > API. You must supply any API key that provider requires. Review the provider's
 > privacy policy for its data-retention and model-training practices before enabling
 > it.

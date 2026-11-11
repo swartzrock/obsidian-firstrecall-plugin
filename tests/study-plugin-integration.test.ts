@@ -394,10 +394,10 @@ describe("Export file preservation", () => {
 });
 
 describe("Study plugin orchestration", () => {
-	it.each([false, true])("advances vault progress and exposes hosted retry waits (429: %s)", async (rateLimited) => {
+	it("advances vault progress across provider requests and note refreshes", async () => {
 		vi.useFakeTimers();
 		const harness = createHarness();
-		harness.data.settings.byok.selectedProvider = "hosted-demo";
+		harness.data.settings.byok.selectedProvider = "ollama";
 		harness.data.settings.studyAreas = [{
 			id: "vault",
 			name: "Entire vault",
@@ -410,59 +410,35 @@ describe("Study plugin orchestration", () => {
 		harness.setActiveView(null, null);
 		let releaseSecond = () => {};
 		const secondResponse = new Promise<void>((resolve) => { releaseSecond = resolve; });
-		let firstAttempt = true;
-		const transport = vi.fn(async (request: Request) => {
-			if (rateLimited && firstAttempt) {
-				firstAttempt = false;
-				return new Response("rate limited", { status: 429, headers: { "retry-after": "60" } });
-			}
-			const payload = await request.json() as {
-				identity: { operationId: string };
-				note: { title: string };
-				sections: Array<{ sectionId: string; contentHash: string }>;
-			};
-			if (payload.note.title === harness.otherFile.basename) {
-				await secondResponse;
-				throw new Error("Provider unavailable");
-			}
-			return new Response(JSON.stringify({
-				contractVersion: "v1",
-				status: "success",
-				operationId: payload.identity.operationId,
-				attemptConsumed: true,
-				bundle: {
-					sections: payload.sections.map((section) => ({
-						sectionId: section.sectionId,
-						contentHash: section.contentHash,
-						question: "What matters?",
-						keywords: ["recall", "memory"],
-						summary: "Recall matters.",
-					})),
-					noteBrief: {
-						overview: "Brief",
-						whatMatters: { title: "Main", detail: "Main idea" },
-						reviewFirst: { title: "First", detail: "Start here" },
-						sayItBack: { title: "Can you explain it?", detail: "Explain it" },
-					},
-				},
-			}));
-		});
 		Object.assign(harness.plugin, {
-			manifest: { version: "0.6.1" },
-			makeTransport: () => transport,
+			isConfigured: () => true,
+			makeProvider: async () => ({
+				id: "ollama",
+				label: "Ollama",
+				requiresNetwork: false,
+				requiresDownload: false,
+				testConnection: async () => ({ ok: true, message: "ok" }),
+				listModels: async () => [],
+				generateCue: async (input: FirstRecallCueInput) => {
+					if (input.heading === "Memory") {
+						await secondResponse;
+						throw new Error("Provider unavailable");
+					}
+					return { question: "What matters?", keywords: ["recall", "memory"], summary: "Recall matters." };
+				},
+				generateNoteBrief: async () => ({
+					overview: "Brief",
+					whatMatters: { title: "Main", detail: "Main idea" },
+					reviewFirst: { title: "First", detail: "Start here" },
+					sayItBack: { title: "Can you explain it?", detail: "Explain it" },
+				}),
+			}),
 		});
 		try {
 			await harness.plugin.onload();
 			const labels = vi.spyOn(harness.statusBar, "setText");
 			const run = harness.plugin.runStudyArea("vault");
 			await vi.advanceTimersByTimeAsync(0);
-			if (rateLimited) {
-				expect(harness.statusBar.textContent).toContain("Simonides rate limited");
-				expect(harness.statusBar.textContent).toContain("retrying at");
-				expect(harness.statusBar.textContent).toContain("0/2 sections");
-				await vi.advanceTimersByTimeAsync(60_000);
-			}
-			await vi.advanceTimersByTimeAsync(10_000);
 			expect(harness.statusBar.textContent).toContain("1/2 sections");
 			// An active-note refresh must not erase the vault's progress.
 			harness.setActiveView(harness.firstView, harness.noteFile);

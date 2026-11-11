@@ -8,7 +8,7 @@ import type { CueOutput, NoteBriefOutput } from "./schemas";
 
 export type FirstRecallCueOutput = CueOutput;
 export type FirstRecallNoteBriefOutput = NoteBriefOutput;
-export type FirstRecallProviderId = ByokProviderId | "hosted-demo";
+export type FirstRecallProviderId = ByokProviderId;
 
 export interface FirstRecallCueInput {
 	heading: string;
@@ -28,26 +28,6 @@ export type FirstRecallCueBatchResult =
 	| { cue: CueOutput }
 	| { error: string }
 	| { unavailable: FirstRecallSectionUnavailable };
-
-export interface FirstRecallBundleSectionInput {
-	sectionId: string;
-	contentHash: string;
-	heading: string;
-	content: string;
-}
-
-export interface FirstRecallBundleInput {
-	note: {
-		title: string;
-		contextMarkdown: string;
-	};
-	sections: FirstRecallBundleSectionInput[];
-}
-
-export interface FirstRecallBundleResult {
-	sections: FirstRecallCueBatchResult[];
-	noteBrief: NoteBriefOutput;
-}
 
 export interface FirstRecallNoteBriefSectionInput {
 	heading: string;
@@ -83,8 +63,4 @@ export interface FirstRecallCueProviderRuntime {
 		input: FirstRecallNoteBriefInput,
 		signal?: AbortSignal
 	): Promise<NoteBriefOutput>;
-	generateBundle?(
-		input: FirstRecallBundleInput,
-		signal?: AbortSignal
-	): Promise<FirstRecallBundleResult>;
 }
