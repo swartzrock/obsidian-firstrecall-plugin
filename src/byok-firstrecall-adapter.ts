@@ -43,10 +43,6 @@ import type {
 	FirstRecallProviderId,
 } from "./cue-provider";
 import {
-	createHostedDemoProvider,
-	type HostedDemoProviderDeps,
-} from "./hosted-demo-provider";
-import {
 	buildNoteBriefPrompt,
 	
 	NOTE_BRIEF_JSON_SCHEMA,
@@ -80,33 +76,6 @@ export type FirstRecallProviderFactoryDeps = ByokProviderDeps & {
 };
 export type FirstRecallProviderConnectionStatusMap = ByokVerificationSnapshotMap;
 export type { ByokProviderConfig, ByokProviderDeps } from "@swartzrock/byok-runtime";
-
-export function makeFirstRecallHostedDemoProvider(
-	deps: HostedDemoProviderDeps
-): FirstRecallCueProviderRuntime {
-	const hosted = createHostedDemoProvider(deps);
-	const definition = firstRecallProviderDefinition("hosted-demo");
-	return {
-		id: definition.id,
-		label: definition.label,
-		requiresNetwork: true,
-		requiresDownload: false,
-		testConnection: async () => ({
-			ok: true,
-			message: "Simonides trial is ready.",
-		}),
-		listModels: async () => [
-			{ id: "included-trial", label: "Included trial model" },
-		],
-		generateBundle: async (input, signal) => {
-			const result = await hosted.generateBundle(input, signal);
-			return {
-				sections: result.sections,
-				noteBrief: result.noteBrief,
-			};
-		},
-	};
-}
 
 type FirstRecallApiKeyProvider = Extract<
 	ByokProviderConfig,
@@ -590,7 +559,6 @@ function normalizeFirstRecallByokSettings(
 function normalizeFirstRecallSelectedProvider(
 	value: unknown
 ): FirstRecallProviderId | null {
-	if (value === "hosted-demo") return value;
 	if (isByokProviderId(value)) return value;
 	if (value === "codex" || value === "claude") return normalizeProviderId(value);
 	return null;
@@ -610,9 +578,6 @@ function requireFirstRecallSelectedByokProvider(
 ): ByokProviderId {
 	const provider = firstRecallSelectedProvider(settings);
 	if (!provider) throw firstRecallProviderError("Choose an AI provider in Settings.");
-	if (!isByokProviderId(provider)) {
-		throw firstRecallProviderError("The selected provider is not a BYOK provider.");
-	}
 	return provider;
 }
 

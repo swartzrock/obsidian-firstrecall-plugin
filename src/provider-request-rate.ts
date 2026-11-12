@@ -1,28 +1,12 @@
-import type { FirstRecallProviderId } from "./cue-provider";
-
 export const REQUEST_RATE_OPTIONS = [1, 5, 10, 20] as const;
 export type RequestsPerTenSeconds = (typeof REQUEST_RATE_OPTIONS)[number];
 
 const WINDOW_MILLISECONDS = 10_000;
-const HOSTED_DEMO_MAX_REQUESTS: RequestsPerTenSeconds = 1;
 
 export function isRequestsPerTenSeconds(
 	value: unknown
 ): value is RequestsPerTenSeconds {
 	return REQUEST_RATE_OPTIONS.some((option) => option === value);
-}
-
-export function effectiveProviderRequestRate(
-	providerId: FirstRecallProviderId,
-	configuredRate: RequestsPerTenSeconds
-): RequestsPerTenSeconds {
-	if (
-		providerId === "hosted-demo" &&
-		configuredRate > HOSTED_DEMO_MAX_REQUESTS
-	) {
-		return HOSTED_DEMO_MAX_REQUESTS;
-	}
-	return configuredRate;
 }
 
 export interface ProviderRequestRateGate {

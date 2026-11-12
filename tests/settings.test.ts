@@ -625,7 +625,7 @@ describe("settings defaults", () => {
 		const { DEFAULT_SETTINGS } = await loadSettingsModule();
 
 		expect(DEFAULT_SETTINGS).toMatchObject({
-			byok: { selectedProvider: "hosted-demo" },
+			byok: { selectedProvider: null },
 			questionType: "exam-practice",
 			requestsPerTenSeconds: 5,
 			showNoteBrief: true,
@@ -635,7 +635,7 @@ describe("settings defaults", () => {
 		});
 	});
 
-	it("defaults a clean install to the hosted trial with accessible connection controls", async () => {
+	it("starts a clean install with accessible connection choices and no selected provider", async () => {
 		const { tab, plugin } = await setupSettingsTab();
 		tab.display();
 		openSettingsCard(tab, "AI model");
@@ -661,12 +661,12 @@ describe("settings defaults", () => {
 			expect(descriptionEl).not.toBeNull();
 			expect(button.contains(descriptionEl)).toBe(false);
 			expect(button.getAttribute("aria-expanded")).toBe(
-				button.textContent === "Simonides hosted AI trial" ? "true" : "false"
+				"false"
 			);
 			expect(button.getAttribute("aria-controls")).toBeTruthy();
 		}
 		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(0);
-		expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo");
+		expect(plugin.settings.byok.selectedProvider).toBeNull();
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
 	});
 
@@ -716,104 +716,6 @@ describe("settings defaults", () => {
 			.toEqual(expectedGroups);
 		expect(plugin.settings.byok.selectedProvider).toBeNull();
 		expect(plugin.saveSettings).not.toHaveBeenCalled();
-	});
-
-	it("selects the hosted trial without requiring setup fields", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.byok.selectedProvider = null;
-		tab.display();
-		openSettingsCard(tab, "AI model");
-
-		const group = [...tab.containerEl.querySelectorAll<HTMLElement>('[role="group"]')]
-			.find((candidate) => candidate.querySelector('button[aria-expanded]'))!;
-		const pathButtons = [...group.querySelectorAll<HTMLButtonElement>('button[aria-expanded][aria-controls]')];
-		const hostedButton = pathButtons.find((button) =>
-			pathButtons.filter((candidate) => candidate.getAttribute("aria-controls") === button.getAttribute("aria-controls")).length === 1
-		)!;
-		hostedButton.click();
-		await vi.waitFor(() =>
-			expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo")
-		);
-		expect(plugin.saveSettings).toHaveBeenCalledTimes(1);
-		expect(tab.containerEl.querySelectorAll('[role="radio"]')).toHaveLength(0);
-		expect(tab.containerEl.querySelector('input[type="password"]')).toBeNull();
-		expect(tab.containerEl.querySelector('[role="combobox"]')).toBeNull();
-		expect(plugin.settings.byok.providers).not.toHaveProperty("hosted-demo");
-	});
-
-	it("introduces Simonides and links to more information", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.byok.selectedProvider = "hosted-demo";
-		tab.display();
-		openSettingsCard(tab, "AI model");
-
-		const hostedOption = [...tab.containerEl.querySelectorAll<HTMLElement>(
-			".firstrecall-provider-path-option"
-		)].find((option) => option.querySelector("button")?.textContent ===
-			"Simonides hosted AI trial");
-		expect(
-			hostedOption?.querySelector(".firstrecall-provider-path-description")
-				?.textContent
-		).toBe("Generate study materials without an API key.");
-
-		const trialCopy = tab.containerEl.querySelector<HTMLElement>(
-			".firstrecall-hosted-trial-copy"
-		);
-		expect([...trialCopy!.querySelectorAll("p")].map((paragraph) =>
-			paragraph.textContent
-		)).toEqual([
-			"Simonides is FirstRecall's hosted AI service. It uses your note content to generate study materials.",
-			"Free during the trial. Usage and capacity limits apply.",
-			"Simonides processes your note content transiently without intentionally writing it to its application database, analytics dataset, request logs, or AI Gateway payload logs, and does not use it to train its own models. Privacy policy",
-		]);
-		const infoLink = tab.containerEl.querySelector<HTMLAnchorElement>(
-			'.firstrecall-hosted-trial-copy > a[href="https://simonides.ai/"]'
-		);
-		expect(infoLink?.textContent).toBe("Learn more about Simonides");
-		const privacyLink = tab.containerEl.querySelector<HTMLAnchorElement>(
-			'.firstrecall-hosted-trial-copy a[href="https://simonides.ai/privacy"]'
-		);
-		expect(privacyLink?.textContent).toBe("Privacy policy");
-	});
-
-	it("uses the Simonides logo for the hosted trial", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.byok.selectedProvider = "hosted-demo";
-		tab.display();
-		openSettingsCard(tab, "AI model");
-
-		const hostedLogo = tab.containerEl.querySelector<HTMLImageElement>(
-			'.firstrecall-provider-icon[data-provider="hosted-demo"] img'
-		);
-		expect(hostedLogo?.alt).toBe("");
-		expect(hostedLogo?.getAttribute("src")).toMatch(
-			/^(?:data:image\/png;base64,|\/src\/assets\/simonides-logo\.png)$/
-		);
-	});
-
-	it("locks the trial rate and restores the editable rate when switching providers", async () => {
-		const { tab, plugin } = await setupSettingsTab();
-		plugin.settings.requestsPerTenSeconds = 20;
-		tab.display();
-		openSettingsCard(tab, "AI model");
-		const requestRate = () => dropdownWithValues(tab.containerEl, ["1", "5", "10", "20"]);
-
-		expect(requestRate().value).toBe("1");
-		expect(requestRate().disabled).toBe(true);
-
-		providerPathButton(tab.containerEl, "API key").click();
-		tab.containerEl.querySelector<HTMLButtonElement>('[data-provider="openai"][role="radio"]')!.click();
-		await vi.waitFor(() => expect(requestRate().disabled).toBe(false));
-		expect(requestRate().value).toBe("20");
-		const editableRate = requestRate() as HTMLSelectElement & {
-			__onChange: (value: string) => Promise<void>;
-		};
-		await editableRate.__onChange("10");
-		expect(plugin.settings.requestsPerTenSeconds).toBe(10);
-
-		providerPathButton(tab.containerEl, "Simonides hosted AI trial").click();
-		await vi.waitFor(() => expect(requestRate().disabled).toBe(true));
-		expect(requestRate().value).toBe("1");
 	});
 
 	it("restores an existing provider route and rate-limit value", async () => {
@@ -941,14 +843,11 @@ describe("settings defaults", () => {
 	});
 
 	it("renders every provider icon with real paint", async () => {
-		const { tab, plugin } = await setupSettingsTab();
+		const { tab } = await setupSettingsTab();
 		const definitions = firstRecallProviderDefinitions();
 		const expectedProviderIds = new Set(
 			definitions.map((definition) => definition.id)
 		);
-		const trialProvider = definitions.find(
-			(definition) => definition.credentialKind === "trial"
-		)!;
 		const renderedProviderIds = new Set<string>();
 		tab.display();
 		openSettingsCard(tab, "AI model");
@@ -958,24 +857,8 @@ describe("settings defaults", () => {
 				'[role="group"] button[aria-expanded][aria-controls]'
 			),
 		];
-		const controlUsage = new Map<string, number>();
-		for (const button of pathButtons) {
-			const controls = button.getAttribute("aria-controls") ?? "";
-			controlUsage.set(controls, (controlUsage.get(controls) ?? 0) + 1);
-		}
-		pathButtons.sort((left, right) => {
-			const leftCount = controlUsage.get(left.getAttribute("aria-controls") ?? "") ?? 0;
-			const rightCount = controlUsage.get(right.getAttribute("aria-controls") ?? "") ?? 0;
-			return rightCount - leftCount;
-		});
-
 		for (const button of pathButtons) {
 			button.click();
-			if ((controlUsage.get(button.getAttribute("aria-controls") ?? "") ?? 0) === 1) {
-				await vi.waitFor(() =>
-					expect(plugin.settings.byok.selectedProvider).toBe(trialProvider.id)
-				);
-			}
 			const icons = [
 				...tab.containerEl.querySelectorAll<HTMLElement>(
 					".firstrecall-provider-icon[data-provider]"
@@ -985,15 +868,10 @@ describe("settings defaults", () => {
 			for (const iconEl of icons) {
 				renderedProviderIds.add(iconEl.dataset.provider!);
 				const svg = iconEl.querySelector("svg");
-				const image = iconEl.querySelector("img");
 				if (svg) {
 					const paths = [...svg.querySelectorAll("path")];
 					expect(paths.length).toBeGreaterThan(0);
 					expect(paths.every((path) => Boolean(path.getAttribute("d")))).toBe(true);
-				} else if (image) {
-					expect(image.getAttribute("src")).toMatch(
-						/^(?:data:image\/(?:svg\+xml|png;base64),|\/src\/assets\/simonides-logo\.png)$/
-					);
 				} else {
 					expect(iconEl.dataset.icon).toBeTruthy();
 				}

@@ -6,13 +6,12 @@ import {
 } from "@swartzrock/byok-runtime";
 import {
 	BYOK_PROVIDER_ICONS,
-	HOSTED_DEMO_PROVIDER_ICON,
 	type FirstRecallProviderIconDefinition,
 } from "./provider-icons";
 import type { FirstRecallProviderId } from "./cue-provider";
 
-export type FirstRecallCredentialKind = "trial" | "api-key" | "url" | "command";
-export type FirstRecallModelBehavior = "included" | "required" | "optional";
+export type FirstRecallCredentialKind = "api-key" | "url" | "command";
+export type FirstRecallModelBehavior = "required" | "optional";
 
 export interface FirstRecallCredentialFieldDefinition {
 	label: string;
@@ -44,28 +43,6 @@ export interface FirstRecallProviderDefinition {
 	modelField: FirstRecallModelFieldDefinition;
 	supportsModelListing: boolean;
 }
-
-const HOSTED_DEMO_DEFINITION: FirstRecallProviderDefinition = {
-	id: "hosted-demo",
-	label: "Simonides trial",
-	shortLabel: "Simonides trial",
-	icon: HOSTED_DEMO_PROVIDER_ICON,
-	credentialKind: "trial",
-	credentialField: {
-		label: "",
-		placeholder: "",
-		description: "",
-		secret: false,
-		missingMessage: "",
-	},
-	modelBehavior: "included",
-	modelField: {
-		label: "Included trial model",
-		placeholder: "",
-		description: "Included trial model",
-	},
-	supportsModelListing: false,
-};
 
 interface CloudDefinitionOptions {
 	id: ByokProviderId;
@@ -356,17 +333,15 @@ export function byokProviderDefinitions(): FirstRecallProviderDefinition[] {
 export function isFirstRecallProviderId(
 	value: unknown
 ): value is FirstRecallProviderId {
-	return value === "hosted-demo" || isByokProviderId(value);
+	return isByokProviderId(value);
 }
 
 export function firstRecallProviderDefinition(
 	provider: FirstRecallProviderId
 ): FirstRecallProviderDefinition {
-	return provider === "hosted-demo"
-		? HOSTED_DEMO_DEFINITION
-		: byokProviderDefinition(provider);
+	return byokProviderDefinition(provider);
 }
 
 export function firstRecallProviderDefinitions(): FirstRecallProviderDefinition[] {
-	return [HOSTED_DEMO_DEFINITION, ...byokProviderDefinitions()];
+	return byokProviderDefinitions();
 }

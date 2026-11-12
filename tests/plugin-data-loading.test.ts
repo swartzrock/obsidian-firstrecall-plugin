@@ -43,7 +43,7 @@ function unavailableCredentialStore(): SecureCredentialStore {
 }
 
 describe("plugin data loading", () => {
-	it("defaults a new installation to the hosted trial", async () => {
+	it("requires provider setup for a new installation", async () => {
 		const saveData = vi.fn(async () => {});
 		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
@@ -56,7 +56,7 @@ describe("plugin data loading", () => {
 			plugin as unknown as { loadPluginData(): Promise<void> }
 		).loadPluginData();
 
-		expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo");
+		expect(plugin.settings.byok.selectedProvider).toBeNull();
 		expect(saveData).toHaveBeenCalledTimes(1);
 	});
 
@@ -113,19 +113,33 @@ describe("plugin data loading", () => {
 		expect(plugin.settings.byok.selectedProvider).toBe("openai");
 	});
 
-	it("preserves the hosted trial selection without creating an installation id", async () => {
+	it("clears retired trial setup and identifiers while preserving cached material", async () => {
 		const currentSettings = structuredClone(DEFAULT_SETTINGS);
-		currentSettings.byok.selectedProvider = "hosted-demo";
-		normalizeFirstRecallProviderSettings(
-			currentSettings,
-			DEFAULT_SETTINGS,
-			currentSettings
-		);
+		(currentSettings.byok as { selectedProvider: unknown }).selectedProvider = "hosted-demo";
+		const cache = {
+			...currentCache(),
+			provider: "hosted-demo",
+			sections: [{
+				id: "recall",
+				heading: "Recall",
+				level: 1,
+				lineNumber: 0,
+				contentHash: "saved-hash",
+				question: "How does recall strengthen memory?",
+				keywords: ["retrieval"],
+				summary: "Retrieval strengthens memory.",
+				error: null,
+			}],
+		};
 		const saveData = vi.fn(async () => {});
 		const plugin = new FirstRecallPlugin({} as never, {} as never);
 		Object.assign(plugin as unknown as Record<string, unknown>, {
 			credentialStore: unavailableCredentialStore(),
-			loadData: vi.fn(async () => ({ settings: currentSettings })),
+			loadData: vi.fn(async () => ({
+				settings: currentSettings,
+				installationId: "7f4b9f2c-2f2c-4e90-a8b7-5ac2e40dc40a",
+				caches: { "notes/current.md": cache },
+			})),
 			saveData,
 		});
 
@@ -133,11 +147,18 @@ describe("plugin data loading", () => {
 			plugin as unknown as { loadPluginData(): Promise<void> }
 		).loadPluginData();
 
-		expect(plugin.settings.byok.selectedProvider).toBe("hosted-demo");
-		expect((plugin as unknown as { data: object }).data).not.toHaveProperty(
-			"installationId"
-		);
-		expect(saveData).not.toHaveBeenCalled();
+		expect(plugin.settings.byok.selectedProvider).toBeNull();
+		expect(plugin.isProviderConfigured()).toBe(false);
+		await expect(plugin.makeProvider()).rejects.toThrow("Choose an AI provider in Settings.");
+		expect((plugin as unknown as { data: object }).data).not.toHaveProperty("installationId");
+		expect(saveData).toHaveBeenCalledTimes(1);
+		expect(saveData).toHaveBeenCalledWith(expect.objectContaining({
+			settings: expect.objectContaining({
+				byok: expect.objectContaining({ selectedProvider: null }),
+			}),
+			caches: { "notes/current.md": cache },
+		}));
+		expect(saveData.mock.calls[0][0]).not.toHaveProperty("installationId");
 	});
 
 	it("persists only the current settings schema", async () => {

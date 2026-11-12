@@ -505,7 +505,7 @@ describe("Editing View Study projection", () => {
 			question: "",
 			keywords: [],
 			summary: null,
-			unavailable: "Simonides trial limit reached",
+			unavailable: "Test provider limit reached",
 		});
 		const changed = {
 			...limited,
@@ -852,7 +852,7 @@ describe("buildCueLineData", () => {
 
 	it("renders provider-limited sections as explanatory empty study cards", () => {
 		const message =
-			"Simonides trial limit reached — only the first 5 section cards were generated. Choose another provider to generate this section.";
+			"Test provider limit reached — only the first 5 section cards were generated. Choose another provider to generate this section.";
 		const cache = cacheFrom((_s, i) =>
 			i === 1
 				? {
@@ -861,8 +861,8 @@ describe("buildCueLineData", () => {
 						summary: null,
 						unavailable: {
 							reason: "provider-limit",
-							providerId: "hosted-demo",
-							providerLabel: "Simonides trial",
+							providerId: "openai",
+							providerLabel: "Test provider",
 							maxSections: 5,
 						},
 					}

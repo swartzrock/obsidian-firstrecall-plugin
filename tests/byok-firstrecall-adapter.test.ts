@@ -12,7 +12,6 @@ import {
 	makeFirstRecallByokProviderFromStore,
 	secureFirstRecallCloudCredentials,
 	normalizeFirstRecallProviderSettings,
-	makeFirstRecallHostedDemoProvider,
 	recordFirstRecallProviderConnectionSuccess,
 	resetFirstRecallFetchedModels,
 	resolveFirstRecallProviderConfigFromStore,
@@ -35,7 +34,6 @@ import type {
 } from "../src/secure-credential-store";
 import { buildSectionCuePrompt } from "../src/cue-instructions";
 import { buildNoteBriefPrompt } from "../src/study-material-instructions";
-import { generateNote } from "../src/generator";
 
 function settings(
 	overrides: Partial<FirstRecallSettings> & {
@@ -284,87 +282,6 @@ describe("firstRecallProviderConfigFromSettings", () => {
 		expect(
 			makeFirstRecallByokProvider(providerSettings, { transport }).id
 		).toBe(provider);
-	});
-
-	it("submits every section and maps the server-owned trial limit", async () => {
-		let submittedSections = 0;
-		const provider = makeFirstRecallHostedDemoProvider({
-			transport: async (request) => {
-				const body = (await request.json()) as {
-					identity: { operationId: string };
-					sections: Array<{ sectionId: string; contentHash: string }>;
-				};
-				submittedSections = body.sections.length;
-				return new Response(JSON.stringify({
-					contractVersion: "v1",
-					status: "success",
-					operationId: body.identity.operationId,
-					attemptConsumed: true,
-					bundle: {
-						sections: body.sections.map((section, index) => ({
-							sectionId: section.sectionId,
-							contentHash: section.contentHash,
-							question: "What idea does this section explain?",
-							keywords: ["idea", "section"],
-							summary: "This section explains one idea.",
-							...(index >= 5 ? { placeholderReason: "trial_limit" } : {}),
-						})),
-						noteBrief: {
-							overview: "Seven sections explain seven ideas.",
-							whatMatters: { title: "Seven ideas", detail: "Review every section." },
-							reviewFirst: { title: "First idea", detail: "Begin with section one." },
-							sayItBack: { title: "How do the seven ideas connect?", detail: "Explain their relationship." },
-						},
-					},
-				}), { status: 200, headers: { "content-type": "application/json" } });
-			},
-			clientVersion: "0.5.0",
-			installationId: "7f4b9f2c-2f2c-4e90-a8b7-5ac2e40dc40a",
-			sessionId: "c1f63499-1afd-4462-bb71-c816679b0e22",
-			createOperationId: () => "9ac782b9-edde-41c0-91d0-6ec020224b6a",
-		});
-
-		expect(provider).toMatchObject({
-			id: "hosted-demo",
-			label: "Simonides trial",
-			requiresNetwork: true,
-			requiresDownload: false,
-		});
-		expect(provider.maxGeneratedSections).toBeUndefined();
-		expect(await provider.testConnection()).toMatchObject({ ok: true });
-		expect(await provider.listModels()).toEqual([
-			{ id: "included-trial", label: "Included trial model" },
-		]);
-		expect(typeof provider.generateBundle).toBe("function");
-		expect(provider.generateCue).toBeUndefined();
-
-		const result = await generateNote({
-			noteTitle: "Seven ideas",
-			markdown: Array.from(
-				{ length: 7 },
-				(_, index) => `# Section ${index + 1}\nBody ${index + 1}.`
-			).join("\n\n"),
-			provider,
-		});
-
-		expect(submittedSections).toBe(7);
-		expect(result.sections).toHaveLength(7);
-		expect(result.sections.map((section) => section.error)).toEqual(
-			Array(7).fill(null)
-		);
-		expect(result.sections.map((section) => section.question)).toEqual([
-			...Array(5).fill("What idea does this section explain?"),
-			null,
-			null,
-		]);
-		expect(result.sections.slice(5).map((section) => section.unavailable)).toEqual(
-			Array(2).fill({
-				reason: "provider-limit",
-				providerId: "hosted-demo",
-				providerLabel: "Simonides trial",
-				maxSections: 5,
-			})
-		);
 	});
 
 	it("wraps generic text providers with FirstRecall cue generation", async () => {
@@ -772,14 +689,14 @@ describe("FirstRecall provider settings normalization", () => {
 		expect(normalized.byok.selectedProvider).toBeNull();
 	});
 
-	it("preserves the explicit hosted trial selection without adding provider settings", () => {
+	it("clears a retired hosted trial selection while preserving other provider settings", () => {
 		const raw = settings({ selectedProvider: "openai" });
 		(raw.byok as { selectedProvider: unknown }).selectedProvider = "hosted-demo";
 		const normalized = structuredClone(DEFAULT_SETTINGS);
 
 		normalizeFirstRecallProviderSettings(normalized, DEFAULT_SETTINGS, raw);
 
-		expect(normalized.byok.selectedProvider).toBe("hosted-demo");
+		expect(normalized.byok.selectedProvider).toBeNull();
 		expect(normalized.byok.providers.openai).toMatchObject(
 			raw.byok.providers.openai ?? {}
 		);

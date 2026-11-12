@@ -46,7 +46,7 @@
   
   Choose Study this note, try answering the question, and reveal the source when you’re ready.
   
-  The hosted trial needs no account or API key; usage and capacity limits apply. Other online providers may require an account and charge for usage. See the [guide](https://www.firstrecall.ai/guide) for setup help and the [Simonides privacy policy](https://simonides.ai/privacy) for hosted-trial data handling.
+  Online providers may require an account and charge for usage. See the [guide](https://www.firstrecall.ai/guide) for setup help.
   
   ### 🗣️ Feedback
   
@@ -62,7 +62,6 @@
 
 ### Patch Changes
 
-- 3179cc9: Add an opt-in developer console flag to log the next Simonides request and raw response, including transport errors and the automatic rate-limit retry. The flag is consumed when the call starts and adds no settings UI.
 - 4da8c46: Fix Study mode in Reading view so answers blur like Editing view, including when headings and answers render in separate blocks.
   
   Center the reveal button on the bottom border of inline study cards in Editing and Reading, with space before the answer. Side-rail cards keep the button on the right edge.
@@ -95,7 +94,7 @@
 
 ### Minor Changes
 
-- ef470ca: Add the included FirstRecall hosted AI trial, connection-based provider setup, provider-wide request pacing, and hosted-trial limit handling.
+- ef470ca: Add connection-based provider setup and provider-wide request pacing.
 
 ## 0.6.1
 

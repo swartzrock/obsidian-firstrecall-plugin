@@ -1,4 +1,3 @@
-import { HOSTED_DEMO_MAX_TOTAL_SECTION_CHARS } from "./hosted-demo-limits";
 import {
 	cueEligibleSections,
 	extractStudyableText,
@@ -9,7 +8,6 @@ import {
 	type CueGenerationOptions,
 } from "./cue-generation";
 import type {
-	FirstRecallBundleInput,
 	FirstRecallCueBatchResult,
 	FirstRecallCueProviderRuntime,
 	FirstRecallSectionUnavailable,
@@ -103,36 +101,11 @@ export type NoteBriefGenerationOutcome =
 /** Default budget for note text injected into a single prompt. */
 export const DEFAULT_MAX_CONTEXT_CHARS = 8000;
 export const DEFAULT_SECTION_CONCURRENCY = 5;
-const BUNDLE_MAX_TITLE_CHARS = 200;
-const BUNDLE_MAX_CONTEXT_CHARS = 12_000;
-const BUNDLE_MAX_SECTION_CHARS = 4_000;
 
 /** Trim long text to a char budget, adding a marker so the model knows it was cut. */
 export function clampText(text: string, maxChars: number): string {
 	if (text.length <= maxChars) return text;
 	return text.slice(0, maxChars) + "\n...[truncated for length]...";
-}
-
-function clampTextWithinLimit(text: string, maxChars: number): string {
-	if (text.length <= maxChars) return text;
-	const marker = "\n...[truncated for length]...";
-	if (maxChars <= marker.length) return text.slice(0, maxChars);
-	return text.slice(0, maxChars - marker.length) + marker;
-}
-
-function boundedLength(
-	requested: number | undefined,
-	fallback: number,
-	maximum: number
-): number {
-	if (
-		typeof requested !== "number" ||
-		!Number.isFinite(requested) ||
-		requested <= 0
-	) {
-		return Math.min(fallback, maximum);
-	}
-	return Math.min(Math.floor(requested), maximum);
 }
 
 export function resolveGenerationOptions(
@@ -264,156 +237,6 @@ export async function generateSectionCue(
 	return result;
 }
 
-function completeProgress(
-	sectionCount: number,
-	total: number,
-	onProgress?: (done: number, total: number) => void
-): void {
-	for (let done = 1; done <= sectionCount + 1; done++) {
-		onProgress?.(done, total);
-	}
-}
-
-export async function generateNoteBundleForSections(
-	params: GenerateNoteParams,
-	sections: GenerateSectionParams["section"][]
-): Promise<NoteGenerationResult> {
-	const { noteTitle, markdown, signal, onProgress } = params;
-	const generateBundle = params.provider.generateBundle?.bind(params.provider);
-	if (!generateBundle) {
-		throw new Error("Provider does not support atomic bundle generation.");
-	}
-	const total = sections.length + 1;
-	onProgress?.(0, total);
-
-	if (signal?.aborted) {
-		return {
-			sections: [],
-			noteBrief: null,
-			noteBriefOutcome: { status: "canceled" },
-			canceled: true,
-		};
-	}
-
-	const emptyResults = sections.map(emptySectionResult);
-	const maxGeneratedSections = providerSectionLimit(params.provider);
-	const allEligible = cueEligibleSections(parseSections(markdown));
-	const supportedIds = maxGeneratedSections === null
-		? null
-		: new Set(
-				allEligible
-					.slice(0, maxGeneratedSections)
-					.map((section) => section.id)
-			);
-	const submittedSections = sections.filter(
-		(section) => !supportedIds || supportedIds.has(section.id)
-	);
-	for (let index = 0; index < sections.length; index++) {
-		if (
-			supportedIds &&
-			maxGeneratedSections !== null &&
-			!supportedIds.has(sections[index].id)
-		) {
-			emptyResults[index] = providerLimitResult(
-				sections[index],
-				params.provider,
-				maxGeneratedSections
-			);
-		}
-	}
-	if (submittedSections.length === 0 && allEligible.length > 0) {
-		submittedSections.push(allEligible[0]);
-	}
-	const contextLimit = boundedLength(
-		params.maxContextChars,
-		DEFAULT_MAX_CONTEXT_CHARS,
-		BUNDLE_MAX_CONTEXT_CHARS
-	);
-	const sectionLimit = boundedLength(
-		params.maxContextChars,
-		BUNDLE_MAX_SECTION_CHARS,
-		BUNDLE_MAX_SECTION_CHARS
-	);
-	const input: FirstRecallBundleInput = {
-		note: {
-			title: clampTextWithinLimit(noteTitle, BUNDLE_MAX_TITLE_CHARS),
-			contextMarkdown: clampTextWithinLimit(
-				extractStudyableText(markdown),
-				contextLimit
-			),
-		},
-		sections: submittedSections.map((section) => ({
-			sectionId: section.id,
-			contentHash: section.contentHash,
-			heading: clampTextWithinLimit(section.heading, BUNDLE_MAX_TITLE_CHARS),
-			content: clampTextWithinLimit(
-				extractStudyableText(section.content),
-				sectionLimit
-			),
-		})),
-	};
-
-	// Allocate short sections first, preserving their content and original order.
-	const byLength = [...input.sections].sort((a, b) => a.content.length - b.content.length);
-	let remainingChars = HOSTED_DEMO_MAX_TOTAL_SECTION_CHARS;
-	for (const [index, section] of byLength.entries()) {
-		const budget = Math.floor(remainingChars / (byLength.length - index));
-		section.content = clampTextWithinLimit(section.content, budget);
-		remainingChars -= section.content.length;
-	}
-
-	try {
-		const bundle = await generateBundle(input, signal);
-		if (signal?.aborted) {
-			return {
-				sections: [],
-				noteBrief: null,
-				noteBriefOutcome: { status: "canceled" },
-				canceled: true,
-			};
-		}
-		if (bundle.sections.length !== submittedSections.length) {
-			throw new Error("Provider returned a different section count.");
-		}
-
-		const resultsById = new Map(
-			submittedSections.map((section, index) => [section.id, bundle.sections[index]])
-		);
-		sections.forEach((section, index) => {
-			if (!emptyResults[index].unavailable) {
-				applyCueResult(emptyResults[index], resultsById.get(section.id));
-			}
-		});
-		completeProgress(sections.length, total, onProgress);
-		return {
-			sections: emptyResults,
-			noteBrief: bundle.noteBrief,
-			noteBriefOutcome: { status: "success", noteBrief: bundle.noteBrief },
-			canceled: false,
-		};
-	} catch (error) {
-		if (signal?.aborted) {
-			return {
-				sections: [],
-				noteBrief: null,
-				noteBriefOutcome: { status: "canceled" },
-				canceled: true,
-			};
-		}
-		const message = error instanceof Error ? error.message : String(error);
-		emptyResults.forEach((result) => {
-			if (!result.unavailable) result.error = message;
-		});
-		completeProgress(sections.length, total, onProgress);
-		return {
-			sections: emptyResults,
-			noteBrief: null,
-			noteBriefOutcome: { status: "failed", error: message },
-			canceled: false,
-		};
-	}
-}
-
 export async function generateSectionCueBatch(
 	params: GenerateSectionBatchParams
 ): Promise<SectionResult[]> {
@@ -515,9 +338,6 @@ export async function generateNote(
 ): Promise<NoteGenerationResult> {
 	const { provider, markdown, noteTitle, signal, onProgress } = params;
 	const sections = cueEligibleSections(parseSections(markdown));
-	if (provider.generateBundle && sections.length > 0) {
-		return generateNoteBundleForSections(params, sections);
-	}
 	const options = resolveGenerationOptions(params.options);
 	const maxContextChars = params.maxContextChars ?? DEFAULT_MAX_CONTEXT_CHARS;
 	const sectionConcurrency = resolveEffectiveSectionConcurrency(

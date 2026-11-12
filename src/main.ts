@@ -37,7 +37,6 @@ import {
 	secureFirstRecallCloudCredentials,
 	listFirstRecallProviderModelsFromStore,
 	makeFirstRecallByokProviderFromStore,
-	makeFirstRecallHostedDemoProvider,
 	type FirstRecallFetchedModelProvider,
 } from "./byok-firstrecall-adapter";
 import type { FirstRecallCueProviderRuntime } from "./cue-provider";
@@ -128,7 +127,6 @@ import {
 import { formatFirstRecallNotice } from "./notice";
 import { parsePersistedFirstRecallSettings } from "./persisted-settings";
 import {
-	effectiveProviderRequestRate,
 	RollingWindowRequestLimiter,
 } from "./provider-request-rate";
 import {
@@ -154,18 +152,10 @@ interface PluginData {
 	maintenanceStates: MaintenanceStateMap;
 	hidden: Record<string, true>;
 	cueSectionCollapse: CueSectionCollapseMap;
-	installationId?: unknown;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isUuid(value: unknown): value is string {
-	return typeof value === "string" &&
-		/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-			value
-		);
 }
 
 function abortReason(signal: AbortSignal): Error {
@@ -212,7 +202,6 @@ export default class FirstRecallPlugin extends Plugin {
 		total: number;
 		failedPaths: string[];
 	}>();
-	private readonly hostedRetryWaits = new Map<symbol, number>();
 	private readonly studySession = new StudySessionController();
 	private readonly studyHeaderMenuActions = new WeakMap<MarkdownView, HTMLElement>();
 	private readonly studyHeaderActionElements = new Set<HTMLElement>();
@@ -246,7 +235,6 @@ export default class FirstRecallPlugin extends Plugin {
 	private cueSectionCollapse!: CueSectionCollapseStore;
 	private credentialStore!: SecureCredentialStore;
 	private credentialStorageWarnings: string[] = [];
-	private readonly hostedDemoSessionId = crypto.randomUUID();
 	private readonly providerRequestLimiters = new Map<
 		FirstRecallCueProviderRuntime["id"],
 		RollingWindowRequestLimiter
@@ -475,16 +463,14 @@ export default class FirstRecallPlugin extends Plugin {
 			maintenanceStates,
 			hidden,
 			cueSectionCollapse,
-			...(Object.prototype.hasOwnProperty.call(loadedRecord, "installationId")
-				? { installationId: loadedRecord.installationId }
-				: {}),
 		};
 		this.settings = this.data.settings;
 		if (
 			credentialStorage.settingsChanged ||
 			cachesChanged ||
 			maintenanceStatesChanged ||
-			settingsChanged
+			settingsChanged ||
+			Object.prototype.hasOwnProperty.call(loadedRecord, "installationId")
 		) {
 			await this.persistPluginData();
 		}
@@ -1214,7 +1200,6 @@ export default class FirstRecallPlugin extends Plugin {
 	private isConfigured(): boolean {
 		const provider = firstRecallSelectedProvider(this.settings);
 		if (!provider) return false;
-		if (provider === "hosted-demo") return true;
 		const definition = byokProviderDefinition(provider);
 		const hasCredential =
 			definition.credentialKind === "api-key"
@@ -1278,7 +1263,7 @@ export default class FirstRecallPlugin extends Plugin {
 	}
 
 	private generationStatusLabel(): string | null {
-		if (!this.studyAreaRuns.size && !this.hostedRetryWaits.size) return null;
+		if (!this.studyAreaRuns.size) return null;
 		let done = 0;
 		let total = 0;
 		let failed = 0;
@@ -1291,10 +1276,6 @@ export default class FirstRecallPlugin extends Plugin {
 			? `${done}/${total} section${total === 1 ? "" : "s"}`
 			: "";
 		const failures = failed ? ` · ${failed} note${failed === 1 ? "" : "s"} failed` : "";
-		if (this.hostedRetryWaits.size) {
-			const retryAt = Math.max(...this.hostedRetryWaits.values());
-			return `FirstRecall: Simonides rate limited · retrying at ${new Date(retryAt).toLocaleTimeString()}${progress ? ` · ${progress}` : ""}${failures}`;
-		}
 		return `FirstRecall: generating ${progress}${failures}`;
 	}
 
@@ -1317,7 +1298,7 @@ export default class FirstRecallPlugin extends Plugin {
 	private setStudyMaterialStatus(
 		projection: StudyMaterialStatusProjection
 	): void {
-		if (this.studyAreaRuns.size || this.hostedRetryWaits.size) {
+		if (this.studyAreaRuns.size) {
 			this.setStatus("generating");
 			return;
 		}
@@ -1885,29 +1866,6 @@ export default class FirstRecallPlugin extends Plugin {
 
 	/** Build the provider for the current settings. Public so Settings can test it. */
 	async makeProvider(): Promise<FirstRecallCueProviderRuntime> {
-		if (firstRecallSelectedProvider(this.settings) === "hosted-demo") {
-			const installationId = await this.hostedDemoInstallationId();
-			const limiter = this.providerRequestLimiter("hosted-demo");
-			const transport = this.makeTransport();
-			const retryToken = Symbol();
-			return makeFirstRecallHostedDemoProvider({
-				transport: async (request) => {
-					await limiter.acquire(request.signal);
-					return transport(request);
-				},
-				clientVersion: this.manifest.version,
-				installationId,
-				sessionId: this.hostedDemoSessionId,
-				createOperationId: () => crypto.randomUUID(),
-				onRetryWait: (milliseconds) => {
-					if (milliseconds === null) this.hostedRetryWaits.delete(retryToken);
-					else this.hostedRetryWaits.set(retryToken, Date.now() + milliseconds);
-					if (!this.statusBarEl) return;
-					if (this.studyAreaRuns.size || this.hostedRetryWaits.size) this.setStatus("generating");
-					else void this.updateStatusForFile(this.app.workspace.getActiveFile());
-				},
-			});
-		}
 		const providerId = firstRecallSelectedProvider(this.settings);
 		return makeFirstRecallByokProviderFromStore(
 			this.settings,
@@ -1927,28 +1885,10 @@ export default class FirstRecallPlugin extends Plugin {
 		const existing = this.providerRequestLimiters.get(providerId);
 		if (existing) return existing;
 		const limiter = new RollingWindowRequestLimiter(() =>
-			effectiveProviderRequestRate(
-				providerId,
-				this.settings.requestsPerTenSeconds
-			)
+			this.settings.requestsPerTenSeconds
 		);
 		this.providerRequestLimiters.set(providerId, limiter);
 		return limiter;
-	}
-
-	private async hostedDemoInstallationId(): Promise<string> {
-		if (isUuid(this.data.installationId)) {
-			const installationId = this.data.installationId.toLowerCase();
-			if (installationId !== this.data.installationId) {
-				this.data.installationId = installationId;
-				await this.persistPluginData();
-			}
-			return installationId;
-		}
-		const installationId = crypto.randomUUID();
-		this.data.installationId = installationId;
-		await this.persistPluginData();
-		return installationId;
 	}
 
 	async listProviderModels(
@@ -1986,7 +1926,6 @@ export default class FirstRecallPlugin extends Plugin {
 	private selectedModelName(): string {
 		const provider = firstRecallSelectedProvider(this.settings);
 		if (!provider) return "";
-		if (provider === "hosted-demo") return "Included trial model";
 		const model = firstRecallProviderModel(this.settings, provider).trim();
 		return byokProviderDefinition(provider).modelBehavior === "optional"
 			? model || "CLI default"

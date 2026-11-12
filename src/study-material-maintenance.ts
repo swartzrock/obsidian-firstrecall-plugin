@@ -8,11 +8,9 @@ import {
 import type { CueGenerationOptions } from "./cue-generation";
 import type { FirstRecallCueProviderRuntime } from "./cue-provider";
 import {
-	generateNoteBundleForSections,
 	generateNoteBriefForSections,
 	generateSectionCueBatch,
 	resolveEffectiveSectionConcurrency,
-	type NoteGenerationResult,
 	type SectionResult,
 } from "./generator";
 import { cueEligibleSections, parseSections, type Section } from "./parser";
@@ -670,61 +668,20 @@ export class StudyMaterialMaintenance {
 		const targets = effectiveComponents.sectionIds
 			.map((id) => eligibleById.get(id))
 			.filter((section): section is Section => Boolean(section));
-		let generated: SectionResult[] = [];
-		let bundledBrief: NoteGenerationResult["noteBrief"] = null;
-		let bundledBriefError: string | null = null;
+		const generated: SectionResult[] = [];
 		let canceled = false;
-		if (provider.generateBundle) {
-			const eligible = [...eligibleById.values()];
-			const hasServerOwnedProviderLimit =
-				provider.maxGeneratedSections === undefined &&
-				Boolean(cache?.sections.some(
-					(section) => section.unavailable?.providerId === provider.id
-				));
-			const bundleTargets = providerLimitIds.length || hasServerOwnedProviderLimit
-				? eligible
-				: targets.length
-					? targets
-					: eligible.slice(0, 1);
-			const bundleResult = await generateNoteBundleForSections(
-				{
-					noteTitle: source.noteTitle,
-					markdown: source.markdown,
-					provider,
-					options: this.deps.generationOptions(),
-				},
-				bundleTargets
-			);
-			const requestedIds = new Set(effectiveComponents.sectionIds);
-			generated = bundleResult.sections.filter((section) =>
-				requestedIds.has(section.id)
-			);
-			canceled = bundleResult.canceled;
-			if (
-				effectiveComponents.noteBrief &&
-				bundleResult.noteBriefOutcome?.status === "success"
-			) {
-				bundledBrief = bundleResult.noteBrief;
-			} else if (
-				effectiveComponents.noteBrief &&
-				bundleResult.noteBriefOutcome?.status === "failed"
-			) {
-				bundledBriefError = bundleResult.noteBriefOutcome.error;
-			}
-		} else {
-			const concurrency = resolveEffectiveSectionConcurrency(
-				this.deps.sectionConcurrency(),
-				provider
-			);
-			for (let start = 0; start < targets.length; start += concurrency) {
-				const results = await generateSectionCueBatch({
-					sections: targets.slice(start, start + concurrency),
-					provider,
-					options: this.deps.generationOptions(),
-					noteContext: source.markdown,
-				});
-				generated.push(...results);
-			}
+		const concurrency = resolveEffectiveSectionConcurrency(
+			this.deps.sectionConcurrency(),
+			provider
+		);
+		for (let start = 0; start < targets.length; start += concurrency) {
+			const results = await generateSectionCueBatch({
+				sections: targets.slice(start, start + concurrency),
+				provider,
+				options: this.deps.generationOptions(),
+				noteContext: source.markdown,
+			});
+			generated.push(...results);
 		}
 
 		const successful = generated.filter((result) => !result.error);
@@ -751,12 +708,9 @@ export class StudyMaterialMaintenance {
 			);
 		}
 
-		let briefError = bundledBriefError;
+		let briefError: string | null = null;
 		let briefSucceeded = false;
-		if (bundledBrief && nextCache) {
-			nextCache = { ...nextCache, noteBrief: bundledBrief };
-			briefSucceeded = true;
-		} else if (effectiveComponents.noteBrief && !provider.generateBundle) {
+		if (effectiveComponents.noteBrief) {
 			const briefOutcome = await generateNoteBriefForSections({
 				noteTitle: source.noteTitle,
 				markdown: source.markdown,
