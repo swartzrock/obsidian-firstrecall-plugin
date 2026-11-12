@@ -2005,6 +2005,7 @@ html.firstrecall-editor-cue-width-resizing body:is(.theme-light, .theme-dark) * 
 	align-items: center;
 	gap: 5px;
 	width: auto;
+	min-width: max-content;
 	padding-inline: 7px;
 }
 
