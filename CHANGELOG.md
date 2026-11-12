@@ -1,5 +1,16 @@
 # firstrecall
 
+## 1.1.0
+
+### Minor Changes
+
+- 172123f: Remove the hosted AI trial. Choose a cloud API, local server, or terminal tool in AI model settings to generate study material. Existing trial selections return to provider setup; saved study material and other provider settings are preserved.
+
+### Patch Changes
+
+- 2bfe2a6: Updated Zod schema validation for the CVE-2023-54404 vulnerability
+- 172123f: Keep the FirstRecall header button wide enough for its logo and label when community themes such as Border give icon buttons a fixed width.
+
 ## 1.0.2
 
 ### Patch Changes
