@@ -81,6 +81,7 @@ function withEditorView<T>(
 	const previousGlobals = new Map<PropertyKey, PropertyDescriptor | undefined>();
 	const testGlobals: Record<PropertyKey, unknown> = {
 		window: dom.window,
+		Window: dom.window.Window,
 		document: dom.window.document,
 		navigator: dom.window.navigator,
 		MutationObserver: dom.window.MutationObserver,
@@ -1567,6 +1568,7 @@ describe("renderCueElement", () => {
 		const previousGlobals = new Map<PropertyKey, PropertyDescriptor | undefined>();
 		const testGlobals: Record<PropertyKey, unknown> = {
 			window: dom.window,
+			Window: dom.window.Window,
 			document: dom.window.document,
 			navigator: dom.window.navigator,
 			MutationObserver: dom.window.MutationObserver,
@@ -2122,6 +2124,7 @@ describe("cue editor placement", () => {
 		const previousGlobals = new Map<PropertyKey, PropertyDescriptor | undefined>();
 		const testGlobals: Record<PropertyKey, unknown> = {
 			window: dom.window,
+			Window: dom.window.Window,
 			document: dom.window.document,
 			navigator: dom.window.navigator,
 			MutationObserver: dom.window.MutationObserver,
@@ -2420,6 +2423,7 @@ describe("rail spacers", () => {
 		const previousGlobals = new Map<PropertyKey, PropertyDescriptor | undefined>();
 		const testGlobals: Record<PropertyKey, unknown> = {
 			window: dom.window,
+			Window: dom.window.Window,
 			document: dom.window.document,
 			navigator: dom.window.navigator,
 			MutationObserver: dom.window.MutationObserver,
