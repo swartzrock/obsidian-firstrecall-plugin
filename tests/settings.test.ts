@@ -472,13 +472,26 @@ async function setupSettingsTab(opts: {
 			el.addEventListener(type, handler);
 		},
 	};
+	type VaultEntry = { path: string; extension?: string; children?: VaultEntry[] };
+	const loadedFiles: VaultEntry[] = (opts.loadedFiles ?? []).map((file) =>
+		file.folder
+			? Object.assign(new obsidian.TFolder(), { path: file.path, children: [] })
+			: file
+	);
+	const root = { path: "", children: [] as VaultEntry[] };
+	for (const file of loadedFiles) {
+		const parentPath = file.path.split("/").slice(0, -1).join("/");
+		const parent = loadedFiles.find((entry) => entry.path === parentPath && entry.children);
+		(parent?.children ?? root.children).push(file);
+	}
 	const app = {
 		vault: {
 			getName: () => "FirstRecall",
-			getAllLoadedFiles: () =>
-				(opts.loadedFiles ?? []).map((file) =>
-					file.folder ? { path: file.path, children: [] } : file
-				),
+			getAllLoadedFiles: () => loadedFiles,
+			getAllFolders: () => loadedFiles.filter((file) => file instanceof obsidian.TFolder),
+			getFolderByPath: (path: string) =>
+				loadedFiles.find((file) => file.path === path && file instanceof obsidian.TFolder) ?? null,
+			getRoot: () => root,
 		},
 	};
 	const tab = new FirstRecallSettingTab(app as never, plugin as never);
@@ -1127,6 +1140,9 @@ describe("folders and automatic updates settings", () => {
 				{ path: "Courses/Chemistry", folder: true },
 			],
 		});
+		vi.spyOn(tab.app.vault, "getAllLoadedFiles").mockImplementation(() => {
+			throw new Error("Folder selection must not enumerate vault files");
+		});
 		plugin.createStudyArea.mockImplementationOnce(async (parentPath: string) => {
 			const area = studyArea({ parentPath });
 			plugin.settings.studyAreas = [area];
@@ -1148,6 +1164,38 @@ describe("folders and automatic updates settings", () => {
 		expect(plugin.settings.studyAreas[0]?.maintenanceMode).toBe("paused");
 		expect(plugin.runStudyArea).not.toHaveBeenCalled();
 		expect(plugin.updateStudyArea).not.toHaveBeenCalled();
+	});
+
+	it.each([
+		["Courses/Biology", ["Courses/Biology/Empty", "Courses/Biology/Note.MD"]],
+		["", ["Courses/Biology", "Courses/Biology/Empty", "Courses/Biology/Note.MD", "Other", "Other/Note.md"]],
+		["Deleted", []],
+	])("limits exclusion suggestions to folders and Markdown in scope %j", async (parentPath, expected) => {
+		const { tab, plugin } = await setupSettingsTab({
+			loadedFiles: [
+				{ path: "Courses/Biology", folder: true },
+				{ path: "Courses/Biology/Empty", folder: true },
+				{ path: "Courses/Biology/Note.MD", extension: "MD" },
+				{ path: "Courses/Biology/image.png", extension: "png" },
+				{ path: "Courses/Biology/Excluded.md", extension: "md" },
+				{ path: "Other", folder: true },
+				{ path: "Other/Note.md", extension: "md" },
+			],
+		});
+		plugin.settings.studyAreas = [studyArea({
+			parentPath,
+			excludedPaths: ["Courses/Biology/Excluded.md"],
+		})];
+		vi.spyOn(tab.app.vault, "getAllLoadedFiles").mockImplementation(() => {
+			throw new Error("Exclusions must not enumerate vault files");
+		});
+		if (parentPath === "Courses/Biology") {
+			Object.defineProperty(tab.app.vault.getFolderByPath("Other")!, "children", {
+				get: () => { throw new Error("Must not traverse an unrelated folder"); },
+			});
+		}
+		expect(tab["studyAreaExclusionPaths"](plugin.settings.studyAreas[0]!))
+			.toEqual(expected);
 	});
 
 	it("shows excluded and failed scan counts without requiring a provider", async () => {
@@ -1403,6 +1451,9 @@ describe("searchable settings", () => {
 		const { tab, plugin } = await setupSettingsTab();
 		plugin.settings.studyAreas = [studyArea()];
 		const enumerate = vi.spyOn(tab.app.vault, "getAllLoadedFiles");
+		const folders = vi.spyOn(tab.app.vault, "getAllFolders");
+		const folder = vi.spyOn(tab.app.vault, "getFolderByPath");
+		const root = vi.spyOn(tab.app.vault, "getRoot");
 		const entries = searchableEntries(tab.getSettingDefinitions());
 		const terms = entries.flatMap(({ definition }) => [definition.name, ...(definition.aliases ?? [])]);
 		expect(terms).toEqual(expect.arrayContaining([
@@ -1415,6 +1466,9 @@ describe("searchable settings", () => {
 		expect(entries.find(({ definition }) => definition.aliases?.includes("Automatic update delay"))?.pagePath).toEqual(["Managed folders"]);
 		expect(tab.containerEl.childElementCount).toBe(0);
 		expect(enumerate).not.toHaveBeenCalled();
+		expect(folders).not.toHaveBeenCalled();
+		expect(folder).not.toHaveBeenCalled();
+		expect(root).not.toHaveBeenCalled();
 		expect(plugin.previewStudyArea).not.toHaveBeenCalled();
 		expect(plugin.isProviderCredentialSaved).not.toHaveBeenCalled();
 		expect(plugin.saveSettings).not.toHaveBeenCalled();

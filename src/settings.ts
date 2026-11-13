@@ -703,7 +703,6 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 				sl
 					.setLimits(1, 5, 1)
 					.setValue(this.plugin.settings.sectionConcurrency)
-					.setDynamicTooltip()
 					.onChange(async (value) => {
 						this.plugin.settings.sectionConcurrency = value;
 						await this.plugin.saveSettings();
@@ -1173,28 +1172,34 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 	// ── Folders and automatic updates ─────────────────────────────────────
 	private studyAreaFolderPaths(): string[] {
 		return this.app.vault
-			.getAllLoadedFiles()
-			.filter(
-				(file): file is TFolder =>
-					file instanceof TFolder || "children" in file
-			)
+			.getAllFolders(false)
 			.map((folder) => normalizeVaultPath(folder.path))
 			.filter(Boolean)
 			.sort((a, b) => a.localeCompare(b));
 	}
 
 	private studyAreaExclusionPaths(area: StudyArea): string[] {
-		return this.app.vault
-			.getAllLoadedFiles()
-			.filter(
-				(file) =>
-					file instanceof TFolder ||
-					"children" in file ||
-					("extension" in file &&
-						typeof file.extension === "string" &&
-						file.extension.toLowerCase() === "md")
-			)
-			.map((file) => normalizeVaultPath(file.path))
+		const parentPath = normalizeVaultPath(area.parentPath);
+		const folder = parentPath
+			? this.app.vault.getFolderByPath(parentPath)
+			: this.app.vault.getRoot();
+		if (!folder) return [];
+		const paths: string[] = [];
+		const folders = [folder];
+		while (folders.length) {
+			for (const child of folders.pop()!.children) {
+				if (child instanceof TFolder) {
+					folders.push(child);
+					paths.push(child.path);
+				} else if ("extension" in child &&
+					typeof child.extension === "string" &&
+					child.extension.toLowerCase() === "md") {
+					paths.push(child.path);
+				}
+			}
+		}
+		return paths
+			.map((path) => normalizeVaultPath(path))
 			.filter((path) => validateStudyAreaExclusion(area, path).valid)
 			.sort((a, b) => a.localeCompare(b));
 	}
