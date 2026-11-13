@@ -7,7 +7,7 @@
 
 [![Obsidian](https://img.shields.io/badge/Obsidian-1.11.4%2B-7C3AED?logo=obsidian&logoColor=white)](https://obsidian.md)
 [![Language](https://img.shields.io/badge/language-TypeScript-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Package manager](https://img.shields.io/badge/package_manager-bun_1.3.14-000000?logo=bun&logoColor=white)](https://bun.sh/)
+[![Package manager](https://img.shields.io/badge/package_manager-bun_1.4.4-000000?logo=bun&logoColor=white)](https://bun.sh/)
 [![GitHub release](https://img.shields.io/github/v/release/swartzrock/obsidian-firstrecall-plugin?include_prereleases&label=release)](https://github.com/swartzrock/obsidian-firstrecall-plugin/releases)
 [![GitHub release date](https://img.shields.io/github/release-date/swartzrock/obsidian-firstrecall-plugin)](https://github.com/swartzrock/obsidian-firstrecall-plugin/releases)
 [![Last commit](https://img.shields.io/github/last-commit/swartzrock/obsidian-firstrecall-plugin)](https://github.com/swartzrock/obsidian-firstrecall-plugin/commits/main)
@@ -197,6 +197,12 @@ executables and `child_process` to run the optional terminal providers. These
 capabilities are required for Codex CLI and Claude CLI support. Select a cloud API
 or a local model server if you do not want to run a terminal
 provider.
+
+**Folder discovery:** The Managed folders settings page lists folder paths through
+Obsidian's folder API, including empty folders. Exclusion suggestions inspect only
+folders and Markdown paths inside the selected managed folder, or the entire vault
+when you choose that scope. Building these suggestions does not read note contents
+or send them to an AI provider.
 
 > 
 > **Data Privacy & Third-Party LLM Usage**
