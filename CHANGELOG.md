@@ -1,5 +1,11 @@
 # firstrecall
 
+## 1.1.1
+
+### Patch Changes
+
+- 7b8b679: updated all deps to address vulnerabilities
+
 ## 1.1.0
 
 ### Minor Changes
