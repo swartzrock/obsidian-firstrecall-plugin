@@ -1,5 +1,11 @@
 # firstrecall
 
+## 1.1.2
+
+### Patch Changes
+
+- cdc66da: Update vulnerable development dependencies, remove a deprecated slider API call, and limit exclusion suggestions to the selected managed folder.
+
 ## 1.1.1
 
 ### Patch Changes
