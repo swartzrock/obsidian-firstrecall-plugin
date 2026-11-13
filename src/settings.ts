@@ -1547,9 +1547,8 @@ export class FirstRecallSettingTab extends PluginSettingTab {
 		state.phase = "running";
 		state.message = null;
 		this.refreshSettings();
-		let summary: StudyAreaRunSummary | null = null;
 		try {
-			summary = await this.plugin.runStudyArea(areaId, mode);
+			const summary = await this.plugin.runStudyArea(areaId, mode);
 			state.phase = this.studyAreaCompletionPhase(summary);
 			state.message = this.studyAreaCompletionMessage(summary);
 			state.plan = await this.plugin.previewStudyArea(areaId);
